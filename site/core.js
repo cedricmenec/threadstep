@@ -15,6 +15,22 @@ export function moveSubject(subjects, subjectId, direction) {
   [next[from], next[to]] = [next[to], next[from]];
   return next;
 }
+export function updateItem(document, subjectId, itemId, patch) {
+  const subject = document.subjects.find((entry) => entry.id === subjectId);
+  if (!subject) return document;
+  const item = subject.items.find((entry) => entry.id === itemId);
+  if (!item) return document;
+  if (!patch || typeof patch.title !== "string") return document;
+  const title = patch.title.trim();
+  if (title.length === 0 || title.length > 300) return document;
+  if (!PRIORITIES.includes(patch.priority)) return document;
+  if (title === item.title && patch.priority === item.priority) return document;
+  const items = subject.items.map((entry) =>
+    entry.id === itemId ? { ...entry, title, priority: patch.priority } : entry);
+  const subjects = document.subjects.map((entry) =>
+    entry.id === subjectId ? { ...entry, items } : entry);
+  return { ...document, subjects };
+}
 export function sortedItems(items, parentId = null) {
   return items.filter((item) => item.parentId === parentId)
     .sort((a, b) => priorityIndex(a.priority) - priorityIndex(b.priority));

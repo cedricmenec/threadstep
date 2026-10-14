@@ -1,10 +1,12 @@
-import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument, moveSubject } from "./core.js";
+import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument, moveSubject, updateItem } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
 let documentState = emptyDocument();
+let editingItemId = null;
+let focusItemId = null;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
@@ -41,6 +43,19 @@ function render() {
     return;
   }
   for (const subject of documentState.subjects) subjectsEl.append(renderSubject(subject));
+  applyFocus();
+}
+function applyFocus() {
+  if (editingItemId) {
+    const input = subjectsEl.querySelector(".task-edit-title");
+    if (input) { input.focus(); input.select(); return; }
+  }
+  if (focusItemId) {
+    const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
+    const target = card && card.querySelector(".task-edit");
+    focusItemId = null;
+    if (target) target.focus();
+  }
 }
 function move(subject, direction) {
   const reordered = moveSubject(documentState.subjects, subject.id, direction);
@@ -131,6 +146,22 @@ function renderSubject(subject) {
 }
 function renderItem(subject, item) {
   const li = el("li", "task" + (item.done ? " done" : ""));
+  li.dataset.item = item.id;
+  if (editingItemId === item.id) {
+    li.append(renderEditor(subject, item));
+  } else {
+    li.append(renderRow(subject, item));
+    li.append(renderActions(subject, item));
+  }
+  const children = sortedItems(subject.items, item.id);
+  if (children.length) {
+    const list = el("ul", "tasks children");
+    for (const child of children) list.append(renderItem(subject, child));
+    li.append(list);
+  }
+  return li;
+}
+function renderRow(subject, item) {
   const row = el("div", "task-row");
   const check = el("input", "task-check");
   check.type = "checkbox";
@@ -143,8 +174,19 @@ function renderItem(subject, item) {
   const title = el("span", "task-title", item.title);
   const badge = el("span", "priority priority-" + item.priority, priorityLabels[item.priority]);
   row.append(check, title, badge);
-  li.append(row);
+  return row;
+}
+function renderActions(subject, item) {
   const actions = el("div", "task-actions");
+  const edit = el("button", "subtle task-edit", "Modifier");
+  edit.type = "button";
+  edit.setAttribute("aria-label", "Modifier " + item.title);
+  edit.addEventListener("click", () => {
+    editingItemId = item.id;
+    focusItemId = null;
+    render();
+  });
+  actions.append(edit);
   if (item.parentId === null) {
     const sub = el("button", "subtle", "+ Sous-étape");
     sub.type = "button";
@@ -164,14 +206,54 @@ function renderItem(subject, item) {
     persist();
   });
   actions.append(remove);
-  li.append(actions);
-  const children = sortedItems(subject.items, item.id);
-  if (children.length) {
-    const list = el("ul", "tasks children");
-    for (const child of children) list.append(renderItem(subject, child));
-    li.append(list);
+  return actions;
+}
+function renderEditor(subject, item) {
+  const form = el("form", "task-edit-form");
+  const titleInput = el("input", "task-edit-title");
+  titleInput.type = "text";
+  titleInput.maxLength = 300;
+  titleInput.required = true;
+  titleInput.value = item.title;
+  titleInput.setAttribute("aria-label", "Titre de l'étape " + item.title);
+  const select = el("select", "task-edit-priority");
+  select.setAttribute("aria-label", "Priorité de l'étape " + item.title);
+  for (const priority of PRIORITIES) {
+    const option = el("option", "", priorityLabels[priority]);
+    option.value = priority;
+    if (priority === item.priority) option.selected = true;
+    select.append(option);
   }
-  return li;
+  const save = el("button", "primary", "Enregistrer");
+  save.type = "submit";
+  const cancel = el("button", "subtle", "Annuler");
+  cancel.type = "button";
+  const error = el("p", "edit-error");
+  error.hidden = true;
+  error.setAttribute("role", "alert");
+  form.append(titleInput, select, save, cancel, error);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const trimmed = titleInput.value.trim();
+    if (!trimmed || trimmed.length > 300) {
+      error.textContent = "Le titre doit contenir entre 1 et 300 caractères.";
+      error.hidden = false;
+      titleInput.focus();
+      return;
+    }
+    const next = updateItem(documentState, subject.id, item.id, { title: titleInput.value, priority: select.value });
+    editingItemId = null;
+    focusItemId = item.id;
+    if (next === documentState) { render(); return; }
+    documentState = next;
+    persist();
+  });
+  cancel.addEventListener("click", () => {
+    editingItemId = null;
+    focusItemId = item.id;
+    render();
+  });
+  return form;
 }
 subjectForm.addEventListener("submit", (event) => {
   event.preventDefault();
