@@ -20,3 +20,14 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - Do not change GitHub workflows, credentials, `opencode.json`, or this file during routine feature work.
 - Never report an unverified test as passed.
 - Do not merge pull requests; human approval is required during the pilot.
+
+## Backlog intake and planning protocol
+- This file is the durable, repository-wide operating contract. It explains how to work; it is NOT the backlog itself.
+- Before planning a new feature, read `docs/product/vision.md`, `docs/product/mvp.md`, `backlog/README.md`, and the relevant existing tasks. Avoid duplicates.
+- When a user describes a feature in natural language (including a voice request), the planning assistant prepares a focused specification; do not ask the user to write GitHub issues or Markdown files.
+- Use the next free `TS-NNN` ID after inspecting `backlog/tasks/`. Create one Markdown file per small, independently testable change under `backlog/tasks/TS-NNN.md`, following `backlog/tasks/TEMPLATE.md`.
+- Include user value, scope, functional behavior, acceptance criteria, validation/testing, assumptions, and explicit out-of-scope behavior. Include dependencies and priority if relevant. Clarify only decisions that materially alter scope, data safety or security.
+- Update `backlog/README.md` and the canonical product specifications when requirements change. Separate planning artifacts from code changes, preserving reviewable history.
+- A planned or ready task is NOT permission to run an LLM, incur OpenRouter costs, merge a PR, or modify implementation code. Obtain explicit execution authorization; never assume that backlog order constitutes it.
+- The existing `Agent (manual, OpenRouter)` workflow does not discover tasks: it requires a specific `task_id` through `workflow_dispatch`. Automated priority selection and wave execution are future capabilities.
+- Keep changes to agent policy and backlog conventions in a dedicated reviewed PR. A routine coding task must not edit `AGENTS.md` or workflow/security files.
