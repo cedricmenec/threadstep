@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       phase:
-        description: 'plan = draft only; apply = reviewed plan; auto = plan and implement in one run'
+        description: 'plan, apply, auto or finalize (validate/archive existing work, no model)'
         required: true
         type: choice
         default: plan
@@ -16,6 +16,7 @@ on:
           - plan
           - apply
           - auto
+          - finalize
       model:
         description: 'OpenRouter model'
         required: true
@@ -67,7 +68,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TASK_ID" =~ ^TS-[0-9]{3}$ ]] || { echo "::error::Invalid task ID"; exit 1; }
-          [[ "$PHASE" == plan || "$PHASE" == apply || "$PHASE" == auto ]] || { echo "::error::Invalid phase"; exit 1; }
+          [[ "$PHASE" == plan || "$PHASE" == apply || "$PHASE" == auto || "$PHASE" == finalize ]] || { echo "::error::Invalid phase"; exit 1; }
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
           test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
           git config user.name "threadstep-software-factory[bot]"
@@ -78,20 +79,27 @@ jobs:
             git fetch origin "$branch"
             git checkout -B "$branch" FETCH_HEAD
           else
-            if [[ "$PHASE" == apply ]]; then
-              echo "::error::No published plan branch. Run phase=plan first."; exit 1
+            if [[ "$PHASE" == apply || "$PHASE" == finalize ]]; then
+              echo "::error::No existing agent branch. Run plan/apply/auto first."; exit 1
             fi
             git checkout -b "$branch"
           fi
           echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
           echo "CHANGE_ID=$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
-      - name: Install pinned OpenSpec and OpenCode
+      - name: Install pinned OpenSpec
         shell: bash
         run: |
           set -euo pipefail
-          npm install --global @fission-ai/openspec@1.14.1 opencode-ai@latest
+          npm install --global @fission-ai/openspec@1.14.1
           openspec --version
+
+      - name: Install OpenCode (paid model phases only)
+        if: inputs.phase != 'finalize'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global opencode-ai@latest
           opencode --version
 
       - name: Prepare or validate OpenSpec change
@@ -204,10 +212,19 @@ jobs:
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-apply-prompt.txt")"
 
       - name: Verify, sync and archive OpenSpec
-        if: inputs.phase == 'apply' || inputs.phase == 'auto'
+        if: inputs.phase == 'apply' || inputs.phase == 'auto' || inputs.phase == 'finalize'
         shell: bash
         run: |
           set -euo pipefail
+          # Finalize must start from a clean committed agent branch: no LLM call or new code.
+          if [[ "$PHASE" == finalize ]]; then
+            test -z "$(git status --porcelain)" || {
+              echo "::error::Finalize requires a clean worktree"; exit 1;
+            }
+            test -d "openspec/changes/$CHANGE_ID" || {
+              echo "::error::Active change missing or already archived"; exit 1;
+            }
+          fi
           # The implementer may check off tasks, but cannot silently rewrite the approved plan.
           plan_edits="$( (git diff --name-only -- "openspec/changes/$CHANGE_ID"; git ls-files --others --exclude-standard -- "openspec/changes/$CHANGE_ID") | sort -u )"
           while IFS= read -r path; do
@@ -255,6 +272,17 @@ jobs:
               esac
             fi
           done <<< "$changed"
+          if [[ "$PHASE" == finalize ]]; then
+            # Do not publish any uncommitted changes except the archive/sync output.
+            # Existing feature commits are allowed on the task branch.
+            git diff --name-only | while IFS= read -r path; do
+              [[ -z "$path" ]] && continue
+              case "$path" in
+                openspec/changes/"$CHANGE_ID"/*|openspec/changes/archive/*-"$CHANGE_ID"/*|openspec/specs/*) ;;
+                *) echo "::error::Finalize changed forbidden path: $path"; exit 1 ;;
+              esac
+            done
+          fi
           test -n "$changed" || { echo "::error::No changes to publish"; exit 1; }
           git add -A
           if ! git diff --cached --quiet; then
@@ -270,7 +298,7 @@ jobs:
             else
               gh pr create --base main --head "$AGENT_BRANCH" \
                 --title "OpenSpec: $TASK_ID" \
-                --body "Phase apply: OpenSpec validated and archived. Independent CI and human review required. **No automatic merge**."
+                --body "Phase $PHASE: OpenSpec validated and archived. Independent CI and human review required. **No automatic merge**."
             fi
           else
             echo "Updated pull request: $existing"
