@@ -1,6 +1,6 @@
 # Autonomous Software Factory | Dossier de référence
 
-**Statut : architecture cible documentée, prototype opérationnel partiel.**  
+**Statut : pilote manuel OpenCode et OpenSpec exécuté ; GitHub App intégrée, CI sur PR App à confirmer.**  
 **Mise à jour : 14 octobre 2026.**  
 **Projet pilote :** [ThreadStep](https://github.com/cedricmenec/threadstep).  
 **Référence antérieure :** dépôt privé `mestryn`, notamment `.github/workflows/opencode.yml` et `AGENTS.md`.
@@ -29,8 +29,8 @@ Contraintes durables :
 
 ## Source de vérité et limites
 
-- Exécution actuelle : `.github/workflows/agent.yml`, `.github/workflows/ci.yml`, `.github/workflows/pages.yml`.
+- Exécution actuelle : `.github/workflows/agent.yml` (OpenCode direct), `.github/workflows/agent-openspec.yml` (plan/apply), `.github/workflows/ci.yml`, `.github/workflows/pages.yml`.
 - Règles de l'agent dans **`AGENTS.md`** ; backlog dans **`backlog/tasks/TS-NNN.md`** ; besoins ThreadStep dans **`docs/product/`**.
-- Ce dossier **spécifie** le futur système ; il n'implémente ni orchestrateur, ni GitHub App, ni pipeline OpenSpec complet.
+- Le pilote OpenSpec a livré TS-005 (PR #8 fusionnée). La GitHub App est créée, installée/configurée par le propriétaire et utilisée par les deux workflows d'agent depuis la PR #9 fusionnée. Le test E2E du déclenchement CI sur une nouvelle PR d'agent reste à confirmer. Aucun orchestrateur ni auto-merge n'est implémenté.
 - Les modèles OpenRouter, flags CLI, tarifs et politiques GitHub peuvent évoluer : **versionner, tester et revalider** avant activation.
 - Une session conversationnelle n'est pas un exécuteur permanent : la continuité autonome doit être portée par GitHub Actions ou un orchestrateur hébergé, avec un état persistant.
