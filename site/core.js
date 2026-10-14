@@ -46,6 +46,31 @@ export function pendingCount(document) {
   return document.subjects.reduce((count, subject) =>
     count + subject.items.filter((item) => !item.done).length, 0);
 }
+export function nextActionSuggestion(document) {
+  let best = null;
+  let bestRank = null;
+  document.subjects.forEach((subject, subjectIndex) => {
+    subject.items.forEach((item, itemIndex) => {
+      if (item.parentId !== null || item.done) return;
+      const rank = [priorityIndex(item.priority), subjectIndex, itemIndex];
+      if (best && !isBetterRank(rank, bestRank)) return;
+      best = {
+        subjectId: subject.id,
+        subjectTitle: subject.title,
+        itemId: item.id,
+        itemTitle: item.title,
+        priority: item.priority
+      };
+      bestRank = rank;
+    });
+  });
+  return best;
+}
+function isBetterRank(rank, bestRank) {
+  if (rank[0] !== bestRank[0]) return rank[0] < bestRank[0];
+  if (rank[1] !== bestRank[1]) return rank[1] < bestRank[1];
+  return rank[2] < bestRank[2];
+}
 export function parseDocument(source) {
   const doc = JSON.parse(source);
   if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.version !== 1 ||

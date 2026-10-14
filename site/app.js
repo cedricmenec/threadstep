@@ -1,13 +1,17 @@
-import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem } from "./core.js";
+import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
+const focusSuggestEl = document.querySelector("#focus-suggest");
+const focusCardEl = document.querySelector("#focus-card");
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
+let revealItemId = null;
+let suggestionVisible = false;
 let hideCompleted = false;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
@@ -40,6 +44,7 @@ function render() {
   subjectsEl.replaceChildren();
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
+  renderSuggestion();
   if (!documentState.subjects.length) {
     subjectsEl.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
     return;
@@ -56,8 +61,46 @@ function applyFocus() {
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
     const target = card && card.querySelector(".task-edit");
     focusItemId = null;
-    if (target) target.focus();
+    if (target) {
+      target.focus();
+      if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
+    }
   }
+}
+function renderSuggestion() {
+  focusCardEl.replaceChildren();
+  if (!suggestionVisible) {
+    focusCardEl.hidden = true;
+    return;
+  }
+  focusCardEl.hidden = false;
+  const suggestion = nextActionSuggestion(documentState);
+  if (!suggestion) {
+    focusCardEl.append(el("p", "focus-empty", "Aucune étape à faire pour le moment. Ajoutez une prochaine action pour commencer."));
+    return;
+  }
+  focusCardEl.append(el("p", "focus-label", "Prochaine étape suggérée"));
+  focusCardEl.append(el("p", "focus-title", suggestion.itemTitle));
+  focusCardEl.append(el("p", "focus-meta", suggestion.subjectTitle + " · " + priorityLabels[suggestion.priority]));
+  const actions = el("div", "focus-actions");
+  const reveal = el("button", "subtle focus-reveal", "Voir dans la liste");
+  reveal.type = "button";
+  reveal.addEventListener("click", () => revealSuggestion(suggestion.itemId));
+  const close = el("button", "subtle focus-close", "Fermer");
+  close.type = "button";
+  close.addEventListener("click", hideSuggestion);
+  actions.append(reveal, close);
+  focusCardEl.append(actions);
+}
+function revealSuggestion(itemId) {
+  revealItemId = itemId;
+  focusItemId = itemId;
+  render();
+}
+function hideSuggestion() {
+  suggestionVisible = false;
+  revealItemId = null;
+  renderSuggestion();
 }
 function move(subject, direction) {
   const reordered = moveSubject(documentState.subjects, subject.id, direction);
@@ -147,7 +190,7 @@ function renderSubject(subject) {
   return card;
 }
 function renderItem(subject, item) {
-  const li = el("li", "task" + (item.done ? " done" : ""));
+  const li = el("li", "task" + (item.done ? " done" : "") + (revealItemId === item.id ? " reveal" : ""));
   li.dataset.item = item.id;
   if (editingItemId === item.id) {
     li.append(renderEditor(subject, item));
@@ -260,6 +303,11 @@ function renderEditor(subject, item) {
 hideCompletedEl.addEventListener("change", () => {
   hideCompleted = hideCompletedEl.checked;
   render();
+});
+focusSuggestEl.addEventListener("click", () => {
+  suggestionVisible = true;
+  revealItemId = null;
+  renderSuggestion();
 });
 subjectForm.addEventListener("submit", (event) => {
   event.preventDefault();

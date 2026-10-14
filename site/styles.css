@@ -24,6 +24,14 @@ h1 span{color:#95aa64}
 .section-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:23px}
 h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .counter{font-size:.79rem;color:#53675a;background:#e9eddf;padding:10px 12px;border-radius:30px;white-space:nowrap}
+.focus-bar{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.focus-suggest{align-self:flex-start}
+.focus-card{background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;max-width:520px}
+.focus-label{font-size:.69rem;font-weight:800;letter-spacing:.14em;color:#68766a;margin:0}
+.focus-title{margin:2px 0 0;font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.focus-meta{margin:0;font-size:.82rem;color:#657366}
+.focus-empty{margin:0;color:#657366;font-size:.9rem}
+.focus-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .add-subject,.task-form{display:flex;gap:9px}
 .add-subject input,.task-form input{flex:1;min-width:0;border:1px solid #d4dbcf;background:white;border-radius:10px;padding:12px 15px;color:#24382f}
 .add-subject{padding:16px;background:#e9eddf;border-radius:14px}
@@ -45,6 +53,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .task-form button{padding:10px 13px}
 .tasks{list-style:none;padding:0;margin:14px 0 0}
 .task{border-top:1px solid #ecf0ea;padding:12px 0 0;margin-top:12px}
+.task.reveal{background:#f3f6ec;border-radius:10px;box-shadow:0 0 0 2px #a9ba69;scroll-margin:16px}
 .task-row{display:flex;gap:9px;align-items:flex-start}
 .task-check{margin-top:4px;accent-color:#466e4d;width:17px;height:17px;flex-shrink:0}
 .task-title{flex:1;min-width:0;line-height:1.45;overflow-wrap:anywhere}
