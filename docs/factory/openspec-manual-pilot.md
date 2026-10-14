@@ -1,4 +1,4 @@
-# Pilote OpenSpec à deux phases, manuel
+# Pilote OpenSpec manuel : plan, apply et auto
 
 Ce pilote introduit un **second workflow** : `.github/workflows/agent-openspec.yml`.
 Le workflow historique `agent.yml` continue de fonctionner sans OpenSpec.
@@ -20,15 +20,33 @@ Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiq
    `openspec archive ... --yes`. L'archivage OpenSpec **synchronise les deltas**
    dans `openspec/specs/` et déplace le change dans `openspec/changes/archive/`.
    La PR existante est mise à jour et marquée prête pour revue.
-5. Approuver au besoin l'exécution de la CI sur PR créée avec `GITHUB_TOKEN`,
-   puis **contrôler la CI et le diff** avant fusion humaine.
+5. Les PR des agents sont désormais publiées avec un jeton temporaire de la GitHub App. Vérifier que la CI démarre et réussit, puis **contrôler la CI et le diff** avant fusion humaine.
+
+## Mode auto : un seul lancement, sans validation intermédiaire
+
+Choisir `phase=auto` et `task_id=TS-NNN` dans le même workflow, après fusion
+de la tâche de backlog sur `main`. Ce choix autorise **deux appels OpenCode /
+OpenRouter** successifs au cours d'un même run : d'abord plan, puis apply.
+Le plan est validé strictement et contrôlé pour éviter des modifications hors
+du répertoire du change ; il est enregistré dans un commit local avant apply,
+afin de détecter toute réécriture des artefacts validés. Après apply, le workflow
+exige les tests, une checklist entièrement cochée et la validation OpenSpec,
+puis synchronise les deltas par `openspec archive --yes` et ouvre une PR
+**non brouillon** avec le code et les specs finales. La fusion reste manuelle.
+
+Un échec bloque les étapes suivantes et empêche la publication finale. En
+particulier, le plan n'est pas publié en PR intermédiaire en mode auto.
+Le timeout du job est de 60 minutes, mais **aucun plafond USD garanti** n'est
+appliqué. `auto` ne doit être choisi que pour une tâche petite, claire et
+préapprouvée. En cas d'ambiguïté métier, préférer `plan` puis `apply`.
 
 ## Invariants et limites
 
-- Aucune GitHub App, auto-merge, orchestrateur, provisionnement de secrets
-  ni consommation OpenRouter lors de l'installation de ce pilote.
-- Les **deux phases** payantes exigent un déclenchement explicite. Aucun lancement
-  ne doit être traité comme approbation de la PR ou autorisation d'une autre tâche.
+- La GitHub App est utilisée pour publier branches et PR ; aucun auto-merge,
+  orchestrateur ou provisionnement de secrets n'est effectué par ce workflow.
+- `plan` et `apply` restent déclenchés séparément. `auto` est un déclenchement
+  explicite unique qui autorise les deux phases payantes, mais ni la fusion de
+  la PR ni l'exécution d'une autre tâche.
 - Une PR `plan` ne doit contenir que `openspec/changes/ts-nnn/**` ; `apply`
   bloque les changements de workflows, `AGENTS.md`, secrets, backlog et
   configuration de l'exécuteur. Ces gardes ne remplacent pas une isolation sandbox.
@@ -39,8 +57,8 @@ Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiq
 - L'implémentation peut encore consommer plusieurs essais ou dépasser une dépense
   souhaitée : **pas de plafond USD techniquement appliqué**. Budget et reprise
   transactionnelle restent des étapes futures.
-- OpenSpec CLI épinglé sur `@fission-ai/openspec@1.14.1`, compatibilité
-  fonctionnelle **à valider en run réel**. OpenCode conserve actuellement
+- OpenSpec CLI épinglé sur `@fission-ai/openspec@1.14.1` ; le mode `auto`
+  reste à valider par un run réel. OpenCode conserve actuellement
   `opencode-ai@latest`, comme le pilote précédent.
 - Ce dispositif est un prototype : CI indépendante sur PR et merge manuel restent
   obligatoires ; les mécanismes de confirmation de périmètre sont encore à renforcer.
