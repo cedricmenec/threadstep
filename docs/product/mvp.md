@@ -14,6 +14,8 @@
 - FR-11 Temporarily hide completed actions and substeps using an accessible view toggle, keeping completed parents visible when they have unfinished substeps. Never modify stored data or JSON exports through filtering.
 - FR-12 Offer a deterministic, view-only « Une étape pour maintenant » suggestion of exactly one unfinished top-level action, prioritizing urgency then subject order then item order, with an accessible way to locate it in the list. Only unfinished top-level actions are eligible: completed actions, substeps and completed parents are excluded, and a clear friendly empty state is shown when none exists. The suggestion is recomputed on each activation, never modifies stored data or JSON, and is not persisted across reload. Substeps as candidates, randomness, AI, timers and automatic completion are out of scope.
 
+- FR-13 Let the user explicitly pin one unfinished top-level action as « Je reprends ici », restore the selection locally after reload, reveal it accessibly, replace or clear it, and automatically clear it if the action is completed or removed. Track stable IDs, keep TS-007 suggestions independent, and preserve document JSON compatibility by storing this browser-only preference separately.
+
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
