@@ -21,6 +21,14 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - Never report an unverified test as passed.
 - Do not merge pull requests; human approval is required during the pilot.
 
+## Mandatory documentation for factory evolution
+
+- Every change to the software factory (GitHub Actions workflows, OpenCode/OpenSpec orchestration, GitHub App authentication, agent policy, CI/security, delivery or cost controls) MUST include a dedicated documentation task/checklist item in the same PR.
+- Update the relevant files under `docs/factory/` to describe the actual behavior, configuration, operational steps, safety limits and validation status. Update the roadmap/decisions when capabilities or trade-offs change.
+- A factory PR is not complete until its documentation task is checked off and the PR description identifies the documentation files changed. If documentation is not needed, document a specific justification in the PR instead of silently omitting it.
+- Do not publish secrets, tokens, private keys or sensitive configuration values in documentation. Distinguish implemented behavior from untested assumptions.
+- Factory changes require an explicitly authorized, separately reviewed PR; routine feature agents must not edit protected factory files.
+
 ## Backlog intake and planning protocol
 - This file is the durable, repository-wide operating contract. It explains how to work; it is NOT the backlog itself.
 - Before planning a new feature, read `docs/product/vision.md`, `docs/product/mvp.md`, `backlog/README.md`, and the relevant existing tasks. Avoid duplicates.
@@ -30,6 +38,6 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - Update `backlog/README.md` and the canonical product specifications when requirements change. Separate planning artifacts from code changes, preserving reviewable history.
 - A planned or ready task is NOT permission to run an LLM, incur OpenRouter costs, merge a PR, or modify implementation code. Obtain explicit execution authorization; never assume that backlog order constitutes it.
 - The legacy `Agent (manual, OpenRouter)` workflow implements directly from backlog with `task_id` through `workflow_dispatch`.
-- The separate `Agent OpenSpec (manual, staged)` workflow offers explicit `phase=plan` (only OpenSpec change artifacts, draft PR) and `phase=apply` (use the reviewed plan, implement, validate and archive). Both phases invoke the paid model and require separate human-triggered runs. No orchestrator or automatic merge is enabled.
+- The separate `Agent OpenSpec (manual, staged or auto)` workflow offers `phase=plan` (draft only), `phase=apply` (reviewed plan) and `phase=auto` (plan, validate, implement, sync and archive in one explicitly authorized run). Each invoked phase uses a paid model; auto authorizes both calls in a single run. No orchestrator or automatic merge is enabled.
 - The selected task maps to deterministic `openspec/changes/ts-nnn/` and must be checked against the product acceptance criteria. Do not treat a plan approval as consent to launch apply automatically. Automated priority selection and wave execution remain future capabilities.
 - Keep changes to agent policy and backlog conventions in a dedicated reviewed PR. A routine coding task must not edit `AGENTS.md` or workflow/security files.
