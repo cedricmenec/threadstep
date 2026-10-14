@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f5f1">
+  <meta name="description" content="ThreadStep : gardez le fil de vos sujets et de leurs prochaines étapes.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>ThreadStep | Gardez le fil</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow"><span class="dot"></span> MON ESPACE DE TRAVAIL</div>
+      <h1>Thread<span>Step</span></h1>
+      <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
+      <div class="toolbar">
+        <button type="button" id="export" class="secondary">Exporter mes données</button>
+        <label class="secondary file-action" for="import">Importer JSON</label>
+        <input id="import" type="file" accept=".json,application/json" aria-label="Importer un fichier JSON">
+      </div>
+      <p class="privacy">Les données restent dans ce navigateur. Aucun compte et aucun serveur.</p>
+    </header>
+    <section class="dashboard" aria-labelledby="dashboard-title">
+      <div class="section-top">
+        <div>
+          <span class="label">VUE D'ENSEMBLE</span>
+          <h2 id="dashboard-title">Mes fils de travail</h2>
+        </div>
+        <div class="counter" id="counter" aria-live="polite">0 prochaine étape</div>
+      </div>
+      <form id="subject-form" class="add-subject">
+        <label for="subject-title" class="sr-only">Nom du sujet</label>
+        <input id="subject-title" name="subject" maxlength="100" required placeholder="Ajouter un sujet ou un projet…" autocomplete="off">
+        <button type="submit" class="primary">+ Ajouter</button>
+      </form>
+      <div id="subjects" class="subjects" aria-live="polite"></div>
+    </section>
+    <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>
+  </main>
+</body>
+</html>

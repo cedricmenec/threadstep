@@ -1,0 +1,117 @@
+name: Agent (manual, OpenRouter)
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: 'Backlog task ID, e.g. TS-002'
+        required: true
+        type: string
+      model:
+        description: 'OpenRouter model'
+        required: true
+        type: choice
+        default: 'openrouter/z-ai/glm-5.3-flash'
+        options:
+          - 'openrouter/z-ai/glm-5.3-flash'
+          - 'openrouter/deepseek/deepseek-v4.1-flash'
+permissions:
+  contents: read
+concurrency:
+  group: agent-${{ inputs.task_id }}
+  cancel-in-progress: false
+jobs:
+  develop:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TASK_ID: ${{ inputs.task_id }}
+      OPENCODE_MODEL: ${{ inputs.model }}
+    steps:
+      - name: Checkout without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate input and open branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$TASK_ID" =~ ^TS-[0-9]{3}$ ]]; then
+            echo "::error::Invalid task ID"; exit 1
+          fi
+          test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Task file missing"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="agent/$TASK_ID"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch origin "$branch"
+            git checkout -B "$branch" FETCH_HEAD
+          else
+            git checkout -b "$branch"
+          fi
+          echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check API key and install agent
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENROUTER_API_KEY:-}" ]; then
+            echo "::error::OPENROUTER_API_KEY secret missing"; exit 1
+          fi
+          npm install --global opencode-ai@latest
+          opencode --version
+      - name: Run bounded OpenCode task
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/agent-instructions.txt <<'PROMPT'
+          You are developing ThreadStep, a public static app. First read AGENTS.md and the selected backlog task file.
+          Implement only that task's acceptance criteria, with the smallest necessary diff.
+          Do not edit .github/workflows/, AGENTS.md, opencode.json, or any credential-related file.
+          Never print secrets. Do not invoke external services other than the model provider.
+          Do not create commits, push, merge or create PRs; the workflow publishes the result.
+          Run npm run check. If tests fail, fix them or report failure. Stop within the task scope.
+          PROMPT
+          printf '\nSelected task: %s\n' "$TASK_ID" >> /tmp/agent-instructions.txt
+          cat "backlog/tasks/$TASK_ID.md" >> /tmp/agent-instructions.txt
+          opencode run --auto --model "$OPENCODE_MODEL" "$(cat /tmp/agent-instructions.txt)"
+      - name: Validate and publish PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git branch --show-current)" != "$AGENT_BRANCH" ]; then
+            echo "::error::Agent changed its work branch"; exit 1
+          fi
+          # Block changes to the execution and secrets boundary before publishing.
+          changed="$( (git diff --name-only origin/main...HEAD; git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+          if printf '%s\n' "$changed" | grep -E '(^|/)(\.env($|\.)|id_rsa|credentials)|^\.github/|^AGENTS\.md$|^opencode\.json$'; then
+            echo "::error::Changes include protected paths"; exit 1
+          fi
+          npm run check
+          if [ -z "$changed" ]; then
+            echo "No changes to publish"; exit 0
+          fi
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "feat($TASK_ID): implement backlog task"
+          fi
+          gh auth setup-git
+          git push -u origin "HEAD:$AGENT_BRANCH"
+          existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
+          if [ -z "$existing" ]; then
+            gh pr create --base main --head "$AGENT_BRANCH" --title "Agent: $TASK_ID" --body "Autonomous OpenRouter delivery for $TASK_ID. Independent CI must pass. **Pilot: manual review and merge required.**"
+          else
+            echo "Updated existing PR: $existing"
+          fi
