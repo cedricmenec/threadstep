@@ -1,5 +1,7 @@
 # Architecture
 
+> La documentation de référence de la **software factory générique** est désormais dans [docs/factory/README.md](factory/README.md). Cette page décrit principalement le **pilote ThreadStep**.
+
 ## Application
 - Static `site/index.html` + CSS and vanilla ECMAScript modules; no build/bundle, no server.
 - `site/core.js` contains pure domain functions and schema validation, testable with built-in Node test runner.
