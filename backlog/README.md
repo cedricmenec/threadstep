@@ -14,5 +14,6 @@ The legacy OpenCode workflow remains manually dispatched with an existing `task_
 - **TS-003**: safe autonomous waves, backlog only; not authorized for execution.
 - **TS-004**: subject reordering with up/down controls, implemented via the OpenCode pilot.
 - **TS-005**: edit an existing action/substep title and priority while preserving completion, hierarchy and local data; implemented and merged via OpenSpec PR #8.
+- **TS-006**: temporarily hide completed actions and substeps while retaining unfinished children of completed parents; ready for explicit manual legacy Agent execution after merge.
 
 Keep tasks small enough for one bounded agent run. Priorities/dependencies remain documented in the Markdown text during the pilot; a machine-readable scheduler is not installed.
