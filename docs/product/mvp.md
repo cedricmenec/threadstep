@@ -10,6 +10,7 @@
 - FR-07 Export state to JSON and import with schema validation and confirmation before replacement.
 - FR-08 Serve as static files via GitHub Pages at a repository subpath.
 - FR-09 Reorder subjects one position at a time using accessible up/down controls. Preserve the subject order across reload, JSON export and import.
+- FR-10 Edit the title and priority of an existing action or one-level substep with explicit save/cancel, validation, accessible controls and automatic local persistence. Preserve IDs, completion flags, parent relations, document version and JSON import/export.
 
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
