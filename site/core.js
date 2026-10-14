@@ -35,6 +35,13 @@ export function sortedItems(items, parentId = null) {
   return items.filter((item) => item.parentId === parentId)
     .sort((a, b) => priorityIndex(a.priority) - priorityIndex(b.priority));
 }
+export function isItemVisible(item, items, hideCompleted) {
+  if (!hideCompleted || !item.done) return true;
+  return items.some((child) => child.parentId === item.id && !child.done);
+}
+export function visibleItems(items, parentId = null, hideCompleted = false) {
+  return sortedItems(items, parentId).filter((item) => isItemVisible(item, items, hideCompleted));
+}
 export function pendingCount(document) {
   return document.subjects.reduce((count, subject) =>
     count + subject.items.filter((item) => !item.done).length, 0);

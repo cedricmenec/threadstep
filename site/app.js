@@ -1,12 +1,14 @@
-import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument, moveSubject, updateItem } from "./core.js";
+import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
+const hideCompletedEl = document.querySelector("#hide-completed");
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
+let hideCompleted = false;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
@@ -139,7 +141,7 @@ function renderSubject(subject) {
   card.append(form);
 
   const list = el("ul", "tasks");
-  for (const item of sortedItems(subject.items)) list.append(renderItem(subject, item));
+  for (const item of visibleItems(subject.items, null, hideCompleted)) list.append(renderItem(subject, item));
   if (!subject.items.length) card.append(el("p", "empty", "Aucune étape. Ajoutez la prochaine action à faire."));
   card.append(list);
   return card;
@@ -153,7 +155,7 @@ function renderItem(subject, item) {
     li.append(renderRow(subject, item));
     li.append(renderActions(subject, item));
   }
-  const children = sortedItems(subject.items, item.id);
+  const children = visibleItems(subject.items, item.id, hideCompleted);
   if (children.length) {
     const list = el("ul", "tasks children");
     for (const child of children) list.append(renderItem(subject, child));
@@ -255,6 +257,10 @@ function renderEditor(subject, item) {
   });
   return form;
 }
+hideCompletedEl.addEventListener("change", () => {
+  hideCompleted = hideCompletedEl.checked;
+  render();
+});
 subjectForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const input = subjectForm.elements.namedItem("subject");

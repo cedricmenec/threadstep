@@ -37,6 +37,10 @@
         <input id="subject-title" name="subject" maxlength="100" required placeholder="Ajouter un sujet ou un projet…" autocomplete="off">
         <button type="submit" class="primary">+ Ajouter</button>
       </form>
+      <label class="filter-toggle" for="hide-completed">
+        <input id="hide-completed" type="checkbox">
+        <span>Masquer les étapes terminées</span>
+      </label>
       <div id="subjects" class="subjects" aria-live="polite"></div>
     </section>
     <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>
