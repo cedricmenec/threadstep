@@ -43,7 +43,20 @@
 
 **Distinction** : le workflow direct `agent.yml` implémente la tâche Markdown sans OpenSpec ; le workflow séparé `agent-openspec.yml` couvre le cycle plan/apply, validation et archive. L'orchestrateur externe reste futur.
 
-## 5. Points de contrôle
+## 5. Documentation obligatoire pour toute évolution de la factory
+
+Chaque PR qui modifie le moteur de la factory (workflows, agents, protocole OpenSpec, authentification GitHub App, CI, sécurité, coûts ou politique de livraison) inclut une **tâche de documentation explicite**, à cocher avant la fusion.
+
+Checklist de référence :
+- [ ] Identifier les documents `docs/factory/` concernés.
+- [ ] Mettre à jour le fonctionnement réel, les paramètres non secrets, le mode opératoire, les limites et les garde-fous.
+- [ ] Mettre à jour feuille de route et décisions lorsque le statut ou l'architecture évolue.
+- [ ] Vérifier les liens, les exemples et la cohérence avec le workflow livré.
+- [ ] Indiquer dans la description de PR les documents modifiés et ce qui reste non testé.
+
+Cette exigence s'applique aussi aux évolutions réalisées directement par l'assistant via GitHub, et aux futures PR d'automatisation. Une exception documentaire doit être justifiée explicitement dans la PR. Ne jamais documenter de valeurs de secrets ou de clés privées.
+
+## 6. Points de contrôle
 
 - **Avant dépenses** : consentement sur tâche/vague et budget ; aucun secret dans le prompt publié.
 - **Avant modification** : vérifier branche et SHA, sauvegarder la reprise.
@@ -51,11 +64,11 @@
 - **Avant fusion** : réussite de la CI sur le SHA réel + OpenSpec vérifié + protections GitHub appliquées ; si un contrôle est en attente, stopper.
 - **Après fusion** : vérifier présence sur `main`, pipeline `main`, déploiement si pertinent, rapport.
 
-## 6. Procédure d'incident et reprise
+## 7. Procédure d'incident et reprise
 
 Conserver la branche distante et ses checkpoints. Collecter workflow URL, horodatage, modèle, version OpenCode/OpenSpec, dernier SHA valide, OpenSpec `tasks.md`, échec vérifié. Ne jamais relancer sans tenir compte de la PR existante. Une relance dans le même `taskId` doit être idempotente. Après échec d'un test ou de sécurité, arrêter la vague plutôt que fusionner de force.
 
-## 7. Retour d'expérience pilote
+## 8. Retour d'expérience pilote
 
 - `TS-002` : un agent exécuté sur demande a ouvert une PR documentaire, sans fusion automatique. Le workflow CI de PR créée avec `GITHUB_TOKEN` s'est trouvé en état `action_required` avant approbation humaine, puis a réussi.
 - `TS-004` : exécution OpenCode terminée, PR #4 fusionnée, CI sur `main` et Pages réussies.
