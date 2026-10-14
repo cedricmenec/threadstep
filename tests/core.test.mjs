@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem } from "../site/core.js";
+import { emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -189,4 +189,109 @@ test("import rejects invalid hierarchy, IDs and versions", () => {
   const dup = emptyDocument();
   dup.subjects.push(newSubject("One", "s"), newSubject("Two", "s"));
   assert.throws(() => parseDocument(JSON.stringify(dup)));
+});
+
+test("nextActionSuggestion picks the first urgent top-level action across subjects", () => {
+  const doc = emptyDocument();
+  const a = newSubject("A", "a");
+  a.items.push(newItem("Normal A", "normal", "a1"), newItem("Urgent A", "urgent", "a2"), newItem("Later A", "later", "a3"));
+  const b = newSubject("B", "b");
+  b.items.push(newItem("Urgent B", "urgent", "b1"));
+  doc.subjects.push(a, b);
+  assert.deepEqual(nextActionSuggestion(doc), {
+    subjectId: "a",
+    subjectTitle: "A",
+    itemId: "a2",
+    itemTitle: "Urgent A",
+    priority: "urgent",
+  });
+});
+
+test("nextActionSuggestion lets priority dominate subject order", () => {
+  const doc = emptyDocument();
+  const first = newSubject("First", "s1");
+  first.items.push(newItem("Normal first", "normal", "f1"));
+  const second = newSubject("Second", "s2");
+  second.items.push(newItem("Urgent later subject", "urgent", "s2i"));
+  doc.subjects.push(first, second);
+  assert.equal(nextActionSuggestion(doc).itemId, "s2i");
+});
+
+test("nextActionSuggestion breaks priority ties by subject order", () => {
+  const doc = emptyDocument();
+  const a = newSubject("A", "a");
+  a.items.push(newItem("A task", "normal", "a1"));
+  const b = newSubject("B", "b");
+  b.items.push(newItem("B task", "normal", "b1"));
+  doc.subjects.push(a, b);
+  assert.equal(nextActionSuggestion(doc).itemId, "a1");
+});
+
+test("nextActionSuggestion breaks within-subject ties by raw item order", () => {
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Second listed", "urgent", "second-id"), newItem("First listed", "urgent", "first-id"));
+  const doc = { version: 1, subjects: [subject] };
+  assert.equal(nextActionSuggestion(doc).itemId, "second-id");
+});
+
+test("nextActionSuggestion excludes completed top-level actions", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  const done = newItem("Done urgent", "urgent", "d");
+  done.done = true;
+  subject.items.push(done, newItem("Todo", "later", "t"));
+  doc.subjects.push(subject);
+  assert.equal(nextActionSuggestion(doc).itemId, "t");
+});
+
+test("nextActionSuggestion never returns a substep even when unfinished", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Parent", "normal", "p"), newItem("Child", "urgent", "c", "p"));
+  doc.subjects.push(subject);
+  assert.equal(nextActionSuggestion(doc).itemId, "p");
+});
+
+test("nextActionSuggestion excludes a completed parent with an unfinished child", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  const parent = newItem("Parent", "urgent", "p");
+  parent.done = true;
+  subject.items.push(parent, newItem("Child", "urgent", "c", "p"));
+  doc.subjects.push(subject);
+  assert.equal(nextActionSuggestion(doc), null);
+});
+
+test("nextActionSuggestion returns null for empty, completed-only and substep-only documents", () => {
+  assert.equal(nextActionSuggestion(emptyDocument()), null);
+  const completed = emptyDocument();
+  const doneSubject = newSubject("A", "a");
+  const done = newItem("Done", "normal", "d");
+  done.done = true;
+  doneSubject.items.push(done);
+  completed.subjects.push(doneSubject);
+  assert.equal(nextActionSuggestion(completed), null);
+  const substepsOnly = emptyDocument();
+  const substepSubject = newSubject("B", "b");
+  const parent = newItem("Parent done", "normal", "p");
+  parent.done = true;
+  substepSubject.items.push(parent, newItem("Child", "normal", "c", "p"));
+  substepsOnly.subjects.push(substepSubject);
+  assert.equal(nextActionSuggestion(substepsOnly), null);
+});
+
+test("nextActionSuggestion does not mutate its input and is stable across calls", () => {
+  const doc = emptyDocument();
+  const a = newSubject("A", "a");
+  a.items.push(newItem("A1", "normal", "a1"));
+  const b = newSubject("B", "b");
+  b.items.push(newItem("B1", "urgent", "b1"), newItem("B2", "urgent", "b2"));
+  doc.subjects.push(a, b);
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  const first = nextActionSuggestion(doc);
+  const second = nextActionSuggestion(doc);
+  assert.deepEqual(first, second);
+  assert.equal(first.itemId, "b1");
+  assert.deepEqual(Object.keys(first).sort(), ["itemId", "itemTitle", "priority", "subjectId", "subjectTitle"]);
+  assert.deepEqual(doc, snapshot);
 });

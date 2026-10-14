@@ -32,6 +32,10 @@
         </div>
         <div class="counter" id="counter" aria-live="polite">0 prochaine étape</div>
       </div>
+      <div class="focus-bar">
+        <button type="button" id="focus-suggest" class="primary focus-suggest">Une étape pour maintenant</button>
+        <div id="focus-card" class="focus-card" aria-live="polite" hidden></div>
+      </div>
       <form id="subject-form" class="add-subject">
         <label for="subject-title" class="sr-only">Nom du sujet</label>
         <input id="subject-title" name="subject" maxlength="100" required placeholder="Ajouter un sujet ou un projet…" autocomplete="off">

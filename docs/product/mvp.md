@@ -12,13 +12,14 @@
 - FR-09 Reorder subjects one position at a time using accessible up/down controls. Preserve the subject order across reload, JSON export and import.
 - FR-10 Edit the title and priority of an existing action or one-level substep with explicit save/cancel, validation, accessible controls and automatic local persistence. Preserve IDs, completion flags, parent relations, document version and JSON import/export.
 - FR-11 Temporarily hide completed actions and substeps using an accessible view toggle, keeping completed parents visible when they have unfinished substeps. Never modify stored data or JSON exports through filtering.
-- FR-12 Offer a deterministic, view-only « Une étape pour maintenant » suggestion of one unfinished top-level action, prioritizing urgency then subject order then item order, with an accessible way to locate it in the list.
+- FR-12 Offer a deterministic, view-only « Une étape pour maintenant » suggestion of exactly one unfinished top-level action, prioritizing urgency then subject order then item order, with an accessible way to locate it in the list. Only unfinished top-level actions are eligible: completed actions, substeps and completed parents are excluded, and a clear friendly empty state is shown when none exists. The suggestion is recomputed on each activation, never modifies stored data or JSON, and is not persisted across reload. Substeps as candidates, randomness, AI, timers and automatic completion are out of scope.
 
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
 - Import rejects unknown format version, invalid priorities, orphan substeps and duplicates.
 - Mobile viewport is supported.
+- The « Une étape pour maintenant » suggestion is deterministic, excludes completed actions and substeps, and never changes localStorage, exported JSON, ids, flags, priorities or ordering; no card is restored after reload.
 - No key, secret or personal task content is sent to a server.
 
 ## Open decisions
