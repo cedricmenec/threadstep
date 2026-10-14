@@ -36,6 +36,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Create GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Validate input and open branch
         shell: bash
         run: |
@@ -44,8 +53,8 @@ jobs:
             echo "::error::Invalid task ID"; exit 1
           fi
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Task file missing"; exit 1; }
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "threadstep-software-factory[bot]"
+          git config user.email "threadstep-software-factory[bot]@users.noreply.github.com"
           branch="agent/$TASK_ID"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             git fetch origin "$branch"
@@ -87,7 +96,7 @@ jobs:
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat /tmp/agent-instructions.txt)"
       - name: Validate and publish PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -107,8 +116,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "feat($TASK_ID): implement backlog task"
           fi
-          gh auth setup-git
-          git push -u origin "HEAD:$AGENT_BRANCH"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
           existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
           if [ -z "$existing" ]; then
             gh pr create --base main --head "$AGENT_BRANCH" --title "Agent: $TASK_ID" --body "Autonomous OpenRouter delivery for $TASK_ID. Independent CI must pass. **Pilot: manual review and merge required.**"
