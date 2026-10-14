@@ -117,7 +117,7 @@ jobs:
           fi
 
       - name: Explore and propose, no product code changes
-        if: inputs.phase == 'plan' || inputs.phase == 'auto' || inputs.phase == 'auto'
+        if: inputs.phase == 'plan' || inputs.phase == 'auto'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
@@ -142,7 +142,7 @@ jobs:
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-plan-prompt.txt")"
 
       - name: Validate the produced plan
-        if: inputs.phase == 'plan'
+        if: inputs.phase == 'plan' || inputs.phase == 'auto'
         shell: bash
         run: |
           set -euo pipefail
@@ -179,7 +179,7 @@ jobs:
           echo "AUTO_PLAN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Apply the reviewed plan with OpenCode
-        if: inputs.phase == 'apply' || inputs.phase == 'auto' || inputs.phase == 'auto'
+        if: inputs.phase == 'apply' || inputs.phase == 'auto'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
@@ -204,7 +204,7 @@ jobs:
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-apply-prompt.txt")"
 
       - name: Verify, sync and archive OpenSpec
-        if: inputs.phase == 'apply'
+        if: inputs.phase == 'apply' || inputs.phase == 'auto'
         shell: bash
         run: |
           set -euo pipefail

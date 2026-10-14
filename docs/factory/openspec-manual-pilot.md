@@ -22,6 +22,32 @@ Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiq
    La PR existante est mise à jour et marquée prête pour revue.
 5. Les PR des agents sont désormais publiées avec un jeton temporaire de la GitHub App. Vérifier que la CI démarre et réussit, puis **contrôler la CI et le diff** avant fusion humaine.
 
+## Correctif après le premier essai auto (14 octobre 2026)
+
+Le premier essai du mode `auto` a révélé que les étapes **Validate the produced
+plan** et **Verify, sync and archive OpenSpec** étaient ignorées par GitHub
+Actions : leurs conditions `if` n'autorisaient respectivement que `plan` et
+`apply`. Le correctif inclut explicitement `auto` dans les deux conditions.
+
+**Important :** une exécution `auto` terminée avec succès avant ce correctif
+ne prouve **ni la validation stricte du plan, ni la synchronisation des deltas,
+ni l'archivage du change**. Ne pas considérer son résultat comme un cycle
+OpenSpec complet. Vérifier les artefacts et corriger via un nouveau change
+contrôlé plutôt que supposer que l'archivage a eu lieu.
+
+Matrice des étapes obligatoires :
+
+| Étape | plan | apply | auto |
+| --- | --- | --- | --- |
+| Générer le plan | oui | non | oui |
+| Valider le plan | oui | non (plan existant validé au préalable) | oui |
+| Implémenter | non | oui | oui |
+| Vérifier, synchroniser et archiver | non | oui | oui |
+
+La publication finale doit être bloquée si une étape obligatoire échoue.
+La vérification E2E de ce correctif sur une **nouvelle tâche** reste à faire,
+avec autorisation explicite avant toute dépense OpenRouter.
+
 ## Checklist de documentation de cette évolution
 
 - [x] Documenter les trois modes `plan`, `apply` et `auto` et leur coût.
