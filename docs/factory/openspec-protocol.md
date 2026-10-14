@@ -62,12 +62,11 @@ Les phases ne sont pas des sous-commandes CLI `explore` ou `propose` :
 ce sont des instructions agentiques guidées par les commandes CLI
 `openspec instructions` et `openspec validate`. Les deux phases consomment
 OpenRouter uniquement après déclenchement manuel. Version CLI épinglée sur
-`1.14.1`. Exécution E2E avec nouvelle tâche restant à démontrer après
-fusion de cette PR. Mode d'emploi : [pilote manuel](openspec-manual-pilot.md).
+`1.14.1`. Exécution E2E démontrée sur TS-005 : phase plan, PR #8 brouillon, phase apply, puis implémentation et fusion par le propriétaire. Les contrôles détaillés des futurs changements restent à vérifier pour chaque run. Mode d'emploi : [pilote manuel](openspec-manual-pilot.md).
 
-## État réel et prochain prototype
+## État réel et améliorations à venir
 
-ThreadStep n'exécute **actuellement pas** OpenSpec : `.github/workflows/agent.yml` lit seulement `backlog/tasks/TS-NNN.md` puis appelle OpenCode. C'est une évolution majeure de `TS-003`, à intégrer par incréments :
+ThreadStep exécute désormais OpenSpec via `.github/workflows/agent-openspec.yml`, en parallèle du workflow direct historique `.github/workflows/agent.yml`. TS-005 a été réalisée avec le cycle plan/apply et fusionnée. Les améliorations restantes sont :
 
 1. Initialiser et figer CLI / Skills / config OpenSpec ; ajouter une tâche de démonstration.
 2. Mettre `Explore + Propose + validation` sur branche dédiée, avec tests de conformité des artefacts.
