@@ -11,8 +11,8 @@
 | Premier run OpenCode/OpenRouter `TS-002` | **Fait** : PR #2 créée, CI après approbation ; PR conservée ouverte comme témoin |
 | Fonctionnalité `TS-004` par OpenCode/OpenRouter | **Fait** : PR #4 fusionnée, CI et Pages réussis |
 | Sélection automatique de tâches et orchestration de vagues | **Non implémenté** |
-| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote en PR** : workflow manuel séparé, phases plan/apply, validation CLI épinglée, sync/archive ; **pas encore éprouvé en run E2E** |
-| GitHub App / auto-merge sécurisé / protection `main` | **Non configurés** ; branche `main` non protégée à la vérification |
+| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, PR #8, plan/apply, validation, archivage et fusion humaine |
+| GitHub App / auto-merge sécurisé / protection `main` | **GitHub App intégrée** aux deux workflows (PR #9 fusionnée), secrets configurés ; test CI sur nouvelle PR App en attente avec TS-006. Auto-merge non implémenté ; protection `main` à revalider |
 
 **Attention aux artefacts historiques** : `backlog/tasks/TS-004.md` indique encore `ready` et ses checkboxes ne sont pas actualisées par le workflow pilote ; prévoir une synchronisation automatique de l'état une fois le cycle OpenSpec introduit.
 
@@ -37,12 +37,11 @@
 
 ### F2. Adopter OpenSpec comme protocole unique
 
-**Incrément proposé dans cette PR** : introduction d'un second workflow manuel
+**Incrément livré** : introduction d'un second workflow manuel
 `Agent OpenSpec (manual, staged)`, sans suppression de `agent.yml`. Le run
 `plan` produit une PR brouillon ; le run `apply` reprend le même change,
 vérifie, synchronise et archive. Voir [mode opératoire](openspec-manual-pilot.md).
-L'essai réel sur un nouveau TS-NNN, la revue sécurité et le durcissement des
-budgets/restauration restent des travaux futurs.
+L'essai réel TS-005 a abouti à la PR #8 fusionnée. La revue sécurité et le durcissement des budgets/restauration restent des travaux futurs.
 
 - Fixer version CLI, config et Skills OpenSpec (profils Explore/Propose/Apply/Sync/Archive + Verify).
 - Introduire `openspec/`, choisir le schéma `spec-driven`, associer `TS-NNN` à des changes déterministes.

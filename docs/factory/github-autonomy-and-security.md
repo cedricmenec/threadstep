@@ -27,14 +27,14 @@ GitHub explique qu'une PR créée/mise à jour via le `GITHUB_TOKEN` déclenche 
 
 La **GitHub App** est le choix cible pour la production d'une PR et la continuité d'une CI GitHub normale. Le PAT finement limité est une solution de transition possible, pas une obligation.
 
-## 4. Configuration proposée de la GitHub App (future)
+## 4. GitHub App configurée et intégrée (14/10/2026)
 
-1. Créer une App privée dédiée à la factory et l'installer uniquement sur les dépôts nécessaires.
+1. App créée : `threadstep-software-factory`, App ID `5321746`, installation sur `threadstep` à confirmer lors du test de workflow.
 2. Donner les permissions minimales nécessaires : `Contents: read/write`, `Pull requests: read/write` ; `Metadata: read` est implicite. Ajouter `Actions: read` uniquement si l'orchestrateur lit les runs via l'App. Ne pas donner de permission globale `Workflows: write` sans besoin explicite et revue.
-3. Dans GitHub Actions, stocker l'identifiant client en variable **`APP_CLIENT_ID`** et la clé privée dans le secret **`APP_PRIVATE_KEY`**. Ne jamais publier cette clé, y compris dans les logs.
-4. Générer dans le job d'émission de PR un jeton d'installation via `actions/create-github-app-token` ; utiliser ce jeton **au minimum pour le push / la création ou la mise à jour de PR** qui doit déclencher une CI normale.
+3. Configuration effectivement utilisée : variable de dépôt **`APP_ID`** et secret **`APP_PRIVATE_KEY`** (clé PEM complète). Le propriétaire a confirmé leur configuration. Ne jamais publier la clé, y compris dans les logs.
+4. PR #9 fusionnée : les deux workflows d'agent utilisent `actions/create-github-app-token@v1`, le jeton d'installation pour `git push` et `GH_TOKEN` pour `gh pr create`, `gh pr list`, `gh pr ready`. L'action demande `permission-contents: write` et `permission-pull-requests: write`.
 5. Réduire le scope, masquer/révoquer le jeton, limiter sa durée et créer un nouveau jeton si le job dépasse sa validité.
-6. Démontrer avec un smoke test : nouvelle PR bot → CI démarre **sans bannière d'approbation** → check réel réussi sur SHA exact → merge seulement si politique OK.
+6. **Reste à démontrer** avec TS-006 : nouvelle PR créée par le workflow historique → CI démarre sans approbation → check réel réussi sur SHA exact → revue et fusion manuelles. Le simple merge de la PR #9 ne prouve pas ce comportement.
 
 **Prérequis manuels potentiels** : l'assistant GitHub actuel ne peut pas enregistrer une GitHub App, installer son secret ou modifier toutes les règles de dépôt avec ses opérations disponibles. Ces opérations doivent être réalisées via un outil d'administration autorisé / quelques étapes UI mobile ; aucun secret dans la conversation.
 
