@@ -1,0 +1,16 @@
+schema: spec-driven
+
+context: |
+  ThreadStep is a public, static, French-language app. Its product contract lives
+  in docs/product/ and its authorized scope in backlog/tasks/TS-NNN.md.
+  Read AGENTS.md first. Preserve browser-local data and JSON import/export
+  compatibility. Do not add a server, authentication, telemetry or dependencies.
+  Agent delivery is by reviewed pull request only, never directly to main.
+
+rules:
+  proposal:
+    - State user value, non-goals and unresolved decisions explicitly.
+  specs:
+    - Describe observable behaviors with WHEN/THEN scenarios.
+  tasks:
+    - Include a validation item for each relevant acceptance criterion.

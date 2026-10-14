@@ -46,6 +46,25 @@ La documentation actuelle d'OpenSpec expose notamment :
 5. Une modification du contrat public, des permissions ou de la persistance doit bloquer si les décisions sont ambiguës.
 6. Le changement archivé et les specs canoniques doivent être dans un état versionné, vérifié et livrable.
 
+## Pilote OpenSpec manuel proposé
+
+Le nouveau workflow `.github/workflows/agent-openspec.yml` introduit un **lancement
+manuel par phase** sans retirer le workflow OpenCode direct historique.
+`phase=plan` explore le code et fait produire par OpenCode les artefacts
+`proposal.md`, `design.md`, `specs/**/spec.md` et `tasks.md` dans
+`openspec/changes/ts-nnn/`, puis les valide et publie une PR brouillon.
+`phase=apply` exige ce plan déjà validé sur branche persistante, exécute
+OpenCode, exige tests et checklist achevée, valide le change et archive avec
+`openspec archive ts-nnn --yes` : **c'est cet archivage qui synchronise
+les deltas vers `openspec/specs/`**.
+
+Les phases ne sont pas des sous-commandes CLI `explore` ou `propose` :
+ce sont des instructions agentiques guidées par les commandes CLI
+`openspec instructions` et `openspec validate`. Les deux phases consomment
+OpenRouter uniquement après déclenchement manuel. Version CLI épinglée sur
+`1.14.1`. Exécution E2E avec nouvelle tâche restant à démontrer après
+fusion de cette PR. Mode d'emploi : [pilote manuel](openspec-manual-pilot.md).
+
 ## État réel et prochain prototype
 
 ThreadStep n'exécute **actuellement pas** OpenSpec : `.github/workflows/agent.yml` lit seulement `backlog/tasks/TS-NNN.md` puis appelle OpenCode. C'est une évolution majeure de `TS-003`, à intégrer par incréments :

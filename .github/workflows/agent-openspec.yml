@@ -1,0 +1,246 @@
+name: Agent OpenSpec (manual, staged)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: 'Existing backlog task, e.g. TS-005'
+        required: true
+        type: string
+      phase:
+        description: 'Plan first; run apply explicitly after reviewing the draft PR'
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - apply
+      model:
+        description: 'OpenRouter model'
+        required: true
+        type: choice
+        default: 'openrouter/z-ai/glm-5.3-flash'
+        options:
+          - 'openrouter/z-ai/glm-5.3-flash'
+          - 'openrouter/deepseek/deepseek-v4.1-flash'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-openspec-${{ inputs.task_id }}
+  cancel-in-progress: false
+
+jobs:
+  staged-development:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TASK_ID: ${{ inputs.task_id }}
+      PHASE: ${{ inputs.phase }}
+      OPENCODE_MODEL: ${{ inputs.model }}
+      OPENSPEC_NO_UPDATE_CHECK: '1'
+      OPENSPEC_NO_ANIMATION: '1'
+    steps:
+      - name: Checkout without persisted token
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate request and select persistent branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TASK_ID" =~ ^TS-[0-9]{3}$ ]] || { echo "::error::Invalid task ID"; exit 1; }
+          [[ "$PHASE" == plan || "$PHASE" == apply ]] || { echo "::error::Invalid phase"; exit 1; }
+          test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
+          test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          branch="agent/openspec/$TASK_ID"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch origin "$branch"
+            git checkout -B "$branch" FETCH_HEAD
+          else
+            if [[ "$PHASE" == apply ]]; then
+              echo "::error::No published plan branch. Run phase=plan first."; exit 1
+            fi
+            git checkout -b "$branch"
+          fi
+          echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
+          echo "CHANGE_ID=$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Install pinned OpenSpec and OpenCode
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global @fission-ai/openspec@1.14.1 opencode-ai@latest
+          openspec --version
+          opencode --version
+
+      - name: Prepare or validate OpenSpec change
+        shell: bash
+        run: |
+          set -euo pipefail
+          change="openspec/changes/$CHANGE_ID"
+          if [[ "$PHASE" == plan ]]; then
+            if find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" 2>/dev/null | grep -q .; then
+              echo "::error::Change already archived"; exit 1
+            fi
+            if [[ ! -d "$change" ]]; then
+              openspec new change "$CHANGE_ID" --schema spec-driven
+            fi
+          else
+            for file in proposal.md design.md tasks.md; do
+              test -s "$change/$file" || { echo "::error::Missing plan artifact: $file"; exit 1; }
+            done
+            find "$change/specs" -name spec.md -type f -size +0c | grep -q . || {
+              echo "::error::Missing nonempty delta spec"; exit 1;
+            }
+            openspec validate "$CHANGE_ID" --strict --no-interactive
+          fi
+
+      - name: Explore and propose, no product code changes
+        if: inputs.phase == 'plan'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OPENROUTER_API_KEY" || { echo "::error::OpenRouter secret missing"; exit 1; }
+          {
+            cat <<'PROMPT'
+          You are preparing a spec-driven change in ThreadStep. Read AGENTS.md, the product specs,
+          and the chosen backlog task. Explore existing behavior before proposing a change.
+          Use 'openspec status --change CHANGE' and 'openspec instructions ARTIFACT --change CHANGE'
+          for proposal, design, specs and tasks, replacing CHANGE with the selected change ID.
+          Produce complete OpenSpec proposal.md, design.md, specs/<capability>/spec.md and tasks.md.
+          Specify GIVEN/WHEN/THEN-style observable scenarios and a testable implementation checklist.
+          During plan, NEVER modify application code, tests, product specs, backlog, workflow files,
+          AGENTS.md, configuration, secrets, or other changes. No commit, push, PR or paid subagent.
+          Do not archive. Report uncertainties in proposal.md, do not invent product decisions.
+          PROMPT
+            printf '\nChange ID: %s\nBacklog task: %s\n' "$CHANGE_ID" "$TASK_ID"
+            cat "backlog/tasks/$TASK_ID.md"
+          } > "$RUNNER_TEMP/openspec-plan-prompt.txt"
+          opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-plan-prompt.txt")"
+
+      - name: Validate the produced plan
+        if: inputs.phase == 'plan'
+        shell: bash
+        run: |
+          set -euo pipefail
+          change="openspec/changes/$CHANGE_ID"
+          for file in proposal.md design.md tasks.md; do
+            test -s "$change/$file" || { echo "::error::Missing required OpenSpec artifact: $file"; exit 1; }
+          done
+          find "$change/specs" -name spec.md -type f -size +0c | grep -q . || {
+            echo "::error::Missing nonempty spec delta"; exit 1;
+          }
+          grep -Eq '^[[:space:]]*-[[:space:]]+\[[[:space:]xX]\]' "$change/tasks.md" || {
+            echo "::error::No tasks in checklist"; exit 1;
+          }
+          openspec validate "$CHANGE_ID" --strict --no-interactive
+          npm run check
+
+      - name: Apply the reviewed plan with OpenCode
+        if: inputs.phase == 'apply'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OPENROUTER_API_KEY" || { echo "::error::OpenRouter secret missing"; exit 1; }
+          {
+            cat <<'PROMPT'
+          Implement ONLY the existing, previously proposed OpenSpec change.
+          First read AGENTS.md, the backlog task and all change artifacts. Run
+          'openspec instructions apply --change CHANGE' with the actual change ID.
+          Implement the smallest solution meeting every delta spec and acceptance criterion.
+          Add/update tests, run npm run check and mark tasks.md items [x] only when actually done.
+          Do not alter proposal.md, design.md, delta specs or the canonical specs.
+          Do not edit workflows, AGENTS.md, backlog, secrets or execution configuration.
+          Do not archive, commit, push, merge or open a PR: the workflow performs these steps.
+          If requirements are ambiguous or tests fail, stop and report the blocker.
+          PROMPT
+            printf '\nChange ID: %s\nBacklog task: %s\n' "$CHANGE_ID" "$TASK_ID"
+            cat "backlog/tasks/$TASK_ID.md"
+          } > "$RUNNER_TEMP/openspec-apply-prompt.txt"
+          opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-apply-prompt.txt")"
+
+      - name: Verify, sync and archive OpenSpec
+        if: inputs.phase == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tasks="openspec/changes/$CHANGE_ID/tasks.md"
+          grep -Eq '^[[:space:]]*-[[:space:]]+\[[xX]\]' "$tasks" || {
+            echo "::error::No completed checklist entries"; exit 1;
+          }
+          if grep -Eq '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$tasks"; then
+            echo "::error::Unchecked tasks remain; refusing archive"; exit 1
+          fi
+          npm run check
+          openspec validate "$CHANGE_ID" --strict --no-interactive
+          # Archive is the official non-interactive delta-to-canonical-spec synchronization.
+          openspec archive "$CHANGE_ID" --yes
+          find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" | grep -q . || {
+            echo "::error::OpenSpec archive missing"; exit 1;
+          }
+          openspec validate --all --strict --no-interactive
+          openspec validate --archived --strict --no-interactive
+
+      - name: Guard scope, commit and publish PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$AGENT_BRANCH" || {
+            echo "::error::Work branch changed"; exit 1;
+          }
+          changed="$( (git diff --name-only origin/main...HEAD; git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            if [[ "$PHASE" == plan ]]; then
+              case "$path" in
+                "openspec/changes/$CHANGE_ID/"*) ;;
+                *) echo "::error::Plan changed a forbidden path: $path"; exit 1 ;;
+              esac
+            else
+              case "$path" in
+                .github/*|AGENTS.md|opencode.json|openspec/config.yaml|.opencode/*|.agents/*|backlog/*|scripts/*|.env|.env.*)
+                  echo "::error::Apply changed a protected path: $path"; exit 1 ;;
+              esac
+            fi
+          done <<< "$changed"
+          test -n "$changed" || { echo "::error::No changes to publish"; exit 1; }
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "agent($TASK_ID): OpenSpec $PHASE"
+          fi
+          gh auth setup-git
+          git push -u origin "HEAD:$AGENT_BRANCH"
+          existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
+          if [[ -z "$existing" ]]; then
+            if [[ "$PHASE" == plan ]]; then
+              gh pr create --draft --base main --head "$AGENT_BRANCH" \
+                --title "OpenSpec: $TASK_ID" \
+                --body "Phase plan: review the proposed OpenSpec change before manually running phase apply. No product code is changed by planning. **Manual merge only**."
+            else
+              gh pr create --base main --head "$AGENT_BRANCH" \
+                --title "OpenSpec: $TASK_ID" \
+                --body "Phase apply: OpenSpec validated and archived. Independent CI and human review required. **No automatic merge**."
+            fi
+          else
+            echo "Updated pull request: $existing"
+            if [[ "$PHASE" == apply ]] && [[ "$(gh pr view "$existing" --json isDraft --jq .isDraft)" == true ]]; then
+              gh pr ready "$existing"
+            fi
+          fi
