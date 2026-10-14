@@ -52,6 +52,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Create GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Validate request and select persistent branch
         shell: bash
         run: |
@@ -60,8 +69,8 @@ jobs:
           [[ "$PHASE" == plan || "$PHASE" == apply ]] || { echo "::error::Invalid phase"; exit 1; }
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
           test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "threadstep-software-factory[bot]"
+          git config user.email "threadstep-software-factory[bot]@users.noreply.github.com"
           git fetch origin main
           branch="agent/openspec/$TASK_ID"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
@@ -204,7 +213,7 @@ jobs:
 
       - name: Guard scope, commit and publish PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -231,8 +240,7 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "agent($TASK_ID): OpenSpec $PHASE"
           fi
-          gh auth setup-git
-          git push -u origin "HEAD:$AGENT_BRANCH"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
           existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
           if [[ -z "$existing" ]]; then
             if [[ "$PHASE" == plan ]]; then
