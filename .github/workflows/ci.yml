@@ -9,7 +9,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,3 +17,11 @@ jobs:
           node-version: '22'
       - name: Run independent tests and syntax checks
         run: npm run check
+      - name: Validate OpenSpec changes and archive independently
+        if: hashFiles('openspec/config.yaml') != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global @fission-ai/openspec@1.14.1
+          openspec validate --all --strict --no-interactive
+          openspec validate --archived --strict --no-interactive
