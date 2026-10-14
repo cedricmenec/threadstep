@@ -1,4 +1,4 @@
-import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument } from "./core.js";
+import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument, moveSubject } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -42,14 +42,48 @@ function render() {
   }
   for (const subject of documentState.subjects) subjectsEl.append(renderSubject(subject));
 }
+function move(subject, direction) {
+  const reordered = moveSubject(documentState.subjects, subject.id, direction);
+  if (reordered === documentState.subjects) return;
+  documentState.subjects = reordered;
+  persist();
+  focusAfterMove(subject.id, direction);
+}
+function focusAfterMove(subjectId, direction) {
+  const controls = [...subjectsEl.querySelectorAll(".subject-move")];
+  const own = controls.filter((button) => button.dataset.subject === subjectId);
+  const card = [...subjectsEl.querySelectorAll(".subject")].find((node) => node.dataset.subject === subjectId);
+  const target = own.find((button) => button.dataset.direction === direction && !button.disabled)
+    || own.find((button) => !button.disabled)
+    || card;
+  if (target) target.focus();
+}
 function renderSubject(subject) {
+  const index = documentState.subjects.indexOf(subject);
   const card = el("section", "subject");
   card.setAttribute("aria-label", subject.title);
+  card.dataset.subject = subject.id;
+  card.tabIndex = -1;
   const head = el("div", "subject-head");
   const titleBox = el("div");
   titleBox.append(el("h3", "", subject.title));
   const pending = subject.items.filter((item) => !item.done).length;
   titleBox.append(el("p", "small", pending + " étape" + (pending > 1 ? "s" : "") + " en attente"));
+  const controls = el("div", "subject-controls");
+  const up = el("button", "subtle subject-move", "↑");
+  up.type = "button";
+  up.dataset.subject = subject.id;
+  up.dataset.direction = "up";
+  up.disabled = index === 0;
+  up.setAttribute("aria-label", "Monter le sujet " + subject.title);
+  up.addEventListener("click", () => move(subject, "up"));
+  const down = el("button", "subtle subject-move", "↓");
+  down.type = "button";
+  down.dataset.subject = subject.id;
+  down.dataset.direction = "down";
+  down.disabled = index === documentState.subjects.length - 1;
+  down.setAttribute("aria-label", "Descendre le sujet " + subject.title);
+  down.addEventListener("click", () => move(subject, "down"));
   const remove = el("button", "danger", "Supprimer");
   remove.type = "button";
   remove.setAttribute("aria-label", "Supprimer le sujet " + subject.title);
@@ -58,7 +92,8 @@ function renderSubject(subject) {
     documentState.subjects = documentState.subjects.filter((s) => s.id !== subject.id);
     persist();
   });
-  head.append(titleBox, remove);
+  controls.append(up, down, remove);
+  head.append(titleBox, controls);
   card.append(head);
 
   const form = el("form", "task-form");
