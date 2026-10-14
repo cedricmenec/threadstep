@@ -10,7 +10,7 @@ The agent workflow is manually dispatched with an existing `task_id` (and an Ope
 
 ## Current tasks
 - **TS-001**: initial static MVP, implemented and validated.
-- **TS-002**: OpenCode smoke test on README, implemented as [PR #2](../../pull/2) (pilot PR; human handling).
+- **TS-002**: OpenCode smoke test on README, implemented as [PR #2](https://github.com/cedricmenec/threadstep/pull/2) (pilot PR; human handling).
 - **TS-003**: safe autonomous waves, backlog only; not authorized for execution.
 - **TS-004**: subject reordering with up/down controls, ready for explicit agent dispatch once this specification is merged.
 
