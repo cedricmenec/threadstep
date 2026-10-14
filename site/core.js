@@ -7,6 +7,14 @@ export const newSubject = (title, id) => ({ id, title: title.trim(), items: [] }
 export const newItem = (title, priority, id, parentId = null) => ({
   id, title: title.trim(), priority, done: false, parentId
 });
+export function moveSubject(subjects, subjectId, direction) {
+  const from = subjects.findIndex((subject) => subject.id === subjectId);
+  const to = direction === "up" ? from - 1 : from + 1;
+  if (from === -1 || to < 0 || to >= subjects.length) return subjects;
+  const next = subjects.slice();
+  [next[from], next[to]] = [next[to], next[from]];
+  return next;
+}
 export function sortedItems(items, parentId = null) {
   return items.filter((item) => item.parentId === parentId)
     .sort((a, b) => priorityIndex(a.priority) - priorityIndex(b.priority));
