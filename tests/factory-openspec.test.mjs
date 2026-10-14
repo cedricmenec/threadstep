@@ -20,6 +20,7 @@ test('Plan is isolated and apply checks task completion and tests', () => {
   assert.match(agent, /Plan changed a forbidden path/);
   assert.match(agent, /Apply changed a protected path/);
   assert.match(agent, /Unchecked tasks remain; refusing archive/);
+  assert.match(agent, /Apply rewrote a reviewed OpenSpec artifact/);
   assert.match(agent, /npm run check/);
   assert.match(agent, /openspec archive "\$CHANGE_ID" --yes/);
   assert.match(agent, /gh pr create --draft/);

@@ -179,6 +179,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The implementer may check off tasks, but cannot silently rewrite the approved plan.
+          plan_edits="$( (git diff --name-only -- "openspec/changes/$CHANGE_ID"; git ls-files --others --exclude-standard -- "openspec/changes/$CHANGE_ID") | sort -u )"
+          while IFS= read -r path; do
+            [[ -z "$path" || "$path" == "openspec/changes/$CHANGE_ID/tasks.md" ]] && continue
+            echo "::error::Apply rewrote a reviewed OpenSpec artifact: $path"; exit 1
+          done <<< "$plan_edits"
           tasks="openspec/changes/$CHANGE_ID/tasks.md"
           grep -Eq '^[[:space:]]*-[[:space:]]+\[[xX]\]' "$tasks" || {
             echo "::error::No completed checklist entries"; exit 1;
@@ -215,7 +221,7 @@ jobs:
               esac
             else
               case "$path" in
-                .github/*|AGENTS.md|opencode.json|openspec/config.yaml|.opencode/*|.agents/*|backlog/*|scripts/*|.env|.env.*)
+                .github/*|AGENTS.md|opencode.json|openspec/config.yaml|.opencode/*|.agents/*|backlog/*|scripts/*|docs/factory/*|.env|.env.*)
                   echo "::error::Apply changed a protected path: $path"; exit 1 ;;
               esac
             fi
