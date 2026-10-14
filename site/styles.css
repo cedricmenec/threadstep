@@ -52,6 +52,11 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .priority-normal{background:#ecf2e8;color:#466d46}
 .priority-later{background:#ecedf0;color:#777f8c}
 .task-actions{display:flex;gap:2px;margin-left:21px;margin-top:3px}
+.task-edit-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.task-edit-title{flex:1;min-width:0;border:1px solid #d4dbcf;background:white;border-radius:9px;padding:9px 12px;color:#24382f}
+.task-edit-priority{border-radius:9px;border:1px solid #d4dbcf;background:white;padding:0 7px;font-size:.79rem;color:#415748}
+.task-edit-form button{padding:9px 13px}
+.edit-error{flex-basis:100%;margin:0;color:#ad4938;font-size:.78rem}
 .children{padding-left:26px;margin:0}
 .children .task{margin-top:5px;padding-top:9px}
 .empty{padding:24px 8px;text-align:center;color:#819083;font-size:.91rem}
