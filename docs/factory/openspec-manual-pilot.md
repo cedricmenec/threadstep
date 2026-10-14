@@ -22,6 +22,13 @@ Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiq
    La PR existante est mise à jour et marquée prête pour revue.
 5. Les PR des agents sont désormais publiées avec un jeton temporaire de la GitHub App. Vérifier que la CI démarre et réussit, puis **contrôler la CI et le diff** avant fusion humaine.
 
+## Checklist de documentation de cette évolution
+
+- [x] Documenter les trois modes `plan`, `apply` et `auto` et leur coût.
+- [x] Documenter les vérifications avant apply, les tests, la synchronisation et l'archivage.
+- [x] Documenter les limites : pas de revue intermédiaire, pas de plafond USD garanti, fusion manuelle.
+- [x] Mettre à jour le contrat `AGENTS.md` et la méthodologie pour rendre obligatoire une tâche documentaire sur les futures évolutions de la factory.
+
 ## Mode auto : un seul lancement, sans validation intermédiaire
 
 Choisir `phase=auto` et `task_id=TS-NNN` dans le même workflow, après fusion
