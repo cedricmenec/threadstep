@@ -1,4 +1,4 @@
-import { STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, parseResumePreference, serializeResumePreference, resumeView } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -7,12 +7,15 @@ const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
+const resumeCardEl = document.querySelector("#resume-card");
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
 let revealItemId = null;
 let suggestionVisible = false;
 let hideCompleted = false;
+let resumeRef = null;
+let documentLoaded = false;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
@@ -29,22 +32,58 @@ function persist() {
   } catch {
     notify("Stockage indisponible : exportez vos données.");
   }
+  documentLoaded = true;
   render();
 }
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) documentState = parseDocument(raw);
+    if (raw) {
+      documentState = parseDocument(raw);
+      documentLoaded = true;
+      resumeRef = readResumePreference();
+    }
   } catch {
     notify("Données locales illisibles. Une importation reste possible.");
   }
   render();
+}
+function readResumePreference() {
+  try {
+    return parseResumePreference(localStorage.getItem(RESUME_KEY));
+  } catch {
+    return null;
+  }
+}
+function saveResumePreference(ref) {
+  try {
+    localStorage.setItem(RESUME_KEY, serializeResumePreference(ref));
+  } catch {
+    notify("Stockage indisponible : le suivi ne sera pas conservé.");
+  }
+}
+function removeResumePreference() {
+  try {
+    localStorage.removeItem(RESUME_KEY);
+  } catch {
+    // Ignore: a missing or unavailable store leaves no orphan reference to clean.
+  }
+}
+function reconcileResume() {
+  const view = resumeView(documentState, resumeRef);
+  if (view) return view;
+  if (resumeRef && documentLoaded) {
+    resumeRef = null;
+    removeResumePreference();
+  }
+  return null;
 }
 function render() {
   subjectsEl.replaceChildren();
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
   renderSuggestion();
+  renderResumeCard();
   if (!documentState.subjects.length) {
     subjectsEl.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
     return;
@@ -101,6 +140,40 @@ function hideSuggestion() {
   suggestionVisible = false;
   revealItemId = null;
   renderSuggestion();
+}
+function renderResumeCard() {
+  resumeCardEl.replaceChildren();
+  const view = reconcileResume();
+  if (!view) {
+    resumeCardEl.hidden = true;
+    return;
+  }
+  resumeCardEl.hidden = false;
+  resumeCardEl.append(el("h3", "resume-label", "Je reprends ici"));
+  resumeCardEl.append(el("p", "resume-title", view.itemTitle));
+  resumeCardEl.append(el("p", "resume-meta", view.subjectTitle + " · " + priorityLabels[view.priority]));
+  const actions = el("div", "resume-actions");
+  const reveal = el("button", "subtle resume-reveal", "Voir dans la liste");
+  reveal.type = "button";
+  reveal.setAttribute("aria-label", "Voir dans la liste : " + view.itemTitle);
+  reveal.addEventListener("click", () => revealResume(view.itemId));
+  const clear = el("button", "subtle resume-clear", "Ne plus suivre");
+  clear.type = "button";
+  clear.setAttribute("aria-label", "Ne plus suivre : " + view.itemTitle);
+  clear.addEventListener("click", clearResume);
+  actions.append(reveal, clear);
+  resumeCardEl.append(actions);
+}
+function revealResume(itemId) {
+  revealItemId = itemId;
+  focusItemId = itemId;
+  render();
+}
+function clearResume() {
+  resumeRef = null;
+  removeResumePreference();
+  revealItemId = null;
+  render();
 }
 function move(subject, direction) {
   const reordered = moveSubject(documentState.subjects, subject.id, direction);
@@ -242,6 +315,25 @@ function renderActions(subject, item) {
       persist();
     });
     actions.append(sub);
+    if (!item.done) {
+      if (resumeRef && resumeRef.subjectId === subject.id && resumeRef.itemId === item.id) {
+        const tracked = el("button", "subtle resume-held", "Action suivie");
+        tracked.type = "button";
+        tracked.disabled = true;
+        tracked.setAttribute("aria-label", "Action suivie : " + item.title);
+        actions.append(tracked);
+      } else {
+        const keep = el("button", "subtle resume-keep", "Garder le fil");
+        keep.type = "button";
+        keep.setAttribute("aria-label", "Garder le fil : " + item.title);
+        keep.addEventListener("click", () => {
+          resumeRef = { subjectId: subject.id, itemId: item.id };
+          saveResumePreference(resumeRef);
+          render();
+        });
+        actions.append(keep);
+      }
+    }
   }
   const remove = el("button", "subtle", "Retirer");
   remove.type = "button";
@@ -338,6 +430,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     const incoming = parseDocument(await file.text());
     if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
     documentState = incoming;
+    documentLoaded = true;
     persist();
     notify("Import terminé");
   } catch (error) {

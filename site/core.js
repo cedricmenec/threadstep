@@ -1,5 +1,6 @@
 // Pure domain functions. No API calls, frameworks or backend.
 export const STORAGE_KEY = "threadstep.document.v1";
+export const RESUME_KEY = "threadstep.resume.v1";
 export const PRIORITIES = ["urgent", "normal", "later"];
 const priorityIndex = (priority) => PRIORITIES.indexOf(priority);
 export const emptyDocument = () => ({ version: 1, subjects: [] });
@@ -70,6 +71,38 @@ function isBetterRank(rank, bestRank) {
   if (rank[0] !== bestRank[0]) return rank[0] < bestRank[0];
   if (rank[1] !== bestRank[1]) return rank[1] < bestRank[1];
   return rank[2] < bestRank[2];
+}
+export function parseResumePreference(raw) {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  return validResumeRef(value) ? { subjectId: value.subjectId, itemId: value.itemId } : null;
+}
+export function serializeResumePreference(ref) {
+  if (!validResumeRef(ref)) return null;
+  return JSON.stringify({ subjectId: ref.subjectId, itemId: ref.itemId });
+}
+function validResumeRef(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value) &&
+    validId(value.subjectId) && validId(value.itemId);
+}
+export function resumeView(document, ref) {
+  if (!validResumeRef(ref)) return null;
+  const subject = document.subjects.find((entry) => entry.id === ref.subjectId);
+  if (!subject) return null;
+  const item = subject.items.find((entry) => entry.id === ref.itemId);
+  if (!item || item.parentId !== null || item.done) return null;
+  return {
+    subjectId: subject.id,
+    subjectTitle: subject.title,
+    itemId: item.id,
+    itemTitle: item.title,
+    priority: item.priority
+  };
 }
 export function parseDocument(source) {
   const doc = JSON.parse(source);
