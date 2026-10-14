@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyDocument, newSubject, newItem, sortedItems, pendingCount, parseDocument, moveSubject, updateItem } from "../site/core.js";
+import { emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -120,6 +120,63 @@ test("updateItem preserves parent and substep hierarchy and round-trips", () => 
   assert.equal(nextChild.subjects[0].items[0].title, "Parent");
   assert.equal(nextChild.subjects[0].items[0].done, true);
   assert.deepEqual(parseDocument(JSON.stringify(nextChild)), JSON.parse(JSON.stringify(nextChild)));
+});
+
+test("visibleItems shows everything when the filter is off", () => {
+  const items = [
+    newItem("Fait", "normal", "d"),
+    newItem("À faire", "urgent", "u"),
+  ];
+  items[0].done = true;
+  assert.deepEqual(visibleItems(items, null, false).map((x) => x.id), ["u", "d"]);
+});
+
+test("visibleItems hides completed items and preserves priority order", () => {
+  const items = [
+    newItem("Fait urgent", "urgent", "du"),
+    newItem("À faire plus tard", "later", "ul"),
+    newItem("Fait normal", "normal", "dn"),
+    newItem("À faire urgent", "urgent", "uu"),
+  ];
+  items[0].done = true;
+  items[2].done = true;
+  assert.deepEqual(visibleItems(items, null, true).map((x) => x.id), ["uu", "ul"]);
+});
+
+test("visibleItems keeps a completed parent when it has an unfinished child", () => {
+  const items = [
+    newItem("Parent terminé", "normal", "p"),
+    newItem("Enfant à faire", "later", "c1", "p"),
+    newItem("Enfant terminé", "urgent", "c2", "p"),
+  ];
+  items[0].done = true;
+  items[2].done = true;
+  assert.equal(isItemVisible(items[0], items, true), true);
+  assert.deepEqual(visibleItems(items, null, true).map((x) => x.id), ["p"]);
+  assert.deepEqual(visibleItems(items, "p", true).map((x) => x.id), ["c1"]);
+});
+
+test("visibleItems hides a completed parent whose children are all done", () => {
+  const items = [
+    newItem("Parent terminé", "normal", "p"),
+    newItem("Enfant terminé", "urgent", "c", "p"),
+  ];
+  items[0].done = true;
+  items[1].done = true;
+  assert.equal(isItemVisible(items[0], items, true), false);
+  assert.deepEqual(visibleItems(items, null, true), []);
+});
+
+test("visibleItems does not mutate items and disabling restores full order", () => {
+  const items = [
+    newItem("Fait", "urgent", "d"),
+    newItem("À faire", "normal", "u"),
+  ];
+  items[0].done = true;
+  const snapshot = JSON.parse(JSON.stringify(items));
+  assert.deepEqual(visibleItems(items, null, true).map((x) => x.id), ["u"]);
+  assert.deepEqual(items, snapshot);
+  assert.deepEqual(visibleItems(items, null, false).map((x) => x.id), sortedItems(items).map((x) => x.id));
 });
 
 test("import rejects invalid hierarchy, IDs and versions", () => {
