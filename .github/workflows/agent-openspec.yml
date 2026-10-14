@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       phase:
-        description: 'plan, apply, auto or finalize (validate/archive existing work, no model)'
+        description: 'plan, apply, auto or finalize (semantic sync via paid model)'
         required: true
         type: choice
         default: plan
@@ -95,7 +95,6 @@ jobs:
           openspec --version
 
       - name: Install OpenCode (paid model phases only)
-        if: inputs.phase != 'finalize'
         shell: bash
         run: |
           set -euo pipefail
@@ -211,12 +210,14 @@ jobs:
           } > "$RUNNER_TEMP/openspec-apply-prompt.txt"
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-apply-prompt.txt")"
 
-      - name: Verify, sync and archive OpenSpec
+      - name: Verify, semantic sync and archive OpenSpec
         if: inputs.phase == 'apply' || inputs.phase == 'auto' || inputs.phase == 'finalize'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
         run: |
           set -euo pipefail
-          # Finalize must start from a clean committed agent branch: no LLM call or new code.
+          # Finalize starts from a clean committed agent branch before semantic sync.
           if [[ "$PHASE" == finalize ]]; then
             test -z "$(git status --porcelain)" || {
               echo "::error::Finalize requires a clean worktree"; exit 1;
@@ -240,8 +241,16 @@ jobs:
           fi
           npm run check
           openspec validate "$CHANGE_ID" --strict --no-interactive
-          # Archive is the official non-interactive delta-to-canonical-spec synchronization.
-          openspec archive "$CHANGE_ID" --yes
+          # Semantic sync: OpenCode follows the OpenSpec /opsx:sync workflow.
+          # A separate paid model call is required in apply, auto and finalize.
+          test -n "$OPENROUTER_API_KEY" || { echo "::error::OpenRouter secret missing"; exit 1; }
+          before="$(git status --porcelain | grep -v ' openspec/specs/' || true)"
+          prompt="Perform /opsx:sync for $CHANGE_ID. Read all delta specs and canonical specs. Semantically merge ADDED, MODIFIED, REMOVED and RENAMED requirements, preserve unrelated requirements and scenarios, avoid duplication, and compare against implemented behavior. Modify ONLY openspec/specs/. Do not change source, tests, change artifacts, backlog, workflows or configuration. Do not archive, commit, push or use subagents. Report unresolved conflicts as errors."
+          opencode run --auto --model "$OPENCODE_MODEL" "$prompt"
+          after="$(git status --porcelain | grep -v ' openspec/specs/' || true)"
+          [[ "$before" == "$after" ]] || { echo "::error::Semantic sync changed files outside canonical specs"; exit 1; }
+          # The LLM already synced canonical specs; archive without a second merge.
+          openspec archive "$CHANGE_ID" --yes --skip-specs
           find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" | grep -q . || {
             echo "::error::OpenSpec archive missing"; exit 1;
           }
