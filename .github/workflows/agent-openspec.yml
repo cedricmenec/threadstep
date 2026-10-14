@@ -1,4 +1,4 @@
-name: Agent OpenSpec (manual, staged)
+name: Agent OpenSpec (manual, staged or auto)
 
 on:
   workflow_dispatch:
@@ -8,13 +8,14 @@ on:
         required: true
         type: string
       phase:
-        description: 'Plan first; run apply explicitly after reviewing the draft PR'
+        description: 'plan = draft only; apply = reviewed plan; auto = plan and implement in one run'
         required: true
         type: choice
         default: plan
         options:
           - plan
           - apply
+          - auto
       model:
         description: 'OpenRouter model'
         required: true
@@ -35,7 +36,7 @@ jobs:
   staged-development:
     if: github.actor == github.repository_owner
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -66,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$TASK_ID" =~ ^TS-[0-9]{3}$ ]] || { echo "::error::Invalid task ID"; exit 1; }
-          [[ "$PHASE" == plan || "$PHASE" == apply ]] || { echo "::error::Invalid phase"; exit 1; }
+          [[ "$PHASE" == plan || "$PHASE" == apply || "$PHASE" == auto ]] || { echo "::error::Invalid phase"; exit 1; }
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
           test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
           git config user.name "threadstep-software-factory[bot]"
@@ -98,7 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           change="openspec/changes/$CHANGE_ID"
-          if [[ "$PHASE" == plan ]]; then
+          if [[ "$PHASE" == plan || "$PHASE" == auto ]]; then
             if find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" 2>/dev/null | grep -q .; then
               echo "::error::Change already archived"; exit 1
             fi
@@ -116,7 +117,7 @@ jobs:
           fi
 
       - name: Explore and propose, no product code changes
-        if: inputs.phase == 'plan'
+        if: inputs.phase == 'plan' || inputs.phase == 'auto' || inputs.phase == 'auto'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
@@ -158,8 +159,27 @@ jobs:
           openspec validate "$CHANGE_ID" --strict --no-interactive
           npm run check
 
+      - name: Guard auto plan scope before implementation
+        if: inputs.phase == 'auto'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reject plan-time modifications outside this change before starting the paid apply call.
+          changed="$( (git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+          while IFS= read -r path; do
+            [[ -z "$path" ]] && continue
+            case "$path" in
+              "openspec/changes/$CHANGE_ID/"*) ;;
+              *) echo "::error::Auto plan changed a forbidden path: $path"; exit 1 ;;
+            esac
+          done <<< "$changed"
+          # Freeze the reviewed plan artifacts in a local commit so apply cannot rewrite them.
+          git add -- "openspec/changes/$CHANGE_ID"
+          git commit -m "agent($TASK_ID): OpenSpec auto plan"
+          echo "AUTO_PLAN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Apply the reviewed plan with OpenCode
-        if: inputs.phase == 'apply'
+        if: inputs.phase == 'apply' || inputs.phase == 'auto' || inputs.phase == 'auto'
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         shell: bash
@@ -254,7 +274,7 @@ jobs:
             fi
           else
             echo "Updated pull request: $existing"
-            if [[ "$PHASE" == apply ]] && [[ "$(gh pr view "$existing" --json isDraft --jq .isDraft)" == true ]]; then
+            if [[ "$PHASE" != plan ]] && [[ "$(gh pr view "$existing" --json isDraft --jq .isDraft)" == true ]]; then
               gh pr ready "$existing"
             fi
           fi
