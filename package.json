@@ -1,0 +1,12 @@
+{
+  "name": "threadstep",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-only workspace for next actions across parallel subjects",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm test && node --check site/core.js && node --check site/app.js"
+  },
+  "engines": { "node": ">=22" }
+}
