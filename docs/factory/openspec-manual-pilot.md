@@ -1,4 +1,4 @@
-# Pilote OpenSpec manuel : plan, apply et auto
+# Pilote OpenSpec manuel : plan, apply, auto et finalize
 
 Ce pilote introduit un **second workflow** : `.github/workflows/agent-openspec.yml`.
 Le workflow historique `agent.yml` continue de fonctionner sans OpenSpec.
@@ -21,6 +21,33 @@ Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiq
    dans `openspec/specs/` et déplace le change dans `openspec/changes/archive/`.
    La PR existante est mise à jour et marquée prête pour revue.
 5. Les PR des agents sont désormais publiées avec un jeton temporaire de la GitHub App. Vérifier que la CI démarre et réussit, puis **contrôler la CI et le diff** avant fusion humaine.
+
+## Mode finalize : reprise sans OpenRouter
+
+`phase=finalize` permet de réparer un change déjà **implémenté et commité**
+sur `agent/openspec/TS-NNN`, mais pas encore synchronisé ni archivé.
+
+Dans **Actions → Agent OpenSpec → Run workflow**, choisir `main`,
+`task_id=TS-NNN` et `phase=finalize`. Le modèle proposé dans le formulaire
+est **ignoré** : ni OpenCode ni `OPENROUTER_API_KEY` ne sont utilisés.
+
+Le workflow exige la branche existante, un répertoire
+`openspec/changes/ts-nnn/` actif, les artefacts OpenSpec, une checklist
+entièrement cochée, `npm run check` et la validation stricte. Il exécute
+ensuite `openspec archive --yes`, qui synchronise les deltas avec les
+spécifications canoniques, puis revalide et publie le commit dans **la PR
+existante**, toujours soumise à la CI et à une fusion humaine.
+
+Aucune modification de code par agent et aucune dépense de modèle.
+L'exécution GitHub Actions reste soumise aux éventuelles limites de
+facturation GitHub. Si la branche a déjà été fusionnée, si le change a
+déjà été archivé, si la checklist est incomplète ou si les tests échouent,
+`finalize` doit échouer : ne pas contourner les contrôles.
+
+**Cas TS-007 :** après fusion de la PR de cette amélioration, lancer
+`phase=finalize` avec `task_id=TS-007` uniquement si la PR de
+l'implémentation TS-007 est toujours ouverte et que le change actif
+existe sur sa branche.
 
 ## Correctif après le premier essai auto (14 octobre 2026)
 
