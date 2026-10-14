@@ -129,3 +129,33 @@ Choisir une **nouvelle petite tâche de comportement** non déjà réalisée, ex
 `plan` puis inspecter les fichiers. Si les fichiers ne sont pas conformes, ne
 pas lancer `apply`. Ensuite lancer `apply` et contrôler le verdict du workflow,
 l'archive et les specs canoniques, les tests et la CI de la PR.
+
+## Synchronisation sémantique OPSX (évolution du 14 octobre 2026)
+
+Les phases `apply`, `auto` et `finalize` exécutent désormais un appel
+OpenCode/OpenRouter supplémentaire pour réaliser la fusion sémantique
+`/opsx:sync` des delta specs dans `openspec/specs/`. Le modèle lit les
+exigences et scénarios existants, conserve le contenu non concerné et évite
+les doublons. Le workflow interdit à cet appel de modifier le code ou les
+artefacts de change ; les validations OpenSpec sont relancées après archivage.
+
+L'archivage est ensuite réalisé par `openspec archive CHANGE --yes --skip-specs` :
+la synchronisation ayant déjà été faite par l'agent, cette option évite une
+**deuxième** fusion structurelle qui pourrait écraser la fusion sémantique.
+Le déplacement vers `openspec/changes/archive/` reste effectué et vérifié.
+
+**Coût et autorisation :** `finalize` n'est **plus gratuit en modèle** ;
+`apply` comporte au moins deux appels (implémentation + sync), et `auto`
+au moins trois (plan + implémentation + sync). Chaque lancement exige une
+autorisation explicite et peut générer une facture OpenRouter. Aucune relance
+payante automatique n'est prévue. La fusion des PR reste manuelle.
+
+**Limite :** OpenCode reçoit une instruction explicite de suivre la démarche
+`/opsx:sync`, mais l'intégration du slash-command lui-même dans `opencode run`
+n'est pas encore vérifiée en E2E ; un test réel devra confirmer le résultat
+sémantique et la conservation des exigences existantes. Les contrôles de
+fichiers sont une défense supplémentaire, pas une preuve sémantique.
+
+Cette évolution remplace les affirmations antérieures selon lesquelles
+`finalize` était sans modèle. La documentation historique de l'incident
+TS-007 reste conservée pour traçabilité.
