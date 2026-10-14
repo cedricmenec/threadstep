@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion } from "../site/core.js";
+import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, parseResumePreference, serializeResumePreference, resumeView } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -293,5 +293,161 @@ test("nextActionSuggestion does not mutate its input and is stable across calls"
   assert.deepEqual(first, second);
   assert.equal(first.itemId, "b1");
   assert.deepEqual(Object.keys(first).sort(), ["itemId", "itemTitle", "priority", "subjectId", "subjectTitle"]);
+  assert.deepEqual(doc, snapshot);
+});
+
+test("RESUME_KEY is separate from the document storage key", () => {
+  assert.equal(RESUME_KEY, "threadstep.resume.v1");
+  assert.notEqual(RESUME_KEY, "threadstep.document.v1");
+});
+
+test("parseResumePreference accepts a valid stored reference", () => {
+  assert.deepEqual(parseResumePreference('{"subjectId":"s1","itemId":"t1"}'), { subjectId: "s1", itemId: "t1" });
+});
+
+test("parseResumePreference rejects invalid input without throwing", () => {
+  assert.equal(parseResumePreference(null), null);
+  assert.equal(parseResumePreference(undefined), null);
+  assert.equal(parseResumePreference(42), null);
+  assert.equal(parseResumePreference(""), null);
+  assert.equal(parseResumePreference("pas du json"), null);
+  assert.equal(parseResumePreference("[]"), null);
+  assert.equal(parseResumePreference("42"), null);
+  assert.equal(parseResumePreference('"texte"'), null);
+  assert.equal(parseResumePreference("null"), null);
+  assert.equal(parseResumePreference('{"subjectId":"","itemId":"t1"}'), null);
+  assert.equal(parseResumePreference('{"subjectId":"s1","itemId":""}'), null);
+  assert.equal(parseResumePreference('{"subjectId":"s1"}'), null);
+  assert.equal(parseResumePreference('{"itemId":"t1"}'), null);
+  assert.equal(parseResumePreference(JSON.stringify({ subjectId: "a".repeat(101), itemId: "t1" })), null);
+  assert.equal(parseResumePreference(JSON.stringify({ subjectId: "s1", itemId: "b".repeat(101) })), null);
+  assert.equal(parseResumePreference(JSON.stringify({ subjectId: {}, itemId: "t1" })), null);
+  assert.equal(parseResumePreference(JSON.stringify({ subjectId: "s1", itemId: 7 })), null);
+});
+
+test("serializeResumePreference round-trips through parseResumePreference", () => {
+  const ref = { subjectId: "s1", itemId: "t1" };
+  const raw = serializeResumePreference(ref);
+  assert.equal(typeof raw, "string");
+  assert.deepEqual(parseResumePreference(raw), ref);
+  assert.deepEqual(parseResumePreference(serializeResumePreference({ subjectId: "s", itemId: "i", extra: "ignored" })), { subjectId: "s", itemId: "i" });
+});
+
+test("serializeResumePreference returns null for invalid references", () => {
+  assert.equal(serializeResumePreference(null), null);
+  assert.equal(serializeResumePreference(undefined), null);
+  assert.equal(serializeResumePreference({ subjectId: "", itemId: "t1" }), null);
+  assert.equal(serializeResumePreference({ subjectId: "s1", itemId: "" }), null);
+  assert.equal(serializeResumePreference({ subjectId: "s1" }), null);
+  assert.equal(serializeResumePreference({ subjectId: "a".repeat(101), itemId: "t1" }), null);
+  assert.equal(serializeResumePreference("s1"), null);
+});
+
+function resumeDocument() {
+  const doc = emptyDocument();
+  const subject = newSubject("Appels", "s1");
+  subject.items.push(newItem("Relancer Paul", "urgent", "t1"));
+  doc.subjects.push(subject);
+  return doc;
+}
+
+test("resumeView resolves an unfinished top-level action with subject, title and priority", () => {
+  const doc = resumeDocument();
+  assert.deepEqual(resumeView(doc, { subjectId: "s1", itemId: "t1" }), {
+    subjectId: "s1",
+    subjectTitle: "Appels",
+    itemId: "t1",
+    itemTitle: "Relancer Paul",
+    priority: "urgent"
+  });
+});
+
+test("resumeView returns null for completed, substep, missing and empty references", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "s1");
+  const done = newItem("Terminée", "normal", "d");
+  done.done = true;
+  subject.items.push(newItem("Parent", "normal", "p"), newItem("Enfant", "urgent", "c", "p"), done);
+  doc.subjects.push(subject);
+  assert.equal(resumeView(doc, { subjectId: "s1", itemId: "d" }), null);
+  assert.equal(resumeView(doc, { subjectId: "s1", itemId: "c" }), null);
+  assert.equal(resumeView(doc, { subjectId: "s1", itemId: "absente" }), null);
+  assert.equal(resumeView(doc, { subjectId: "absent", itemId: "p" }), null);
+  assert.equal(resumeView(doc, null), null);
+  assert.equal(resumeView(doc, {}), null);
+  assert.equal(resumeView(doc, { subjectId: "", itemId: "p" }), null);
+  assert.equal(resumeView(doc, { subjectId: "s1" }), null);
+});
+
+test("resumeView never mutates its input document", () => {
+  const doc = resumeDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  resumeView(doc, { subjectId: "s1", itemId: "t1" });
+  resumeView(doc, { subjectId: "s1", itemId: "missing" });
+  resumeView(doc, null);
+  assert.deepEqual(doc, snapshot);
+});
+
+test("resume selection is unique and a different reference resolves to the other action", () => {
+  const doc = emptyDocument();
+  const a = newSubject("Alpha", "sa");
+  a.items.push(newItem("Action A", "normal", "ia"));
+  const b = newSubject("Beta", "sb");
+  b.items.push(newItem("Action B", "urgent", "ib"));
+  doc.subjects.push(a, b);
+  const viewA = resumeView(doc, { subjectId: "sa", itemId: "ia" });
+  const viewB = resumeView(doc, { subjectId: "sb", itemId: "ib" });
+  assert.equal(viewA.itemId, "ia");
+  assert.equal(viewA.subjectId, "sa");
+  assert.equal(viewB.itemId, "ib");
+  assert.equal(viewB.subjectId, "sb");
+  assert.notEqual(viewA.itemId, viewB.itemId);
+  assert.deepEqual(parseResumePreference(serializeResumePreference({ subjectId: "sb", itemId: "ib" })), { subjectId: "sb", itemId: "ib" });
+  assert.deepEqual(resumeView(doc, parseResumePreference(serializeResumePreference({ subjectId: "sb", itemId: "ib" }))), viewB);
+});
+
+test("resume preference survives a reload round-trip", () => {
+  const doc = resumeDocument();
+  const ref = { subjectId: "s1", itemId: "t1" };
+  const raw = serializeResumePreference(ref);
+  const restored = parseResumePreference(raw);
+  assert.deepEqual(resumeView(doc, restored), resumeView(doc, ref));
+});
+
+test("resume tracking survives renaming, reprioritizing and subject reordering", () => {
+  const doc = emptyDocument();
+  const a = newSubject("Alpha", "sa");
+  a.items.push(newItem("Action A", "normal", "ia"));
+  const b = newSubject("Beta", "sb");
+  b.items.push(newItem("Action B", "urgent", "ib"));
+  doc.subjects.push(a, b);
+  const ref = { subjectId: "sb", itemId: "ib" };
+  const renamed = updateItem(doc, "sb", "ib", { title: "Action B renommée", priority: "later" });
+  const reordered = { ...renamed, subjects: moveSubject(renamed.subjects, "sb", "up") };
+  const restored = parseResumePreference(serializeResumePreference(ref));
+  assert.deepEqual(resumeView(reordered, restored), {
+    subjectId: "sb",
+    subjectTitle: "Beta",
+    itemId: "ib",
+    itemTitle: "Action B renommée",
+    priority: "later"
+  });
+  assert.deepEqual(reordered.subjects.map((s) => s.id), ["sb", "sa"]);
+});
+
+test("nextActionSuggestion is independent from the resume reference", () => {
+  const doc = emptyDocument();
+  const a = newSubject("Alpha", "sa");
+  a.items.push(newItem("Action A", "normal", "ia"));
+  const b = newSubject("Beta", "sb");
+  b.items.push(newItem("Action B", "urgent", "ib"));
+  doc.subjects.push(a, b);
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  const before = nextActionSuggestion(doc);
+  const ref = parseResumePreference(serializeResumePreference({ subjectId: "sa", itemId: "ia" }));
+  resumeView(doc, ref);
+  const after = nextActionSuggestion(doc);
+  assert.deepEqual(after, before);
+  assert.equal(after.itemId, "ib");
   assert.deepEqual(doc, snapshot);
 });

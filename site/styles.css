@@ -24,6 +24,13 @@ h1 span{color:#95aa64}
 .section-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:23px}
 h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .counter{font-size:.79rem;color:#53675a;background:#e9eddf;padding:10px 12px;border-radius:30px;white-space:nowrap}
+.resume-card{background:#eef3e3;border:1px solid #cdd9b6;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;max-width:520px;margin-bottom:18px}
+.resume-card[hidden]{display:none}
+.resume-label{font-size:.69rem;font-weight:800;letter-spacing:.14em;color:#5f6f4f;margin:0}
+.resume-title{margin:2px 0 0;font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
+.resume-meta{margin:0;font-size:.82rem;color:#657366}
+.resume-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.resume-held:disabled{opacity:.7;cursor:default}
 .focus-bar{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
 .focus-suggest{align-self:flex-start}
 .focus-card{background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;max-width:520px}
