@@ -27,8 +27,9 @@ et le modèle DeepSeek V4.1 Flash.
   zéro, plus de trois chiffres, chemins, nombres partiels et formes
   non canoniques de TS-NNN.
 - [x] Les variantes de saisie ne permettent pas deux runs parallèles
-  sur la même branche : le workflow pilote est sérialisé dans
-  un groupe de concurrence unique sans annuler un run en cours.
+  sur la même branche : un job de prévalidation transmet le TS-NNN
+  canonique au groupe de concurrence **propre à cette tâche**.
+  Les tâches distinctes peuvent toujours s'exécuter en parallèle.
 - [x] Ajouter des tests déterministes offline pour le normaliseur,
   ses entrées invalides, le CLI et la configuration du workflow.
 - [x] Actualiser documents opératoires, décisions, roadmap,
@@ -53,7 +54,8 @@ payant n'a été demandé pour réaliser cette tâche.
 La normalisation concerne agent-openspec.yml uniquement :
 le workflow direct historique agent.yml est inchangé.
 L'alias numérique n'élargit ni les autorisations GitHub, ni le
-périmètre fonctionnel des tâches. Avec la sérialisation globale,
-deux tâches OpenSpec distinctes ne s'exécutent plus simultanément
-pendant ce pilote ; c'est un compromis délibéré pour éviter
-la collision de branches sous des noms d'entrée différents.
+périmètre fonctionnel des tâches. Le job de prévalidation normalise
+et vérifie l'existence de la tâche avant les appels payants.
+Le verrou de concurrence s'applique à chaque tâche canonique :
+les autres tâches conservent leur parallélisme. GitHub peut remplacer
+un run encore en attente par une exécution plus récente du même groupe.
