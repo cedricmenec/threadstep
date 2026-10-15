@@ -29,22 +29,48 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # All aliases (9, 009, TS-009) must share one lane. Serialize the pilot
-  # rather than allow the same persistent task branch to race across spellings.
-  group: agent-openspec
-  cancel-in-progress: false
-
 jobs:
-  staged-development:
+  # Normalize before any model installation or paid call. The same task
+  # aliases share one canonical branch and one task-scoped concurrency key.
+  normalize-task:
     if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      task_id: ${{ steps.normalize.outputs.task_id }}
+    steps:
+      - name: Checkout task normalizer
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate and normalize task input
+        id: normalize
+        shell: bash
+        env:
+          RAW_TASK_ID: ${{ inputs.task_id }}
+        run: |
+          set -euo pipefail
+          task_id="$(node scripts/normalize-task-id.mjs "$RAW_TASK_ID")"
+          test -f "backlog/tasks/$task_id.md" || {
+            echo "::error::Backlog file missing: $task_id"; exit 1;
+          }
+          echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
+
+  staged-development:
+    needs: normalize-task
+    if: github.actor == github.repository_owner
+    # All aliases for one task serialize; independent tasks retain parallelism.
+    concurrency:
+      group: agent-openspec-${{ needs.normalize-task.outputs.task_id }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
     env:
-      TASK_ID: ${{ inputs.task_id }}
+      TASK_ID: ${{ needs.normalize-task.outputs.task_id }}
       PHASE: ${{ inputs.phase }}
       OPENCODE_MODEL: ${{ inputs.model }}
       OPENSPEC_NO_UPDATE_CHECK: '1'
@@ -69,10 +95,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Canonicalize once before backlog lookup, branch creation and paid calls.
-          # GITHUB_ENV carries TS-NNN into every following workflow step.
-          TASK_ID="$(node scripts/normalize-task-id.mjs "$TASK_ID")"
-          echo "TASK_ID=$TASK_ID" >> "$GITHUB_ENV"
+          # The independent preflight job provides a canonical TS-NNN already
+          # checked against the backlog; recheck after the second checkout.
+          [[ "$TASK_ID" =~ ^TS-[0-9]{3}$ ]] || {
+            echo "::error::Normalized task ID is invalid"; exit 1;
+          }
           [[ "$PHASE" == plan || "$PHASE" == apply || "$PHASE" == auto || "$PHASE" == finalize ]] || { echo "::error::Invalid phase"; exit 1; }
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
           test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
