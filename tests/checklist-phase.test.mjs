@@ -26,5 +26,5 @@ test("allows ordinary implementation tasks and current TS-009 plan correction", 
 test("OpenSpec workflow checks phase contract on plan and existing apply", () => {
   const workflow = readFileSync(new URL("../.github/workflows/agent-openspec.yml", import.meta.url), "utf8");
   assert.match(workflow, /node scripts\/check-openspec-task-phases\.mjs "\$change\/tasks\.md"/);
-  assert.match(workflow, /node scripts\/check-openspec-task-phases\.mjs "\$change\/tasks\.md"/);\n  assert.match(workflow, /node scripts\/check-openspec-task-phases\.mjs "openspec\/changes\/\$CHANGE_ID\/tasks\.md"/);
+  assert.match(workflow, /node scripts\/check-openspec-task-phases\.mjs "openspec\/changes\/\$CHANGE_ID\/tasks\.md"/);
 });
