@@ -1,8 +1,26 @@
+---
+schema_version: 2
+id: TS-XXX
+type: product
+status: proposed
+priority: normal
+# Generation default for a complete, well-characterized product task.
+# Explicit contraindications (type: factory, risk medium/high/unknown, or a
+# historical task with no automation) override this default to manual.
+automation: allowed
+# Never infer low from missing information. unknown is not automatically executable.
+risk: unknown
+depends_on: []
+created_at: YYYY-MM-DD
+---
+
 # TS-XXX | Brief capability title
 
-Status: proposed
-Priority: normal
-Dependencies: none
+Status, priority, dependencies and eligibility are declared in the YAML
+frontmatter above; the body describes the work. `automation: allowed` is a
+declarative eligibility only and never authorizes a paid run, a merge or a
+change to code, secrets or permissions. See
+[docs/factory/backlog-v2-task-contract.md](../../docs/factory/backlog-v2-task-contract.md).
 
 ## User value
 State the user problem and the intended outcome in one or two sentences.

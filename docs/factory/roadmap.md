@@ -16,6 +16,7 @@
 | Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
 | Réconciliation documentaire | **Actualisée** : [ASF-DOC-001](tasks/ASF-DOC-001.md) (TS-009) puis [ASF-DOC-002](tasks/ASF-DOC-002.md) (TS-010/011 et fusion conditionnelle). |
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
+| Contrat des tâches Backlog V2 | **Documentaire, en revue (PR non fusionnée)** : [ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) et ses tests statiques ; aucune migration, aucun index et aucune automatisation. |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 
