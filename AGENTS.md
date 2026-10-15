@@ -30,7 +30,7 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - Do not publish secrets, tokens, private keys or sensitive configuration values in documentation. Distinguish implemented behavior from untested assumptions.
 - Factory changes require an explicitly authorized, separately reviewed PR; routine feature agents must not edit protected factory files.
 - The OpenSpec workflow must initialize OpenCode skills/commands on the ephemeral runner and verify they exist before paid agent calls. Generated instructions must not be committed with a feature PR.
-- Semantic sync must use the OpenCode OPSX command when available and verify the exact contents of non-canonical files before/after sync; compare deltas against canonical specs in human review. These newly proposed gates remain unproven in a paid E2E run until independently tested.
+- Semantic sync must use the OpenCode OPSX command when available and verify the exact contents of non-canonical files before/after sync; compare deltas against canonical specs in human review. This native OPSX command and content-scope guard were tested end-to-end on TS-009 (run 38712079641, merged PR #26). REMOVED and RENAMED operations remain untested.
 
 ## Backlog intake and planning protocol
 - This file is the durable, repository-wide operating contract. It explains how to work; it is NOT the backlog itself.
