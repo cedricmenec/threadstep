@@ -20,7 +20,8 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
   DeepSeek V4.1 Flash pré-sélectionnés (GLM 5.3 Flash et les autres phases
   toujours disponibles). Numéro `9`, `09`, `009` ou nom `TS-009`
   normalisé en `TS-009` avant les opérations payantes. Les runs OpenSpec
-  sont sérialisés pour éviter les courses entre variantes d'ID. Le clic
+  sont sérialisés **par tâche canonique**, grâce à un job de
+  prévalidation. Les tâches différentes peuvent tourner en parallèle. Le clic
   manuel « Run workflow » reste indispensable ; les 3 appels OpenCode
   de `auto` ne sont pas plafonnés en USD. Cette modification de configuration
   est contrôlée par tests statiques ; aucun run payé de validation n'a été lancé.
