@@ -31,7 +31,7 @@ export function validateAutoMergePrerequisites({ repository, branch, rulesets })
   if (branch?.protected !== true) {
     throw new Error("main is not protected; refusing auto-merge");
   }
-  const eligible = rulesets.some(rule => {
+  const eligible = Array.isArray(rulesets) && rulesets.some(rule => {
     if (!applicableMainRule(rule)) return false;
     const rules = rule?.rules ?? [];
     const pr = rules.find(item => item.type === "pull_request");
@@ -78,7 +78,7 @@ export function runAutoMerge() {
     api(`repos/${repo}/rulesets/${rule.id}`));
   validateAutoMergePrerequisites({ repository, branch, rulesets });
 
-  const expectedHeadSha = gh(["git", "rev-parse", "HEAD"]);
+  const expectedHeadSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const pr = JSON.parse(gh(["pr", "view", expectedHeadRef, "--repo", repo,
     "--json", "number,state,isDraft,baseRefName,headRefName,headRefOid,url"]));
   const number = validateAutoMergeTarget(pr, { expectedHeadRef, expectedHeadSha });
