@@ -94,3 +94,9 @@ Le test **TS-009 MODIFIED est terminé** : commande OPSX native, garde-fou, spé
 ## Précaution
 
 L'accord sur la feuille de route n'est pas une autorisation d'activer une exécution agentique, de créer une GitHub App ou de modifier des secrets/règles de branche. L'implémentation future exige la décision correspondante.
+
+## Bootstrap de l'exécution ASF (proposition en PR, non livrée)
+
+- [ ] ASF-BOOT-001 : ajouter un agent dédié de factory, lancé manuellement pour ASF-V2-001..011, séparant travail OpenCode non privilégié et publication GitHub App après validation du diff. Voir [mode opératoire](agent-asf-manual.md).
+- [ ] CI et Actionlint réussis sur la PR bootstrap, fusion explicitement autorisée, tests post-fusion vérifiés.
+- [ ] Premier run payé ASF-V2-001 seulement après nouvelle autorisation du propriétaire.

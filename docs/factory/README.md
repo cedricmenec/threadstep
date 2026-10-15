@@ -47,3 +47,7 @@ restent dans ce dossier et dans GitHub.
 ## Programme ASF V2 : conception et tâches
 
 Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.md) sont validées pour être découpées en travail de développement, mais **aucune implémentation n'est encore livrée**. Voir le [plan de onze tâches ASF-V2](tasks/ASF-V2-README.md), leurs dépendances et restrictions d'exécution. La préparation du backlog ne constitue pas une autorisation de déclencher OpenRouter ni de fusionner une PR d'implémentation.
+
+## Exécuteur ASF dédié (bootstrap)
+
+Voir [l'exécuteur manuel ASF proposé](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md). Son statut devient opérationnel uniquement après revue, CI, fusion et vérification sur main. Il accepte les tâches de factory ASF-V2 sans affaiblir le workflow ThreadStep TS-NNN.

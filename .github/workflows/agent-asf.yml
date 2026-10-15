@@ -1,0 +1,196 @@
+name: Agent ASF (manual, OpenRouter, reviewed PR)
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: 'Reviewed factory task: ASF-V2-001 through ASF-V2-011'
+        required: true
+        type: string
+      model:
+        description: 'Paid OpenRouter model, one manual execution per dispatch'
+        required: true
+        type: choice
+        default: 'openrouter/deepseek/deepseek-v4.1-flash'
+        options:
+          - 'openrouter/deepseek/deepseek-v4.1-flash'
+          - 'openrouter/z-ai/glm-5.3-flash'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: asf-task-${{ inputs.task_id }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      task_id: ${{ steps.task.outputs.task_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate ASF task before spending
+        id: task
+        shell: bash
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node scripts/agent-asf-policy.mjs preflight "$TASK_ID"
+          # A second open PR for the same task would risk duplicated paid work.
+          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "$TASK_ID in:title" --json number --jq 'length')"
+          if [[ "$existing" != "0" ]]; then
+            echo "::error::Open PR exists for the selected factory task"; exit 1
+          fi
+          echo "task_id=$TASK_ID" >> "$GITHUB_OUTPUT"
+
+  develop:
+    needs: preflight
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      TASK_ID: ${{ needs.preflight.outputs.task_id }}
+      OPENCODE_MODEL: ${{ inputs.model }}
+    steps:
+      - name: Checkout trusted main without write credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Freeze trusted policy away from agent workspace
+        shell: bash
+        run: cp scripts/agent-asf-policy.mjs "$RUNNER_TEMP/agent-asf-policy.mjs"
+      - name: Install OpenCode (no repository write credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global opencode-ai@latest
+          opencode --version
+      - name: Implement selected factory task with OpenRouter
+        shell: bash
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${OPENROUTER_API_KEY:-}" || { echo "::error::OpenRouter key missing"; exit 1; }
+          {
+            cat <<'PROMPT'
+          You are a development agent for the Autonomous Software Factory (ASF).
+          Read AGENTS.md, the selected docs/factory/tasks/ASF-V2-NNN.md,
+          and the referenced specifications. Develop this factory task only.
+          All changes MUST stay within that task's specific paths and acceptance criteria.
+          Product-agent restrictions remain intact: never weaken the ThreadStep agent workflows.
+          Do not read or print credentials, change secrets or GitHub settings, call subagents,
+          create commits, push, open PRs, or request merges. Do not change your own executor,
+          scripts/agent-asf-policy.mjs, other ASF task descriptions, or approved specifications.
+          The publishing job performs a strict independent scope check and creates a reviewed PR.
+          Run npm run check and report any incomplete criteria; do not claim tests you did not run.
+          PROMPT
+            printf '\nSelected factory task: %s\n' "$TASK_ID"
+            cat "docs/factory/tasks/$TASK_ID.md"
+          } > "$RUNNER_TEMP/agent-asf-prompt.txt"
+          opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/agent-asf-prompt.txt")"
+      - name: Verify and export diff without secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run check
+          git add -A
+          node "$RUNNER_TEMP/agent-asf-policy.mjs" validate "$TASK_ID"
+          git diff --cached --binary --no-ext-diff --no-renames > "$RUNNER_TEMP/asf-agent.patch"
+          test -s "$RUNNER_TEMP/asf-agent.patch"
+          test "$(wc -c < "$RUNNER_TEMP/asf-agent.patch")" -le 1500000 || {
+            echo "::error::Patch exceeds 1.5 MB"; exit 1;
+          }
+          cp "$RUNNER_TEMP/asf-agent.patch" asf-agent.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: asf-diff
+          path: asf-agent.patch
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: [preflight, develop]
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      TASK_ID: ${{ needs.preflight.outputs.task_id }}
+    steps:
+      - name: Checkout trusted source, no write credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: asf-diff
+          path: ${{ runner.temp }}/asf-artifact
+      - name: Apply and validate untrusted patch BEFORE minting publisher token
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/agent-asf-policy.mjs preflight "$TASK_ID"
+          patch="$RUNNER_TEMP/asf-artifact/asf-agent.patch"
+          test -s "$patch"
+          test "$(wc -c < "$patch")" -le 1500000
+          git checkout -b "agent/asf/$TASK_ID-run-$GITHUB_RUN_ID"
+          git apply --index --check "$patch"
+          git apply --index "$patch"
+          node scripts/agent-asf-policy.mjs validate "$TASK_ID"
+          git config user.name "threadstep-software-factory[bot]"
+          git config user.email "threadstep-software-factory[bot]@users.noreply.github.com"
+          git commit -m "feat(asf): implement $TASK_ID"
+          echo "AGENT_BRANCH=agent/asf/$TASK_ID-run-$GITHUB_RUN_ID" >> "$GITHUB_ENV"
+      # Only workflow-editing tasks need GitHub App Workflows: write.
+      # Never alter the App permissions automatically. If unavailable, fail closed.
+      - name: Mint publisher token for regular factory tasks
+        if: needs.preflight.outputs.task_id != 'ASF-V2-008' && needs.preflight.outputs.task_id != 'ASF-V2-009'
+        id: normal-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Mint publisher token for explicitly workflow-scoped tasks
+        if: needs.preflight.outputs.task_id == 'ASF-V2-008' || needs.preflight.outputs.task_id == 'ASF-V2-009'
+        id: workflow-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+      - name: Publish reviewed PR (never auto-merge)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.normal-token.outputs.token || steps.workflow-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push origin "HEAD:$AGENT_BRANCH"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$AGENT_BRANCH" --title "Agent ASF: $TASK_ID" --body "Implementation of $TASK_ID from an explicitly owner-dispatched paid run. Human review and independent CI check are mandatory. No auto-merge requested."
