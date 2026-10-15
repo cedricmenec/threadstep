@@ -1,6 +1,6 @@
 # Autonomous Software Factory | Dossier de référence
 
-**Statut : TS-008 auto et TS-009 apply livrés ; OPSX natif OpenCode vérifié sur MODIFIED, garde-fou SHA-256 et CI indépendante validés.**  
+**Statut : OpenSpec auto TS-010 et TS-011 livrés et fusionnés automatiquement par GitHub App après CI ; agent manuel restauré, Actionlint actif et OPSX natif éprouvé.**  
 **Mise à jour : 15 octobre 2026.**  
 **Projet pilote :** [ThreadStep](https://github.com/cedricmenec/threadstep).  
 **Référence antérieure :** dépôt privé `mestryn`, notamment `.github/workflows/opencode.yml` et `AGENTS.md`.
@@ -15,7 +15,7 @@ Contraintes durables :
 - **Spec-driven development via OpenSpec** comme protocole cible, incluant Explore, Propose, Apply, vérification, synchronisation des specs et Archive.
 - **Deux modes conservés** : **déclenchement manuel ciblé** et **orchestration externe / par vagues**. Ils utilisent exactement la même chaîne d'exécution et de contrôles ; l'orchestrateur est facultatif.
 - Le travail est durable, reprenable après interruption, observable, reproductible et limité en coût.
-- La fusion et le déploiement automatiques sont des capacités futures conditionnées par des garde-fous, **pas une autorisation générale de contourner la CI**.
+- **Fusion automatique native GitHub et déploiement Pages observés** après CI requise sur TS-010/TS-011 ; l'orchestration externe par vagues reste une cible. Aucun mécanisme ne doit contourner les checks.
 
 ## Où lire quoi ?
 
@@ -32,8 +32,9 @@ Contraintes durables :
 
 - Exécution actuelle : agent.yml (direct), agent-openspec.yml (plan/apply/auto/finalize), ci.yml et pages.yml.
 - Contrat agent dans AGENTS.md, tâches sous backlog/tasks/, exigences produit sous docs/product/.
-- TS-008 (PR #21) a livré une capacité ADDED via un prompt de sync ; TS-009 (PR #26) a confirmé l'invocation OPSX native sur un MODIFIED existant, avec préservation des autres exigences, garde-fou SHA-256, archive et Pages.
+- TS-008 (#21) a validé ADDED ; TS-009 (#26) a validé OPSX natif MODIFIED. TS-010 (#32) et TS-011 (#34) ont livré leurs capacités OpenSpec et prouvé le chemin GitHub App → CI indépendante → fusion automatique → Pages.
 - PR #25 a rendu explicite le contrat : chaque case de la checklist OpenSpec doit être réalisable avant la synchronisation ; la revue post-sync reste distincte.
 - [ASF-DOC-001](tasks/ASF-DOC-001.md) documente la réconciliation du 15 octobre 2026.
-- Le document [current-state.md](current-state.md) sert d'entrée unique pour le statut réellement vérifié. L'orchestrateur, les limites de coût garanties et la protection main restent à traiter.
+- [ASF-DOC-002](tasks/ASF-DOC-002.md) trace la réconciliation après TS-011.
+- Le document [current-state.md](current-state.md) sert d'entrée unique pour le statut vérifié. La protection main et le check `check` sont configurés ; l'orchestrateur, les plafonds de coût garantis et les checkpoints transactionnels restent à traiter.
 - Les versions des outils, commandes et tarifs peuvent évoluer ; ne jamais déduire la validité du comportement de la seule présence d'un fichier ou de l'état green d'un run.
