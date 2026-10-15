@@ -310,6 +310,9 @@ test("suggestionReason names the effective priority and the tie-break order", ()
 
 test("suggestionReason returns null for any invalid priority", () => {
   assert.equal(suggestionReason("demain"), null);
+  assert.equal(suggestionReason("toString"), null);
+  assert.equal(suggestionReason("constructor"), null);
+  assert.equal(suggestionReason("__proto__"), null);
   assert.equal(suggestionReason("Urgent"), null);
   assert.equal(suggestionReason(""), null);
   assert.equal(suggestionReason(null), null);
