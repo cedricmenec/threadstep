@@ -41,7 +41,7 @@
 9. `publish` : pousser, ouvrir/réutiliser la PR, attendre CI indépendante, fusionner selon politique explicite.
 10. `report` : statut, preuves, coût, références et prochaine action ; l'orchestrateur peut ensuite avancer.
 
-**Distinction** : le workflow direct agent.yml travaille depuis le backlog sans OpenSpec ; agent-openspec.yml couvre plan/apply/auto/finalize, validations, synchronisation sémantique et archive. L'orchestrateur externe reste futur. Le nouveau mécanisme d'invocation de commande OPSX n'a pas encore été validé E2E (voir current-state.md).
+**Distinction** : le workflow direct agent.yml travaille depuis le backlog sans OpenSpec ; agent-openspec.yml couvre plan/apply/auto/finalize, validations, synchronisation sémantique et archive. L'orchestrateur externe reste futur. Le mécanisme de commande OPSX native a été validé E2E sur TS-009 (run 38712079641, PR #26), avec garde-fou avant/après, synchronisation MODIFIED, archive et CI. Voir [current-state.md](current-state.md).
 
 ## 5. Documentation obligatoire pour toute évolution de la factory
 
@@ -66,7 +66,7 @@ Cette exigence s'applique aussi aux évolutions réalisées directement par l'as
 
 ## 7. Procédure d'incident et reprise
 
-Conserver la branche distante et ses checkpoints. Collecter workflow URL, horodatage, modèle, version OpenCode/OpenSpec, dernier SHA valide, OpenSpec `tasks.md`, échec vérifié. Ne jamais relancer sans tenir compte de la PR existante. Une relance dans le même `taskId` doit être idempotente. Après échec d'un test ou de sécurité, arrêter la vague plutôt que fusionner de force.
+Conserver la branche distante et ses checkpoints. Collecter workflow URL, horodatage, modèle, version OpenCode/OpenSpec, dernier SHA valide, OpenSpec `tasks.md`, échec vérifié. Ne jamais relancer sans tenir compte de la PR existante. Une relance dans le même `taskId` doit viser l'idempotence ; TS-009 illustre que la reprise n'est pas encore transactionnelle : les changements locaux d'un apply échoué ont été perdus, tandis que son plan versionné pouvait être repris. Après échec d'un test ou de sécurité, arrêter la vague plutôt que fusionner de force.
 
 ## 8. Retour d'expérience pilote
 
@@ -74,5 +74,7 @@ Conserver la branche distante et ses checkpoints. Collecter workflow URL, horoda
 - `TS-004` : exécution OpenCode terminée, PR #4 fusionnée, CI sur `main` et Pages réussies.
 - `TS-005` : premier cycle OpenSpec plan/apply achevé, PR #8 fusionnée.
 - PR #9 : jeton GitHub App ajouté aux deux workflows ; PR #21 (TS-008) et sa CI de PR réussie démontrent le fonctionnement. Après merge, CI main et Pages ont réussi.
-- **TS-008 (PR #21)** : auto complet, 41 tests, sync guidée par prompt et archive réussies ; ne démontre pas encore l'invocation native OPSX ni la fusion MODIFIED.
+- **TS-008 (PR #21)** : auto complet, 41 tests, sync guidée par prompt et archive réussies ; création ADDED seulement.
+- **TS-009 (PR #26)** : plan/apply réussis après correction de la checklist, invocation de la commande OPSX native, sync MODIFIED d'une capacité existante, 55 tests pendant apply et 60 tests sur main après fusion, Pages réussi.
+- **PR #25** : rejet en phase plan/pré-apply des cases post-sync dans les checklists, après l'incident du run 38710098331.
 - **Limite actuelle** : déclenchement par tâche explicite, aucun scheduler, aucun budget USD garanti et aucune protection main confirmée. Voir [l'état courant](current-state.md).
