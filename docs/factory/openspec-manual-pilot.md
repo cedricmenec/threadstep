@@ -1,161 +1,96 @@
-# Pilote OpenSpec manuel : plan, apply, auto et finalize
+# Pilote OpenSpec / OpenCode : mode opératoire actuel
 
-Ce pilote introduit un **second workflow** : `.github/workflows/agent-openspec.yml`.
-Le workflow historique `agent.yml` continue de fonctionner sans OpenSpec.
-Aucun exécuteur payant ne se déclenche sur `push`, `pull_request` ni automatiquement.
+**État de référence : 15 octobre 2026.** Voir [l'état courant](current-state.md)
+pour les exécutions prouvées, les risques et le prochain test.
 
-## Utilisation
+## Exécution
 
-1. Préparer et fusionner dans `main` une tâche `backlog/tasks/TS-NNN.md` prête.
-2. Aller dans **Actions → Agent OpenSpec (manual, staged) → Run workflow**, sur `main`.
-   Saisir `task_id=TS-NNN`, `phase=plan` et choisir le modèle. **Ce lancement
-   exécute OpenCode/OpenRouter et peut donc coûter de l'argent**, même sans coder.
-3. Le workflow crée/réutilise `agent/openspec/TS-NNN`, prépare les artefacts sous
-   `openspec/changes/ts-nnn/`, valide leur structure, exécute `npm run check`,
-   et ouvre une **PR brouillon**. Inspecter proposition, design, deltas de specs et
-   checklist avant toute phase suivante. Aucune modification produit autorisée en `plan`.
-4. Une fois le plan revu, relancer volontairement **le même workflow** depuis
-   `main`, avec `task_id=TS-NNN` et `phase=apply`. Cette phase utilise le
-   change préexistant, implémente et teste, vérifie la checklist, puis exécute
-   `openspec archive ... --yes`. L'archivage OpenSpec **synchronise les deltas**
-   dans `openspec/specs/` et déplace le change dans `openspec/changes/archive/`.
-   La PR existante est mise à jour et marquée prête pour revue.
-5. Les PR des agents sont désormais publiées avec un jeton temporaire de la GitHub App. Vérifier que la CI démarre et réussit, puis **contrôler la CI et le diff** avant fusion humaine.
+Depuis GitHub Actions, lancer manuellement **Agent OpenSpec (manual, staged or auto)**
+sur main en renseignant une tâche déjà intégrée au backlog, son mode et son modèle
+OpenRouter. La préparation documentaire d'une tâche n'est **jamais** une
+autorisation de dépense. Aucune fusion automatique.
 
-## Mode finalize : reprise sans OpenRouter
-
-`phase=finalize` permet de réparer un change déjà **implémenté et commité**
-sur `agent/openspec/TS-NNN`, mais pas encore synchronisé ni archivé.
-
-Dans **Actions → Agent OpenSpec → Run workflow**, choisir `main`,
-`task_id=TS-NNN` et `phase=finalize`. Le modèle proposé dans le formulaire
-est **ignoré** : ni OpenCode ni `OPENROUTER_API_KEY` ne sont utilisés.
-
-Le workflow exige la branche existante, un répertoire
-`openspec/changes/ts-nnn/` actif, les artefacts OpenSpec, une checklist
-entièrement cochée, `npm run check` et la validation stricte. Il exécute
-ensuite `openspec archive --yes`, qui synchronise les deltas avec les
-spécifications canoniques, puis revalide et publie le commit dans **la PR
-existante**, toujours soumise à la CI et à une fusion humaine.
-
-Aucune modification de code par agent et aucune dépense de modèle.
-L'exécution GitHub Actions reste soumise aux éventuelles limites de
-facturation GitHub. Si la branche a déjà été fusionnée, si le change a
-déjà été archivé, si la checklist est incomplète ou si les tests échouent,
-`finalize` doit échouer : ne pas contourner les contrôles.
-
-**Cas TS-007 :** après fusion de la PR de cette amélioration, lancer
-`phase=finalize` avec `task_id=TS-007` uniquement si la PR de
-l'implémentation TS-007 est toujours ouverte et que le change actif
-existe sur sa branche.
-
-## Correctif après le premier essai auto (14 octobre 2026)
-
-Le premier essai du mode `auto` a révélé que les étapes **Validate the produced
-plan** et **Verify, sync and archive OpenSpec** étaient ignorées par GitHub
-Actions : leurs conditions `if` n'autorisaient respectivement que `plan` et
-`apply`. Le correctif inclut explicitement `auto` dans les deux conditions.
-
-**Important :** une exécution `auto` terminée avec succès avant ce correctif
-ne prouve **ni la validation stricte du plan, ni la synchronisation des deltas,
-ni l'archivage du change**. Ne pas considérer son résultat comme un cycle
-OpenSpec complet. Vérifier les artefacts et corriger via un nouveau change
-contrôlé plutôt que supposer que l'archivage a eu lieu.
-
-Matrice des étapes obligatoires :
-
-| Étape | plan | apply | auto |
+| Phase | Travail | Appels modèle minimaux | Livraison |
 | --- | --- | --- | --- |
-| Générer le plan | oui | non | oui |
-| Valider le plan | oui | non (plan existant validé au préalable) | oui |
-| Implémenter | non | oui | oui |
-| Vérifier, synchroniser et archiver | non | oui | oui |
+| plan | Générer proposal/design/specs/tasks, valider et tester | 1 | PR brouillon, sans code produit |
+| apply | Appliquer un plan préexistant, tester, sync, archive | 2 | PR existante prête pour revue |
+| auto | Plan, validation, implémentation, sync, archive | 3 | PR finale pour revue humaine |
+| finalize | Terminer un change déjà implémenté/commité, sync, archive | 1 | Mise à jour de PR |
 
-La publication finale doit être bloquée si une étape obligatoire échoue.
-La vérification E2E de ce correctif sur une **nouvelle tâche** reste à faire,
-avec autorisation explicite avant toute dépense OpenRouter.
+Ces nombres sont **des appels OpenCode prévus par le workflow**, pas une garantie
+sur le nombre de requêtes internes du fournisseur. Aucune limite USD garantie
+n'est imposée. Les modèles restent payants et nécessitent l'accord humain
+pour chaque lancement. En cas d'ambiguïté métier, préférer plan puis apply,
+avec des autorisations séparées.
 
-## Checklist de documentation de cette évolution
+Une branche d'agent persistante porte le nom agent/openspec/TS-NNN et le
+change actif openspec/changes/ts-nnn/. La GitHub App publie la PR avec un jeton
+temporaire, et la CI indépendante valide le SHA. L'humain fusionne seulement
+après contrôle du diff, des specs et des checks.
 
-- [x] Documenter les trois modes `plan`, `apply` et `auto` et leur coût.
-- [x] Documenter les vérifications avant apply, les tests, la synchronisation et l'archivage.
-- [x] Documenter les limites : pas de revue intermédiaire, pas de plafond USD garanti, fusion manuelle.
-- [x] Mettre à jour le contrat `AGENTS.md` et la méthodologie pour rendre obligatoire une tâche documentaire sur les futures évolutions de la factory.
+## Installation d'OpenSpec pour OpenCode
 
-## Mode auto : un seul lancement, sans validation intermédiaire
+Le paquet npm **@fission-ai/openspec@1.14.1** fournit la CLI. Installer la
+CLI ne génère **pas**, à lui seul, les workflows agentiques d'OpenCode.
+Cette PR propose l'étape suivante, **non encore vérifiée E2E** :
 
-Choisir `phase=auto` et `task_id=TS-NNN` dans le même workflow, après fusion
-de la tâche de backlog sur `main`. Ce choix autorise **deux appels OpenCode /
-OpenRouter** successifs au cours d'un même run : d'abord plan, puis apply.
-Le plan est validé strictement et contrôlé pour éviter des modifications hors
-du répertoire du change ; il est enregistré dans un commit local avant apply,
-afin de détecter toute réécriture des artefacts validés. Après apply, le workflow
-exige les tests, une checklist entièrement cochée et la validation OpenSpec,
-puis synchronise les deltas par `openspec archive --yes` et ouvre une PR
-**non brouillon** avec le code et les specs finales. La fusion reste manuelle.
+1. Installer la CLI épinglée puis OpenCode dans le runner éphémère.
+2. Exécuter openspec init --tools opencode,agents à la racine.
+3. Vérifier .opencode/skills/openspec-sync-specs/SKILL.md,
+   .opencode/commands/opsx-sync.md et .agents/skills/openspec-sync-specs/SKILL.md.
+4. Ignorer les instructions générées dans .git/info/exclude local au runner ;
+   refuser toute mutation de fichiers de projet par init.
+5. À la phase sync, invoquer directement **opencode run --command opsx-sync**
+   avec l'identifiant de change, au lieu d'un simple prompt évoquant OPSX.
 
-Un échec bloque les étapes suivantes et empêche la publication finale. En
-particulier, le plan n'est pas publié en PR intermédiaire en mode auto.
-Le timeout du job est de 60 minutes, mais **aucun plafond USD garanti** n'est
-appliqué. `auto` ne doit être choisi que pour une tâche petite, claire et
-préapprouvée. En cas d'ambiguïté métier, préférer `plan` puis `apply`.
+OpenCode reconnaît les skills dans .opencode/skills et .agents/skills.
+Les slash commands OPSX sont des **prompts de workflow** propres à l'agent,
+pas des sous-commandes de la CLI openspec. Une exécution reste nécessaire
+pour établir la compatibilité réelle avec OpenCode et cette version de la CLI.
 
-## Invariants et limites
+Références :
+[OpenSpec supported tools](https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md),
+[OpenSpec commands](https://github.com/Fission-AI/OpenSpec/blob/main/docs/commands.md),
+[OpenCode CLI](https://opencode.ai/docs/cli/),
+[OpenCode skills](https://opencode.ai/docs/skills/).
 
-- La GitHub App est utilisée pour publier branches et PR ; aucun auto-merge,
-  orchestrateur ou provisionnement de secrets n'est effectué par ce workflow.
-- `plan` et `apply` restent déclenchés séparément. `auto` est un déclenchement
-  explicite unique qui autorise les deux phases payantes, mais ni la fusion de
-  la PR ni l'exécution d'une autre tâche.
-- Une PR `plan` ne doit contenir que `openspec/changes/ts-nnn/**` ; `apply`
-  bloque les changements de workflows, `AGENTS.md`, secrets, backlog et
-  configuration de l'exécuteur. Ces gardes ne remplacent pas une isolation sandbox.
-- `apply` échoue sans plan valide, si la checklist reste incomplète, si les tests
-  échouent ou si la validation/archivage échoue. L'échec ne fusionne rien.
-- Branches/PR réutilisables par ID ; une même tâche ne peut pas être lancée
-  simultanément sur les deux phases. Ne pas réutiliser un ID déjà archivé.
-- L'implémentation peut encore consommer plusieurs essais ou dépasser une dépense
-  souhaitée : **pas de plafond USD techniquement appliqué**. Budget et reprise
-  transactionnelle restent des étapes futures.
-- OpenSpec CLI épinglé sur `@fission-ai/openspec@1.14.1` ; le mode `auto`
-  reste à valider par un run réel. OpenCode conserve actuellement
-  `opencode-ai@latest`, comme le pilote précédent.
-- Ce dispositif est un prototype : CI indépendante sur PR et merge manuel restent
-  obligatoires ; les mécanismes de confirmation de périmètre sont encore à renforcer.
+## Contrôles avant publication
 
-## Essai contrôlé recommandé
+- Validation du plan (plan/auto) ; en auto, commit local du plan avant apply.
+- Checklist entièrement cochée, npm run check et validation stricte du change.
+- **Avant sync** : prise d'empreinte SHA-256 des fichiers suivis et non suivis
+  qui ne sont pas des specs canoniques ; mémorisation du HEAD courant.
+- **Après sync** : refuser tout changement de contenu, ajout, suppression,
+  changement de mode ou commit hors openspec/specs/. Refuser une sync sans
+  effet sur les specs canoniques. Script scripts/sync-guard.mjs.
+- Après sync : openspec archive CHANGE --yes --skip-specs pour éviter une
+  seconde fusion structurelle, puis validate --all et --archived en mode strict.
+- Publication uniquement via PR et CI indépendante. Protection GitHub main
+  à configurer séparément ; la garde de périmètre n'est pas une sandbox.
 
-Choisir une **nouvelle petite tâche de comportement** non déjà réalisée, exécuter
-`plan` puis inspecter les fichiers. Si les fichiers ne sont pas conformes, ne
-pas lancer `apply`. Ensuite lancer `apply` et contrôler le verdict du workflow,
-l'archive et les specs canoniques, les tests et la CI de la PR.
+Ces contrôles mécaniques ne prouvent **pas** la correction sémantique :
+comparer toujours exigences ADDED/MODIFIED/REMOVED/RENAMED avec les anciennes
+specs et le comportement implémenté. Les fichiers/scripts de cette PR
+nécessitent revue et CI avant adoption.
 
-## Synchronisation sémantique OPSX (évolution du 14 octobre 2026)
+## Historique et preuve disponible
 
-Les phases `apply`, `auto` et `finalize` exécutent désormais un appel
-OpenCode/OpenRouter supplémentaire pour réaliser la fusion sémantique
-`/opsx:sync` des delta specs dans `openspec/specs/`. Le modèle lit les
-exigences et scénarios existants, conserve le contenu non concerné et évite
-les doublons. Le workflow interdit à cet appel de modifier le code ou les
-artefacts de change ; les validations OpenSpec sont relancées après archivage.
+- TS-005 : pilote plan/apply (PR #8) fusionné.
+- TS-007 : premier auto ayant ignoré deux étapes de contrôle. PR #16 corrige
+  les conditions if ; PR #17 ajoute finalize. Ne pas déduire du succès ancien
+  que tous les gates ont été exécutés.
+- PR #19 : remplacement de la fusion structurelle par un appel de modèle
+  guidé par le texte /opsx:sync ; finalize devient payant.
+- TS-008 : [run auto 38645900430](https://github.com/cedricmenec/threadstep/actions/runs/38645900430)
+  exécuté avec OpenSpec 1.14.1 / OpenCode 1.19.0, 41 tests Node réussis,
+  trois appels OpenCode prévus, aucune étape obligatoire skipped, sync puis
+  archivage et PR #21 fusionnée. **C'était une création de capacité et une
+  instruction de prompt, pas un test du nouveau --command ni une fusion MODIFIED.**
 
-L'archivage est ensuite réalisé par `openspec archive CHANGE --yes --skip-specs` :
-la synchronisation ayant déjà été faite par l'agent, cette option évite une
-**deuxième** fusion structurelle qui pourrait écraser la fusion sémantique.
-Le déplacement vers `openspec/changes/archive/` reste effectué et vérifié.
+## Vérification suivante
 
-**Coût et autorisation :** `finalize` n'est **plus gratuit en modèle** ;
-`apply` comporte au moins deux appels (implémentation + sync), et `auto`
-au moins trois (plan + implémentation + sync). Chaque lancement exige une
-autorisation explicite et peut générer une facture OpenRouter. Aucune relance
-payante automatique n'est prévue. La fusion des PR reste manuelle.
-
-**Limite :** OpenCode reçoit une instruction explicite de suivre la démarche
-`/opsx:sync`, mais l'intégration du slash-command lui-même dans `opencode run`
-n'est pas encore vérifiée en E2E ; un test réel devra confirmer le résultat
-sémantique et la conservation des exigences existantes. Les contrôles de
-fichiers sont une défense supplémentaire, pas une preuve sémantique.
-
-Cette évolution remplace les affirmations antérieures selon lesquelles
-`finalize` était sans modèle. La documentation historique de l'incident
-TS-007 reste conservée pour traçabilité.
+Après fusion de la présente évolution, conduire un test limité sur une capacité
+canonique existante (TS-009 est candidat), avec autorisation explicite,
+et archiver les résultats : SHA, runs/étapes, version CLI, preuve d'utilisation
+du command file/skill, diff avant/après, validations, tests, CI et coût OpenRouter.
+Ne jamais relancer une tâche archivée pour simuler ce test.
