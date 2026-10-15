@@ -113,6 +113,9 @@ un contrôle avant sync et un diff après sync. L'agent a correctement laissé
 4.3 décochée, le sync n'a pas démarré et aucun commit produit n'a été publié.
 La branche persistante agent/openspec/TS-009 a donc reçu une correction de
 plan **sans relancer l'agent** : tâche 4.3 limitée au contrôle pré-sync,
-puis revue post-sync distincte sans checkbox. Rerun apply possible ; la
-présente évolution de factory réduit le risque de reproduction sur les
-prochains plans. Aucun crédit OpenRouter n'est consommé par le validateur.
+puis revue post-sync distincte sans checkbox. Le second
+[run 38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
+a réussi (55 tests, commande OPSX, garde-fou SHA-256, archive) et a publié la
+[PR #26](https://github.com/cedricmenec/threadstep/pull/26) ; sa CI a réussi.
+Aucun crédit OpenRouter n'est consommé par le nouveau validateur statique,
+mais les phases apply et sync elles-mêmes restent payantes.
