@@ -17,6 +17,11 @@ on:
           - plan
           - apply
           - finalize
+      auto_merge:
+        description: 'Automatically merge final PR only after required independent CI succeeds (never plan)'
+        required: true
+        type: boolean
+        default: true
       model:
         description: 'OpenRouter model'
         required: true
@@ -358,11 +363,11 @@ jobs:
             if [[ "$PHASE" == plan ]]; then
               gh pr create --draft --base main --head "$AGENT_BRANCH" \
                 --title "OpenSpec: $TASK_ID" \
-                --body "Phase plan: review the proposed OpenSpec change before manually running phase apply. No product code is changed by planning. **Manual merge only**."
+                --body "Phase plan: review the proposed OpenSpec change before manually running phase apply. No product code is changed by planning. **Never auto-merge a plan**."
             else
               gh pr create --base main --head "$AGENT_BRANCH" \
                 --title "OpenSpec: $TASK_ID" \
-                --body "Phase $PHASE: OpenSpec validated and archived. Independent CI and human review required. **No automatic merge**."
+                --body "Phase $PHASE: OpenSpec validated and archived. Independent CI required; native auto-merge may be requested if enabled and Protect Main enforces CI/check."
             fi
           else
             echo "Updated pull request: $existing"
@@ -370,3 +375,14 @@ jobs:
               gh pr ready "$existing"
             fi
           fi
+          echo "PR_PUBLISHED=true" >> "$GITHUB_ENV"
+
+      - name: Request safe auto-merge only for completed OpenSpec changes
+        if: inputs.auto_merge == true && inputs.phase != 'plan' && env.PR_PUBLISHED == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Never auto-merge plan PRs. Gate on main ruleset + CI/check.
+          node scripts/request-safe-auto-merge.mjs
