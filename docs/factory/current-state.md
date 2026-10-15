@@ -29,6 +29,20 @@ Liens : [PR #21](https://github.com/cedricmenec/threadstep/pull/21), [run agent]
 
 TS-008 a créé la **nouvelle** capacité resume-tracking : 10 exigences et 31 scénarios dans le delta. Cette exécution ne démontre **pas encore** la fusion sémantique de MODIFIED/REMOVED/RENAMED dans une spécification canonique préexistante.
 
+## Incident de reprise TS-009 (15 octobre 2026)
+
+- PR #24 a fusionné le plan (et seulement le plan) avant apply.
+- Le run [38710098331](https://github.com/cedricmenec/threadstep/actions/runs/38710098331)
+  a réussi la génération de code, 54 tests Node et la validation du change,
+  puis s'est arrêté sur « Unchecked tasks remain; refusing archive ».
+- Cause : la case 4.3 attendait un diff post-sync alors que le workflow bloque
+  toute case non cochée **avant** sync. Pas de sync, pas d'archive, pas de PR
+  de code publiée : les modifications non commitées du runner ont été perdues.
+- Une correction ciblée de tasks.md a été faite sur la branche
+  agent/openspec/TS-009. Elle ne nécessite pas de refaire plan ; il faut
+  relancer apply pour reconstruire le code puis effectuer sync. Une PR factory
+  distincte propose d'empêcher les futures checklists impossibles.
+
 ## Risques et limites
 
 1. **Intégration OPSX** : le lancement de la commande générée et le chargement réel des Agent Skills restent à éprouver en exécution autorisée ; leur simple présence ne prouve pas leur usage.
