@@ -11,6 +11,10 @@ This repository is the first experimental product for a reusable, GitHub Actions
 suppression avec « Annuler » pendant 10 secondes, sauvegarde/export).
 Les fonctions TS-010 et TS-011 sont livrées depuis les PR #32 et #34.
 
+**Nouvelle conversation avec ChatGPT :** lire d'abord
+[**ChatGPT.md**](ChatGPT.md), puis les sources de vérité qu'il indique.
+Il sert de guide de navigation et de permissions, pas d'état daté.
+
 **Software Factory :** [état courant](docs/factory/current-state.md) et
 [mode opératoire OpenSpec](docs/factory/openspec-manual-pilot.md).
 
