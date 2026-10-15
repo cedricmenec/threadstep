@@ -36,9 +36,14 @@ et le modèle DeepSeek V4.1 Flash.
   backlog et contrat des agents dans cette même PR.
 - [x] Préserver déclenchement uniquement manuel, filtre du propriétaire,
   autorisation de fusion distincte, garde-fous OPSX et CI.
-- [ ] Vérifier la CI sur le SHA de la PR et son résultat après fusion.
-- [ ] Vérifier visuellement le formulaire GitHub après fusion ;
-  aucun workflow payant n'est déclenché pour tester la configuration.
+- [x] Vérifier la CI indépendante du code et du normaliseur sur la PR :
+  [run 38717714727](https://github.com/cedricmenec/threadstep/actions/runs/38717714727), succès.
+
+## Vérifications après fusion
+
+Contrôler la CI sur main et Pages. La sélection effective des valeurs par
+l'interface GitHub sera vérifiable au prochain lancement manuel, sans
+exécuter un nouveau workflow payant pour cette seule modification.
 
 ## Précaution sur les coûts
 
