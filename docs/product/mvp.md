@@ -1,5 +1,14 @@
 # MVP specification
 
+**État : 15 octobre 2026.** Les fonctions FR-02 (annulation du retrait)
+et FR-15 (ordre manuel à priorité égale) sont livrées par les
+[PR #32](https://github.com/cedricmenec/threadstep/pull/32) et
+[PR #34](https://github.com/cedricmenec/threadstep/pull/34).
+Le comportement utilisateur est détaillé dans
+[le guide d'utilisation](guide-utilisation.md). Les spécifications
+canoniques sont dans `openspec/specs/action-removal/` et
+`openspec/specs/action-ordering/`.
+
 ## Functional requirements
 - FR-01 Create and remove named subject groups.
 - FR-02 Add, complete and remove short next-action items in each subject. Removal is immediate and persisted, and offers a non-modal 10-second undo snackbar (« Étape retirée » / « Annuler ») that restores the removed action and its substeps exactly (ids, titles, priorities, completion flags, parent relations and order); the window is tab-local, invalidated by subject removal, JSON import or another tab's local update, and never survives a reload nor creates a new storage key.
@@ -38,3 +47,10 @@
 - Manual ordering within a priority is delivered in FR-15; automatic archiving remains deferred.
 - Synchronization between browser devices is explicitly out of scope.
 - After first use, gather feedback before elaborating the product.
+
+## Delivery verification and remaining manual checks
+
+- Merged product PRs: [TS-010 #32](https://github.com/cedricmenec/threadstep/pull/32) and [TS-011 #34](https://github.com/cedricmenec/threadstep/pull/34).
+- [Post-merge CI on main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920): 97 Node tests passed; Actionlint and strict OpenSpec validations passed.
+- [GitHub Pages deployment](https://github.com/cedricmenec/threadstep/actions/runs/38755434958): successful.
+- These automated checks do **not** establish a complete manual touch-device, focus/keyboard or screen-reader acceptance campaign. That remains a user validation activity, not a reason to describe TS-010/011 as unimplemented.
