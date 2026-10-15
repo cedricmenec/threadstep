@@ -57,6 +57,7 @@ Il n'est pas nécessaire de créer une issue GitHub.
 | TS-007 | Suggestion déterministe d'action | Livrée, [PR #18](https://github.com/cedricmenec/threadstep/pull/18) fusionnée et archivée |
 | TS-008 | « Je reprends ici » | Livrée, [PR #21](https://github.com/cedricmenec/threadstep/pull/21) fusionnée, capacité ADDED |
 | TS-009 | Expliquer la suggestion | Livrée, [PR #26](https://github.com/cedricmenec/threadstep/pull/26) fusionnée, capacité MODIFIED et sync OPSX native |
+| TS-010 | Retirer une étape avec « Annuler » pendant 10 secondes (snackbar mobile) | **Prête pour exécution** : [TS-010](tasks/TS-010.md), non implémentée ; workflow OpenSpec auto à lancer manuellement après fusion de la PR de backlog |
 
 **Important :** les cases historiques des fichiers de tâche ne sont pas
 systématiquement mises à jour par le workflow. Le statut livré provient
