@@ -10,6 +10,28 @@ sur main en renseignant une tâche déjà intégrée au backlog, son mode et son
 OpenRouter. La préparation documentaire d'une tâche n'est **jamais** une
 autorisation de dépense. Aucune fusion automatique.
 
+**Valeurs pré-sélectionnées dans le formulaire** : phase `auto`, modèle
+`openrouter/deepseek/deepseek-v4.1-flash`. Le modèle
+`openrouter/z-ai/glm-5.3-flash` reste disponible et les phases `plan`,
+`apply`, `finalize` restent sélectionnables. Le formulaire ne déclenche
+rien sans action sur « Run workflow ». Avec `auto`, **trois appels OpenCode**
+sont prévus (plan, implémentation, sync), sans plafond USD automatique.
+Avant de cliquer, vérifier tâche, phase, modèle et coût acceptable.
+
+**Identifiant de tâche raccourci** : entrer `9`, `09`, `009` ou
+`TS-009` revient toujours à `TS-009`. Le format canonique `TS-NNN`
+continue d'être utilisé dans le backlog, la branche d'agent, le change OPSX
+et les commits. Nombres valides de 1 à 999 ; identifiants inexistants refusés
+avant tout appel payant. Les autres formats (comme `TS-9` ou `1000`)
+sont rejetés pour éviter les ambiguïtés. La validation et la normalisation
+ont lieu au premier step, avant installation/usage d'OpenCode.
+
+Pour empêcher deux exécutions concurrentes du même change avec des
+écritures différentes (`9` vs `TS-009`), **toutes les exécutions
+OpenSpec sont sérialisées** dans une file de concurrence du pilote,
+sans annulation des runs en cours, même entre tâches différentes.
+Le workflow direct historique `agent.yml` n'est pas modifié.
+
 | Phase | Travail | Appels modèle minimaux | Livraison |
 | --- | --- | --- | --- |
 | plan | Générer proposal/design/specs/tasks, valider et tester | 1 | PR brouillon, sans code produit |
