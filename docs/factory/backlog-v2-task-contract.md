@@ -1,13 +1,14 @@
 # Contrat des tâches Backlog V2 (ASF-V2-001)
 
-**Statut : documentaire, défini et couvert par des tests statiques ; aucune
-migration, aucun index, aucun validateur exécutable ni exécution automatique.**
+**Statut : documentaire, défini et couvert par des tests statiques.**
 Référence normative : [spécification Backlog V2](specs/backlog-v2.md) (version 0.1,
 approuvée pour découpage). Ce document décrit le contrat effectivement appliqué
-à `backlog/tasks/TEMPLATE.md`, `AGENTS.md` et `ChatGPT.md` par ASF-V2-001. La
-régénération des index et le validateur strict restent portés par
-[ASF-V2-002](tasks/ASF-V2-002.md), la migration historique par
-[ASF-V2-003](tasks/ASF-V2-003.md).
+à `backlog/tasks/TEMPLATE.md`, `AGENTS.md` et `ChatGPT.md` par ASF-V2-001. Le
+validateur strict et la régénération des index sont implémentés par
+[ASF-V2-002](tasks/ASF-V2-002.md) (voir
+[index déterministe](backlog-v2-index.md)) ; la migration historique reste
+portée par [ASF-V2-003](tasks/ASF-V2-003.md). Aucune migration, aucun
+déplacement d'archive et aucune exécution automatique ne sont livrés.
 
 ## 1. Portée
 
@@ -81,3 +82,10 @@ Les invariants ci-dessus sont contrôlés statiquement par
 - tâches factory `ASF-V2-NNN` déclarées `Automation: manual` ;
 - aucune tâche historique `backlog/tasks/TS-NNN.md` ne revendique
   `automation: allowed`.
+
+ASF-V2-002 ajoute une validation **exécutable** du même contrat :
+`tests/asf-backlog-index.test.mjs` contrôle le parseur strict (clé dupliquée,
+enums, types), l'unicité des IDs, les dépendances inconnues, les cycles et
+l'obsolescence d'index, et `npm run check` exécute
+`node scripts/asf/backlog-cli.mjs check` **sans écriture**. Détails et limites
+dans [index déterministe](backlog-v2-index.md).
