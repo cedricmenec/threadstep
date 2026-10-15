@@ -12,7 +12,9 @@ autorisation de dépense. Le formulaire propose désormais
 `auto_merge=true` pour la PR finale, désactivable avant le lancement.
 **La phase `plan` n'est jamais fusionnée automatiquement**, même si cette
 option reste cochée. Le workflow refuse la fusion automatique si `main`
-n'impose pas encore le check indépendant `check`.
+n'impose plus le check indépendant obligatoire `check`.
+Le ruleset `Protect Main` est actuellement actif et cette vérification
+a été éprouvée lors des fusions automatiques #32 et #34.
 Voir [la sécurité GitHub](github-autonomy-and-security.md) et
 [ASF-WF-002](tasks/ASF-WF-002.md).
 
@@ -39,7 +41,8 @@ Pour empêcher deux exécutions concurrentes du même change avec des
 peuvent s'exécuter simultanément ; pour une même tâche, GitHub peut
 remplacer un run encore en attente par un nouveau run du même groupe.
 Les exécutions déjà actives ne sont pas annulées.
-Le workflow direct historique `agent.yml` n'est pas modifié.
+Le workflow direct `agent.yml` conserve sa propre exécution sans OpenSpec,
+et dispose de `auto_merge` activé par défaut, sans preuve E2E de fusion directe.
 
 | Phase | Travail | Appels modèle minimaux | Livraison |
 | --- | --- | --- | --- |
@@ -107,8 +110,9 @@ Références :
   effet sur les specs canoniques. Script scripts/sync-guard.mjs.
 - Après sync : openspec archive CHANGE --yes --skip-specs pour éviter une
   seconde fusion structurelle, puis validate --all et --archived en mode strict.
-- Publication uniquement via PR et CI indépendante. Protection GitHub main
-  à configurer séparément ; la garde de périmètre n'est pas une sandbox.
+- Publication uniquement via PR et CI indépendante. `Protect Main`
+  impose actuellement `check` avant auto-merge ; la garde de périmètre
+  de fichiers n'est pas une sandbox.
 
 Ces contrôles mécaniques ne prouvent **pas** la correction sémantique :
 comparer toujours exigences ADDED/MODIFIED/REMOVED/RENAMED avec les anciennes
@@ -127,6 +131,28 @@ specs et le comportement implémenté. Les scripts sont intégrés ; la CI de ma
   trois appels OpenCode prévus, aucune étape obligatoire skipped, sync puis
   archivage et PR #21 fusionnée. **C'était une création de capacité et une
   instruction de prompt, pas un test du nouveau --command ni une fusion MODIFIED.**
+
+## Preuves nouvelles : deux auto-merges OpenSpec réussis
+
+Depuis la [PR #29](https://github.com/cedricmenec/threadstep/pull/29),
+le formulaire comporte `auto_merge=true` pour les livraisons finales.
+Le propriétaire a lancé manuellement les runs payants
+[TS-010](https://github.com/cedricmenec/threadstep/actions/runs/38749526539)
+et [TS-011](https://github.com/cedricmenec/threadstep/actions/runs/38753301546)
+en phase `auto`. Les deux ont réussi, ouvert leur PR et demandé à GitHub
+la fusion native différée. Les [PR #32](https://github.com/cedricmenec/threadstep/pull/32)
+et [#34](https://github.com/cedricmenec/threadstep/pull/34)
+ont été **fusionnées par la GitHub App** après CI indépendante.
+La [CI de main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920)
+(97 tests Node, Actionlint, OpenSpec) et
+[Pages](https://github.com/cedricmenec/threadstep/actions/runs/38755434958)
+ont réussi. Les changements OpenSpec sont archivés et leurs
+spécifications canoniques `action-removal` et `action-ordering`
+sont dans `openspec/specs/`.
+
+Ce parcours prouve la fusion **sur CI verte**, pas le blocage d'une CI
+rouge, le mode direct `agent.yml` ni une validation mobile/lecteur
+d'écran exhaustive. Les coûts exacts restent à relever chez OpenRouter.
 
 ## Vérification suivante
 
