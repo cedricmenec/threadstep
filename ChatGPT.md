@@ -62,10 +62,24 @@ ne donne aucune garantie de fraîcheur.
    des fichiers *et des branches/PR ouvertes* ; ne pas deviner
    le prochain numéro à partir de cette page.
 3. Rédiger `backlog/tasks/TS-NNN.md` selon
-   [le modèle](backlog/tasks/TEMPLATE.md) : valeur utilisateur,
-   comportements observables, critères vérifiables, persistance,
-   sécurité/accessibilité/mobile si pertinentes, tests, dépendances,
-   hypothèses et exclusions.
+   [le modèle](backlog/tasks/TEMPLATE.md) et le
+   [contrat de tâche V2](docs/factory/backlog-v2-task-contract.md) :
+   frontmatter `schema_version: 2` (`id`, `type`, `status`, `priority`,
+   `automation`, `risk`, `depends_on`, `created_at`) puis valeur
+   utilisateur, comportements observables, critères vérifiables,
+   persistance, sécurité/accessibilité/mobile si pertinentes, tests,
+   dépendances, hypothèses et exclusions. Valeurs par défaut :
+   `automation: allowed` pour une tâche produit complète et bien
+   caractérisée ; `status: ready` si les critères de préparation sont
+   remplis, sinon `proposed`, sans seconde promotion ; `risk: unknown`
+   si le risque n'est pas caractérisé. `risk: unknown` n'est jamais
+   `low` et n'autorise aucune exécution automatique ; une
+   contre-indication explicite (`type: factory`, risque `medium`/`high`/
+   `unknown`, tâche historique sans `automation`) prime sur ce défaut.
+   `TS-NNN` reste propre à ThreadStep ; les tâches de factory utilisent
+   des identifiants `ASF-*` avec `Automation: manual`. Créer ou planifier
+   une tâche n'autorise ni coût, ni fusion, ni modification de workflow,
+   de secret, de permission ou de code.
 4. Mettre à jour `backlog/README.md` et la documentation
    produit pertinente si nécessaire. Créer une **branche et une PR
    documentaire** pour rendre la tâche disponible sur `main`.

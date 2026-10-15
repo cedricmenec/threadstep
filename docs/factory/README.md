@@ -48,6 +48,8 @@ restent dans ce dossier et dans GitHub.
 
 Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.md) sont validées pour être découpées en travail de développement, mais **aucune implémentation n'est encore livrée**. Voir le [plan de onze tâches ASF-V2](tasks/ASF-V2-README.md), leurs dépendances et restrictions d'exécution. La préparation du backlog ne constitue pas une autorisation de déclencher OpenRouter ni de fusionner une PR d'implémentation.
 
+[ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) : frontmatter versionné (`schema_version: 2`), enums, séparation état déclaratif/état GitHub, valeurs par défaut de génération et isolation des règles `TS-NNN`. Ce contrat est documentaire et couvert par des tests statiques ; aucune migration, aucun index et aucune exécution automatique ne sont livrés. Le statut reste « en revue » tant que la PR d'implémentation n'est pas fusionnée et vérifiée sur `main`.
+
 ## Exécuteur ASF dédié (bootstrap)
 
 Voir [l'exécuteur manuel ASF proposé](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md). Son statut devient opérationnel uniquement après revue, CI, fusion et vérification sur main. Il accepte les tâches de factory ASF-V2 sans affaiblir le workflow ThreadStep TS-NNN.
