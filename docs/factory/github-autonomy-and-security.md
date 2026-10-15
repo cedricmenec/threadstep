@@ -29,12 +29,12 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 
 ## 4. GitHub App configurée et intégrée (14/10/2026)
 
-1. App créée : `threadstep-software-factory`, App ID `5321746`, installation sur `threadstep` à confirmer lors du test de workflow.
+1. App créée : `threadstep-software-factory`, App ID `5321746`, installation et exécution sur `threadstep` confirmées par les PR #21 et #26.
 2. Donner les permissions minimales nécessaires : `Contents: read/write`, `Pull requests: read/write` ; `Metadata: read` est implicite. Ajouter `Actions: read` uniquement si l'orchestrateur lit les runs via l'App. Ne pas donner de permission globale `Workflows: write` sans besoin explicite et revue.
 3. Configuration effectivement utilisée : variable de dépôt **`APP_ID`** et secret **`APP_PRIVATE_KEY`** (clé PEM complète). Le propriétaire a confirmé leur configuration. Ne jamais publier la clé, y compris dans les logs.
 4. PR #9 fusionnée : les deux workflows d'agent utilisent `actions/create-github-app-token@v1`, le jeton d'installation pour `git push` et `GH_TOKEN` pour `gh pr create`, `gh pr list`, `gh pr ready`. L'action demande `permission-contents: write` et `permission-pull-requests: write`.
 5. Réduire le scope, masquer/révoquer le jeton, limiter sa durée et créer un nouveau jeton si le job dépasse sa validité.
-6. **Démontré sur TS-008** : PR #21 créée par la GitHub App, CI de PR réussie, fusion par cedricmenec, puis CI de main et Pages réussies. Ce résultat ne démontre pas la protection de main ; selon l'API, main reste non protégée au 15/10/2026.
+6. **Démontré sur TS-008 et TS-009** : PR #21 et #26 créées par la GitHub App, CI de PR réussies, fusion humaine, puis CI de main et Pages réussies. Ce résultat ne démontre pas la protection de main ; selon l'API, main reste non protégée au 15/10/2026.
 
 **Prérequis manuels potentiels** : l'assistant GitHub actuel ne peut pas enregistrer une GitHub App, installer son secret ou modifier toutes les règles de dépôt avec ses opérations disponibles. Ces opérations doivent être réalisées via un outil d'administration autorisé / quelques étapes UI mobile ; aucun secret dans la conversation.
 
@@ -58,7 +58,7 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 
 ## 7. Documentation officielle vérifiée
 
-**Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; le nouveau contrôle de diff et l'invocation native sont proposés mais non testés E2E.
+**Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; l'invocation native et le garde-fou SHA-256 ont été validés E2E sur TS-009 (run 38712079641, PR #26). La protection de main reste absente après fusion, selon l'API GitHub.
 
 - [GITHUB_TOKEN et exceptions, PR bot soumises à approbation, alternatives App/PAT](https://docs.github.com/en/actions/concepts/security/github_token)
 - [Triggering a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
