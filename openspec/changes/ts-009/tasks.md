@@ -44,12 +44,21 @@
   `openspec validate ts-009 --strict --no-interactive`, reporting the exact
   commands and their output.
 - [ ] 4.3 Before sync, verify the delta under
-  `openspec/changes/ts-009/specs/next-action-suggestion/spec.md` contains only
-  `## MODIFIED Requirements` with the single `Suggestion card content`
-  requirement preserving its original scenario; after sync, diff
-  `openspec/specs/next-action-suggestion/spec.md` against the previous revision
-  to confirm only that requirement changed, with every other requirement and
-  scenario identical and no duplication.
+  `openspec/changes/ts-009/specs/next-action-suggestion/spec.md` contains
+  only `## MODIFIED Requirements` with the single `Suggestion card content`
+  requirement, preserves the original scenario and adds the new explanation
+  scenarios. This verification is the implementer's last checklist task.
+
+## Post-sync review (after the workflow sync, outside the apply checklist)
+
+- After the OpenCode OPSX sync, diff
+  `openspec/specs/next-action-suggestion/spec.md` against the previous
+  canonical revision. Confirm that only `Suggestion card content` changed,
+  that all other requirements and scenarios remain identical, and that no
+  requirement or scenario was duplicated.
+- Verify the sync scope guard, the OpenSpec archive and independent PR CI.
+  A reviewer must approve the semantic diff before merge.
+- These post-sync assertions cannot be ticked by apply before sync has run.
 
 ## Workflow follow-up
 
