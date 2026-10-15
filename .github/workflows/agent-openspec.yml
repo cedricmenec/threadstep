@@ -137,6 +137,7 @@ jobs:
               echo "::error::Missing nonempty delta spec"; exit 1;
             }
             openspec validate "$CHANGE_ID" --strict --no-interactive
+            node scripts/check-openspec-task-phases.mjs "$change/tasks.md"
           fi
 
       - name: Explore and propose, no product code changes
@@ -155,6 +156,10 @@ jobs:
           for proposal, design, specs and tasks, replacing CHANGE with the selected change ID.
           Produce complete OpenSpec proposal.md, design.md, specs/<capability>/spec.md and tasks.md.
           Specify GIVEN/WHEN/THEN-style observable scenarios and a testable implementation checklist.
+          Every tasks.md checkbox MUST be fully completable during implementation BEFORE
+          the separate workflow steps for semantic OPSX sync and archive. Put any post-sync
+          diff comparison, archive verification or independent PR CI review in a plain
+          'Post-sync review' section WITHOUT checkboxes, not in the apply checklist.
           During plan, NEVER modify application code, tests, product specs, backlog, workflow files,
           AGENTS.md, configuration, secrets, or other changes. No commit, push, PR or paid subagent.
           Do not archive. Report uncertainties in proposal.md, do not invent product decisions.
@@ -180,6 +185,7 @@ jobs:
             echo "::error::No tasks in checklist"; exit 1;
           }
           openspec validate "$CHANGE_ID" --strict --no-interactive
+          node scripts/check-openspec-task-phases.mjs "openspec/changes/$CHANGE_ID/tasks.md"
           npm run check
 
       - name: Guard auto plan scope before implementation

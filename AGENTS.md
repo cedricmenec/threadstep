@@ -16,6 +16,7 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 ## Development
 - Work on the prepared agent branch only; do not push to main.
 - For each task, read its acceptance criteria before editing.
+- For OpenSpec changes, ensure every checkbox in tasks.md can be completed during apply before OPSX sync and archive. Specify post-sync semantic diffs, archive checks and independent CI review in a separate non-checkbox review section. Never mark a post-sync check complete before it has run.
 - Run `npm run check` and report exactly what was executed.
 - Do not change GitHub workflows, credentials, `opencode.json`, or this file during routine feature work.
 - Never report an unverified test as passed.
