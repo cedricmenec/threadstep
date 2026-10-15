@@ -16,6 +16,14 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
   agent-openspec.yml (plan / apply / auto / finalize). Le propriétaire
   déclenche un task_id et un modèle dans Actions ; aucun ordonnanceur
   automatique ni orchestration de vagues n'est déployé.
+- **Formulaire OpenSpec** (évolution ASF-WF-001) : phase `auto` et modèle
+  DeepSeek V4.1 Flash pré-sélectionnés (GLM 5.3 Flash et les autres phases
+  toujours disponibles). Numéro `9`, `09`, `009` ou nom `TS-009`
+  normalisé en `TS-009` avant les opérations payantes. Les runs OpenSpec
+  sont sérialisés pour éviter les courses entre variantes d'ID. Le clic
+  manuel « Run workflow » reste indispensable ; les 3 appels OpenCode
+  de `auto` ne sont pas plafonnés en USD. Cette modification de configuration
+  est contrôlée par tests statiques ; aucun run payé de validation n'a été lancé.
 - **OPSX natif OpenCode, validé sur TS-009** : le runner installe
   @fission-ai/openspec@1.14.1, génère les fichiers agent avec
   openspec init --tools opencode,agents, vérifie les skills et les commandes,
