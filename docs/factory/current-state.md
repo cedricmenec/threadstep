@@ -1,6 +1,6 @@
 # État courant de l'Autonomous Software Factory
 
-**Référence vérifiée : 15 octobre 2026, après fusion des PR #25 et #26.**
+**Référence vérifiée : 15 octobre 2026, après fusion de la PR #34.**
 Point d'entrée unique pour reprendre le pilote. Les règles exécutables sont
 [AGENTS.md](../../AGENTS.md), les workflows dans .github/workflows/ et les
 spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
@@ -43,8 +43,10 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
   désactivable au lancement. Le script de fusion n'autorise que GitHub
   native auto-merge, après contrôle explicite d'un required status check
   `check` dans le ruleset actif de `main`. OpenSpec `plan` reste brouillon,
-  jamais fusionné automatiquement. **Aucun E2E de fusion automatique n'est
-  encore prouvé.**
+  jamais fusionné automatiquement. **E2E de fusion automatique OpenSpec
+  prouvé** pour TS-010 (PR #32) et TS-011 (PR #34) : la GitHub App a
+  demandé et effectué la fusion après CI indépendante. La fusion du
+  workflow direct sans OpenSpec reste non éprouvée de bout en bout.
 - **Versions/coûts** : OpenSpec épinglé en 1.14.1, OpenCode installé par
   opencode-ai@latest, observé en 1.19.0 durant TS-008. Modèles OpenRouter
   configurés : DeepSeek V4.1 Flash et GLM 5.3 Flash. Les appels restent
@@ -65,12 +67,25 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
 | PR #25 | Contrat des phases de checklist et cinq tests de non-régression rapides, fusionné. |
 | Run 38712079641, PR #26 | Second apply TS-009 : 55 tests, invocation OPSX native, garde-fou de périmètre, fusion MODIFIED, archive, PR fusionnée. |
 | Runs 38713003608 et 38713003743 | CI de main après PR #26 : 60 tests réussis ; déploiement Pages réussi. |
+| PR #28, ASF-WF-001 | Formulaire OpenSpec : auto et DeepSeek V4.1 Flash par défaut ; saisie numérique TS-NNN normalisée, testé en CI et utilisé dans TS-010/11. |
+| PR #29 puis #30 | Auto-merge natif à contrôles requis ; régression YAML de l'agent direct (#29), réparée en #30 avec Actionlint et validation Bash. |
+| Runs 38749526539 et 38753301546 | Exécutions OpenSpec auto TS-010 et TS-011 réussies, avec demandes de fusion automatique. |
+| PR #32 et #34 | Agent GitHub App confirmé comme auteur **de la fusion automatique** après CI des deux PR produits. |
+| Runs 38755434920 et 38755434958 | CI main après #34 : **97 tests Node**, Actionlint et validations OpenSpec réussis ; Pages déployé. |
 
 Références :
 [TS-009 apply](https://github.com/cedricmenec/threadstep/actions/runs/38712079641) ·
 [PR #26](https://github.com/cedricmenec/threadstep/pull/26) ·
 [CI main](https://github.com/cedricmenec/threadstep/actions/runs/38713003608) ·
 [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38713003743).
+
+Preuves récentes :
+[run TS-010](https://github.com/cedricmenec/threadstep/actions/runs/38749526539) ·
+[PR #32](https://github.com/cedricmenec/threadstep/pull/32) ·
+[run TS-011](https://github.com/cedricmenec/threadstep/actions/runs/38753301546) ·
+[PR #34](https://github.com/cedricmenec/threadstep/pull/34) ·
+[CI main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920) ·
+[Pages](https://github.com/cedricmenec/threadstep/actions/runs/38755434958).
 
 **Portée de la preuve OPSX :** la modification de
 openspec/specs/next-action-suggestion/spec.md a remplacé uniquement
@@ -108,20 +123,20 @@ workflow et émis des exécutions en erreur, sans jobs, lors de pushs. Voir
 La CI de main et Pages avaient réussi, car l'ancien pipeline ne vérifiait
 pas la syntaxe complète des workflows.
 
-La tâche [ASF-WF-003](tasks/ASF-WF-003.md) prépare la réparation :
-restauration de l'unique job manuel, lint YAML/expressions par actionlint
-et validation Bash des blocs `run` dans tous les workflows. Aucune
-exécution OpenRouter n'est nécessaire. Tant que la PR corrective n'est
-pas fusionnée et la CI passée, ne pas démarrer l'agent manuel.
+La [PR #30](https://github.com/cedricmenec/threadstep/pull/30) a **corrigé**
+le YAML de l'agent manuel et ajouté Actionlint épinglé ainsi qu'un
+contrôle de syntaxe Bash des blocs `run`. La CI de main et Pages ont réussi
+après #30. L'agent manuel est à nouveau disponible, mais son chemin
+**auto-merge direct** reste non vérifié en E2E. Voir [ASF-WF-003](tasks/ASF-WF-003.md).
 
 ## Risques et limites encore ouverts
 
-1. **Protection de main configurée, E2E auto-merge restant à vérifier** :
-   `protected: true`, ruleset `Protect Main` (id 25163425) actif,
-   PR obligatoire et contrôle `check` obligatoire, source GitHub Actions
-   (integration_id 15368), après correction d'une liste initialement vide.
-   Le script ASF-WF-002 recontrôle ces critères à chaque run ; aucun
-   essai réel de fusion automatique ou de refus sur CI rouge n'est prouvé.
+1. **Protection active, auto-merge OpenSpec éprouvé** : `protected: true`,
+   ruleset `Protect Main` (id 25163425), PR et contrôle CI `check`
+   obligatoires, source GitHub Actions (integration_id 15368).
+   TS-010/TS-011 ont prouvé un succès de fusion automatique après CI.
+   **Non prouvé** : refus E2E sur CI rouge, fusion automatique du mode direct
+   et robustesse en présence de conflits/reviews requis.
 2. **Budget** : aucun plafond OpenRouter USD exécutable par run/vague, ni
    comptabilité fournisseur corrélée aux runs. Chaque lancement effectif
    reste une opération à autoriser.
@@ -133,23 +148,23 @@ pas fusionnée et la CI passée, ne pas démarrer l'agent manuel.
    modifications multiples non encore démontrés.
 6. **Reprise transactionnelle** : pas de checkpoints distants automatiques
    pour chaque étape d'apply, comme illustré par le premier run TS-009.
-7. **Validation UI** : 60 tests Node et Pages réussis, mais pas de preuve
-   de campagne complète lecteur d'écran et mobile automatisée.
+7. **Validation UI** : 97 tests Node et Pages réussis après TS-011 ;
+   pas de preuve d'une recette complète sur mobile physique ou lecteur d'écran.
 8. **Synchronisation des statuts** : les métadonnées des tâches du backlog
    nécessitent encore une tenue manuelle, désormais réconciliée par
    [ASF-DOC-001](tasks/ASF-DOC-001.md).
 
 ## Étapes suivantes recommandées
 
-- Compléter le ruleset `Protect Main` avec le contrôle obligatoire
-  `check` (GitHub Actions), sans permettre de contournement des checks ;
-  la protection des PR et les interdictions de force-push sont déjà présentes.
+- **Maintenir** le ruleset `Protect Main`, le statut obligatoire `check`
+  et l'absence de contournement ; tester spécifiquement un cas CI rouge
+  et le chemin auto-merge du workflow direct.
 - Épingler OpenCode, tracer les coûts fournisseur et fixer une politique
   de dépenses/reprises proportionnée.
 - Préparer une nouvelle expérimentation **distincte** pour REMOVED/RENAMED
   ou une fusion sémantique conflictuelle, sans rejouer TS-009.
 - Étudier la persistance de checkpoints et l'orchestration par vagues,
-  sans introduire d'auto-merge sans décision explicite.
+  avec déclenchement payant toujours explicite et respect du ruleset.
 - Maintenir cette page, la roadmap, les ADR et les statuts du backlog
   à chaque livraison.
 
@@ -160,4 +175,5 @@ pas fusionnée et la CI passée, ne pas démarrer l'agent manuel.
 [Sécurité GitHub](github-autonomy-and-security.md) ·
 [Décisions](decisions.md) ·
 [Roadmap](roadmap.md) ·
-[Tâche de réconciliation](tasks/ASF-DOC-001.md).
+[Tâches de réconciliation](tasks/ASF-DOC-001.md) et
+[ASF-DOC-002](tasks/ASF-DOC-002.md).
