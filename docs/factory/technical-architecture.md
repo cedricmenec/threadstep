@@ -24,7 +24,7 @@ flowchart TD
   B --> O
 ```
 
-**Attention :** ce diagramme illustre l'architecture **cible**. Le chemin manuel OpenSpec fonctionne (TS-008 PR #21, TS-009 PR #26) ; l'orchestrateur externe `O`, les plafonds budgétaires et le stockage transactionnel ne sont pas implémentés. La commande OpenCode OPSX et le garde-fou de contenu ont été éprouvés sur le run 38712079641. Le workflow utilise un jeton de GitHub App pour publier les PR et la CI est indépendante. Voir [l'état courant](current-state.md).
+**Attention :** ce diagramme illustre l'architecture **cible**. Le chemin manuel OpenSpec fonctionne (TS-008 PR #21, TS-009 PR #26) ; l'orchestrateur externe `O`, les plafonds budgétaires et le stockage transactionnel ne sont pas implémentés. La commande OpenCode OPSX et le garde-fou ont été éprouvés sur le run 38712079641. Les PR #32/#34 ont ensuite validé le parcours GitHub App → PR → check indépendant obligatoire → auto-merge → Pages. Le refus sur CI rouge et le mode direct ne sont pas encore éprouvés E2E. Voir [l'état courant](current-state.md).
 
 ## 2. Couches proposées (ports et adaptateurs)
 
@@ -84,7 +84,7 @@ Résultat attendu : `runId`, `taskId`, `state`, `workingBranch`, `commitSha`, `o
 - PR #4 (TS-004) fusionnée ; CI main et Pages réussis. **À cette époque**, PR #2 (TS-002) encore ouverte ; elle a été fusionnée ensuite.
 - `main` ne présentait **pas de protection de branche** lors de la vérification ; un succès ponctuel de tests ne remplace pas cette protection.
 
-**Situation au 15/10/2026, après PR #26 :** les puces ci-dessus sont l'historique du prototype, pas l'état courant. Le cycle OpenSpec a livré TS-008 et TS-009 ; l'intégration Agent Skills/OPSX et le garde-fou d'empreintes sont validés sur une synchronisation MODIFIED. La promotion automatisée, les checkpoints distants à chaque étape et la protection main restent futurs. [Statut actuel et preuves](current-state.md).
+**Situation au 15/10/2026, après PR #34 :** les puces ci-dessus décrivent l'historique du prototype, pas l'état courant. Le cycle OpenSpec a livré TS-008 à TS-011 ; `main` est protégée, `check` requis, et la promotion automatique via GitHub App est démontrée sur #32/#34. L'orchestrateur, les plafonds et les checkpoints distants à chaque étape restent futurs. [Statut actuel et preuves](current-state.md).
 
 ## 6. Séparation factory / application
 
