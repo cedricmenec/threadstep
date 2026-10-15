@@ -14,7 +14,7 @@
 **Présentement réalisable :**
 - `Actions → Agent (manual, OpenRouter) → Run workflow`, branche `main`, saisie de `task_id` et du modèle.
 - L'agent lit le fichier de la tâche, effectue le développement, exécute `npm run check`, pousse une branche et ouvre/réutilise une PR.
-- Depuis la PR #9, les deux workflows publient avec un jeton GitHub App temporaire. L'objectif est de déclencher la CI sans approbation manuelle ; ce comportement doit encore être prouvé sur une nouvelle PR créée par l'App. La fusion reste humaine.
+- Les deux workflows publient via le jeton temporaire GitHub App ; la PR #21 de TS-008 a été créée par le bot, et sa CI s'est exécutée avec succès sans intervention supplémentaire. La fusion reste humaine.
 - Une fois fusionné, CI sur `main` et Pages déploient la version testée.
 
 **Évolution voulue :** proposer un bouton/commande `workflow_dispatch` avec `task_id`, `model`, `protocol`, `delivery` et budget autorisé ; **pas de dépendance obligatoire à un orchestrateur externe**. L'exécuteur reçoit et vérifie la même enveloppe de tâche qu'en mode automatique.
@@ -41,7 +41,7 @@
 9. `publish` : pousser, ouvrir/réutiliser la PR, attendre CI indépendante, fusionner selon politique explicite.
 10. `report` : statut, preuves, coût, références et prochaine action ; l'orchestrateur peut ensuite avancer.
 
-**Distinction** : le workflow direct `agent.yml` implémente la tâche Markdown sans OpenSpec ; le workflow séparé `agent-openspec.yml` couvre le cycle plan/apply, validation et archive. L'orchestrateur externe reste futur.
+**Distinction** : le workflow direct agent.yml travaille depuis le backlog sans OpenSpec ; agent-openspec.yml couvre plan/apply/auto/finalize, validations, synchronisation sémantique et archive. L'orchestrateur externe reste futur. Le nouveau mécanisme d'invocation de commande OPSX n'a pas encore été validé E2E (voir current-state.md).
 
 ## 5. Documentation obligatoire pour toute évolution de la factory
 
@@ -73,5 +73,6 @@ Conserver la branche distante et ses checkpoints. Collecter workflow URL, horoda
 - `TS-002` : un agent exécuté sur demande a ouvert une PR documentaire, sans fusion automatique. Le workflow CI de PR créée avec `GITHUB_TOKEN` s'est trouvé en état `action_required` avant approbation humaine, puis a réussi.
 - `TS-004` : exécution OpenCode terminée, PR #4 fusionnée, CI sur `main` et Pages réussies.
 - `TS-005` : premier cycle OpenSpec plan/apply achevé, PR #8 fusionnée.
-- PR #9 : jeton GitHub App ajouté aux deux workflows d'agent ; validation E2E de la CI sur PR créée par l'App à faire avec TS-006.
-- **Limite actuelle** : chaque tâche est déclenchée avec un ID explicite ; ni sélection autonome, ni politique de fusion automatique durcie.
+- PR #9 : jeton GitHub App ajouté aux deux workflows ; PR #21 (TS-008) et sa CI de PR réussie démontrent le fonctionnement. Après merge, CI main et Pages ont réussi.
+- **TS-008 (PR #21)** : auto complet, 41 tests, sync guidée par prompt et archive réussies ; ne démontre pas encore l'invocation native OPSX ni la fusion MODIFIED.
+- **Limite actuelle** : déclenchement par tâche explicite, aucun scheduler, aucun budget USD garanti et aucune protection main confirmée. Voir [l'état courant](current-state.md).

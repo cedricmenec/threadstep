@@ -2,7 +2,7 @@
 
 **Document de planification**, pas déclencheur d'une exécution automatique. Les jalons ci-dessous requièrent explicitement validation et autorisation avant implémentation.
 
-## État du pilote vérifié (14 octobre 2026)
+## État vérifié et étapes restantes (15 octobre 2026)
 
 | Jalons | Statut et preuve |
 | --- | --- |
@@ -12,7 +12,9 @@
 | Fonctionnalité `TS-004` par OpenCode/OpenRouter | **Fait** : PR #4 fusionnée, CI et Pages réussis |
 | Sélection automatique de tâches et orchestration de vagues | **Non implémenté** |
 | Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, PR #8, plan/apply, validation, archivage et fusion humaine |
-| GitHub App / auto-merge sécurisé / protection `main` | **GitHub App intégrée** aux deux workflows (PR #9 fusionnée), secrets configurés ; test CI sur nouvelle PR App en attente avec TS-006. Auto-merge non implémenté ; protection `main` à revalider |
+| GitHub App / auto-merge sécurisé / protection main | **App et CI sur PR vérifiées** : TS-008 PR #21 créée par bot, CI réussie. Aucun auto-merge ; main non protégée selon API. |
+
+| Sync OPSX natif et durcissement | **PR proposée** : installer les skills/commandes dans le runner et tester le garde-fou SHA-256. **Non prouvé en E2E** ; TS-008 utilisait un prompt explicite. |
 
 **Attention aux artefacts historiques** : `backlog/tasks/TS-004.md` indique encore `ready` et ses checkboxes ne sont pas actualisées par le workflow pilote ; prévoir une synchronisation automatique de l'état une fois le cycle OpenSpec introduit.
 
@@ -27,7 +29,7 @@
 ### F1. Réduire l'intervention GitHub et sécuriser la livraison
 
 - Démontrer GitHub App ou PAT à permissions minimales pour émission de PR, de préférence **GitHub App**.
-- Supprimer le statut `action_required` sur une **nouvelle PR de test** tout en maintenant la CI indépendante.
+- **Acquis sur TS-008** : une PR créée par la GitHub App déclenche la CI sans approbation supplémentaire ; surveiller ce comportement sur les prochaines PR.
 - Protéger `main`, sélectionner les checks obligatoires, vérifier la politique d'approbation de review et de merge ; configurer `allow_auto_merge` uniquement si souhaité/possible.
 - Valider de bout en bout : création PR automatique → CI sans approbation de démarrage → fusion autorisée selon règles → Pages.
 - Tester un cas rouge pour prouver que la PR **ne fusionne pas**.
@@ -43,7 +45,7 @@
 vérifie, synchronise et archive. Voir [mode opératoire](openspec-manual-pilot.md).
 L'essai réel TS-005 a abouti à la PR #8 fusionnée. La revue sécurité et le durcissement des budgets/restauration restent des travaux futurs.
 
-- Fixer version CLI, config et Skills OpenSpec (profils Explore/Propose/Apply/Sync/Archive + Verify).
+- CLI OpenSpec fixée en 1.14.1 ; l'installation des skills OpenCode sur le runner est proposée, à éprouver en E2E. OpenCode demeure non épinglé.
 - Introduire `openspec/`, choisir le schéma `spec-driven`, associer `TS-NNN` à des changes déterministes.
 - Étape autonome Explore/Propose/validation des artefacts ; puis Apply + tests + checkpoints; Sync des specs ; Archive non interactif + validation finale.
 - Tester un changement comportemental simple avec artefacts conservés, preuves de tests et un change correctement archivé.
@@ -74,6 +76,10 @@ L'essai réel TS-005 a abouti à la PR #8 fusionnée. La revue sécurité et le 
 - Séparer règles factory et configuration de projet ; démarrer une autre app depuis le seul contrat de task.
 - Vérifier isolation des dépôts, modèles, clés/budgets et permissions App.
 - Publier un guide d'initialisation et un parcours mobile pour l'activation initiale.
+
+### Prochain test borné
+
+Tester la fusion sémantique dans une **capacité existante** via TS-009, dans une PR de backlog séparée. Lancer uniquement après revue des changements de factory et autorisation explicite du coût. Exiger diff specs avant/après, toutes les étapes réelles, CI et rapport de coût. Voir [current-state.md](current-state.md).
 
 ## Décisions non prises
 

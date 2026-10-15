@@ -34,3 +34,19 @@ test('OpenSpec version and independent validation stay pinned', () => {
   assert.match(ci, /openspec validate --all --strict --no-interactive/);
   assert.match(ci, /openspec validate --archived --strict --no-interactive/);
 });
+
+
+test('OPSX command files are initialized explicitly before paid phases', () => {
+  assert.match(agent, /openspec init --tools opencode,agents/);
+  assert.match(agent, /test -s \.opencode\/skills\/openspec-sync-specs\/SKILL\.md/);
+  assert.match(agent, /test -s \.opencode\/commands\/opsx-sync\.md/);
+  assert.match(agent, /test -s \.agents\/skills\/openspec-sync-specs\/SKILL\.md/);
+  assert.match(agent, /opencode run .*--command opsx-sync "\$CHANGE_ID"/);
+  assert.doesNotMatch(agent, /prompt="Perform \/opsx:sync/);
+});
+
+test('Semantic sync verifies content-level scope before archive', () => {
+  assert.match(agent, /node scripts\/sync-guard\.mjs snapshot/);
+  assert.match(agent, /node scripts\/sync-guard\.mjs verify/);
+  assert.match(agent, /openspec archive "\$CHANGE_ID" --yes --skip-specs/);
+});

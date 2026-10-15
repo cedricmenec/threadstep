@@ -1,6 +1,6 @@
 # GitHub : suppression des interventions répétitives, sans affaiblir la sécurité
 
-**État confirmé le 14/10/2026.** L'exécution OpenCode de `TS-002` a réussi et créé la PR #2, mais sa CI `pull_request` a été créée avec le statut **`action_required`**, sans job lancé, jusqu'à approbation humaine. La CI a ensuite réussi. Ceci est le comportement documenté par GitHub pour les PR générées avec le `GITHUB_TOKEN`.
+**Historique de l'incident initial du 14/10/2026.** L'exécution OpenCode de `TS-002` a réussi et créé la PR #2, mais sa CI `pull_request` a été créée avec le statut **`action_required`**, sans job lancé, jusqu'à approbation humaine. La CI a ensuite réussi. Ceci est le comportement documenté par GitHub pour les PR générées avec le `GITHUB_TOKEN`.
 
 ## 1. Distinguer quatre choses
 
@@ -9,7 +9,7 @@
 - **Allow GitHub Actions to create and approve pull requests** autorise des actions spécifiques du bot, **mais n'annule pas** l'approbation de lancement de CI des PR créées avec `GITHUB_TOKEN`.
 - **Approval required** (démarrage des workflows CI sur PR bot) est différent de la **review/approval de la PR** requise par une protection de branche ; supprimer le premier ne supprime pas le second.
 
-## 2. Pourquoi le token courant bloque
+## 2. Pourquoi le GITHUB_TOKEN du pilote initial bloquait
 
 GitHub explique qu'une PR créée/mise à jour via le `GITHUB_TOKEN` déclenche les événements `pull_request` en **état d'approbation nécessaire** (`opened`, `synchronize`, `reopened`). La plupart des autres événements produits par ce token n'amorcent pas une nouvelle exécution, pour éviter les boucles. Les exceptions notables sont `workflow_dispatch` et `repository_dispatch`.
 
@@ -21,7 +21,7 @@ GitHub explique qu'une PR créée/mise à jour via le `GITHUB_TOKEN` déclenche 
 | --- | --- | --- | --- |
 | **GitHub App dédiée : recommandée** | **Oui**, lorsque la PR est créée/mise à jour avec le token d'installation de cette App | Scoped à un repo/installation, jetons courts, identité de service indépendante | Création/installation App, clé privée à conserver en secret, permissions à configurer |
 | **Fine-grained PAT : alternative pilote** | **Oui**, si les permissions du PAT permettent de créer la PR | Mise en place simple, déclenche les workflows associés à l'événement | Identité liée à un utilisateur, rotation/expiration, périmètre sensible |
-| **`GITHUB_TOKEN` + approbation manuelle** | Non | Actuel, ne nécessite aucun secret supplémentaire | Fait obstacle à l'autonomie complète |
+| **GITHUB_TOKEN + approbation manuelle** | Non | Historique du pilote initial | Fait obstacle à l'autonomie complète |
 | **`GITHUB_TOKEN` + `workflow_dispatch` explicite** | Peut déclencher une **CI séparée** sans approbation liée à une PR bot | Pas de credential supplémentaire, exception officielle GitHub | Conception d'une validation indépendante au bon SHA et publication d'une preuve exigée pour la fusion ; **ne remplace pas automatiquement** les required PR checks |
 | **Livraison directe `main` façon Mestryn** | Évite la PR donc évite cette approbation PR | Simplicité, expérience antérieure `DELIVERY: MAIN` | Risque de contourner la review ; la CI de push créée avec `GITHUB_TOKEN` n'est pas déclenchée automatiquement ; branch protection et vérification du SHA indispensables |
 
@@ -34,11 +34,11 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 3. Configuration effectivement utilisée : variable de dépôt **`APP_ID`** et secret **`APP_PRIVATE_KEY`** (clé PEM complète). Le propriétaire a confirmé leur configuration. Ne jamais publier la clé, y compris dans les logs.
 4. PR #9 fusionnée : les deux workflows d'agent utilisent `actions/create-github-app-token@v1`, le jeton d'installation pour `git push` et `GH_TOKEN` pour `gh pr create`, `gh pr list`, `gh pr ready`. L'action demande `permission-contents: write` et `permission-pull-requests: write`.
 5. Réduire le scope, masquer/révoquer le jeton, limiter sa durée et créer un nouveau jeton si le job dépasse sa validité.
-6. **Reste à démontrer** avec TS-006 : nouvelle PR créée par le workflow historique → CI démarre sans approbation → check réel réussi sur SHA exact → revue et fusion manuelles. Le simple merge de la PR #9 ne prouve pas ce comportement.
+6. **Démontré sur TS-008** : PR #21 créée par la GitHub App, CI de PR réussie, fusion par cedricmenec, puis CI de main et Pages réussies. Ce résultat ne démontre pas la protection de main ; selon l'API, main reste non protégée au 15/10/2026.
 
 **Prérequis manuels potentiels** : l'assistant GitHub actuel ne peut pas enregistrer une GitHub App, installer son secret ou modifier toutes les règles de dépôt avec ses opérations disponibles. Ces opérations doivent être réalisées via un outil d'administration autorisé / quelques étapes UI mobile ; aucun secret dans la conversation.
 
-## 5. Protections impératives avant auto-merge
+## 5. Protections impératives avant autonomie renforcée
 
 - Protéger `main` avec **required status checks** et interdire les force-pushs ; `ThreadStep/main` était **non protégée** à la vérification.
 - Conserver la CI `pull_request` **sans secrets OpenRouter** et sans droits d'écriture. Aucun `pull_request_target` lançant du code issu de PR, aucune chaîne privilégiée `workflow_run` non auditée.
@@ -57,6 +57,8 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 - Toutes les actions dangereuses (`main`, changements de secrets, migrations destructives, règles GitHub) doivent respecter leur politique d'autorisation.
 
 ## 7. Documentation officielle vérifiée
+
+**Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; le nouveau contrôle de diff et l'invocation native sont proposés mais non testés E2E.
 
 - [GITHUB_TOKEN et exceptions, PR bot soumises à approbation, alternatives App/PAT](https://docs.github.com/en/actions/concepts/security/github_token)
 - [Triggering a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)

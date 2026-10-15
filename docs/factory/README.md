@@ -1,7 +1,7 @@
 # Autonomous Software Factory | Dossier de référence
 
-**Statut : pilote manuel OpenCode et OpenSpec exécuté ; GitHub App intégrée, CI sur PR App à confirmer.**  
-**Mise à jour : 14 octobre 2026.**  
+**Statut : cycle auto TS-008 et CI sur PR GitHub App vérifiés ; invocation OPSX native proposée mais non testée.**  
+**Mise à jour : 15 octobre 2026.**  
 **Projet pilote :** [ThreadStep](https://github.com/cedricmenec/threadstep).  
 **Référence antérieure :** dépôt privé `mestryn`, notamment `.github/workflows/opencode.yml` et `AGENTS.md`.
 
@@ -19,18 +19,19 @@ Contraintes durables :
 
 ## Où lire quoi ?
 
-1. [Spécification fonctionnelle](functional-specification.md) : acteurs, capacités, scénarios, critères et exigences non fonctionnelles.
-2. [Architecture technique](technical-architecture.md) : composants, ports/adaptateurs, contrats, états, stockages et modes d'exécution.
-3. [Méthodologie opérationnelle](operating-methodology.md) : de la voix au backlog, du lancement à la livraison, et incidents.
-4. [Cycle de développement OpenSpec](openspec-protocol.md) : Explore → Propose → Apply → Verify → Sync → Archive.
-5. [Autonomie et sécurité GitHub](github-autonomy-and-security.md) : blocage de CI sur PR créée par bot, GitHub App/PAT, contrôles, budgets, garde-fous.
-6. [Feuille de route et critères de passage](roadmap.md) : état confirmé, évolutions et tests de bout en bout.
-7. [Décisions et alternatives](decisions.md) : décisions actuelles, options et arbitrages à venir.
+1. [État courant et reprise](current-state.md) : preuves, risques, versions et prochaine expérimentation.
+2. [Spécification fonctionnelle](functional-specification.md) : acteurs, capacités, scénarios, critères et exigences non fonctionnelles.
+3. [Architecture technique](technical-architecture.md) : composants, ports/adaptateurs, contrats, états, stockages et modes d'exécution.
+4. [Méthodologie opérationnelle](operating-methodology.md) : de la voix au backlog, du lancement à la livraison, et incidents.
+5. [Cycle de développement OpenSpec](openspec-protocol.md) : Explore → Propose → Apply → Verify → Sync → Archive.
+6. [Autonomie et sécurité GitHub](github-autonomy-and-security.md) : blocage de CI sur PR créée par bot, GitHub App/PAT, contrôles, budgets, garde-fous.
+7. [Feuille de route et critères de passage](roadmap.md) : état confirmé, évolutions et tests de bout en bout.
+8. [Décisions et alternatives](decisions.md) : décisions actuelles, options et arbitrages à venir.
 
 ## Source de vérité et limites
 
-- Exécution actuelle : `.github/workflows/agent.yml` (OpenCode direct), `.github/workflows/agent-openspec.yml` (plan/apply), `.github/workflows/ci.yml`, `.github/workflows/pages.yml`.
-- Règles de l'agent dans **`AGENTS.md`** ; backlog dans **`backlog/tasks/TS-NNN.md`** ; besoins ThreadStep dans **`docs/product/`**.
-- Le pilote OpenSpec a livré TS-005 (PR #8 fusionnée). La GitHub App est créée, installée/configurée par le propriétaire et utilisée par les deux workflows d'agent depuis la PR #9 fusionnée. Le test E2E du déclenchement CI sur une nouvelle PR d'agent reste à confirmer. Aucun orchestrateur ni auto-merge n'est implémenté.
-- Les modèles OpenRouter, flags CLI, tarifs et politiques GitHub peuvent évoluer : **versionner, tester et revalider** avant activation.
-- Une session conversationnelle n'est pas un exécuteur permanent : la continuité autonome doit être portée par GitHub Actions ou un orchestrateur hébergé, avec un état persistant.
+- Exécution actuelle : agent.yml (direct), agent-openspec.yml (plan/apply/auto/finalize), ci.yml et pages.yml.
+- Contrat agent dans AGENTS.md, tâches sous backlog/tasks/, exigences produit sous docs/product/.
+- TS-008 (PR #21) a été produite par la GitHub App, avec CI de PR et de main réussies et Pages déployées. La synchronisation y a été effectuée par un agent guidé par prompt, sans preuve de l'invocation de la commande native OPSX.
+- Le document [current-state.md](current-state.md) sert d'entrée unique pour le statut réellement vérifié. L'orchestrateur, les limites de coût garanties et la protection main restent à traiter.
+- Les versions des outils, commandes et tarifs peuvent évoluer ; ne jamais déduire la validité du comportement de la seule présence d'un fichier ou de l'état green d'un run.

@@ -24,7 +24,7 @@ flowchart TD
   B --> O
 ```
 
-**Attention :** ce diagramme représente l'architecture **cible**, pas les workflows actuellement exécutés. En pilote, `M → E` existe, mais OpenSpec et l'orchestrateur `O` ne sont pas implémentés. La CI de PR créée avec `GITHUB_TOKEN` nécessite aujourd'hui une approbation.
+**Attention :** ce diagramme illustre l'architecture **cible**. Le chemin manuel OpenSpec fonctionne (TS-008, PR #21) ; l'orchestrateur externe `O`, les plafonds budgétaires et le stockage transactionnel ne sont pas implémentés. Le workflow utilise désormais un jeton de GitHub App pour publier les PR, et la CI sur PR #21 a réussi. Voir [l'état courant](current-state.md).
 
 ## 2. Couches proposées (ports et adaptateurs)
 
@@ -75,7 +75,7 @@ Résultat attendu : `runId`, `taskId`, `state`, `workingBranch`, `commitSha`, `o
 
 **Durabilité :** branche `agent/TS-NNN` ou `factory/<run-id>` préparée avant travail ; checkpoint poussé et SHA distant vérifié après chaque tâche OpenSpec ; reprise depuis la branche distante sans force-push. Étudier la politique de checkpoint déjà expérimentée dans `mestryn` (un item OpenSpec achevé = commit/push/sha vérifié).
 
-## 5. État réel du dépôt ThreadStep au 14/10/2026
+## 5. Historique du prototype initial (avant le cycle OpenSpec TS-008)
 
 - `.github/workflows/agent.yml` : **déclenchement manuel** `task_id` et `model`, propriétaire uniquement, 20 minutes ; création/réutilisation branche `agent/TS-NNN`, OpenCode → OpenRouter, `npm run check`, PR avec `GITHUB_TOKEN`.
 - `.github/workflows/ci.yml` : `pull_request` et `push` vers `main`, `npm run check`.
@@ -83,6 +83,8 @@ Résultat attendu : `runId`, `taskId`, `state`, `workingBranch`, `commitSha`, `o
 - Backlog et `AGENTS.md` : directives de cadrage et exécution ; **pas de scheduler**, pas de statut transactionnel, pas de suivi de budget API, pas d'OpenSpec installé/configuré dans ThreadStep.
 - PR #4 (TS-004) fusionnée ; CI `main` et Pages réussis. PR #2 (TS-002) conservée ouverte.
 - `main` ne présentait **pas de protection de branche** lors de la vérification ; un succès ponctuel de tests ne remplace pas cette protection.
+
+**Situation au 15/10/2026 :** les affirmations précédentes décrivent le prototype initial et ne doivent pas servir d'état courant. Le cycle OpenSpec complet est implémenté et a livré TS-008 via PR #21. La nouvelle intégration Agent Skills/OPSX et le garde-fou d'empreintes restent non testés en E2E. [Statut actuel et preuves](current-state.md).
 
 ## 6. Séparation factory / application
 

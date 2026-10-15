@@ -28,6 +28,8 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - A factory PR is not complete until its documentation task is checked off and the PR description identifies the documentation files changed. If documentation is not needed, document a specific justification in the PR instead of silently omitting it.
 - Do not publish secrets, tokens, private keys or sensitive configuration values in documentation. Distinguish implemented behavior from untested assumptions.
 - Factory changes require an explicitly authorized, separately reviewed PR; routine feature agents must not edit protected factory files.
+- The OpenSpec workflow must initialize OpenCode skills/commands on the ephemeral runner and verify they exist before paid agent calls. Generated instructions must not be committed with a feature PR.
+- Semantic sync must use the OpenCode OPSX command when available and verify the exact contents of non-canonical files before/after sync; compare deltas against canonical specs in human review. These newly proposed gates remain unproven in a paid E2E run until independently tested.
 
 ## Backlog intake and planning protocol
 - This file is the durable, repository-wide operating contract. It explains how to work; it is NOT the backlog itself.
