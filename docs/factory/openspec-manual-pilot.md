@@ -8,7 +8,13 @@ pour les exécutions prouvées, les risques et le prochain test.
 Depuis GitHub Actions, lancer manuellement **Agent OpenSpec (manual, staged or auto)**
 sur main en renseignant une tâche déjà intégrée au backlog, son mode et son modèle
 OpenRouter. La préparation documentaire d'une tâche n'est **jamais** une
-autorisation de dépense. Aucune fusion automatique.
+autorisation de dépense. Le formulaire propose désormais
+`auto_merge=true` pour la PR finale, désactivable avant le lancement.
+**La phase `plan` n'est jamais fusionnée automatiquement**, même si cette
+option reste cochée. Le workflow refuse la fusion automatique si `main`
+n'impose pas encore le check indépendant `check`.
+Voir [la sécurité GitHub](github-autonomy-and-security.md) et
+[ASF-WF-002](tasks/ASF-WF-002.md).
 
 **Valeurs pré-sélectionnées dans le formulaire** : phase `auto`, modèle
 `openrouter/deepseek/deepseek-v4.1-flash`. Le modèle
@@ -37,10 +43,10 @@ Le workflow direct historique `agent.yml` n'est pas modifié.
 
 | Phase | Travail | Appels modèle minimaux | Livraison |
 | --- | --- | --- | --- |
-| plan | Générer proposal/design/specs/tasks, valider et tester | 1 | PR brouillon, sans code produit |
-| apply | Appliquer un plan préexistant, tester, sync, archive | 2 | PR existante prête pour revue |
-| auto | Plan, validation, implémentation, sync, archive | 3 | PR finale pour revue humaine |
-| finalize | Terminer un change déjà implémenté/commité, sync, archive | 1 | Mise à jour de PR |
+| plan | Générer proposal/design/specs/tasks, valider et tester | 1 | PR brouillon, jamais auto-merge |
+| apply | Appliquer un plan préexistant, tester, sync, archive | 2 | PR finale, auto-merge conditionnel |
+| auto | Plan, validation, implémentation, sync, archive | 3 | PR finale, auto-merge conditionnel |
+| finalize | Terminer un change déjà implémenté/commité, sync, archive | 1 | Mise à jour de PR, auto-merge conditionnel |
 
 Ces nombres sont **des appels OpenCode prévus par le workflow**, pas une garantie
 sur le nombre de requêtes internes du fournisseur. Aucune limite USD garantie
@@ -50,8 +56,10 @@ avec des autorisations séparées.
 
 Une branche d'agent persistante porte le nom agent/openspec/TS-NNN et le
 change actif openspec/changes/ts-nnn/. La GitHub App publie la PR avec un jeton
-temporaire, et la CI indépendante valide le SHA. L'humain fusionne seulement
-après contrôle du diff, des specs et des checks.
+temporaire, et la CI indépendante valide le SHA. L'humain peut désactiver auto-merge pour faire sa propre revue. Sinon,
+GitHub ne fusionnera qu'après les checks **effectivement requis** et réussis.
+Le script ne se contente pas d'un voyant vert facultatif : il vérifie le
+ruleset avant toute demande d'auto-merge.
 
 ## Installation d'OpenSpec pour OpenCode
 
