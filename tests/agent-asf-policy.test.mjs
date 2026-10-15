@@ -41,10 +41,15 @@ test("suspicious paths, traversal, secrets and overlapping tasks are rejected", 
   assert.throws(() => validateChangedPaths("ASF-V2-001", []), /did not produce changes/);
 });
 
-test("preflight verifies explicit owner-eligible task metadata", () => {
-  const path = "docs/factory/tasks/ASF-V2-001.md";
-  const content = readFileSync(path, "utf8");
-  assert.deepEqual(preflight("ASF-V2-001"), []);
+test("preflight verifies explicit owner-eligible task metadata using stable fixtures", () => {
+  const content = [
+    "# ASF-V2-001 | Test fixture",
+    "Status: ready (documentary planning only)",
+    "Type: factory",
+    "Automation: manual",
+    "Dependencies: none"
+  ].join("\n");
+  assert.deepEqual(preflight("ASF-V2-001", () => content), []);
   assert.throws(() => preflight("ASF-V2-001", () => content.replace("Automation: manual", "Automation: allowed")), /not a ready/);
   assert.throws(() => preflight("ASF-V2-001", () => content.replace("Status: ready", "Status: proposed")), /not a ready/);
 });
@@ -54,8 +59,17 @@ test("preflight requires a separate path for workflow modifications", () => {
   assert.throws(() => preflight("ASF-V2-009"), /separately authorized gated path/);
 });
 
-test("preflight refuses dependencies not yet verified as delivered", () => {
-  assert.throws(() => preflight("ASF-V2-002"), /Dependency not recorded as verified/);
+test("preflight refuses dependencies not yet verified as delivered in fixtures", () => {
+  const source = path => {
+    if (path.endsWith("/ASF-V2-001.md")) return [
+      "Status: ready",
+      "Type: factory",
+      "Automation: manual",
+      "Dependencies: none"
+    ].join("\n");
+    return readFileSync(path, "utf8");
+  };
+  assert.throws(() => preflight("ASF-V2-002", source), /Dependency not recorded as verified/);
 });
 
 test("workflow separates paid development and privileged publication", () => {
