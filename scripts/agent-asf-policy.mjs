@@ -62,10 +62,12 @@ export function preflight(taskId, read = path => readFileSync(path, "utf8")) {
     throw new Error("Invalid task dependencies");
   }
   for (const dep of deps) {
+    // Only the existence and schema of a dependency are declarative here.
+    // GitHub PR, checks and post-merge delivery are verified online separately.
     const text = read("docs/factory/tasks/" + dep + ".md");
-    if (!/^Status:\s*(?:completed|delivered)\b/im.test(text) ||
-        !/^Delivery proof:\s*https:\/\/github\.com\/[^\s]+\/pull\/\d+\s*$/im.test(text)) {
-      throw new Error("Dependency not recorded as verified and delivered: " + dep);
+    if (!/^Type:\s*factory\s*$/im.test(text) ||
+        !/^Status:\s*(?:ready|completed|delivered)\b/im.test(text)) {
+      throw new Error("Invalid or canceled factory dependency: " + dep);
     }
   }
   return deps;

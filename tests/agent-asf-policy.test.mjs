@@ -59,7 +59,7 @@ test("preflight requires a separate path for workflow modifications", () => {
   assert.throws(() => preflight("ASF-V2-009"), /separately authorized gated path/);
 });
 
-test("preflight refuses dependencies not yet verified as delivered in fixtures", () => {
+test("preflight parses dependencies independently from documentary delivery status", () => {
   const source = path => {
     if (path.endsWith("/ASF-V2-001.md")) return [
       "Status: ready",
@@ -69,7 +69,9 @@ test("preflight refuses dependencies not yet verified as delivered in fixtures",
     ].join("\n");
     return readFileSync(path, "utf8");
   };
-  assert.throws(() => preflight("ASF-V2-002", source), /Dependency not recorded as verified/);
+  assert.deepEqual(preflight("ASF-V2-002", source), ["ASF-V2-001"]);
+  assert.throws(() => preflight("ASF-V2-002", path => path.endsWith("/ASF-V2-001.md")
+    ? "Status: canceled\nType: factory\nDependencies: none" : source(path)), /Invalid or canceled/);
 });
 
 test("workflow separates paid development and privileged publication", () => {

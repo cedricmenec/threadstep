@@ -31,6 +31,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      checks: read
+      actions: read
     outputs:
       task_id: ${{ steps.task.outputs.task_id }}
     steps:
@@ -49,6 +51,9 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/agent-asf-policy.mjs preflight "$TASK_ID"
+          # GitHub is the source of truth for delivered dependencies. This read-only
+          # check fails closed before any model install, model call, or cost.
+          node scripts/verify-asf-dependencies.mjs "$TASK_ID"
           # A second open PR for the same task would risk duplicated paid work.
           existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "$TASK_ID in:title" --json number --jq 'length')"
           if [[ "$existing" != "0" ]]; then
