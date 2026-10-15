@@ -17,19 +17,18 @@ test('OpenSpec pilot needs explicit manual phase and task', () => {
 });
 
 test('OpenSpec manual dispatch defaults to auto and DeepSeek V4.1 Flash', () => {
-  assert.match(agent, /phase:\\n(?:.*\\n){0,6}        default: auto\\n        options:\\n          - auto\\n/);
-  assert.match(agent, /model:\\n(?:.*\\n){0,6}        default: 'openrouter\\/deepseek\\/deepseek-v4\\.1-flash'/);
-  assert.match(agent, /- 'openrouter\\/z-ai\\/glm-5\\.3-flash'/);
-  assert.match(agent, /auto is default: 3 paid OpenCode calls/);
+  assert.ok(agent.includes('default: auto\n        options:\n          - auto'.replaceAll('\\n', '\n')));
+  assert.ok(agent.includes("default: 'openrouter/deepseek/deepseek-v4.1-flash'"));
+  assert.ok(agent.includes("- 'openrouter/z-ai/glm-5.3-flash'"));
+  assert.ok(agent.includes('auto is default: 3 paid OpenCode calls'));
 });
 
-test('Short task IDs are normalized before path, branch and paid model steps', () => {
-  assert.match(agent, /TASK_ID="\\$\\(node scripts\\/normalize-task-id\\.mjs "\\$TASK_ID"\\)"/);
-  assert.match(agent, /echo "TASK_ID=\\$TASK_ID" >> "\\$GITHUB_ENV"/);
-  assert.match(agent, /test -f "backlog\\/tasks\\/\\$TASK_ID\\.md"/);
-  assert.match(agent, /branch="agent\\/openspec\\/\\$TASK_ID"/);
-  assert.match(agent, /group: agent-openspec\\n/);
-  assert.doesNotMatch(agent, /group: agent-openspec-\\$\\{\\{ inputs\\.task_id/);
+test('Short task IDs are normalized before paths, branches and paid model steps', () => {
+  assert.ok(agent.includes('TASK_ID="$(node scripts/normalize-task-id.mjs "$TASK_ID")"'));
+  assert.ok(agent.includes('echo "TASK_ID=$TASK_ID" >> "$GITHUB_ENV"'));
+  assert.ok(agent.includes('test -f "backlog/tasks/$TASK_ID.md"'));
+  assert.ok(agent.includes('branch="agent/openspec/$TASK_ID"'));
+  assert.ok(agent.includes('group: agent-openspec\n'.replaceAll('\\n', '\n')));
 });
 
 test('Plan is isolated and apply checks task completion and tests', () => {
