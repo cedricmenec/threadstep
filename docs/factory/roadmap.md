@@ -15,6 +15,7 @@
 | GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées** via TS-008 et TS-009 ; aucun auto-merge en place, main non protégée selon API. |
 | Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
 | Réconciliation documentaire | **Acquise** : [ASF-DOC-001](tasks/ASF-DOC-001.md), statuts du backlog actualisés après la livraison #26. |
+| Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés et exécutions sérialisées ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 
