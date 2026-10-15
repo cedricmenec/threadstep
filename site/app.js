@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -8,14 +8,21 @@ const hideCompletedEl = document.querySelector("#hide-completed");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
 const resumeCardEl = document.querySelector("#resume-card");
+const snackbarEl = document.querySelector("#snackbar");
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
+let focusSubjectId = null;
 let revealItemId = null;
 let suggestionVisible = false;
 let hideCompleted = false;
 let resumeRef = null;
 let documentLoaded = false;
+
+const UNDO_WINDOW_MS = 10000;
+let pendingRemoval = null;
+let removalTimer = null;
+let removalDeadline = 0;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
@@ -96,6 +103,12 @@ function applyFocus() {
     const input = subjectsEl.querySelector(".task-edit-title");
     if (input) { input.focus(); input.select(); return; }
   }
+  if (focusSubjectId) {
+    const card = [...subjectsEl.querySelectorAll(".subject")].find((node) => node.dataset.subject === focusSubjectId);
+    focusSubjectId = null;
+    if (card) card.focus();
+    return;
+  }
   if (focusItemId) {
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
     const target = card && card.querySelector(".task-edit");
@@ -174,8 +187,86 @@ function revealResume(itemId) {
 function clearResume() {
   resumeRef = null;
   removeResumePreference();
+  if (pendingRemoval) pendingRemoval.trackedRef = null;
   revealItemId = null;
   render();
+}
+function clearRemovalTimer() {
+  if (removalTimer !== null) {
+    clearTimeout(removalTimer);
+    removalTimer = null;
+  }
+}
+function hideSnackbar() {
+  snackbarEl.hidden = true;
+  snackbarEl.replaceChildren();
+}
+function invalidatePendingRemoval() {
+  clearRemovalTimer();
+  pendingRemoval = null;
+  hideSnackbar();
+}
+function expireRemoval() {
+  removalTimer = null;
+  pendingRemoval = null;
+  hideSnackbar();
+}
+function startRemovalTimer(delay) {
+  clearRemovalTimer();
+  removalDeadline = Date.now() + delay;
+  removalTimer = setTimeout(expireRemoval, delay);
+}
+function suspendRemovalTimer() {
+  if (removalTimer === null) return;
+  removalDeadline = Math.max(0, removalDeadline - Date.now());
+  clearRemovalTimer();
+}
+function resumeRemovalTimer() {
+  if (pendingRemoval && removalTimer === null) startRemovalTimer(removalDeadline);
+}
+function showSnackbar(itemTitle) {
+  snackbarEl.replaceChildren();
+  snackbarEl.append(el("span", "snackbar-message", "Étape retirée"));
+  const undo = el("button", "snackbar-undo", "Annuler");
+  undo.type = "button";
+  undo.setAttribute("aria-label", "Annuler le retrait de " + itemTitle);
+  undo.addEventListener("click", undoRemoval);
+  snackbarEl.append(undo);
+  snackbarEl.hidden = false;
+}
+function retirerAction(subject, item) {
+  const result = planRemoval(documentState, subject.id, item.id);
+  if (!result.removal) return;
+  invalidatePendingRemoval();
+  pendingRemoval = { subjectId: subject.id, rootItemId: item.id, removal: result.removal, trackedRef: null };
+  if (resumeRef && removalContainsItem(result.removal, resumeRef.itemId)) {
+    pendingRemoval.trackedRef = { subjectId: resumeRef.subjectId, itemId: resumeRef.itemId };
+  }
+  documentState = result.document;
+  focusSubjectId = subject.id;
+  persist();
+  showSnackbar(item.title);
+  startRemovalTimer(UNDO_WINDOW_MS);
+}
+function undoRemoval() {
+  if (!pendingRemoval) return;
+  const { removal, trackedRef } = pendingRemoval;
+  const restoredDocument = restoreRemoval(documentState, removal);
+  const rootId = removal.rootId;
+  if (restoredDocument === documentState) {
+    invalidatePendingRemoval();
+    return;
+  }
+  documentState = restoredDocument;
+  const restored = restorableTrackingRef(documentState, trackedRef);
+  if (restored) {
+    resumeRef = restored;
+    saveResumePreference(resumeRef);
+  }
+  focusItemId = rootId;
+  revealItemId = rootId;
+  invalidatePendingRemoval();
+  persist();
 }
 function move(subject, direction) {
   const reordered = moveSubject(documentState.subjects, subject.id, direction);
@@ -224,6 +315,7 @@ function renderSubject(subject) {
   remove.setAttribute("aria-label", "Supprimer le sujet " + subject.title);
   remove.addEventListener("click", () => {
     if (!confirm("Supprimer ce sujet et toutes ses étapes ?")) return;
+    invalidatePendingRemoval();
     documentState.subjects = documentState.subjects.filter((s) => s.id !== subject.id);
     persist();
   });
@@ -331,6 +423,7 @@ function renderActions(subject, item) {
         keep.addEventListener("click", () => {
           resumeRef = { subjectId: subject.id, itemId: item.id };
           saveResumePreference(resumeRef);
+          if (pendingRemoval) pendingRemoval.trackedRef = null;
           render();
         });
         actions.append(keep);
@@ -340,10 +433,7 @@ function renderActions(subject, item) {
   const remove = el("button", "subtle", "Retirer");
   remove.type = "button";
   remove.setAttribute("aria-label", "Retirer " + item.title);
-  remove.addEventListener("click", () => {
-    subject.items = subject.items.filter((entry) => entry.id !== item.id && entry.parentId !== item.id);
-    persist();
-  });
+  remove.addEventListener("click", () => retirerAction(subject, item));
   actions.append(remove);
   return actions;
 }
@@ -431,6 +521,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     if (file.size > 1024 * 1024) throw new Error("Fichier trop volumineux (maximum 1 Mo).");
     const incoming = parseDocument(await file.text());
     if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
+    invalidatePendingRemoval();
     documentState = incoming;
     documentLoaded = true;
     persist();
@@ -441,5 +532,14 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     event.target.value = "";
   }
 });
-window.addEventListener("storage", (event) => { if (event.key === STORAGE_KEY) load(); });
+window.addEventListener("storage", (event) => {
+  if (event.key !== STORAGE_KEY) return;
+  invalidatePendingRemoval();
+  load();
+});
+snackbarEl.addEventListener("focusin", suspendRemovalTimer);
+snackbarEl.addEventListener("focusout", (event) => {
+  if (event.relatedTarget && snackbarEl.contains(event.relatedTarget)) return;
+  resumeRemovalTimer();
+});
 load();

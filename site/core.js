@@ -112,6 +112,53 @@ export function resumeView(document, ref) {
     priority: item.priority
   };
 }
+export function planRemoval(document, subjectId, itemId) {
+  const subject = document.subjects.find((entry) => entry.id === subjectId);
+  if (!subject) return { document, removal: null };
+  const item = subject.items.find((entry) => entry.id === itemId);
+  if (!item) return { document, removal: null };
+  const removeChildren = item.parentId === null;
+  const entries = [];
+  subject.items.forEach((entry, index) => {
+    if (entry.id === itemId || (removeChildren && entry.parentId === itemId)) {
+      entries.push({ index, item: { ...entry } });
+    }
+  });
+  const items = subject.items.filter((entry) =>
+    entry.id !== itemId && !(removeChildren && entry.parentId === itemId));
+  const subjects = document.subjects.map((entry) =>
+    entry.id === subjectId ? { ...entry, items } : entry);
+  const removal = { subjectId, rootId: itemId, entries };
+  return { document: { ...document, subjects }, removal };
+}
+export function restoreRemoval(document, removal) {
+  if (!removal || !Array.isArray(removal.entries) || removal.entries.length === 0) return document;
+  const subject = document.subjects.find((entry) => entry.id === removal.subjectId);
+  if (!subject) return document;
+  const present = new Set(subject.items.map((entry) => entry.id));
+  const items = subject.items.slice();
+  let inserted = false;
+  const ordered = removal.entries.slice().sort((a, b) => a.index - b.index);
+  for (const entry of ordered) {
+    if (!entry || !entry.item || present.has(entry.item.id)) continue;
+    const at = Math.min(Math.max(entry.index, 0), items.length);
+    items.splice(at, 0, { ...entry.item });
+    present.add(entry.item.id);
+    inserted = true;
+  }
+  if (!inserted) return document;
+  const subjects = document.subjects.map((entry) =>
+    entry.id === removal.subjectId ? { ...entry, items } : entry);
+  return { ...document, subjects };
+}
+export function removalContainsItem(removal, itemId) {
+  if (!removal || !Array.isArray(removal.entries)) return false;
+  return removal.entries.some((entry) => entry && entry.item && entry.item.id === itemId);
+}
+export function restorableTrackingRef(document, trackedRef) {
+  if (!resumeView(document, trackedRef)) return null;
+  return { subjectId: trackedRef.subjectId, itemId: trackedRef.itemId };
+}
 export function parseDocument(source) {
   const doc = JSON.parse(source);
   if (!doc || typeof doc !== "object" || Array.isArray(doc) || doc.version !== 1 ||
