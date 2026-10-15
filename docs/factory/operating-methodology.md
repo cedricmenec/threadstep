@@ -14,7 +14,7 @@
 **Présentement réalisable :**
 - `Actions → Agent (manual, OpenRouter) → Run workflow`, branche `main`, saisie de `task_id` et du modèle.
 - L'agent lit le fichier de la tâche, effectue le développement, exécute `npm run check`, pousse une branche et ouvre/réutilise une PR.
-- Les deux workflows publient via le jeton temporaire GitHub App ; la PR #21 de TS-008 a été créée par le bot, et sa CI s'est exécutée sans intervention supplémentaire. Ils proposent désormais `auto_merge=true` par défaut, qui n'est activé que pour une PR finale si le ruleset de `main` rend le check `check` obligatoire. Sinon la PR reste ouverte avec une erreur explicite. La fusion manuelle reste disponible.
+- Les deux workflows publient via le jeton temporaire GitHub App ; la PR #21 de TS-008 a été créée par le bot, et sa CI s'est exécutée sans intervention supplémentaire. Ils proposent `auto_merge=true` par défaut, uniquement pour les PR finales avec `check` requis par `Protect Main`. Les runs OpenSpec TS-010/TS-011 ont prouvé la fusion GitHub App après CI sur #32/#34 ; elle reste désactivable. Une configuration GitHub insuffisante laisse la PR ouverte. Le chemin E2E du mode direct reste à démontrer.
 - Une fois fusionné, CI sur `main` et Pages déploient la version testée.
 
 **Évolution voulue :** proposer un bouton/commande `workflow_dispatch` avec `task_id`, `model`, `protocol`, `delivery` et budget autorisé ; **pas de dépendance obligatoire à un orchestrateur externe**. L'exécuteur reçoit et vérifie la même enveloppe de tâche qu'en mode automatique.
@@ -77,4 +77,6 @@ Conserver la branche distante et ses checkpoints. Collecter workflow URL, horoda
 - **TS-008 (PR #21)** : auto complet, 41 tests, sync guidée par prompt et archive réussies ; création ADDED seulement.
 - **TS-009 (PR #26)** : plan/apply réussis après correction de la checklist, invocation de la commande OPSX native, sync MODIFIED d'une capacité existante, 55 tests pendant apply et 60 tests sur main après fusion, Pages réussi.
 - **PR #25** : rejet en phase plan/pré-apply des cases post-sync dans les checklists, après l'incident du run 38710098331.
-- **Limite actuelle** : déclenchement par tâche explicite, aucun scheduler, aucun budget USD garanti et aucune protection main confirmée. Voir [l'état courant](current-state.md).
+- **TS-010 (#32) et TS-011 (#34)** : exécutions OpenSpec `auto` réussies avec fusion automatique par la GitHub App après CI, suivi de CI sur `main` et Pages (97 tests après #34).
+- **PR #29/#30** : ajout auto-merge puis correction du YAML du workflow manuel ; Actionlint et `bash -n` incorporés à la CI (73 tests après #30).
+- **Limites actuelles** : déclenchement par tâche explicite, aucun scheduler, aucun plafond USD garanti. `main` est protégée par `Protect Main` avec `check` requis ; tests de CI rouge et auto-merge direct non effectués. Voir [l'état courant](current-state.md).
