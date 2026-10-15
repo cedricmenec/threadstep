@@ -1,1 +1,154 @@
-[]
+[
+  {
+    "id": "TS-001",
+    "path": "backlog/tasks/TS-001.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [],
+    "created_at": "2026-10-14",
+    "content_sha256": "ba8a4688818553abdc1c74082732855e60dfec1a3b4c7cf164e38fe992c76dbc"
+  },
+  {
+    "id": "TS-002",
+    "path": "backlog/tasks/TS-002.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [],
+    "created_at": "2026-10-14",
+    "content_sha256": "d630886d22e69a3a3b7bc38230fed05716ebc1336fe9525b1e680e98ad8f1555"
+  },
+  {
+    "id": "TS-003",
+    "path": "backlog/tasks/TS-003.md",
+    "type": "factory",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [],
+    "created_at": "2026-10-14",
+    "content_sha256": "1cf36ff08bcdbe5382ea0d0c142709e875e62b16ee9884c29d79d5d039980082"
+  },
+  {
+    "id": "TS-004",
+    "path": "backlog/tasks/TS-004.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-001"
+    ],
+    "created_at": "2026-10-14",
+    "content_sha256": "2f72e4a5ecb480fd1b973d5cb77f994b2911490fd4d02819dfcd10e91addf475"
+  },
+  {
+    "id": "TS-005",
+    "path": "backlog/tasks/TS-005.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-001"
+    ],
+    "created_at": "2026-10-14",
+    "content_sha256": "d71f3dfcff667ea8abed04c1b5cc7e8c509d9bf8dcd78c5af4c915e0cf28eeb2"
+  },
+  {
+    "id": "TS-006",
+    "path": "backlog/tasks/TS-006.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-001"
+    ],
+    "created_at": "2026-10-14",
+    "content_sha256": "f439a764f47beadfd103742f866e53cc1e82d9cfce7cbf1583a7ea0687503352"
+  },
+  {
+    "id": "TS-007",
+    "path": "backlog/tasks/TS-007.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-001"
+    ],
+    "created_at": "2026-10-14",
+    "content_sha256": "f0ed75968724473bc8fa1f9a306e530fd35a7f98a44aee0a1454a6ceaf008aa9"
+  },
+  {
+    "id": "TS-008",
+    "path": "backlog/tasks/TS-008.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-007"
+    ],
+    "created_at": "2026-10-15",
+    "content_sha256": "09156d43d9c60c6ef5ed72499961ef3fb14e0e1f543cd6112bbe96880b4ee914"
+  },
+  {
+    "id": "TS-009",
+    "path": "backlog/tasks/TS-009.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-007"
+    ],
+    "created_at": "2026-10-15",
+    "content_sha256": "2b7c29d22a430098a7531ee01907cfd43530aaf875afa0af37846f1a7be11f26"
+  },
+  {
+    "id": "TS-010",
+    "path": "backlog/tasks/TS-010.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-005",
+      "TS-008"
+    ],
+    "created_at": "2026-10-15",
+    "content_sha256": "b5bbab087fd2684fed90d5aef0628408481568f86834ecb406536a4e8dafaad0"
+  },
+  {
+    "id": "TS-011",
+    "path": "backlog/tasks/TS-011.md",
+    "type": "product",
+    "status": "on_hold",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "unknown",
+    "depends_on": [
+      "TS-001",
+      "TS-004",
+      "TS-007",
+      "TS-005"
+    ],
+    "created_at": "2026-10-15",
+    "content_sha256": "67f79aa93ca88c71188714044ef2d411b7fd7ea0b49444b0cdc56e9b550f7e60"
+  }
+]

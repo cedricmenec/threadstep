@@ -88,9 +88,10 @@ vers un ID non migré est en revanche inconnue et échoue la validation.
 
 ## 5. État actuel et preuves
 
-- Aucun fichier `backlog/tasks/*.md` ne porte encore de frontmatter V2 : les
-  deux index générés sont donc des tableaux vides `[]`, et `npm run check`
-  réussit.
+- Les onze tâches historiques `TS-001` à `TS-011` portent désormais le
+  frontmatter V2 depuis la migration [ASF-V2-003](tasks/ASF-V2-003.md) ; les
+  index sont donc peuplés (11 fiches actives, 0 archivée) et `npm run check`
+  réussit. Voir [migration historique](backlog-v2-migration.md).
 - Tests déterministes : `tests/asf-backlog-index.test.mjs` couvre 100 tâches
   fictives (index byte-identique, corps absent), clé dupliquée, cycle, ID
   double, dépendance inconnue, auto-référence, enums invalides, index obsolète

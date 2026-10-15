@@ -17,7 +17,7 @@
 | Réconciliation documentaire | **Actualisée** : [ASF-DOC-001](tasks/ASF-DOC-001.md) (TS-009) puis [ASF-DOC-002](tasks/ASF-DOC-002.md) (TS-010/011 et fusion conditionnelle). |
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
 | Contrat des tâches Backlog V2 | **Livré** : [ASF-V2-001](tasks/ASF-V2-001.md) (PR #40) définit le [contrat des tâches V2](backlog-v2-task-contract.md) et ses tests statiques. |
-| Index et validation stricte du backlog | **Implémenté, en revue (PR de tâche non fusionnée)** : [ASF-V2-002](tasks/ASF-V2-002.md) fournit `scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json` et l'[index déterministe](backlog-v2-index.md). Migration [ASF-V2-003](tasks/ASF-V2-003.md) non démarrée. |
+| Index et validation stricte du backlog | **Livré sur `main`** : [ASF-V2-002](tasks/ASF-V2-002.md) fournit `scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json` et l'[index déterministe](backlog-v2-index.md) (PR #43 fusionnée). Migration [ASF-V2-003](tasks/ASF-V2-003.md) **en revue dans sa PR** : frontmatter V2 des tâches historiques et index peuplé (11 actives), détails dans [migration historique](backlog-v2-migration.md). |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 
@@ -109,9 +109,10 @@ L'accord sur la feuille de route n'est pas une autorisation d'activer une exécu
 - [ ] Livrer ASF-BOOT-002 : contrôle GitHub déterministe des dépendances sans synchronisation documentaire bloquante, avec tests d'erreurs et CI indépendante.
 - [ ] Poursuivre avec ASF-V2-002 uniquement après autorisation d'un nouveau lancement OpenRouter.
 
-Note de statut (non cochée) : une PR d'implémentation ASF-V2-002 propose
-`scripts/asf/`, les index `backlog/index.json` / `backlog/archive-index.json` et
-l'intégration de `check` à `npm run check`. Elle exige encore une CI `check`
-indépendante réussie sur son SHA, une revue de diff et une fusion explicitement
-autorisée. Les preuves actuelles sont locales (`npm run check` → 130 tests) et
-ne valent pas livraison sur `main`.
+Note de statut (non cochée) : la PR d'implémentation ASF-V2-002
+(`scripts/asf/`, index `backlog/index.json` / `backlog/archive-index.json`,
+`check` intégré à `npm run check`) est présente sur `main` via la PR #43. La
+migration [ASF-V2-003](tasks/ASF-V2-003.md) est en revue dans sa propre PR :
+preuves locales (`npm run check` → 137 tests, `backlog:check` 11 actifs,
+0 archivé, `node --check` sur `site/core.js` et `site/app.js`) et **aucune**
+revendication de CI GitHub indépendante ni de fusion.
