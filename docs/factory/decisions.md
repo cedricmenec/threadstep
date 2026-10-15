@@ -18,7 +18,7 @@ Les entrées **Acceptée** fixent l'intention de l'architecture cible ; elles ne
 | ASF-ADR-012 | Acceptée, implémentée et testée pour ADDED/MODIFIED | Après apply, synchronisation sémantique par agent et archive --skip-specs : TS-008 prouve ADDED, TS-009 PR #26 prouve MODIFIED dans une capacité existante. REMOVED/RENAMED restent à tester. |
 | ASF-ADR-013 | Acceptée, implémentée et validée E2E | OpenSpec init --tools opencode,agents, commande OpenCode --command opsx-sync et garde-fou SHA-256. Prouvé sur TS-009 run 38712079641 et PR #26 ; isolation hors sandbox non garantie. |
 | ASF-ADR-014 | Acceptée, implémentée | Contrat de checklist pré-sync : contrôles post-sync hors cases à cocher ; validateur statique dans plan/apply (PR #25), testé en CI. |
-| ASF-ADR-015 | Acceptée, implémentée (tests CI) | Formulaire OpenSpec : auto et DeepSeek V4.1 Flash par défaut, mais déclenchement manuel uniquement ; raccourci numérique 1-999 normalisé en TS-NNN, compatibilité des IDs complets, runs OpenSpec sérialisés pour éviter les alias concurrents. Cette préférence entraîne trois appels OpenCode plan/apply/sync lors d'un lancement auto. Voir ASF-WF-001. |
+| ASF-ADR-015 | Acceptée, implémentée (tests CI) | Formulaire OpenSpec : auto et DeepSeek V4.1 Flash par défaut, mais déclenchement manuel uniquement ; raccourci numérique 1-999 normalisé en TS-NNN, compatibilité des IDs complets, runs OpenSpec verrouillés par tâche canonique pour éviter les alias concurrents sans réduire le parallélisme entre tâches. Cette préférence entraîne trois appels OpenCode plan/apply/sync lors d'un lancement auto. Voir ASF-WF-001. |
 
 ## Origines vérifiables
 
