@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView } from "../site/core.js";
+import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -481,4 +481,154 @@ test("nextActionSuggestion is independent from the resume reference", () => {
   assert.deepEqual(after, before);
   assert.equal(after.itemId, "ib");
   assert.deepEqual(doc, snapshot);
+});
+
+function removalDocument() {
+  const doc = emptyDocument();
+  const subject = newSubject("Fils", "s1");
+  subject.items.push(
+    newItem("Parent", "normal", "p"),
+    newItem("Enfant A", "urgent", "c1", "p"),
+    newItem("Autre action", "later", "o1"),
+    newItem("Enfant B", "normal", "c2", "p"),
+  );
+  subject.items[1].done = true;
+  doc.subjects.push(subject);
+  return doc;
+}
+
+test("planRemoval removes a top-level action with all its substeps in order", () => {
+  const doc = removalDocument();
+  const result = planRemoval(doc, "s1", "p");
+  assert.equal(result.removal.subjectId, "s1");
+  assert.equal(result.removal.rootId, "p");
+  assert.deepEqual(result.removal.entries.map((e) => e.item.id), ["p", "c1", "c2"]);
+  assert.deepEqual(result.removal.entries.map((e) => e.index), [0, 1, 3]);
+  assert.deepEqual(result.document.subjects[0].items.map((i) => i.id), ["o1"]);
+});
+
+test("planRemoval removes a single substep without touching its siblings", () => {
+  const doc = removalDocument();
+  const result = planRemoval(doc, "s1", "c1");
+  assert.deepEqual(result.removal.entries.map((e) => e.item.id), ["c1"]);
+  assert.deepEqual(result.removal.entries.map((e) => e.index), [1]);
+  assert.deepEqual(result.document.subjects[0].items.map((i) => i.id), ["p", "o1", "c2"]);
+});
+
+test("planRemoval is a no-op for a missing subject or item and never mutates the input", () => {
+  const doc = removalDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  assert.equal(planRemoval(doc, "absent", "p").document, doc);
+  assert.equal(planRemoval(doc, "absent", "p").removal, null);
+  assert.equal(planRemoval(doc, "s1", "absent").document, doc);
+  assert.equal(planRemoval(doc, "s1", "absent").removal, null);
+  assert.deepEqual(doc, snapshot);
+});
+
+test("planRemoval returns new structures without sharing the removed references", () => {
+  const doc = removalDocument();
+  const subject = doc.subjects[0];
+  const result = planRemoval(doc, "s1", "p");
+  assert.notEqual(result.document, doc);
+  assert.notEqual(result.document.subjects, doc.subjects);
+  assert.notEqual(result.document.subjects[0], subject);
+  assert.notEqual(result.document.subjects[0].items, subject.items);
+  assert.notEqual(result.removal.entries[0].item, subject.items[0]);
+  assert.equal(result.removal.entries[0].item.parentId, null);
+  assert.equal(result.removal.entries[1].item.parentId, "p");
+  assert.equal(subject.items.length, 4);
+});
+
+test("restoreRemoval rebuilds the exact subtree with identities, order and flags", () => {
+  const doc = removalDocument();
+  const { document: after, removal } = planRemoval(doc, "s1", "p");
+  const restored = restoreRemoval(after, removal);
+  assert.notEqual(restored, after);
+  assert.deepEqual(restored, doc);
+  const items = restored.subjects[0].items;
+  assert.deepEqual(items.map((i) => i.id), ["p", "c1", "o1", "c2"]);
+  assert.equal(items[1].done, true);
+  assert.equal(items[1].parentId, "p");
+  assert.equal(items[3].parentId, "p");
+});
+
+test("restoreRemoval restores a single substep to its original position", () => {
+  const doc = removalDocument();
+  const { document: after, removal } = planRemoval(doc, "s1", "c2");
+  const restored = restoreRemoval(after, removal);
+  assert.deepEqual(restored.subjects[0].items.map((i) => i.id), ["p", "c1", "o1", "c2"]);
+  assert.deepEqual(restored, doc);
+});
+
+test("restoreRemoval preserves unrelated changes made before the undo", () => {
+  const doc = removalDocument();
+  const { document: after, removal } = planRemoval(doc, "s1", "p");
+  const added = { ...after, subjects: after.subjects.map((s) => ({
+    ...s, items: [...s.items, newItem("Nouveau", "urgent", "n1")]
+  })) };
+  const restored = restoreRemoval(added, removal);
+  assert.deepEqual(restored.subjects[0].items.map((i) => i.id), ["p", "c1", "o1", "c2", "n1"]);
+  assert.equal(restored.subjects[0].items.find((i) => i.id === "n1").title, "Nouveau");
+});
+
+test("restoreRemoval skips ids already present and ignores invalid receipts", () => {
+  const doc = removalDocument();
+  const { document: after, removal } = planRemoval(doc, "s1", "p");
+  const kept = { ...after, subjects: after.subjects.map((s) => ({
+    ...s, items: [...s.items, { ...doc.subjects[0].items[0] }]
+  })) };
+  const restored = restoreRemoval(kept, removal);
+  assert.equal(restored.subjects[0].items.filter((i) => i.id === "p").length, 1);
+  assert.deepEqual(restored.subjects[0].items.map((i) => i.id).sort(), ["c1", "c2", "o1", "p"]);
+  assert.equal(restoreRemoval(doc, null), doc);
+  assert.equal(restoreRemoval(doc, { entries: [] }), doc);
+  assert.equal(restoreRemoval(doc, { subjectId: "s1", entries: null }), doc);
+});
+
+test("restoreRemoval returns the same reference for a missing subject and never recreates it", () => {
+  const doc = removalDocument();
+  const { removal } = planRemoval(doc, "s1", "p");
+  const other = emptyDocument();
+  other.subjects.push(newSubject("Autre", "sX"));
+  assert.equal(restoreRemoval(other, removal), other);
+  assert.equal(other.subjects.length, 1);
+  assert.equal(other.subjects[0].id, "sX");
+});
+
+test("removalContainsItem matches the target and its substeps only", () => {
+  const doc = removalDocument();
+  const { removal } = planRemoval(doc, "s1", "p");
+  assert.equal(removalContainsItem(removal, "p"), true);
+  assert.equal(removalContainsItem(removal, "c1"), true);
+  assert.equal(removalContainsItem(removal, "c2"), true);
+  assert.equal(removalContainsItem(removal, "o1"), false);
+  assert.equal(removalContainsItem(removal, "absent"), false);
+  assert.equal(removalContainsItem(null, "p"), false);
+  assert.equal(removalContainsItem({}, "p"), false);
+});
+
+test("restorableTrackingRef keeps a valid unfinished top-level reference", () => {
+  const doc = removalDocument();
+  const ref = { subjectId: "s1", itemId: "p" };
+  assert.deepEqual(restorableTrackingRef(doc, ref), { subjectId: "s1", itemId: "p" });
+});
+
+test("restorableTrackingRef rejects completed, substep, missing and empty references", () => {
+  const doc = removalDocument();
+  assert.equal(restorableTrackingRef(doc, { subjectId: "s1", itemId: "c1" }), null);
+  assert.deepEqual(restorableTrackingRef(doc, { subjectId: "s1", itemId: "o1" }), { subjectId: "s1", itemId: "o1" });
+  assert.equal(restorableTrackingRef(doc, { subjectId: "s1", itemId: "absent" }), null);
+  assert.equal(restorableTrackingRef(doc, { subjectId: "absent", itemId: "p" }), null);
+  assert.equal(restorableTrackingRef(doc, null), null);
+  assert.equal(restorableTrackingRef(doc, {}), null);
+});
+
+test("restorableTrackingRef returns null for a completed top-level action", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "s1");
+  const done = newItem("Terminée", "normal", "d");
+  done.done = true;
+  subject.items.push(done);
+  doc.subjects.push(subject);
+  assert.equal(restorableTrackingRef(doc, { subjectId: "s1", itemId: "d" }), null);
 });

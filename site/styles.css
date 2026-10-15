@@ -79,6 +79,13 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .children{padding-left:26px;margin:0}
 .children .task{margin-top:5px;padding-top:9px}
 .empty{padding:24px 8px;text-align:center;color:#819083;font-size:.91rem}
+.snackbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:14px;background:#263d31;color:#f3f6ec;border-radius:12px;padding:12px 14px 12px 18px;box-shadow:0 12px 30px #24382f33;max-width:min(480px,calc(100vw - 32px));z-index:20}
+.snackbar[hidden]{display:none}
+.snackbar-message{font-size:.9rem;font-weight:600}
+.snackbar-undo{background:transparent;border:1px solid #a9ba69;color:#e8f0d8;border-radius:9px;padding:10px 14px;font-size:.85rem;font-weight:800;min-height:44px;cursor:pointer;white-space:nowrap}
+.snackbar-undo:hover{background:#395b47}
+@media(prefers-reduced-motion:no-preference){.snackbar{animation:snackbar-in .18s ease-out}}
+@keyframes snackbar-in{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 #status{margin-left:8px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}

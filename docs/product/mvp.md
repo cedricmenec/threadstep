@@ -2,7 +2,7 @@
 
 ## Functional requirements
 - FR-01 Create and remove named subject groups.
-- FR-02 Add, complete and remove short next-action items in each subject.
+- FR-02 Add, complete and remove short next-action items in each subject. Removal is immediate and persisted, and offers a non-modal 10-second undo snackbar (« Étape retirée » / « Annuler ») that restores the removed action and its substeps exactly (ids, titles, priorities, completion flags, parent relations and order); the window is tab-local, invalidated by subject removal, JSON import or another tab's local update, and never survives a reload nor creates a new storage key.
 - FR-03 Group one level of nested substeps under a parent action.
 - FR-04 Prioritize actions as urgent, normal or later, displayed in that order per level.
 - FR-05 See the number of unfinished actions across subjects.
@@ -22,6 +22,7 @@
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
 - Import rejects unknown format version, invalid priorities, orphan substeps and duplicates.
+- Removing an action or substep persists immediately and shows a snackbar « Étape retirée » with « Annuler »; undoing within ten seconds restores the exact action and its substeps and re-persists, while expiry, reload, subject removal, import or an external localStorage update prevent any stale restoration and no new storage key is created.
 - Mobile viewport is supported.
 - The « Une étape pour maintenant » suggestion is deterministic, excludes completed actions and substeps, and never changes localStorage, exported JSON, ids, flags, priorities or ordering; no card is restored after reload.
 - The « Je reprends ici » tracking pins exactly one unfinished top-level action, survives reload, reveals it accessibly, clears on « Ne plus suivre », and is automatically cleaned up when the action is completed or removed or its subject is removed; it uses a browser-local preference separate from `threadstep.document.v1`, is excluded from JSON exports, and never changes ids, priorities, completion flags or ordering.
