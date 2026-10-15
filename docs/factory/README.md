@@ -43,3 +43,7 @@ restent dans ce dossier et dans GitHub.
 - [ASF-DOC-002](tasks/ASF-DOC-002.md) trace la réconciliation après TS-011.
 - Le document [current-state.md](current-state.md) sert d'entrée unique pour le statut vérifié. La protection main et le check `check` sont configurés ; l'orchestrateur, les plafonds de coût garantis et les checkpoints transactionnels restent à traiter.
 - Les versions des outils, commandes et tarifs peuvent évoluer ; ne jamais déduire la validité du comportement de la seule présence d'un fichier ou de l'état green d'un run.
+
+## Programme ASF V2 : conception et tâches
+
+Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.md) sont validées pour être découpées en travail de développement, mais **aucune implémentation n'est encore livrée**. Voir le [plan de onze tâches ASF-V2](tasks/ASF-V2-README.md), leurs dépendances et restrictions d'exécution. La préparation du backlog ne constitue pas une autorisation de déclencher OpenRouter ni de fusionner une PR d'implémentation.
