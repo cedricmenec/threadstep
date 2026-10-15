@@ -18,6 +18,8 @@
 
 - FR-14 Explain in accessible French why the deterministic « Une étape pour maintenant » suggestion was selected, using its effective priority (urgent, normal or later) and the existing tie-break order of earlier subject order then earlier action order. The explanation is shown only with a valid suggestion, invents no criterion beyond that order, does not alter selection or stored data, remains distinct from « Je reprends ici », and never invokes AI/network or introduces new persistence.
 
+- FR-15 Let the user rank top-level actions manually inside each priority group using a visible French drag handle (mouse, finger or stylus) or accessible « Monter »/« Descendre » controls that move an action one rank and are disabled at the group boundaries. Reordering stays inside the same subject and priority: a drop on another subject, another priority, a substep, empty space or an invalid target is refused with no document mutation and no storage write; priorities never change, substeps follow their parent, and reordering is suspended while completed steps are hidden with a short French explanation. The chosen order is stored in the existing `subject.items` array with no new field, no document version change and no new storage key, survives reload and JSON export/import, and keeps the deterministic suggestion, the « Je reprends ici » tracking and the removal undo coherent.
+
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
@@ -30,7 +32,9 @@
 
 - The « Une étape pour maintenant » explanation names the suggested action's effective priority (urgent/normal/later) in French, states the existing tie-break order of earlier subjects then earlier actions without inventing other criteria, and is shown only with a valid suggestion; activating the suggestion, reading the explanation and using « Voir dans la liste » leave localStorage, exported JSON and the « Je reprends ici » tracking unchanged.
 
+- Top-level actions can be reordered within their priority group by dragging the handle or using « Monter »/« Descendre »; cross-subject, cross-priority, substep and empty-space drops change nothing and write no storage; the order survives reload, export and import while ids, priorities, completion flags, parents and the document version stay unchanged; while « Masquer les étapes terminées » is active no handle is shown and the move controls are disabled with a French explanation.
+
 ## Open decisions
-- Manual ordering within a priority and automatic archiving are deferred.
+- Manual ordering within a priority is delivered in FR-15; automatic archiving remains deferred.
 - Synchronization between browser devices is explicitly out of scope.
 - After first use, gather feedback before elaborating the product.

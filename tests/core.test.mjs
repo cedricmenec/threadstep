@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "../site/core.js";
+import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -631,4 +631,157 @@ test("restorableTrackingRef returns null for a completed top-level action", () =
   subject.items.push(done);
   doc.subjects.push(subject);
   assert.equal(restorableTrackingRef(doc, { subjectId: "s1", itemId: "d" }), null);
+});
+
+test("reorderWithinPriority moves an action before another of the same priority", () => {
+  const items = [
+    newItem("A", "urgent", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+    newItem("D", "later", "d"),
+  ];
+  const next = reorderWithinPriority(items, "c", "b", "before");
+  assert.notEqual(next, items);
+  assert.deepEqual(next.map((i) => i.id), ["a", "c", "b", "d"]);
+  assert.deepEqual(sortedItems(next).map((i) => i.id), ["a", "c", "b", "d"]);
+  assert.deepEqual(items.map((i) => i.id), ["a", "b", "c", "d"]);
+});
+
+test("reorderWithinPriority supports dropping an action after its target", () => {
+  const items = [
+    newItem("A", "normal", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+  ];
+  assert.deepEqual(reorderWithinPriority(items, "a", "c", "after").map((i) => i.id), ["b", "c", "a"]);
+});
+
+test("reorderWithinPriority refuses cross-priority, substep, missing, equal and unchanged targets", () => {
+  const items = [
+    newItem("A", "urgent", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+    newItem("Child", "normal", "child", "b"),
+  ];
+  assert.equal(reorderWithinPriority(items, "b", "a", "before"), items);
+  assert.equal(reorderWithinPriority(items, "b", "child", "before"), items);
+  assert.equal(reorderWithinPriority(items, "child", "b", "before"), items);
+  assert.equal(reorderWithinPriority(items, "b", "missing", "before"), items);
+  assert.equal(reorderWithinPriority(items, "missing", "b", "before"), items);
+  assert.equal(reorderWithinPriority(items, "b", "b", "before"), items);
+  assert.equal(reorderWithinPriority(items, "b", "c", "before"), items);
+  assert.equal(reorderWithinPriority(items, "b", "c", "sideways"), items);
+  assert.equal(canReorderWithinPriority(items, "b", "a", "before"), false);
+  assert.equal(canReorderWithinPriority(items, "b", "child", "before"), false);
+  assert.equal(canReorderWithinPriority(items, "c", "b", "before"), true);
+});
+
+test("moveWithinPriority swaps adjacent ranks inside the group only", () => {
+  const items = [
+    newItem("A", "normal", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+  ];
+  assert.deepEqual(moveWithinPriority(items, "c", "up").map((i) => i.id), ["a", "c", "b"]);
+  assert.deepEqual(moveWithinPriority(items, "a", "down").map((i) => i.id), ["b", "a", "c"]);
+  assert.deepEqual(moveWithinPriority(items, "b", "up").map((i) => i.id), ["b", "a", "c"]);
+});
+
+test("moveWithinPriority returns the same reference at group boundaries and for invalid input", () => {
+  const items = [
+    newItem("A", "normal", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+    newItem("Child", "normal", "child", "b"),
+  ];
+  assert.equal(moveWithinPriority(items, "a", "up"), items);
+  assert.equal(moveWithinPriority(items, "c", "down"), items);
+  assert.equal(moveWithinPriority(items, "missing", "up"), items);
+  assert.equal(moveWithinPriority(items, "child", "up"), items);
+  assert.equal(moveWithinPriority(items, "b", "sideways"), items);
+  assert.equal(canMoveWithinPriority(items, "a", "up"), false);
+  assert.equal(canMoveWithinPriority(items, "b", "up"), true);
+  assert.equal(canMoveWithinPriority(items, "c", "down"), false);
+});
+
+test("reorderWithinPriority only reorders the target group in an interleaved array", () => {
+  const items = [
+    newItem("B", "normal", "b"),
+    newItem("U", "urgent", "u"),
+    newItem("C", "normal", "c"),
+    newItem("D", "later", "d"),
+  ];
+  const before = JSON.parse(JSON.stringify(items));
+  const next = reorderWithinPriority(items, "c", "b", "before");
+  assert.deepEqual(next.map((i) => i.id), ["c", "u", "b", "d"]);
+  assert.deepEqual(sortedItems(next).map((i) => i.id), ["u", "c", "b", "d"]);
+  assert.equal(next[1], items[1]);
+  assert.equal(next[3], items[3]);
+  assert.deepEqual(items, before);
+});
+
+test("reorderWithinPriority never mutates its input and never shares changed references", () => {
+  const items = [newItem("A", "normal", "a"), newItem("B", "normal", "b")];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  const next = reorderWithinPriority(items, "b", "a", "before");
+  assert.notEqual(next, items);
+  assert.equal(next[0], items[1]);
+  assert.equal(next[1], items[0]);
+  assert.deepEqual(items, snapshot);
+});
+
+test("reorderWithinPriority keeps a moved parent's substeps attached and unchanged", () => {
+  const items = [
+    newItem("P1", "normal", "p1"),
+    newItem("P2", "normal", "p2"),
+    newItem("C1", "later", "c1", "p1"),
+    newItem("C2", "urgent", "c2", "p1"),
+  ];
+  const next = reorderWithinPriority(items, "p1", "p2", "after");
+  assert.deepEqual(next.map((i) => i.id), ["p2", "p1", "c1", "c2"]);
+  const parent = next.find((i) => i.id === "p1");
+  assert.equal(parent.parentId, null);
+  assert.equal(parent.priority, "normal");
+  assert.equal(parent.title, "P1");
+  assert.equal(next.find((i) => i.id === "c1").parentId, "p1");
+  assert.equal(next.find((i) => i.id === "c2").parentId, "p1");
+  assert.equal(next.find((i) => i.id === "c2").priority, "urgent");
+});
+
+test("reorderWithinPriority leaves other subjects untouched", () => {
+  const other = newSubject("B", "sb");
+  other.items.push(newItem("B1", "normal", "b1"));
+  const items = [
+    newItem("A1", "normal", "a1"),
+    newItem("A2", "normal", "a2"),
+  ];
+  const next = reorderWithinPriority(items, "a2", "a1", "before");
+  assert.deepEqual(next.map((i) => i.id), ["a2", "a1"]);
+  assert.deepEqual(other.items.map((i) => i.id), ["b1"]);
+});
+
+test("nextActionSuggestion follows the new within-subject order after a reorder", () => {
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Second", "urgent", "second"), newItem("First", "urgent", "first"));
+  const doc = { version: 1, subjects: [subject] };
+  assert.equal(nextActionSuggestion(doc).itemId, "second");
+  subject.items = reorderWithinPriority(subject.items, "first", "second", "before");
+  assert.equal(nextActionSuggestion(doc).itemId, "first");
+});
+
+test("a reordered document round-trips through parseDocument without migration", () => {
+  const subject = newSubject("S", "s1");
+  subject.items.push(
+    newItem("A", "urgent", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+    newItem("D", "later", "d"),
+  );
+  const doc = { version: 1, subjects: [subject] };
+  subject.items = reorderWithinPriority(subject.items, "c", "b", "before");
+  const parsed = parseDocument(JSON.stringify(doc));
+  assert.deepEqual(parsed, JSON.parse(JSON.stringify(doc)));
+  assert.deepEqual(parsed.subjects[0].items.map((i) => i.id), ["a", "c", "b", "d"]);
+  assert.equal(parsed.version, 1);
+  assert.deepEqual(Object.keys(parsed.subjects[0].items[0]).sort(), ["done", "id", "parentId", "priority", "title"]);
 });
