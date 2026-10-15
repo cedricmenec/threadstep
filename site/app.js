@@ -1,10 +1,11 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
+const reorderNoteEl = document.querySelector("#reorder-note");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
 const resumeCardEl = document.querySelector("#resume-card");
@@ -18,6 +19,8 @@ let suggestionVisible = false;
 let hideCompleted = false;
 let resumeRef = null;
 let documentLoaded = false;
+let pendingMoveFocus = null;
+let dragState = null;
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -87,6 +90,7 @@ function reconcileResume() {
 }
 function render() {
   subjectsEl.replaceChildren();
+  if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
   renderSuggestion();
@@ -113,6 +117,23 @@ function applyFocus() {
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
     const target = card && card.querySelector(".task-edit");
     focusItemId = null;
+    if (target) {
+      target.focus();
+      if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
+    }
+    return;
+  }
+  if (pendingMoveFocus) {
+    const { itemId, direction } = pendingMoveFocus;
+    pendingMoveFocus = null;
+    const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
+    if (!card) return;
+    const sameDirection = direction === "up"
+      ? card.querySelector(".task-move-up")
+      : direction === "down" ? card.querySelector(".task-move-down") : null;
+    const target = (sameDirection && !sameDirection.disabled)
+      ? sameDirection
+      : card.querySelector(".task-handle") || sameDirection;
     if (target) {
       target.focus();
       if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
@@ -388,8 +409,132 @@ function renderRow(subject, item) {
   row.append(check, title, badge);
   return row;
 }
+function moveItem(subject, item, direction) {
+  const reordered = moveWithinPriority(subject.items, item.id, direction);
+  if (reordered === subject.items) return;
+  subject.items = reordered;
+  pendingMoveFocus = { itemId: item.id, direction };
+  persist();
+  notify(direction === "up" ? "Étape montée" : "Étape descendue");
+}
+function renderReorderControls(subject, item) {
+  const controls = el("div", "task-reorder");
+  const priorityLabel = priorityLabels[item.priority];
+  if (!hideCompleted) {
+    const handle = el("button", "task-handle", "⠿");
+    handle.type = "button";
+    handle.setAttribute("aria-label", "Déplacer « " + item.title + " » (priorité " + priorityLabel + ")");
+    handle.setAttribute("aria-describedby", "reorder-note");
+    handle.addEventListener("pointerdown", (event) => startDrag(event, subject, item, handle));
+    controls.append(handle);
+  }
+  const up = el("button", "subtle task-move-up", "Monter");
+  up.type = "button";
+  up.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "up");
+  up.setAttribute("aria-label", "Monter « " + item.title + " » (priorité " + priorityLabel + ")");
+  up.addEventListener("click", () => moveItem(subject, item, "up"));
+  const down = el("button", "subtle task-move-down", "Descendre");
+  down.type = "button";
+  down.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "down");
+  down.setAttribute("aria-label", "Descendre « " + item.title + " » (priorité " + priorityLabel + ")");
+  down.addEventListener("click", () => moveItem(subject, item, "down"));
+  controls.append(up, down);
+  return controls;
+}
+function startDrag(event, subject, item, handle) {
+  if (hideCompleted || dragState) return;
+  if (typeof event.button === "number" && event.button !== 0) return;
+  dragState = {
+    pointerId: event.pointerId,
+    subjectId: subject.id,
+    itemId: item.id,
+    handle,
+    candidate: null
+  };
+  if (typeof handle.setPointerCapture === "function" && event.pointerId !== undefined) {
+    try { handle.setPointerCapture(event.pointerId); } catch { /* capture unavailable */ }
+  }
+  handle.classList.add("dragging-handle");
+  handle.setAttribute("aria-grabbed", "true");
+  const task = handle.closest(".task");
+  if (task) task.classList.add("dragging");
+}
+function onDragMove(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  if (event.cancelable) event.preventDefault();
+  updateDropIndicator(resolveDropTarget(event.clientX, event.clientY));
+}
+function resolveDropTarget(x, y) {
+  const subject = documentState.subjects.find((entry) => entry.id === dragState.subjectId);
+  if (!subject) return null;
+  const stack = typeof document.elementsFromPoint === "function"
+    ? document.elementsFromPoint(x, y)
+    : [document.elementFromPoint(x, y)];
+  for (const element of stack) {
+    if (!element || typeof element.closest !== "function") continue;
+    const task = element.closest(".task");
+    if (!task) continue;
+    const owner = task.closest(".subject");
+    if (!owner || owner.dataset.subject !== dragState.subjectId) continue;
+    const row = task.querySelector(".task-row") || task;
+    if (typeof row.getBoundingClientRect !== "function") continue;
+    const rect = row.getBoundingClientRect();
+    const position = y < rect.top + rect.height / 2 ? "before" : "after";
+    if (canReorderWithinPriority(subject.items, dragState.itemId, task.dataset.item, position)) {
+      return { targetId: task.dataset.item, position, row: task };
+    }
+  }
+  return null;
+}
+function clearDropIndicators() {
+  for (const node of subjectsEl.querySelectorAll(".drop-before, .drop-after")) {
+    node.classList.remove("drop-before", "drop-after");
+  }
+}
+function updateDropIndicator(candidate) {
+  clearDropIndicators();
+  if (!dragState) return;
+  dragState.candidate = candidate;
+  if (candidate && candidate.row) {
+    candidate.row.classList.add(candidate.position === "before" ? "drop-before" : "drop-after");
+  }
+}
+function releaseDrag(state, pointerId) {
+  if (typeof state.handle.releasePointerCapture === "function" && pointerId !== undefined) {
+    try { state.handle.releasePointerCapture(pointerId); } catch { /* already released */ }
+  }
+  state.handle.classList.remove("dragging-handle");
+  state.handle.removeAttribute("aria-grabbed");
+  const task = state.handle.closest(".task");
+  if (task) task.classList.remove("dragging");
+  clearDropIndicators();
+  if (dragState === state) dragState = null;
+}
+function onDragEnd(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  const state = dragState;
+  const candidate = state.candidate;
+  releaseDrag(state, event.pointerId);
+  if (!candidate) return;
+  const subject = documentState.subjects.find((entry) => entry.id === state.subjectId);
+  if (!subject) return;
+  const reordered = reorderWithinPriority(subject.items, state.itemId, candidate.targetId, candidate.position);
+  if (reordered === subject.items) return;
+  subject.items = reordered;
+  pendingMoveFocus = { itemId: state.itemId, direction: null };
+  persist();
+  notify("Étape déplacée");
+}
+function cancelDrag(event) {
+  if (!dragState) return;
+  const state = dragState;
+  const pointerId = event && event.pointerId !== undefined ? event.pointerId : state.pointerId;
+  releaseDrag(state, pointerId);
+  notify("Déplacement annulé");
+}
 function renderActions(subject, item) {
   const actions = el("div", "task-actions");
+  if (item.parentId === null) actions.append(renderReorderControls(subject, item));
   const edit = el("button", "subtle task-edit", "Modifier");
   edit.type = "button";
   edit.setAttribute("aria-label", "Modifier " + item.title);
@@ -487,6 +632,20 @@ function renderEditor(subject, item) {
 hideCompletedEl.addEventListener("change", () => {
   hideCompleted = hideCompletedEl.checked;
   render();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !dragState) return;
+  event.preventDefault();
+  cancelDrag(null);
+});
+window.addEventListener("pointermove", (event) => {
+  if (dragState) onDragMove(event);
+});
+window.addEventListener("pointerup", (event) => {
+  if (dragState) onDragEnd(event);
+});
+window.addEventListener("pointercancel", (event) => {
+  if (dragState) cancelDrag(event);
 });
 focusSuggestEl.addEventListener("click", () => {
   suggestionVisible = true;

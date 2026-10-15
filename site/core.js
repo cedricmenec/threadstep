@@ -43,6 +43,53 @@ export function isItemVisible(item, items, hideCompleted) {
 export function visibleItems(items, parentId = null, hideCompleted = false) {
   return sortedItems(items, parentId).filter((item) => isItemVisible(item, items, hideCompleted));
 }
+export function reorderWithinPriority(items, itemId, targetId, position) {
+  if (!Array.isArray(items)) return items;
+  if (position !== "before" && position !== "after") return items;
+  if (itemId === targetId) return items;
+  const source = items.find((item) => item && item.id === itemId);
+  const target = items.find((item) => item && item.id === targetId);
+  if (!source || !target) return items;
+  if (source.parentId !== null || target.parentId !== null) return items;
+  if (source.priority !== target.priority) return items;
+  const priority = source.priority;
+  const slots = [];
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (item.parentId === null && item.priority === priority) slots.push(index);
+  }
+  const group = slots.map((slot) => items[slot]);
+  const from = group.indexOf(source);
+  if (from === -1) return items;
+  const ordered = group.slice();
+  ordered.splice(from, 1);
+  const to = ordered.indexOf(target);
+  if (to === -1) return items;
+  ordered.splice(position === "before" ? to : to + 1, 0, source);
+  if (ordered.every((item, index) => item === group[index])) return items;
+  const next = items.slice();
+  slots.forEach((slot, index) => { next[slot] = ordered[index]; });
+  return next;
+}
+export function moveWithinPriority(items, itemId, direction) {
+  if (!Array.isArray(items)) return items;
+  if (direction !== "up" && direction !== "down") return items;
+  const source = items.find((item) => item && item.id === itemId);
+  if (!source || source.parentId !== null) return items;
+  const group = items.filter((item) =>
+    item.parentId === null && item.priority === source.priority);
+  const index = group.indexOf(source);
+  if (index === -1) return items;
+  const neighbour = direction === "up" ? group[index - 1] : group[index + 1];
+  if (!neighbour) return items;
+  return reorderWithinPriority(items, itemId, neighbour.id, direction === "up" ? "before" : "after");
+}
+export function canReorderWithinPriority(items, itemId, targetId, position) {
+  return reorderWithinPriority(items, itemId, targetId, position) !== items;
+}
+export function canMoveWithinPriority(items, itemId, direction) {
+  return moveWithinPriority(items, itemId, direction) !== items;
+}
 export function pendingCount(document) {
   return document.subjects.reduce((count, subject) =>
     count + subject.items.filter((item) => !item.done).length, 0);
