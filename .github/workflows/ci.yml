@@ -15,6 +15,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate all GitHub Actions workflows with actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Pin the validator; workflow syntax was previously unchecked by CI.
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          "$(go env GOPATH)/bin/actionlint" -color=false
       - name: Run independent tests and syntax checks
         run: npm run check
       - name: Validate OpenSpec changes and archive independently
