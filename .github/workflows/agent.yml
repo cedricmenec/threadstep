@@ -6,6 +6,11 @@ on:
         description: 'Backlog task ID, e.g. TS-002'
         required: true
         type: string
+      auto_merge:
+        description: 'Automatically merge PR only after required independent CI succeeds'
+        required: true
+        type: boolean
+        default: true
       model:
         description: 'OpenRouter model'
         required: true
@@ -119,7 +124,19 @@ jobs:
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
           existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
           if [ -z "$existing" ]; then
-            gh pr create --base main --head "$AGENT_BRANCH" --title "Agent: $TASK_ID" --body "Autonomous OpenRouter delivery for $TASK_ID. Independent CI must pass. **Pilot: manual review and merge required.**"
+            gh pr create --base main --head "$AGENT_BRANCH" --title "Agent: $TASK_ID" --body "OpenRouter delivery for $TASK_ID. Independent CI required; optional native auto-merge only after protected main checks pass."
           else
             echo "Updated existing PR: $existing"
           fi
+          echo "PR_PUBLISHED=true" >> "$GITHUB_ENV"
+
+      - name: Request safe GitHub auto-merge after independent CI
+        if: inputs.auto_merge == true && env.PR_PUBLISHED == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The script must fail closed unless an active main ruleset
+          # requires CI/check. Native auto-merge then waits for CI.
+          node scripts/request-safe-auto-merge.mjs
