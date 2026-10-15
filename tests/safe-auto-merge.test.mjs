@@ -47,6 +47,8 @@ test("requires protection, native auto-merge and a main PR+check ruleset", () =>
   assert.equal(applicableMainRule(wrong), false);
   const bypass = ruleset(); bypass.conditions.ref_name.exclude = ["refs/heads/main"];
   assert.equal(applicableMainRule(bypass), false);
+  const wildcardBypass = ruleset(); wildcardBypass.conditions.ref_name.exclude = ["refs/heads/m*"];
+  assert.equal(applicableMainRule(wildcardBypass), false);
   const noPR = ruleset(); noPR.rules = noPR.rules.filter(x => x.type !== "pull_request");
   assert.throws(() => validateAutoMergePrerequisites({
     repository, branch, rulesets: [noPR]
