@@ -1,6 +1,6 @@
 # Autonomous Software Factory | Dossier de référence
 
-**Statut : cycle auto TS-008 et CI sur PR GitHub App vérifiés ; invocation OPSX native proposée mais non testée.**  
+**Statut : TS-008 auto et TS-009 apply livrés ; OPSX natif OpenCode vérifié sur MODIFIED, garde-fou SHA-256 et CI indépendante validés.**  
 **Mise à jour : 15 octobre 2026.**  
 **Projet pilote :** [ThreadStep](https://github.com/cedricmenec/threadstep).  
 **Référence antérieure :** dépôt privé `mestryn`, notamment `.github/workflows/opencode.yml` et `AGENTS.md`.
@@ -32,6 +32,8 @@ Contraintes durables :
 
 - Exécution actuelle : agent.yml (direct), agent-openspec.yml (plan/apply/auto/finalize), ci.yml et pages.yml.
 - Contrat agent dans AGENTS.md, tâches sous backlog/tasks/, exigences produit sous docs/product/.
-- TS-008 (PR #21) a été produite par la GitHub App, avec CI de PR et de main réussies et Pages déployées. La synchronisation y a été effectuée par un agent guidé par prompt, sans preuve de l'invocation de la commande native OPSX.
+- TS-008 (PR #21) a livré une capacité ADDED via un prompt de sync ; TS-009 (PR #26) a confirmé l'invocation OPSX native sur un MODIFIED existant, avec préservation des autres exigences, garde-fou SHA-256, archive et Pages.
+- PR #25 a rendu explicite le contrat : chaque case de la checklist OpenSpec doit être réalisable avant la synchronisation ; la revue post-sync reste distincte.
+- [ASF-DOC-001](tasks/ASF-DOC-001.md) documente la réconciliation du 15 octobre 2026.
 - Le document [current-state.md](current-state.md) sert d'entrée unique pour le statut réellement vérifié. L'orchestrateur, les limites de coût garanties et la protection main restent à traiter.
 - Les versions des outils, commandes et tarifs peuvent évoluer ; ne jamais déduire la validité du comportement de la seule présence d'un fichier ou de l'état green d'un run.

@@ -1,70 +1,129 @@
 # État courant de l'Autonomous Software Factory
 
-**Référence : 15 octobre 2026.** Point d'entrée pour la reprise et le résumé opérationnel. Le contrat exécutable est [AGENTS.md](../../AGENTS.md) et les workflows sont dans .github/workflows/. Vérifier le SHA et les logs GitHub avant toute opération.
+**Référence vérifiée : 15 octobre 2026, après fusion des PR #25 et #26.**
+Point d'entrée unique pour reprendre le pilote. Les règles exécutables sont
+[AGENTS.md](../../AGENTS.md), les workflows dans .github/workflows/ et les
+spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
 
-## Architecture effectivement implémentée
+## Architecture en service
 
-- **Source de vérité** : dépôt public cedricmenec/threadstep, backlog Markdown sous backlog/tasks/, intention produit sous docs/product/, changements et spécifications OpenSpec sous openspec/.
-- **Produit pilote** : application statique, navigateur et localStorage, import/export JSON, GitHub Pages, sans backend.
-- **Exécution** : deux workflows GitHub Actions manuels, agent.yml (direct) et agent-openspec.yml (phases plan, apply, auto, finalize). Aucun ordonnanceur autonome.
-- **Agents et versions** : OpenCode via OpenRouter. OpenSpec est épinglé sur @fission-ai/openspec@1.14.1 ; OpenCode reste installé par @latest, observé en 1.19.0 durant TS-008.
-- **OPSX** : la présente PR propose de générer les skills et commandes OpenCode via openspec init --tools opencode,agents dans le runner éphémère, puis d'appeler opencode run --command opsx-sync. **Cette nouvelle invocation n'est pas encore testée E2E.** Historiquement, TS-008 a reçu une simple instruction évoquant /opsx:sync.
-- **Livraison** : branches agent/openspec/TS-NNN, jeton temporaire de l'App threadstep-software-factory, PR et CI indépendante. Fusion humaine uniquement.
-- **Coûts** : plan appelle au moins un modèle, apply au moins deux, auto au moins trois, finalize au moins un. Aucune limite USD techniquement garantie et aucun relevé de coût automatique.
+- **GitHub, source de vérité** : dépôt public cedricmenec/threadstep ;
+  backlog sous backlog/tasks/, vision et contrat produit dans docs/product/,
+  changement OpenSpec actif ou archivé sous openspec/changes/.
+- **Application pilote** : site statique dans site/, navigateur et
+  localStorage, import/export JSON, publication GitHub Pages, sans backend.
+- **Deux exécuteurs manuels** : agent.yml (direct, sans OpenSpec) et
+  agent-openspec.yml (plan / apply / auto / finalize). Le propriétaire
+  déclenche un task_id et un modèle dans Actions ; aucun ordonnanceur
+  automatique ni orchestration de vagues n'est déployé.
+- **OPSX natif OpenCode, validé sur TS-009** : le runner installe
+  @fission-ai/openspec@1.14.1, génère les fichiers agent avec
+  openspec init --tools opencode,agents, vérifie les skills et les commandes,
+  puis lance opencode run --command opsx-sync ts-009. Le test a modifié la
+  section MODIFIED d'une spécification déjà canonique, et non seulement
+  ajouté une nouvelle capacité.
+- **Contrats et isolation** : le script scripts/sync-guard.mjs compare les
+  empreintes de contenu des fichiers suivis et non suivis avant/après sync,
+  interdit les changements hors openspec/specs/ et exige une modification
+  canonique. Le script scripts/check-openspec-task-phases.mjs, ajouté par
+  PR #25, interdit des demandes explicitement post-sync dans la checklist
+  pré-sync au moment du plan et au démarrage de apply.
+- **Publication** : GitHub App threadstep-software-factory, branche
+  agent/openspec/TS-NNN, PR, CI indépendante et fusion autorisée par le
+  propriétaire. Les workflows d'agent n'effectuent pas eux-mêmes de merge.
+- **Versions/coûts** : OpenSpec épinglé en 1.14.1, OpenCode installé par
+  opencode-ai@latest, observé en 1.19.0 durant TS-008. Modèles OpenRouter
+  configurés : DeepSeek V4.1 Flash et GLM 5.3 Flash. Les appels restent
+  payants ; il n'existe ni plafond USD garanti ni relevé de dépense
+  automatique dans le workflow.
 
-## Incidents, preuves et jalons
+## Preuves d'exécution vérifiées
 
-| Référence | État vérifié |
+| Référence | Preuve et conclusion |
 | --- | --- |
-| PR #8 | TS-005 : cycle OpenSpec plan/apply, fusion humaine. |
-| PR #16 | Correction des étapes ignorées en mode auto durant TS-007. |
-| PR #17 | Finalize introduit sans modèle, puis rendu payant par la PR #19. |
-| PR #19 | Sync sémantique guidée par agent, puis archive --skip-specs. |
-| PR #20 | Backlog et spécification produit TS-008. |
-| PR #21 | TS-008 exécutée en auto, implémentée, archivée et fusionnée par cedricmenec. |
-| Run 38645900430 | Toutes les étapes obligatoires exécutées, 41 tests réussis, OpenSpec valide. |
-| Runs 38647009079 et 38647009093 | CI de main et Pages réussies après la PR #21. |
+| PR #8, TS-005 | Pilote OpenSpec plan/apply, archivé et fusionné. |
+| PR #16 | Correction des étapes de validation ignorées par l'ancien auto TS-007. |
+| PR #19 | Premier sync sémantique guidé par un prompt OpenCode, archive --skip-specs. |
+| PR #21, TS-008 | Auto complet, 41 tests, nouvelle capacité resume-tracking ADDED, PR et CI/Pages réussies. |
+| PR #22 | Génération des skills/commandes OpenCode et garde-fou SHA-256 avant/après sync. |
+| PR #23 et #24 | Préparation du backlog TS-009 et plan OpenSpec fusionné prématurément, sans code. |
+| Run 38710098331 | Premier apply TS-009 : code généré et 54 tests OK, bloqué par une checklist demandant un contrôle post-sync avant sync. Rien de publié. |
+| PR #25 | Contrat des phases de checklist et cinq tests de non-régression rapides, fusionné. |
+| Run 38712079641, PR #26 | Second apply TS-009 : 55 tests, invocation OPSX native, garde-fou de périmètre, fusion MODIFIED, archive, PR fusionnée. |
+| Runs 38713003608 et 38713003743 | CI de main après PR #26 : 60 tests réussis ; déploiement Pages réussi. |
 
-Liens : [PR #21](https://github.com/cedricmenec/threadstep/pull/21), [run agent](https://github.com/cedricmenec/threadstep/actions/runs/38645900430), [CI main](https://github.com/cedricmenec/threadstep/actions/runs/38647009079), [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38647009093).
+Références :
+[TS-009 apply](https://github.com/cedricmenec/threadstep/actions/runs/38712079641) ·
+[PR #26](https://github.com/cedricmenec/threadstep/pull/26) ·
+[CI main](https://github.com/cedricmenec/threadstep/actions/runs/38713003608) ·
+[Pages](https://github.com/cedricmenec/threadstep/actions/runs/38713003743).
 
-TS-008 a créé la **nouvelle** capacité resume-tracking : 10 exigences et 31 scénarios dans le delta. Cette exécution ne démontre **pas encore** la fusion sémantique de MODIFIED/REMOVED/RENAMED dans une spécification canonique préexistante.
+**Portée de la preuve OPSX :** la modification de
+openspec/specs/next-action-suggestion/spec.md a remplacé uniquement
+« Suggestion card content », conservé son scénario d'origine et ajouté
+trois scénarios, sans dupliquer ni effacer les autres exigences. Le test
+démontre MODIFIED, **pas REMOVED ni RENAMED**. L'archive du change est dans
+openspec/changes/archive/2026-10-15-ts-009/.
 
-## Incident de reprise TS-009 (15 octobre 2026)
+## Incident et reprise : TS-009
 
-- PR #24 a fusionné le plan (et seulement le plan) avant apply.
-- Le run [38710098331](https://github.com/cedricmenec/threadstep/actions/runs/38710098331)
-  a réussi la génération de code, 54 tests Node et la validation du change,
-  puis s'est arrêté sur « Unchecked tasks remain; refusing archive ».
-- Cause : la case 4.3 attendait un diff post-sync alors que le workflow bloque
-  toute case non cochée **avant** sync. Pas de sync, pas d'archive, pas de PR
-  de code publiée : les modifications non commitées du runner ont été perdues.
-- Une correction ciblée de tasks.md a été faite sur la branche
-  agent/openspec/TS-009. Elle ne nécessite pas de refaire plan ; il faut
-  relancer apply pour reconstruire le code puis effectuer sync. Le second run
-  [38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
-  a **réussi** (55 tests, commande OPSX, garde-fou de contenu, archive) et
-  ouvert la [PR #26](https://github.com/cedricmenec/threadstep/pull/26).
-  La CI de la PR est passée ; fusion encore soumise à revue. Une PR factory
-  distincte (#25) empêche désormais les futurs plans impossibles après fusion.
+La PR #24 contenait seulement le plan et a été fusionnée trop tôt. Le
+premier apply, run 38710098331, a créé localement le code et passé 54 tests,
+mais la checklist 4.3 demandait un diff **après** sync tandis que le workflow
+exigeait toutes les cases cochées **avant** sync. Arrêt protecteur légitime,
+sans commit distant : les fichiers locaux du runner ont été perdus.
 
-## Risques et limites
+Le plan a été corrigé sur la branche persistante de TS-009 : contrôle pré-sync
+dans la checklist et revue post-sync hors cases à cocher. Le second
+[apply 38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
+a entièrement réussi et publié la PR #26, désormais fusionnée. La PR #25
+prévoit une détection statique anticipée de cet anti-pattern. **Ne pas relancer
+TS-009**, son change est archivé et son code est livré.
 
-1. **Intégration OPSX** : TS-009 run 38712079641 a confirmé la commande OpenCode opsx-sync, le garde-fou de contenu et une modification MODIFIED d'une capacité canonique existante. La sémantique de la spécification reste revue par un humain ; les opérations RENAMED/REMOVED n'ont pas encore été éprouvées.
-2. **Protection de main** : GitHub signale protected: false au 15 octobre ; la lecture détaillée retourne 403 avec les permissions du connecteur. Aucune règle n'a été modifiée.
-3. **Isolation** : le garde-fou proposé vérifie les empreintes des fichiers hors openspec/specs/ avant/après sync, y compris les fichiers déjà modifiés, et exige un changement canonique. Il ne remplace ni une sandbox, ni la validation sémantique humaine.
-4. **Dépenses** : pas de plafond USD, ni de montant réel de TS-008 observé dans les logs ; aucune dépense sans consentement.
-5. **Qualité UI** : CI/Node réussis, pas de preuve complète sur navigateur mobile et technologies d'assistance.
-6. **Durabilité** : le plan auto est initialement commité localement ; checkpoints distants et reprise transactionnelle à industrialiser.
-7. **Versionnement** : OpenCode installé à latest, à épingler après stabilisation du pilote.
+Ce cas rappelle que le plan fusionné dans main avant apply est une exception,
+pas le parcours recommandé : conserver le plan en PR brouillon, exécuter
+apply sur la branche d'agent, puis fusionner la PR finale.
 
-## Suite recommandée
+## Risques et limites encore ouverts
 
-- Revoir puis fusionner cette PR de consolidation **après** la CI et la revue des changements ; ne pas la considérer comme une preuve E2E.
-- Configurer la protection de main et des checks requis, sous autorisation de l'administrateur.
-- Préparer TS-009 **dans une PR produit distincte**, avec une modification ciblée de next-action-suggestion : section MODIFIED et scénario ADDED pour tester une fusion dans une capacité existante.
-- Seulement après autorisation explicite, exécuter un test payant borné, auditer le run, les fichiers modifiés, la checklist, les specs canoniques et le coût réel.
-- Maintenir ce document, les ADR et la roadmap lors de chaque évolution en distinguant implémenté, testé et hypothèses.
+1. **Protection de main absente** : l'API GitHub renvoie protected: false
+   après la fusion #26. Required checks et règles de branche ne sont pas
+   activés ; les succès de CI ne sont pas un verrou administratif.
+2. **Budget** : aucun plafond OpenRouter USD exécutable par run/vague, ni
+   comptabilité fournisseur corrélée aux runs. Chaque lancement effectif
+   reste une opération à autoriser.
+3. **Reproductibilité** : OpenCode installé par @latest, à épingler après
+   validation d'une version cible ; OpenSpec est déjà épinglé.
+4. **Isolation** : empreintes SHA-256 et filtres de chemins sont des
+   protections de fichiers, non une sandbox contre les actions du modèle.
+5. **Couverture OPSX** : MODIFIED vérifié ; REMOVED, RENAMED, conflits de
+   modifications multiples non encore démontrés.
+6. **Reprise transactionnelle** : pas de checkpoints distants automatiques
+   pour chaque étape d'apply, comme illustré par le premier run TS-009.
+7. **Validation UI** : 60 tests Node et Pages réussis, mais pas de preuve
+   de campagne complète lecteur d'écran et mobile automatisée.
+8. **Synchronisation des statuts** : les métadonnées des tâches du backlog
+   nécessitent encore une tenue manuelle, désormais réconciliée par
+   [ASF-DOC-001](tasks/ASF-DOC-001.md).
 
-## Références
+## Étapes suivantes recommandées
 
-[Mode opératoire](openspec-manual-pilot.md) · [Protocole OPSX](openspec-protocol.md) · [Sécurité GitHub](github-autonomy-and-security.md) · [Décisions](decisions.md) · [Feuille de route](roadmap.md) · [Outils OpenSpec](https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md) · [OpenCode skills](https://opencode.ai/docs/skills/) · [OpenCode CLI](https://opencode.ai/docs/cli/).
+- Configurer la protection de main (checks requis, politique de revue,
+  interdiction des pushs directs et force-pushs) dans les paramètres GitHub.
+- Épingler OpenCode, tracer les coûts fournisseur et fixer une politique
+  de dépenses/reprises proportionnée.
+- Préparer une nouvelle expérimentation **distincte** pour REMOVED/RENAMED
+  ou une fusion sémantique conflictuelle, sans rejouer TS-009.
+- Étudier la persistance de checkpoints et l'orchestration par vagues,
+  sans introduire d'auto-merge sans décision explicite.
+- Maintenir cette page, la roadmap, les ADR et les statuts du backlog
+  à chaque livraison.
+
+## Documentation de référence
+
+[Mode opératoire](openspec-manual-pilot.md) ·
+[Protocole OpenSpec](openspec-protocol.md) ·
+[Sécurité GitHub](github-autonomy-and-security.md) ·
+[Décisions](decisions.md) ·
+[Roadmap](roadmap.md) ·
+[Tâche de réconciliation](tasks/ASF-DOC-001.md).

@@ -8,27 +8,27 @@
 | --- | --- |
 | Prototype ThreadStep statique, specs, backlog, `AGENTS.md` | **Fait** : `site/`, `docs/product/`, `backlog/` |
 | CI `npm run check` et déploiement Github Pages sur `main` | **Fait** : workflows `.github/workflows/ci.yml`, `pages.yml`, runs réussis |
-| Premier run OpenCode/OpenRouter `TS-002` | **Fait** : PR #2 créée, CI après approbation ; PR conservée ouverte comme témoin |
+| Premier run OpenCode/OpenRouter `TS-002` | **Fait** : PR #2 créée, CI après approbation, puis fusionnée le 14 octobre |
 | Fonctionnalité `TS-004` par OpenCode/OpenRouter | **Fait** : PR #4 fusionnée, CI et Pages réussis |
 | Sélection automatique de tâches et orchestration de vagues | **Non implémenté** |
-| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, PR #8, plan/apply, validation, archivage et fusion humaine |
-| GitHub App / auto-merge sécurisé / protection main | **App et CI sur PR vérifiées** : TS-008 PR #21 créée par bot, CI réussie. Aucun auto-merge ; main non protégée selon API. |
+| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, TS-008 (auto) et TS-009 (plan/apply + sync MODIFIED), PR #26 fusionnée |
+| GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées** via TS-008 et TS-009 ; aucun auto-merge en place, main non protégée selon API. |
+| Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
+| Réconciliation documentaire | **Acquise** : [ASF-DOC-001](tasks/ASF-DOC-001.md), statuts du backlog actualisés après la livraison #26. |
 
-| Sync OPSX natif et durcissement | **PR proposée** : installer les skills/commandes dans le runner et tester le garde-fou SHA-256. **Non prouvé en E2E** ; TS-008 utilisait un prompt explicite. |
-
-**Attention aux artefacts historiques** : `backlog/tasks/TS-004.md` indique encore `ready` et ses checkboxes ne sont pas actualisées par le workflow pilote ; prévoir une synchronisation automatique de l'état une fois le cycle OpenSpec introduit.
+**Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 
 ## Étapes proposées, dans cet ordre
 
 ### F0. Documenter et figer le pilote [ce dossier]
 
 - Conserver architecture cible, décisions et méthodologie dans `docs/factory/`.
-- Maintenir le mode manuel existant sans activation de nouvelles dépenses.
+- Maintenir le mode manuel existant et une autorisation explicite par déclenchement payant.
 - Vérifier CI sur PR documentaire, puis intégrer après validation.
 
 ### F1. Réduire l'intervention GitHub et sécuriser la livraison
 
-- Démontrer GitHub App ou PAT à permissions minimales pour émission de PR, de préférence **GitHub App**.
+- **Acquis** : GitHub App à permissions ciblées pour les PR ; conserver ce mode.
 - **Acquis sur TS-008** : une PR créée par la GitHub App déclenche la CI sans approbation supplémentaire ; surveiller ce comportement sur les prochaines PR.
 - Protéger `main`, sélectionner les checks obligatoires, vérifier la politique d'approbation de review et de merge ; configurer `allow_auto_merge` uniquement si souhaité/possible.
 - Valider de bout en bout : création PR automatique → CI sans approbation de démarrage → fusion autorisée selon règles → Pages.
@@ -43,9 +43,9 @@
 `Agent OpenSpec (manual, staged)`, sans suppression de `agent.yml`. Le run
 `plan` produit une PR brouillon ; le run `apply` reprend le même change,
 vérifie, synchronise et archive. Voir [mode opératoire](openspec-manual-pilot.md).
-L'essai réel TS-005 a abouti à la PR #8 fusionnée. La revue sécurité et le durcissement des budgets/restauration restent des travaux futurs.
+TS-005 (#8), TS-008 (#21) et TS-009 (#26) ont démontré les cycles manuels et auto, dont la fusion sémantique MODIFIED. La protection main, les plafonds et les reprises transactionnelles restent à industrialiser.
 
-- CLI OpenSpec fixée en 1.14.1 ; l'installation des skills OpenCode sur le runner est proposée, à éprouver en E2E. OpenCode demeure non épinglé.
+- **Acquis** : OpenSpec 1.14.1 et skills/commandes OpenCode générés dans le runner, usage E2E démontré sur TS-009 ; **reste** : épingler OpenCode (@latest actuellement).
 - Introduire `openspec/`, choisir le schéma `spec-driven`, associer `TS-NNN` à des changes déterministes.
 - Étape autonome Explore/Propose/validation des artefacts ; puis Apply + tests + checkpoints; Sync des specs ; Archive non interactif + validation finale.
 - Tester un changement comportemental simple avec artefacts conservés, preuves de tests et un change correctement archivé.
@@ -79,7 +79,7 @@ L'essai réel TS-005 a abouti à la PR #8 fusionnée. La revue sécurité et le 
 
 ### Prochain test borné
 
-Tester la fusion sémantique dans une **capacité existante** via TS-009, dans une PR de backlog séparée. Lancer uniquement après revue des changements de factory et autorisation explicite du coût. Exiger diff specs avant/après, toutes les étapes réelles, CI et rapport de coût. Voir [current-state.md](current-state.md).
+Le test **TS-009 MODIFIED est terminé** : commande OPSX native, garde-fou, spécification canonique modifiée, archive, CI et Pages ont été vérifiés ([run 38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)). Préparer une tâche séparée pour REMOVED, RENAMED ou des conflits sémantiques, après autorisation du run. Ne pas rejouer TS-009 pour cela. Un reporting de coût fiable reste à concevoir. Voir [current-state.md](current-state.md).
 
 ## Décisions non prises
 

@@ -32,7 +32,7 @@ après contrôle du diff, des specs et des checks.
 
 Le paquet npm **@fission-ai/openspec@1.14.1** fournit la CLI. Installer la
 CLI ne génère **pas**, à lui seul, les workflows agentiques d'OpenCode.
-Cette PR propose l'étape suivante, **non encore vérifiée E2E** :
+Depuis la PR #22, les étapes suivantes sont **implémentées et vérifiées en E2E** sur TS-009 (run 38712079641) :
 
 1. Installer la CLI épinglée puis OpenCode dans le runner éphémère.
 2. Exécuter openspec init --tools opencode,agents à la racine.
@@ -45,8 +45,8 @@ Cette PR propose l'étape suivante, **non encore vérifiée E2E** :
 
 OpenCode reconnaît les skills dans .opencode/skills et .agents/skills.
 Les slash commands OPSX sont des **prompts de workflow** propres à l'agent,
-pas des sous-commandes de la CLI openspec. Une exécution reste nécessaire
-pour établir la compatibilité réelle avec OpenCode et cette version de la CLI.
+pas des sous-commandes de la CLI openspec. Leur compatibilité avec OpenCode
+est attestée par la synchronisation MODIFIED TS-009 (PR #26).
 
 Références :
 [OpenSpec supported tools](https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md),
@@ -79,8 +79,7 @@ Références :
 
 Ces contrôles mécaniques ne prouvent **pas** la correction sémantique :
 comparer toujours exigences ADDED/MODIFIED/REMOVED/RENAMED avec les anciennes
-specs et le comportement implémenté. Les fichiers/scripts de cette PR
-nécessitent revue et CI avant adoption.
+specs et le comportement implémenté. Les scripts sont intégrés ; la CI de main a réussi après les PR #25 et #26.
 
 ## Historique et preuve disponible
 
@@ -98,11 +97,19 @@ nécessitent revue et CI avant adoption.
 
 ## Vérification suivante
 
-Après fusion de la présente évolution, conduire un test limité sur une capacité
-canonique existante (TS-009 est candidat), avec autorisation explicite,
-et archiver les résultats : SHA, runs/étapes, version CLI, preuve d'utilisation
-du command file/skill, diff avant/après, validations, tests, CI et coût OpenRouter.
-Ne jamais relancer une tâche archivée pour simuler ce test.
+La validation de MODIFIED dans une capacité existante **a été réalisée** :
+[run 38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641),
+[PR #26](https://github.com/cedricmenec/threadstep/pull/26),
+[CI main](https://github.com/cedricmenec/threadstep/actions/runs/38713003608)
+et [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38713003743).
+Aucun nouveau plan ni apply TS-009 n'est nécessaire. Les scénarios non
+démontrés sont REMOVED, RENAMED et les conflits de fusion. La preuve
+du coût exact facturé est à chercher chez OpenRouter, non dans ces logs.
+
+**Attention aux PR de plan** : en exécution séquencée, conserver le plan
+en PR brouillon jusqu'à apply, puis fusionner la livraison terminée.
+La fusion prématurée de la PR #24 a nécessité une reprise, détaillée
+ci-dessous, et n'est pas le parcours à répéter.
 
 ## Incident TS-009 du 15/10/2026 : checklist de phase impossible
 
@@ -116,6 +123,7 @@ plan **sans relancer l'agent** : tâche 4.3 limitée au contrôle pré-sync,
 puis revue post-sync distincte sans checkbox. Le second
 [run 38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
 a réussi (55 tests, commande OPSX, garde-fou SHA-256, archive) et a publié la
-[PR #26](https://github.com/cedricmenec/threadstep/pull/26) ; sa CI a réussi.
+[PR #26](https://github.com/cedricmenec/threadstep/pull/26), depuis fusionnée.
+La CI finale sur main a réussi avec 60 tests et Pages est déployé.
 Aucun crédit OpenRouter n'est consommé par le nouveau validateur statique,
 mais les phases apply et sync elles-mêmes restent payantes.

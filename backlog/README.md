@@ -1,24 +1,66 @@
-# Backlog
+# Backlog ThreadStep
 
-Task specifications live in `backlog/tasks/TS-NNN.md` as versioned Markdown files. Use `backlog/tasks/TEMPLATE.md` for new tasks and `AGENTS.md` for repository-wide agent conventions. Product intent belongs in `docs/product/`.
+Les besoins produit versionnés vivent dans backlog/tasks/TS-NNN.md.
+Le contrat de travail des agents figure dans [AGENTS.md](../AGENTS.md),
+les exigences dans docs/product/ et les spécifications canoniques dans
+openspec/specs/. Les états ci-dessous ont été **réconciliés le
+15 octobre 2026**, après fusion de la PR #26.
 
-## How to request a new feature
-Describe the need in natural language or by voice. The planning assistant inspects the existing product specification and backlog, assigns the next available task ID, breaks down oversized work, writes the acceptance criteria, and commits a task file and any required product-spec updates to a reviewable branch. The user does **not** have to create an issue, write Markdown, or choose a filename.
+## Proposer une fonctionnalité
 
-## How implementation currently works
-The legacy OpenCode workflow remains manually dispatched with an existing `task_id` (and an OpenRouter model) after the task has been merged into `main`. For spec-driven development, use **Agent OpenSpec (manual, staged)** with `task_id`, then manually run `phase=plan` to create the change and review its draft PR. Only after review, manually run `phase=apply` for implementation and archive. **Both phases call a paid model** and require their own explicit trigger; writing a task is not execution authorization. The workflows never automatically choose tasks or merge PRs. A dispatcher, budget enforcement and safe auto-merge remain future work.
+Exprimer le besoin en langage naturel ou vocal. L'assistant examine
+la vision, les exigences et les tâches existantes, choisit un TS-NNN
+libre, décompose le travail si nécessaire, écrit le périmètre et
+les critères d'acceptation, puis fait valider les documents par PR.
+Il n'est pas nécessaire de créer une issue GitHub.
 
-## Current tasks
-- **TS-001**: initial static MVP, implemented and validated.
-- **TS-002**: OpenCode smoke test on README, implemented as [PR #2](https://github.com/cedricmenec/threadstep/pull/2) (pilot PR; human handling).
-- **TS-003**: safe autonomous waves, backlog only; not authorized for execution.
-- **TS-004**: subject reordering with up/down controls, implemented via the OpenCode pilot.
-- **TS-005**: edit an existing action/substep title and priority while preserving completion, hierarchy and local data; implemented and merged via OpenSpec PR #8.
-- **TS-006**: temporarily hide completed actions and substeps while retaining unfinished children of completed parents; ready for explicit manual legacy Agent execution after merge.
-- **TS-007**: suggest one deterministic next action to focus on, with an accessible link to its location; planned as the first OpenSpec `auto` test.
+## Exécution effective
 
-- **TS-008**: pin one unfinished top-level action as « Je reprends ici », restore it after interruption and reveal it accessibly; ready for a separately authorized OPSX semantic-sync test.
+- **Direct** : workflow Agent (manual, OpenRouter), avec task_id et modèle.
+- **OpenSpec** : workflow Agent OpenSpec (manual, staged or auto), avec
+  task_id, modèle OpenRouter et phase plan, apply, auto ou finalize.
+- **Plan puis apply** : plan génère une PR brouillon de spécifications.
+  La conserver ouverte pour revue avant d'exécuter apply sur la branche
+  persistante, puis fusionner la PR de livraison après CI. Fusionner la
+  seule PR de plan prématurément a provoqué l'incident TS-009.
+- **Auto** : exécute les phases dans un seul run explicitement déclenché.
+- **OPSX** : init des skills/commandes OpenCode, synchronisation via
+  opsx-sync, garde-fou des contenus hors openspec/specs/, archive et
+  validation stricte. MODIFIED a été éprouvé sur TS-009.
+- **Contrat de phase** : les cases de tasks.md doivent toutes être
+  réalisables avant sync ; les contrôles post-sync/CI sont distincts.
+- La création d'un backlog ne déclenche pas à elle seule d'exécution
+  payante. Les workflows n'ordonnancent aucune tâche et ne fusionnent
+  jamais les PR automatiquement. Budget garanti et protection main
+  restent à implémenter.
 
-Keep tasks small enough for one bounded agent run. Priorities/dependencies remain documented in the Markdown text during the pilot; a machine-readable scheduler is not installed.
+## État du backlog
 
-- **TS-009**: expliquer en une phrase le choix « Une étape pour maintenant », sans changer l'algorithme ; expérimentation OPSX MODIFIED sur next-action-suggestion. Backlog seulement, non autorisé pour exécution payante et conditionné à la revue du durcissement OPSX.
+| Tâche | Objet | Statut vérifié |
+| --- | --- | --- |
+| TS-001 | MVP statique | Livrée, CI et Pages réussies |
+| TS-002 | Smoke test agent OpenCode | Livrée, [PR #2](https://github.com/cedricmenec/threadstep/pull/2) fusionnée |
+| TS-003 | Orchestration de vagues autonomes | **Backlog uniquement**, non implémentée |
+| TS-004 | Réordonner les sujets | Livrée, [PR #4](https://github.com/cedricmenec/threadstep/pull/4) fusionnée |
+| TS-005 | Modifier une action/sous-étape | Livrée, [PR #8](https://github.com/cedricmenec/threadstep/pull/8) fusionnée et archivée |
+| TS-006 | Masquer les étapes terminées | Livrée, [PR #12](https://github.com/cedricmenec/threadstep/pull/12) fusionnée |
+| TS-007 | Suggestion déterministe d'action | Livrée, [PR #18](https://github.com/cedricmenec/threadstep/pull/18) fusionnée et archivée |
+| TS-008 | « Je reprends ici » | Livrée, [PR #21](https://github.com/cedricmenec/threadstep/pull/21) fusionnée, capacité ADDED |
+| TS-009 | Expliquer la suggestion | Livrée, [PR #26](https://github.com/cedricmenec/threadstep/pull/26) fusionnée, capacité MODIFIED et sync OPSX native |
+
+**Important :** les cases historiques des fichiers de tâche ne sont pas
+systématiquement mises à jour par le workflow. Le statut livré provient
+des PR et CI vérifiées, pas de cases cochées a posteriori. Pour TS-005
+et suivantes, les archives OpenSpec contiennent des checklists d'exécution.
+
+L'historique exact est dans
+[docs/factory/current-state.md](../docs/factory/current-state.md) et
+la tâche de mise en cohérence
+[ASF-DOC-001](../docs/factory/tasks/ASF-DOC-001.md).
+
+## Précautions
+
+Conserver des tâches suffisamment petites pour une seule exécution
+bornée. Les priorités et dépendances sont du texte Markdown pendant
+le pilote : il n'y a pas de moteur d'ordonnancement transactionnel.
+Ne pas relancer une tâche déjà archivée uniquement pour « tester OPSX ».
