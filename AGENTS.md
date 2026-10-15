@@ -45,3 +45,11 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 - The OpenSpec workflow_dispatch form preselects `auto` and `openrouter/deepseek/deepseek-v4.1-flash`; these are convenience defaults, not permission to execute. It accepts a 1-3 digit number (e.g. `9`, `009`) or canonical `TS-009` and normalizes to `TS-NNN` before backlog validation, branch naming and model calls. Reject `0`, out-of-range and malformed values. Each canonical OpenSpec task has its own concurrency group, avoiding alias races while allowing independent tasks to run in parallel. The direct legacy workflow is unchanged.
 - The selected task maps to deterministic `openspec/changes/ts-nnn/` and must be checked against the product acceptance criteria. Do not treat a plan approval as consent to launch apply automatically. Automated priority selection and wave execution remain future capabilities.
 - Keep changes to agent policy and backlog conventions in a dedicated reviewed PR. A routine coding task must not edit `AGENTS.md` or workflow/security files.
+
+## Dedicated ASF development agent (manual, reviewed)
+
+- The `Agent ASF (manual, OpenRouter, reviewed PR)` workflow is a separate **owner-only** path for explicitly selected `docs/factory/tasks/ASF-V2-NNN.md` tasks. It does not weaken the routine ThreadStep product-agent restrictions above.
+- The task-specific, versioned allowlist in `scripts/agent-asf-policy.mjs` is checked before publication. The development job has no GitHub App write token. Privileged publication runs only after a validated patch and produces a PR for human review, never an auto-merge request.
+- Manual dispatch authorizes a **paid** task execution only. Task status/priority does not authorize API costs, changes of secrets or GitHub settings, or PR merge. The model provider key is available only to the paid development step.
+- ASF-V2-008/009 are **not executable by this bootstrap** because they change GitHub Actions workflows. A separately approved, human-gated publication path is required; this bootstrap neither requests `Workflows: write` nor changes App permissions.
+- Factory changes always require independent CI, checked documentation within the same PR, explicit merge authorization, and honest post-merge verification. See `docs/factory/agent-asf-manual.md`.

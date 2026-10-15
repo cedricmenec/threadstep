@@ -177,3 +177,7 @@ après #30. L'agent manuel est à nouveau disponible, mais son chemin
 [Roadmap](roadmap.md) ·
 [Tâches de réconciliation](tasks/ASF-DOC-001.md) et
 [ASF-DOC-002](tasks/ASF-DOC-002.md).
+
+## Évolution proposée : ASF-BOOT-001 (en revue, non déployée)
+
+La PR bootstrap propose un exécuteur **manuel** de tasks ASF-V2 avec jobs séparés, politique de chemins figée, PR en revue humaine, et exclusion explicite des changements de workflows (ASF-V2-008/009) jusqu'à la conception d'une voie de publication avec revue humaine avant push. Aucune preuve E2E payante, aucune activation, aucun changement de secret ou de protection main ne sont revendiqués avant fusion et tests. Voir [agent-asf-manual.md](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md).
