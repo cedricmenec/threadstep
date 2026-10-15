@@ -20,3 +20,5 @@ The legacy OpenCode workflow remains manually dispatched with an existing `task_
 - **TS-008**: pin one unfinished top-level action as « Je reprends ici », restore it after interruption and reveal it accessibly; ready for a separately authorized OPSX semantic-sync test.
 
 Keep tasks small enough for one bounded agent run. Priorities/dependencies remain documented in the Markdown text during the pilot; a machine-readable scheduler is not installed.
+
+- **TS-009**: expliquer en une phrase le choix « Une étape pour maintenant », sans changer l'algorithme ; expérimentation OPSX MODIFIED sur next-action-suggestion. Backlog seulement, non autorisé pour exécution payante et conditionné à la revue du durcissement OPSX.

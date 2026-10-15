@@ -16,6 +16,8 @@
 
 - FR-13 Let the user explicitly pin exactly one unfinished top-level action as « Je reprends ici » using an accessible French control on each eligible action. Show a single top-of-interface card with the subject, title and priority plus « Voir dans la liste » and « Ne plus suivre »; restoring the selection locally after reload, revealing it accessibly (including on mobile and when completed actions are hidden), replacing it when another action is pinned, and clearing it explicitly or automatically when the tracked action is completed or removed, when its subject is removed, or when an import no longer contains it. Track the stable subject and action IDs (never title or position), keep TS-007 suggestions independent, leave IDs, priorities, completion flags and ordering untouched, and preserve document JSON compatibility by storing this browser-only preference separately and excluding it from exports.
 
+- FR-14 Explain in accessible French why the deterministic « Une étape pour maintenant » suggestion was selected, using its priority and the existing tie-break order of subjects and actions. The explanation is shown only with a valid suggestion, does not alter selection or stored data, remains distinct from « Je reprends ici », and never invokes AI/network or introduces new persistence. **Planned in TS-009, not yet implemented.**
+
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
@@ -24,6 +26,8 @@
 - The « Une étape pour maintenant » suggestion is deterministic, excludes completed actions and substeps, and never changes localStorage, exported JSON, ids, flags, priorities or ordering; no card is restored after reload.
 - The « Je reprends ici » tracking pins exactly one unfinished top-level action, survives reload, reveals it accessibly, clears on « Ne plus suivre », and is automatically cleaned up when the action is completed or removed or its subject is removed; it uses a browser-local preference separate from `threadstep.document.v1`, is excluded from JSON exports, and never changes ids, priorities, completion flags or ordering.
 - No key, secret or personal task content is sent to a server.
+
+- When TS-009 is implemented, verify the explanation matches urgent/normal/later, keeps tie-break order truthful and preserves unchanged JSON/localStorage and TS-008 tracking. This is a planned acceptance test, not a currently passing result.
 
 ## Open decisions
 - Manual ordering within a priority and automatic archiving are deferred.
