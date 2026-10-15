@@ -17,6 +17,11 @@ Contraintes durables :
 - Le travail est durable, reprenable après interruption, observable, reproductible et limité en coût.
 - **Fusion automatique native GitHub et déploiement Pages observés** après CI requise sur TS-010/TS-011 ; l'orchestration externe par vagues reste une cible. Aucun mécanisme ne doit contourner les checks.
 
+**Nouvelle session sans contexte ?** Commencer par
+[ChatGPT.md](../../ChatGPT.md), point d'entrée court sur les
+responsabilités, autorisations, tâches et PR. Les faits courants
+restent dans ce dossier et dans GitHub.
+
 ## Où lire quoi ?
 
 1. [État courant et reprise](current-state.md) : preuves, risques, versions et prochaine expérimentation.
