@@ -38,8 +38,13 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
   PR #25, interdit des demandes explicitement post-sync dans la checklist
   pré-sync au moment du plan et au démarrage de apply.
 - **Publication** : GitHub App threadstep-software-factory, branche
-  agent/openspec/TS-NNN, PR, CI indépendante et fusion autorisée par le
-  propriétaire. Les workflows d'agent n'effectuent pas eux-mêmes de merge.
+  agent/openspec/TS-NNN, PR et CI indépendante. ASF-WF-002 ajoute aux deux
+  workflows un booléen `auto_merge=true` par défaut pour les PR finales,
+  désactivable au lancement. Le script de fusion n'autorise que GitHub
+  native auto-merge, après contrôle explicite d'un required status check
+  `check` dans le ruleset actif de `main`. OpenSpec `plan` reste brouillon,
+  jamais fusionné automatiquement. **Aucun E2E de fusion automatique n'est
+  encore prouvé.**
 - **Versions/coûts** : OpenSpec épinglé en 1.14.1, OpenCode installé par
   opencode-ai@latest, observé en 1.19.0 durant TS-008. Modèles OpenRouter
   configurés : DeepSeek V4.1 Flash et GLM 5.3 Flash. Les appels restent
@@ -95,9 +100,11 @@ apply sur la branche d'agent, puis fusionner la PR finale.
 
 ## Risques et limites encore ouverts
 
-1. **Protection de main absente** : l'API GitHub renvoie protected: false
-   après la fusion #26. Required checks et règles de branche ne sont pas
-   activés ; les succès de CI ne sont pas un verrou administratif.
+1. **Protection partielle de main** : après la PR #28, GitHub renvoie
+   `protected: true` et le ruleset actif `Protect Main` (id 25163425)
+   exige une PR, mais sa liste `required_status_checks` est vide.
+   Il faut ajouter le contrôle `check` pour activer la fusion automatique
+   sûre. Tant que ce réglage manque, ASF-WF-002 refuse la demande d'auto-merge.
 2. **Budget** : aucun plafond OpenRouter USD exécutable par run/vague, ni
    comptabilité fournisseur corrélée aux runs. Chaque lancement effectif
    reste une opération à autoriser.
@@ -117,8 +124,9 @@ apply sur la branche d'agent, puis fusionner la PR finale.
 
 ## Étapes suivantes recommandées
 
-- Configurer la protection de main (checks requis, politique de revue,
-  interdiction des pushs directs et force-pushs) dans les paramètres GitHub.
+- Compléter le ruleset `Protect Main` avec le contrôle obligatoire
+  `check` (GitHub Actions), sans permettre de contournement des checks ;
+  la protection des PR et les interdictions de force-push sont déjà présentes.
 - Épingler OpenCode, tracer les coûts fournisseur et fixer une politique
   de dépenses/reprises proportionnée.
 - Préparer une nouvelle expérimentation **distincte** pour REMOVED/RENAMED
