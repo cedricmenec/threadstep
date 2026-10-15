@@ -11,9 +11,9 @@ Faire évoluer l'Autonomous Software Factory vers une orchestration de vagues **
 
 ## Documents
 
-1. [01-backlog-v2.md](01-backlog-v2.md) : contrat de tâche, métadonnées, indexation, génération et archivage.
-2. [02-scheduler-v1.md](02-scheduler-v1.md) : éligibilité, dépendances, classement et sélection dynamique.
-3. [03-orchestrator-v1.md](03-orchestrator-v1.md) : vague, autorisation, exécution, livraison, reprise et archivage.
+1. [01-backlog-v2.md](backlog-v2.md) : contrat de tâche, métadonnées, indexation, génération et archivage.
+2. [02-scheduler-v1.md](scheduler-v1.md) : éligibilité, dépendances, classement et sélection dynamique.
+3. [03-orchestrator-v1.md](orchestrator-v1.md) : vague, autorisation, exécution, livraison, reprise et archivage.
 
 ## Décisions acquises dans les échanges
 
