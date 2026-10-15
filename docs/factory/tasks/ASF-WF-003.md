@@ -1,7 +1,7 @@
 # ASF-WF-003 | Rétablir le workflow manuel OpenCode
 
 Date: 2026-10-15
-Status: proposed fix in PR, not merged
+Status: completed; PR #30 merged and independent CI/Pages verified
 Priority: critical
 Scope: GitHub Actions manual agent workflow and independent workflow lint
 
@@ -38,9 +38,12 @@ et ne compilait pas la syntaxe Bash de leurs blocs `run: |`.
   `run: |`, les soumettant à `bash -n`, et vérifiant l'unicité
   des étapes de publication et de fusion.
 - [x] Documenter l'incident et son correctif, sans changer le code produit.
-- [ ] CI GitHub réussie sur la PR et revue du diff.
-- [ ] Confirmation après fusion : le workflow a retrouvé son nom, aucun
-  run d'échec automatique n'est créé par les pushs, CI de main et Pages OK.
+- [x] CI GitHub de PR #30 réussie (73 tests Node et Actionlint),
+  puis fusion humaine effectuée.
+- [x] Après #30, la CI de main et Pages ont réussi ; les pushs
+  suivants ne génèrent plus d'exécutions parasites invalides du workflow.
+  La syntaxe est validée par Actionlint et les tests Bash, sans
+  lancement payant du mode direct.
 
 ## Prévention
 
@@ -50,3 +53,12 @@ guillemets non refermés qui étaient la cause de l'incident. Ces deux
 vérifications seront présentes dans les futures PR de factory.
 
 **Aucun workflow OpenRouter n'est lancé pour cette réparation.**
+
+## Preuves de résolution (15 octobre 2026)
+
+[PR #30](https://github.com/cedricmenec/threadstep/pull/30),
+[CI de PR](https://github.com/cedricmenec/threadstep/actions/runs/38746938998),
+[CI main](https://github.com/cedricmenec/threadstep/actions/runs/38747525932)
+et [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38747528029)
+ont réussi. Le workflow manuel est de nouveau syntaxiquement valide ;
+il n'a pas été réexécuté avec OpenRouter pour ce diagnostic.
