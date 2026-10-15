@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, parseResumePreference, serializeResumePreference, resumeView } from "../site/core.js";
+import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -294,6 +294,37 @@ test("nextActionSuggestion does not mutate its input and is stable across calls"
   assert.equal(first.itemId, "b1");
   assert.deepEqual(Object.keys(first).sort(), ["itemId", "itemTitle", "priority", "subjectId", "subjectTitle"]);
   assert.deepEqual(doc, snapshot);
+});
+
+test("suggestionReason returns the exact explanation for each priority", () => {
+  assert.equal(suggestionReason("urgent"), "Choisie selon sa priorité « Urgent » ; en cas d'égalité, l'ordre des sujets puis des actions décide.");
+  assert.equal(suggestionReason("normal"), "Choisie selon sa priorité « Normal » ; en cas d'égalité, l'ordre des sujets puis des actions décide.");
+  assert.equal(suggestionReason("later"), "Choisie selon sa priorité « Plus tard » ; en cas d'égalité, l'ordre des sujets puis des actions décide.");
+});
+
+test("suggestionReason names the effective priority and the tie-break order", () => {
+  assert.match(suggestionReason("normal"), /« Normal »/);
+  assert.match(suggestionReason("later"), /« Plus tard »/);
+  assert.match(suggestionReason("urgent"), /l'ordre des sujets puis des actions/);
+});
+
+test("suggestionReason returns null for any invalid priority", () => {
+  assert.equal(suggestionReason("demain"), null);
+  assert.equal(suggestionReason("toString"), null);
+  assert.equal(suggestionReason("constructor"), null);
+  assert.equal(suggestionReason("__proto__"), null);
+  assert.equal(suggestionReason("Urgent"), null);
+  assert.equal(suggestionReason(""), null);
+  assert.equal(suggestionReason(null), null);
+  assert.equal(suggestionReason(undefined), null);
+  assert.equal(suggestionReason(42), null);
+  assert.equal(suggestionReason({}), null);
+});
+
+test("suggestionReason is deterministic across repeated calls", () => {
+  for (const priority of ["urgent", "normal", "later"]) {
+    assert.equal(suggestionReason(priority), suggestionReason(priority));
+  }
 });
 
 test("RESUME_KEY is separate from the document storage key", () => {

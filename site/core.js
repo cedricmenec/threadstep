@@ -72,6 +72,14 @@ function isBetterRank(rank, bestRank) {
   if (rank[1] !== bestRank[1]) return rank[1] < bestRank[1];
   return rank[2] < bestRank[2];
 }
+const reasonLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
+export function suggestionReason(priority) {
+  if (!PRIORITIES.includes(priority)) return null;
+  const label = reasonLabels[priority];
+  if (!label) return null;
+  return "Choisie selon sa priorité « " + label +
+    " » ; en cas d'égalité, l'ordre des sujets puis des actions décide.";
+}
 export function parseResumePreference(raw) {
   if (typeof raw !== "string" || raw.length === 0) return null;
   let value;

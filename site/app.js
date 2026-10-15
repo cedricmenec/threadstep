@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, parseResumePreference, serializeResumePreference, resumeView } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -121,6 +121,8 @@ function renderSuggestion() {
   focusCardEl.append(el("p", "focus-label", "Prochaine étape suggérée"));
   focusCardEl.append(el("p", "focus-title", suggestion.itemTitle));
   focusCardEl.append(el("p", "focus-meta", suggestion.subjectTitle + " · " + priorityLabels[suggestion.priority]));
+  const reason = suggestionReason(suggestion.priority);
+  if (reason) focusCardEl.append(el("p", "focus-reason", reason));
   const actions = el("div", "focus-actions");
   const reveal = el("button", "subtle focus-reveal", "Voir dans la liste");
   reveal.type = "button";
