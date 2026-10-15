@@ -15,8 +15,8 @@ const policies = Object.freeze({
   "ASF-V2-005": ["scripts/asf/", "tests/", "docs/factory/"],
   "ASF-V2-006": ["scripts/asf/", "tests/", "docs/factory/"],
   "ASF-V2-007": ["scripts/asf/", "tests/", "docs/factory/"],
-  "ASF-V2-008": [".github/workflows/agent-openspec.yml", "scripts/asf/", "tests/", "docs/factory/", "AGENTS.md"],
-  "ASF-V2-009": [".github/workflows/backlog-orchestrator.yml", "scripts/asf/", "tests/", "docs/factory/"],
+  "ASF-V2-008": ["scripts/asf/", "tests/", "docs/factory/", "AGENTS.md"],
+  "ASF-V2-009": ["scripts/asf/", "tests/", "docs/factory/"],
   "ASF-V2-010": ["scripts/asf/", "scripts/request-safe-auto-merge.mjs", "backlog/", "tests/", "docs/factory/"],
   "ASF-V2-011": ["scripts/asf/fixtures/", "tests/", "docs/factory/"]
 });
@@ -31,7 +31,7 @@ export function isAllowedChange(taskId, path) {
       path.split("/").some(part => !part || part === "." || part === ".." || part.startsWith(".env")) ||
       /[\x00-\x1f\x7f]/.test(path)) return false;
   // The publisher's guard and its own workflow cannot be rewritten by the agent.
-  if (path === "scripts/agent-asf-policy.mjs" || path === ".github/workflows/agent-asf.yml" ||
+  if (path === "scripts/agent-asf-policy.mjs" || path.startsWith(".github/workflows/") ||
       path === "docs/factory/tasks/ASF-BOOT-001.md" ||
       path.startsWith("docs/factory/specs/") ||
       (path.startsWith("docs/factory/tasks/") &&
@@ -42,6 +42,11 @@ export function isAllowedChange(taskId, path) {
 
 export function preflight(taskId, read = path => readFileSync(path, "utf8")) {
   if (!knownTask(taskId)) throw new Error("Unknown or invalid ASF task ID");
+  // A workflow PR can run new privileged triggers on push before human review.
+  // Exclude these two tasks until an explicitly approved, gated publisher exists.
+  if (taskId === "ASF-V2-008" || taskId === "ASF-V2-009") {
+    throw new Error("Workflow-changing factory task requires a separately authorized gated path");
+  }
   const content = read("docs/factory/tasks/" + taskId + ".md");
   if (!/^Status:\s*ready\b/im.test(content) ||
       !/^Type:\s*factory\s*$/im.test(content) ||

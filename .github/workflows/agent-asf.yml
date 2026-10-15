@@ -28,6 +28,9 @@ jobs:
     if: github.actor == github.repository_owner && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       task_id: ${{ steps.task.outputs.task_id }}
     steps:
@@ -152,22 +155,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/agent-asf-policy.mjs preflight "$TASK_ID"
+          cp scripts/agent-asf-policy.mjs "$RUNNER_TEMP/agent-asf-policy.mjs"
+          node "$RUNNER_TEMP/agent-asf-policy.mjs" preflight "$TASK_ID"
           patch="$RUNNER_TEMP/asf-artifact/asf-agent.patch"
           test -s "$patch"
           test "$(wc -c < "$patch")" -le 1500000
           git checkout -b "agent/asf/$TASK_ID-run-$GITHUB_RUN_ID"
           git apply --index --check "$patch"
           git apply --index "$patch"
-          node scripts/agent-asf-policy.mjs validate "$TASK_ID"
+          node "$RUNNER_TEMP/agent-asf-policy.mjs" validate "$TASK_ID"
           git config user.name "threadstep-software-factory[bot]"
           git config user.email "threadstep-software-factory[bot]@users.noreply.github.com"
           git commit -m "feat(asf): implement $TASK_ID"
           echo "AGENT_BRANCH=agent/asf/$TASK_ID-run-$GITHUB_RUN_ID" >> "$GITHUB_ENV"
-      # Only workflow-editing tasks need GitHub App Workflows: write.
-      # Never alter the App permissions automatically. If unavailable, fail closed.
-      - name: Mint publisher token for regular factory tasks
-        if: needs.preflight.outputs.task_id != 'ASF-V2-008' && needs.preflight.outputs.task_id != 'ASF-V2-009'
+      # Sensitive workflow editing is excluded from this bootstrap. Keep the App scope narrow.
+      - name: Mint publisher token for ordinary reviewed factory changes
         id: normal-token
         uses: actions/create-github-app-token@v1
         with:
@@ -175,20 +177,10 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
-      - name: Mint publisher token for explicitly workflow-scoped tasks
-        if: needs.preflight.outputs.task_id == 'ASF-V2-008' || needs.preflight.outputs.task_id == 'ASF-V2-009'
-        id: workflow-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-contents: write
-          permission-pull-requests: write
-          permission-workflows: write
       - name: Publish reviewed PR (never auto-merge)
         shell: bash
         env:
-          GH_TOKEN: ${{ steps.normal-token.outputs.token || steps.workflow-token.outputs.token }}
+          GH_TOKEN: ${{ steps.normal-token.outputs.token }}
         run: |
           set -euo pipefail
           test -n "${GH_TOKEN:-}"

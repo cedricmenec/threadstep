@@ -25,8 +25,8 @@ test("factory guard cannot be modified by an agent on any task", () => {
 test("task-scoped permissions do not open all workflows", () => {
   assert.equal(isAllowedChange("ASF-V2-001", "AGENTS.md"), true);
   assert.equal(isAllowedChange("ASF-V2-001", "scripts/asf/selector.mjs"), false);
-  assert.equal(isAllowedChange("ASF-V2-008", ".github/workflows/agent-openspec.yml"), true);
-  assert.equal(isAllowedChange("ASF-V2-009", ".github/workflows/backlog-orchestrator.yml"), true);
+  assert.equal(isAllowedChange("ASF-V2-008", ".github/workflows/agent-openspec.yml"), false);
+  assert.equal(isAllowedChange("ASF-V2-009", ".github/workflows/backlog-orchestrator.yml"), false);
   assert.equal(isAllowedChange("ASF-V2-008", ".github/workflows/ci.yml"), false);
   assert.equal(isAllowedChange("ASF-V2-009", ".github/workflows/agent-openspec.yml"), false);
   assert.equal(isAllowedChange("ASF-V2-010", "scripts/request-safe-auto-merge.mjs"), true);
@@ -49,6 +49,11 @@ test("preflight verifies explicit owner-eligible task metadata", () => {
   assert.throws(() => preflight("ASF-V2-001", () => content.replace("Status: ready", "Status: proposed")), /not a ready/);
 });
 
+test("preflight requires a separate path for workflow modifications", () => {
+  assert.throws(() => preflight("ASF-V2-008"), /separately authorized gated path/);
+  assert.throws(() => preflight("ASF-V2-009"), /separately authorized gated path/);
+});
+
 test("preflight refuses dependencies not yet verified as delivered", () => {
   assert.throws(() => preflight("ASF-V2-002"), /Dependency not recorded as verified/);
 });
@@ -62,6 +67,6 @@ test("workflow separates paid development and privileged publication", () => {
   const develop = yaml.split("\n  develop:")[1]?.split("\n  publish:")[0] ?? "";
   assert.doesNotMatch(develop, /create-github-app-token|permission-contents: write|permission-workflows: write/);
   const publish = yaml.split("\n  publish:")[1] ?? "";
-  assert.match(publish, /permission-workflows: write/);
+  assert.doesNotMatch(publish, /permission-workflows: write/);
   assert.doesNotMatch(publish, /auto.merge|request-safe-auto-merge/i);
 });

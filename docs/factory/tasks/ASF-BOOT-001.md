@@ -17,7 +17,7 @@ Pouvoir confier individuellement les tâches ASF-V2-001 à ASF-V2-011 à OpenCod
 - [x] Vérifier tâche ready/manual et références de dépendances avant toute utilisation d'OpenRouter. Une dépendance nécessite un statut delivered/completed et un lien de PR de preuve dans sa fiche.
 - [x] Isoler l'agent de développement de toute permission GitHub d'écriture ; réserver le jeton App à un job séparé après contrôles.
 - [x] Appliquer dans le job publication une politique de chemins par tâche figée en code approuvé, sans permettre à l'agent d'éditer sa propre politique.
-- [x] Refuser les changements hors scope, symlinks, configurations sensibles et modifications de workflows autres que celles précisément prévues par ASF-V2-008 et ASF-V2-009.
+- [x] Refuser les changements hors scope, symlinks, configurations sensibles et toute modification de workflow générée par un agent. Les tâches 008/009 exigent un parcours à revue préalable distinct.
 - [x] Faire passer les tests au job non privilégié, transférer un patch limité, valider de nouveau après application puis ouvrir une PR dédiée.
 - [x] Désactiver la fusion automatique : contrôle humain et CI indépendante obligatoires.
 - [x] Ajouter tests de politique, guide d'exploitation, limites et sécurité, sans modifier les agents produit ou les secrets.
@@ -27,7 +27,7 @@ Pouvoir confier individuellement les tâches ASF-V2-001 à ASF-V2-011 à OpenCod
 ## Limites et compromis explicités
 
 - Un déclenchement `execute` engage des appels OpenRouter payants ; un seul appel `opencode run` ne garantit pas un plafond monétaire.
-- Les tâches ASF-V2-008 et ASF-V2-009 nécessitent la permission GitHub App `Workflows: write`. Elle n'est pas demandée automatiquement à l'administrateur. Si elle est absente, publication refusée et reprise humaine.
+- Les tâches ASF-V2-008 et ASF-V2-009 sont **refusées dès le précontrôle**, avant tout appel payant : elles touchent les workflows sensibles. Leur traitement nécessite une voie de publication à revue préalable dédiée. La GitHub App reste limitée à Contents + Pull requests.
 - La révision humaine reste requise pour chaque PR ASF, même si la CI réussit.
 - Pas de nouveau workflow OpenSpec pour les modifications de factory dans ce bootstrap ; l'agent ASF utilise OpenCode directement.
 - Le check local est une vérification dans un runner non privilégié, non une sandbox. Le modèle reçoit la clé OpenRouter pendant sa seule étape ; il ne reçoit jamais le jeton GitHub App.
