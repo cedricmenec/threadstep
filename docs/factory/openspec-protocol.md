@@ -46,36 +46,38 @@ La documentation actuelle d'OpenSpec expose notamment :
 5. Une modification du contrat public, des permissions ou de la persistance doit bloquer si les décisions sont ambiguës.
 6. Le changement archivé et les specs canoniques doivent être dans un état versionné, vérifié et livrable.
 
-## Pilote OpenSpec manuel proposé
+## État implémenté et intégration OpenCode (15 octobre 2026)
 
-Le nouveau workflow `.github/workflows/agent-openspec.yml` introduit un **lancement
-manuel par phase** sans retirer le workflow OpenCode direct historique.
-`phase=plan` explore le code et fait produire par OpenCode les artefacts
-`proposal.md`, `design.md`, `specs/**/spec.md` et `tasks.md` dans
-`openspec/changes/ts-nnn/`, puis les valide et publie une PR brouillon.
-`phase=apply` exige ce plan déjà validé sur branche persistante, exécute
-OpenCode, exige tests et checklist achevée, valide le change et archive avec
-`openspec archive ts-nnn --yes` : **c'est cet archivage qui synchronise
-les deltas vers `openspec/specs/`**.
+Le protocole fonctionne en pilote dans agent-openspec.yml : plan, apply, auto,
+finalize, contrôle du plan, tests, validation stricte, sync et archive.
+La PR #21 et le [run TS-008](https://github.com/cedricmenec/threadstep/actions/runs/38645900430)
+démontrent cette chaîne sur une nouvelle capacité. La CLI OpenSpec 1.14.1 y
+était installée, mais le sync était décrit dans le prompt, sans commande native.
 
-Les phases ne sont pas des sous-commandes CLI `explore` ou `propose` :
-ce sont des instructions agentiques guidées par les commandes CLI
-`openspec instructions` et `openspec validate`. Les deux phases consomment
-OpenRouter uniquement après déclenchement manuel. Version CLI épinglée sur
-`1.14.1`. Exécution E2E démontrée sur TS-005 : phase plan, PR #8 brouillon, phase apply, puis implémentation et fusion par le propriétaire. Les contrôles détaillés des futurs changements restent à vérifier pour chaque run. Mode d'emploi : [pilote manuel](openspec-manual-pilot.md).
+**Important :** openspec init génère des Agent Skills et, pour OpenCode, des
+fichiers de commandes. La CLI n'exécute pas directement la syntaxe /opsx:sync.
+La PR de consolidation configure explicitement OpenCode via init --tools
+opencode,agents, puis opencode run --command opsx-sync, avec une vérification
+des empreintes hors specs canoniques. Son efficacité reste à tester après fusion.
 
-## État réel et améliorations à venir
+- Agent Skills OpenCode : .opencode/skills/openspec-*/SKILL.md ;
+  commandes OpenCode : .opencode/commands/opsx-*.md.
+- Cible partagée : .agents/skills/openspec-*/SKILL.md ; pas de slash commands
+  OPSX pour cette cible.
+- La synchronisation agentique doit conserver les exigences hors delta
+  et refléter le comportement implémenté ; la validation CLI stricte ne vérifie
+  pas à elle seule la sémantique.
+- Après sync par l'agent, archive --yes --skip-specs évite de refaire la fusion.
 
-ThreadStep exécute désormais OpenSpec via `.github/workflows/agent-openspec.yml`, en parallèle du workflow direct historique `.github/workflows/agent.yml`. TS-005 a été réalisée avec le cycle plan/apply et fusionnée. Les améliorations restantes sont :
+Le prochain test doit **modifier une capacité existante** avec MODIFIED et un
+scénario ADDED, puis comparer la spécification canonique avant/après.
+Le résultat TS-008 avec uniquement ADDED n'établit pas cette preuve.
 
-1. Initialiser et figer CLI / Skills / config OpenSpec ; ajouter une tâche de démonstration.
-2. Mettre `Explore + Propose + validation` sur branche dédiée, avec tests de conformité des artefacts.
-3. Ajouter `Apply + Verify + Sync + Archive` et des checkpoints durables.
-4. Garder la même interface d'entrée `task_id` en mode manuel ; l'orchestrateur n'est qu'un appelant supplémentaire.
-5. Ajouter un test E2E qui prouve la présence des specs canoniques mises à jour, de l'archive, du code testé et de la PR.
+## Références et procédures
 
-## Références officielles
-
-- [OpenSpec CLI](https://openspec.dev/docs/cli)
-- [OpenSpec setup et Agent Skills](https://openspec.dev/docs/setup)
-- Précédent concret : `mestryn/AGENTS.md` et ses règles d'OpenSpec autonome, à adapter plutôt qu'à copier aveuglément.
+- [État courant](current-state.md)
+- [Pilote OpenSpec manuel](openspec-manual-pilot.md)
+- [OpenSpec supported tools](https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md)
+- [OpenSpec commandes](https://github.com/Fission-AI/OpenSpec/blob/main/docs/commands.md)
+- [OpenCode skills](https://opencode.ai/docs/skills/)
+- [OpenCode CLI](https://opencode.ai/docs/cli/)
