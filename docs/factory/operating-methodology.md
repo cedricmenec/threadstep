@@ -14,7 +14,7 @@
 **Présentement réalisable :**
 - `Actions → Agent (manual, OpenRouter) → Run workflow`, branche `main`, saisie de `task_id` et du modèle.
 - L'agent lit le fichier de la tâche, effectue le développement, exécute `npm run check`, pousse une branche et ouvre/réutilise une PR.
-- Les deux workflows publient via le jeton temporaire GitHub App ; la PR #21 de TS-008 a été créée par le bot, et sa CI s'est exécutée avec succès sans intervention supplémentaire. La fusion reste humaine.
+- Les deux workflows publient via le jeton temporaire GitHub App ; la PR #21 de TS-008 a été créée par le bot, et sa CI s'est exécutée sans intervention supplémentaire. Ils proposent désormais `auto_merge=true` par défaut, qui n'est activé que pour une PR finale si le ruleset de `main` rend le check `check` obligatoire. Sinon la PR reste ouverte avec une erreur explicite. La fusion manuelle reste disponible.
 - Une fois fusionné, CI sur `main` et Pages déploient la version testée.
 
 **Évolution voulue :** proposer un bouton/commande `workflow_dispatch` avec `task_id`, `model`, `protocol`, `delivery` et budget autorisé ; **pas de dépendance obligatoire à un orchestrateur externe**. L'exécuteur reçoit et vérifie la même enveloppe de tâche qu'en mode automatique.

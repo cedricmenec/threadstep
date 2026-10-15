@@ -10,7 +10,7 @@ Les entrées **Acceptée** fixent l'intention de l'architecture cible ; elles ne
 | ASF-ADR-004 | Acceptée | **`AGENTS.md`** porte les conventions et contraintes ; ne pas le confondre avec l'état des tâches. |
 | ASF-ADR-005 | Acceptée | **Deux entrées durables** : manuel explicite et orchestrateur externe optionnel. Exécuteur/validations identiques. |
 | ASF-ADR-006 | Acceptée, pilote manuel implémenté | **Spec-driven avec OpenSpec** : Explore, Propose, Apply, Verify, Sync, Archive sur les évolutions fonctionnelles. |
-| ASF-ADR-007 | Acceptée | Branches de travail durables et livraison PR par défaut ; absence de fusion automatique pendant le pilote. |
+| ASF-ADR-007 | Acceptée, adaptée | Branches de travail durables et livraison PR par défaut ; fusion manuelle toujours possible, auto-merge uniquement via GitHub après CI indépendante obligatoire et protections vérifiées. |
 | ASF-ADR-008 | Acceptée, implémentée et testée | GitHub App dédiée plutôt que PAT : PR #21 créée par le bot, CI de PR réussie. |
 | ASF-ADR-009 | Acceptée | Les tests GitHub et la protection `main` sont des contrôles indépendants et ne doivent jamais être contournés pour gagner en autonomie. |
 | ASF-ADR-010 | Acceptée (future) | L'orchestrateur sélectionne les tâches uniquement dans un **périmètre de vague explicitement autorisé** avec plafonds et vérification des dépendances. |
@@ -19,6 +19,7 @@ Les entrées **Acceptée** fixent l'intention de l'architecture cible ; elles ne
 | ASF-ADR-013 | Acceptée, implémentée et validée E2E | OpenSpec init --tools opencode,agents, commande OpenCode --command opsx-sync et garde-fou SHA-256. Prouvé sur TS-009 run 38712079641 et PR #26 ; isolation hors sandbox non garantie. |
 | ASF-ADR-014 | Acceptée, implémentée | Contrat de checklist pré-sync : contrôles post-sync hors cases à cocher ; validateur statique dans plan/apply (PR #25), testé en CI. |
 | ASF-ADR-015 | Acceptée, implémentée (tests CI) | Formulaire OpenSpec : auto et DeepSeek V4.1 Flash par défaut, mais déclenchement manuel uniquement ; raccourci numérique 1-999 normalisé en TS-NNN, compatibilité des IDs complets, runs OpenSpec verrouillés par tâche canonique pour éviter les alias concurrents sans réduire le parallélisme entre tâches. Cette préférence entraîne trois appels OpenCode plan/apply/sync lors d'un lancement auto. Voir ASF-WF-001. |
+| ASF-ADR-016 | Acceptée, implémentée sans preuve E2E | Deux workflows d'agent : `auto_merge` activé par défaut, désactivable ; refus fermé sans ruleset main actif, PR obligatoire et `check` requis. Native GitHub auto-merge avec vérification du SHA, aucune fusion OpenSpec plan. `Protect Main` est actif mais le contrôle `check` n'est pas encore requis. [ASF-WF-002](tasks/ASF-WF-002.md). |
 
 ## Origines vérifiables
 
