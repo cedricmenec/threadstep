@@ -24,12 +24,15 @@ continue d'être utilisé dans le backlog, la branche d'agent, le change OPSX
 et les commits. Nombres valides de 1 à 999 ; identifiants inexistants refusés
 avant tout appel payant. Les autres formats (comme `TS-9` ou `1000`)
 sont rejetés pour éviter les ambiguïtés. La validation et la normalisation
-ont lieu au premier step, avant installation/usage d'OpenCode.
+ont lieu dans un job de prévalidation séparé, avant installation/usage
+d'OpenCode et création du jeton GitHub App du job principal.
 
 Pour empêcher deux exécutions concurrentes du même change avec des
-écritures différentes (`9` vs `TS-009`), **toutes les exécutions
-OpenSpec sont sérialisées** dans une file de concurrence du pilote,
-sans annulation des runs en cours, même entre tâches différentes.
+écritures différentes (`9` vs `TS-009`), les runs utilisent un
+**verrou de concurrence par tâche canonique**. Les tâches différentes
+peuvent s'exécuter simultanément ; pour une même tâche, GitHub peut
+remplacer un run encore en attente par un nouveau run du même groupe.
+Les exécutions déjà actives ne sont pas annulées.
 Le workflow direct historique `agent.yml` n'est pas modifié.
 
 | Phase | Travail | Appels modèle minimaux | Livraison |
