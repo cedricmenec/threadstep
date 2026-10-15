@@ -100,11 +100,12 @@ apply sur la branche d'agent, puis fusionner la PR finale.
 
 ## Risques et limites encore ouverts
 
-1. **Protection partielle de main** : après la PR #28, GitHub renvoie
-   `protected: true` et le ruleset actif `Protect Main` (id 25163425)
-   exige une PR, mais sa liste `required_status_checks` est vide.
-   Il faut ajouter le contrôle `check` pour activer la fusion automatique
-   sûre. Tant que ce réglage manque, ASF-WF-002 refuse la demande d'auto-merge.
+1. **Protection de main configurée, E2E auto-merge restant à vérifier** :
+   `protected: true`, ruleset `Protect Main` (id 25163425) actif,
+   PR obligatoire et contrôle `check` obligatoire, source GitHub Actions
+   (integration_id 15368), après correction d'une liste initialement vide.
+   Le script ASF-WF-002 recontrôle ces critères à chaque run ; aucun
+   essai réel de fusion automatique ou de refus sur CI rouge n'est prouvé.
 2. **Budget** : aucun plafond OpenRouter USD exécutable par run/vague, ni
    comptabilité fournisseur corrélée aux runs. Chaque lancement effectif
    reste une opération à autoriser.
