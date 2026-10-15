@@ -24,7 +24,7 @@ flowchart TD
   B --> O
 ```
 
-**Attention :** ce diagramme illustre l'architecture **cible**. Le chemin manuel OpenSpec fonctionne (TS-008, PR #21) ; l'orchestrateur externe `O`, les plafonds budgétaires et le stockage transactionnel ne sont pas implémentés. Le workflow utilise désormais un jeton de GitHub App pour publier les PR, et la CI sur PR #21 a réussi. Voir [l'état courant](current-state.md).
+**Attention :** ce diagramme illustre l'architecture **cible**. Le chemin manuel OpenSpec fonctionne (TS-008 PR #21, TS-009 PR #26) ; l'orchestrateur externe `O`, les plafonds budgétaires et le stockage transactionnel ne sont pas implémentés. La commande OpenCode OPSX et le garde-fou de contenu ont été éprouvés sur le run 38712079641. Le workflow utilise un jeton de GitHub App pour publier les PR et la CI est indépendante. Voir [l'état courant](current-state.md).
 
 ## 2. Couches proposées (ports et adaptateurs)
 
@@ -73,7 +73,7 @@ Résultat attendu : `runId`, `taskId`, `state`, `workingBranch`, `commitSha`, `o
 
 États alternatifs : `blocked`, `failed`, `cancelled`, `retryable`. État `completed` uniquement après publication effectivement vérifiée et artefacts synchronisés/archivés. L'orchestrateur doit détecter un résultat préexistant et ne pas créer de PR dupliquée.
 
-**Durabilité :** branche `agent/TS-NNN` ou `factory/<run-id>` préparée avant travail ; checkpoint poussé et SHA distant vérifié après chaque tâche OpenSpec ; reprise depuis la branche distante sans force-push. Étudier la politique de checkpoint déjà expérimentée dans `mestryn` (un item OpenSpec achevé = commit/push/sha vérifié).
+**Durabilité cible, non implémentée intégralement :** branche persistante préparée avant travail, checkpoint poussé et SHA distant vérifié après chaque tâche OpenSpec, reprise sans force-push. Dans le pilote actuel, apply travaille localement avant le commit final : le premier apply TS-009 a perdu ses modifications locales à l'arrêt. Étudier la politique de checkpoint déjà expérimentée dans `mestryn`.
 
 ## 5. Historique du prototype initial (avant le cycle OpenSpec TS-008)
 
@@ -81,10 +81,10 @@ Résultat attendu : `runId`, `taskId`, `state`, `workingBranch`, `commitSha`, `o
 - `.github/workflows/ci.yml` : `pull_request` et `push` vers `main`, `npm run check`.
 - `.github/workflows/pages.yml` : tests et publication du dossier `site/` sur GitHub Pages après push sur `main`.
 - Backlog et `AGENTS.md` : directives de cadrage et exécution ; **pas de scheduler**, pas de statut transactionnel, pas de suivi de budget API, pas d'OpenSpec installé/configuré dans ThreadStep.
-- PR #4 (TS-004) fusionnée ; CI `main` et Pages réussis. PR #2 (TS-002) conservée ouverte.
+- PR #4 (TS-004) fusionnée ; CI main et Pages réussis. **À cette époque**, PR #2 (TS-002) encore ouverte ; elle a été fusionnée ensuite.
 - `main` ne présentait **pas de protection de branche** lors de la vérification ; un succès ponctuel de tests ne remplace pas cette protection.
 
-**Situation au 15/10/2026 :** les affirmations précédentes décrivent le prototype initial et ne doivent pas servir d'état courant. Le cycle OpenSpec complet est implémenté et a livré TS-008 via PR #21. La nouvelle intégration Agent Skills/OPSX et le garde-fou d'empreintes restent non testés en E2E. [Statut actuel et preuves](current-state.md).
+**Situation au 15/10/2026, après PR #26 :** les puces ci-dessus sont l'historique du prototype, pas l'état courant. Le cycle OpenSpec a livré TS-008 et TS-009 ; l'intégration Agent Skills/OPSX et le garde-fou d'empreintes sont validés sur une synchronisation MODIFIED. La promotion automatisée, les checkpoints distants à chaque étape et la protection main restent futurs. [Statut actuel et preuves](current-state.md).
 
 ## 6. Séparation factory / application
 
