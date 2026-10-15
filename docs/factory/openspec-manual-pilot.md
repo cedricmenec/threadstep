@@ -58,6 +58,15 @@ Références :
 
 - Validation du plan (plan/auto) ; en auto, commit local du plan avant apply.
 - Checklist entièrement cochée, npm run check et validation stricte du change.
+- **Contrat de phases** : toutes les cases de `tasks.md` sont des actions
+  réalisables par l'agent **avant** le contrôle de checklist et **avant** le
+  sync OPSX. Les validations dépendant de la synchronisation, de l'archive ou
+  de la CI GitHub doivent figurer dans une rubrique narrative « Post-sync
+  review » **sans cases à cocher**, pour revue après exécution.
+- L'étape `plan` et l'entrée en `apply` exécutent le validateur léger
+  `scripts/check-openspec-task-phases.mjs` pour détecter cette erreur de
+  séquencement sans utiliser OpenRouter. Ce détecteur textuel ne remplace pas
+  la revue humaine et ne couvre pas toutes les formulations possibles.
 - **Avant sync** : prise d'empreinte SHA-256 des fichiers suivis et non suivis
   qui ne sont pas des specs canoniques ; mémorisation du HEAD courant.
 - **Après sync** : refuser tout changement de contenu, ajout, suppression,
@@ -94,3 +103,16 @@ canonique existante (TS-009 est candidat), avec autorisation explicite,
 et archiver les résultats : SHA, runs/étapes, version CLI, preuve d'utilisation
 du command file/skill, diff avant/après, validations, tests, CI et coût OpenRouter.
 Ne jamais relancer une tâche archivée pour simuler ce test.
+
+## Incident TS-009 du 15/10/2026 : checklist de phase impossible
+
+Le [run 38710098331](https://github.com/cedricmenec/threadstep/actions/runs/38710098331)
+(apply) a généré les changements de code et obtenu **54 tests réussis**,
+mais le garde-fou a rejeté la checklist car la tâche 4.3 demandait à la fois
+un contrôle avant sync et un diff après sync. L'agent a correctement laissé
+4.3 décochée, le sync n'a pas démarré et aucun commit produit n'a été publié.
+La branche persistante agent/openspec/TS-009 a donc reçu une correction de
+plan **sans relancer l'agent** : tâche 4.3 limitée au contrôle pré-sync,
+puis revue post-sync distincte sans checkbox. Rerun apply possible ; la
+présente évolution de factory réduit le risque de reproduction sur les
+prochains plans. Aucun crédit OpenRouter n'est consommé par le validateur.
