@@ -17,7 +17,7 @@ Toute évolution comportementale doit être **pilotée par une spécification**,
 
 Cette séquence est le **workflow logique**. Les noms `explore`, `propose`, `apply`, `sync` peuvent désigner des *Agent Skills* / commandes agents selon la version d'OpenSpec ; **ne pas supposer** que chaque nom est une sous-commande CLI littérale.
 
-## CLI et Skills à adopter à une version figée
+## CLI et Agent Skills : intégration du pilote
 
 La documentation actuelle d'OpenSpec expose notamment :
 - `openspec init`, `openspec new`, `openspec list`, `openspec show`, `openspec status`.
@@ -26,7 +26,7 @@ La documentation actuelle d'OpenSpec expose notamment :
 - `openspec archive <change-name> -y` pour l'archivage non interactif et la mise à jour des specs.
 - Skills tels que `openspec-explore`, `openspec-propose`, `openspec-apply-change`, `openspec-sync-specs`, `openspec-archive-change`, `openspec-verify-change`.
 
-**Point d'intégration** : installer/configurer une version explicite et compatible de la CLI + Agent Skills dans la factory. Inspecter `openspec --help`, `openspec schemas` et les instructions de schéma lors du développement ; ne pas coder une supposition sur une CLI mouvante. Le projet doit versionner `openspec/config.yaml` et fixer son schéma (préférence initiale `spec-driven`).
+**Point d'intégration implémenté :** OpenSpec 1.14.1 est épinglé, `openspec/config.yaml` et son schéma `spec-driven` sont versionnés, et les skills/commandes OpenCode sont générés à chaque runner éphémère via `openspec init --tools opencode,agents`. OpenCode reste installé par `@latest` et mérite un épinglage après validation.
 
 ## Mapping backlog → OpenSpec
 
@@ -41,37 +41,48 @@ La documentation actuelle d'OpenSpec expose notamment :
 
 1. **Explore / Propose** peuvent rester en mode plan seul lorsque demandé ; aucun code produit modifié.
 2. Le passage à **Apply** nécessite une autorisation explicite d'exécution.
-3. Un item `tasks.md` marqué fait correspondre code + checklist + commit + push + vérification du SHA distant.
+3. Un item `tasks.md` coché atteste le travail d'implémentation vérifié **avant sync**, sans promettre un commit distant à chaque item : le workflow actuel publie au terme du run. Les contrôles post-sync ne sont pas des cases pré-sync.
 4. Le modèle et le prompt ne sont jamais la preuve de conformité : les tests et la validation vérifient les conséquences.
 5. Une modification du contrat public, des permissions ou de la persistance doit bloquer si les décisions sont ambiguës.
 6. Le changement archivé et les specs canoniques doivent être dans un état versionné, vérifié et livrable.
 
-## État implémenté et intégration OpenCode (15 octobre 2026)
+## État implémenté et preuves (15 octobre 2026)
 
-Le protocole fonctionne en pilote dans agent-openspec.yml : plan, apply, auto,
-finalize, contrôle du plan, tests, validation stricte, sync et archive.
-La PR #21 et le [run TS-008](https://github.com/cedricmenec/threadstep/actions/runs/38645900430)
-démontrent cette chaîne sur une nouvelle capacité. La CLI OpenSpec 1.14.1 y
-était installée, mais le sync était décrit dans le prompt, sans commande native.
+Le workflow agent-openspec.yml fonctionne avec plan, apply, auto et
+finalize : contrôle du plan, tests, validation stricte, sync et archive.
+TS-008 (PR #21) a validé un ajout ADDED avec un prompt agentique ; TS-009
+(PR #26) a validé une modification MODIFIED d'une capacité existante avec
+la commande OpenCode générée.
 
-**Important :** openspec init génère des Agent Skills et, pour OpenCode, des
-fichiers de commandes. La CLI n'exécute pas directement la syntaxe /opsx:sync.
-La PR de consolidation configure explicitement OpenCode via init --tools
-opencode,agents, puis opencode run --command opsx-sync, avec une vérification
-des empreintes hors specs canoniques. Son efficacité reste à tester après fusion.
+La CLI OpenSpec n'interprète pas elle-même /opsx:sync : openspec init
+génère des **Agent Skills et commandes OpenCode**, ensuite exécutés par
+opencode run --command opsx-sync. En runner éphémère :
 
-- Agent Skills OpenCode : .opencode/skills/openspec-*/SKILL.md ;
-  commandes OpenCode : .opencode/commands/opsx-*.md.
-- Cible partagée : .agents/skills/openspec-*/SKILL.md ; pas de slash commands
-  OPSX pour cette cible.
-- La synchronisation agentique doit conserver les exigences hors delta
-  et refléter le comportement implémenté ; la validation CLI stricte ne vérifie
-  pas à elle seule la sémantique.
-- Après sync par l'agent, archive --yes --skip-specs évite de refaire la fusion.
+- Installer @fission-ai/openspec@1.14.1 et OpenCode.
+- Exécuter openspec init --tools opencode,agents.
+- Vérifier .opencode/skills/openspec-sync-specs/SKILL.md,
+  .opencode/commands/opsx-sync.md et
+  .agents/skills/openspec-sync-specs/SKILL.md.
+- Invoquer opencode run --auto --model "$OPENCODE_MODEL"
+  --command opsx-sync "$CHANGE_ID".
+- Comparer les empreintes de contenu avant/après avec
+  scripts/sync-guard.mjs ; seules openspec/specs/ sont autorisées.
+- Archiver par openspec archive "$CHANGE_ID" --yes --skip-specs, puis
+  valider specs actives et archivées en mode strict.
 
-Le prochain test doit **modifier une capacité existante** avec MODIFIED et un
-scénario ADDED, puis comparer la spécification canonique avant/après.
-Le résultat TS-008 avec uniquement ADDED n'établit pas cette preuve.
+Le run [38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
+a passé toutes ces étapes ; la CI de main après merge #26 a réussi
+[60 tests](https://github.com/cedricmenec/threadstep/actions/runs/38713003608).
+La section canonique « Suggestion card content » a été modifiée avec son
+scénario antérieur préservé et trois nouveaux scénarios ; exigences
+voisines inchangées. Cela ne démontre pas REMOVED, RENAMED ou les conflits.
+
+**Contrat des tâches** (PR #25) : ne cocher dans tasks.md que des étapes
+réalisables pendant apply **avant** sync. Les inspections après sync,
+archive ou CI sont des contrôles post-sync distincts sans checkbox. Le
+validateur scripts/check-openspec-task-phases.mjs s'exécute au moment du
+plan et au précontrôle apply. Il complète la revue humaine ; il n'est
+pas une preuve de correction sémantique.
 
 ## Références et procédures
 
