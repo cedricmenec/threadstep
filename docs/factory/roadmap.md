@@ -101,3 +101,9 @@ L'accord sur la feuille de route n'est pas une autorisation d'activer une exécu
 - [ ] ASF-BOOT-001 : ajouter un agent dédié de factory, lancé manuellement pour ASF-V2-001..011, séparant travail OpenCode non privilégié et publication GitHub App après validation du diff. Voir [mode opératoire](agent-asf-manual.md).
 - [ ] CI et Actionlint réussis sur la PR bootstrap, fusion explicitement autorisée, tests post-fusion vérifiés.
 - [ ] Premier run payé ASF-V2-001 seulement après nouvelle autorisation du propriétaire.
+
+## Précontrôle de livraison ASF : correctif proposé
+
+- [x] Réconcilier ASF-V2-001 après fusion réelle et CI (PR #41).
+- [ ] Livrer ASF-BOOT-002 : contrôle GitHub déterministe des dépendances sans synchronisation documentaire bloquante, avec tests d'erreurs et CI indépendante.
+- [ ] Poursuivre avec ASF-V2-002 uniquement après autorisation d'un nouveau lancement OpenRouter.

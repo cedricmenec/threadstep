@@ -181,3 +181,7 @@ après #30. L'agent manuel est à nouveau disponible, mais son chemin
 ## Évolution proposée : ASF-BOOT-001 (en revue, non déployée)
 
 La PR bootstrap propose un exécuteur **manuel** de tasks ASF-V2 avec jobs séparés, politique de chemins figée, PR en revue humaine, et exclusion explicite des changements de workflows (ASF-V2-008/009) jusqu'à la conception d'une voie de publication avec revue humaine avant push. Aucune preuve E2E payante, aucune activation, aucun changement de secret ou de protection main ne sont revendiqués avant fusion et tests. Voir [agent-asf-manual.md](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md).
+
+## Correction proposée ASF-BOOT-002 : preuve GitHub de dépendance (en PR)
+
+Après la livraison ASF-V2-001 en PR #40, deux tentatives ASF-V2-002 ont échoué en précontrôle (runs 38821781408, 38822070883) car la fiche précédente demeurait `ready`. Aucune facture OpenRouter n'a été engagée par ces runs. La PR #41 a réconcilié le statut et ses preuves. Le changement ASF-BOOT-002 propose de lire directement les preuves GitHub pendant le précontrôle de l'Agent ASF, indépendamment d'un statut de tâche documentaire encore non actualisé. Tant que cette PR n'est pas fusionnée et validée, ne pas décrire cette capacité comme opérationnelle.

@@ -30,3 +30,9 @@
 Vérifier `npm run check`, le job indépendant `check`, Actionlint, la syntaxe Bash des blocs YAML et les limites des tests de politique. L'apparition du workflow dans Actions après fusion n'est pas la preuve d'un run payé réussi. La première exécution payante doit être autorisée séparément sur ASF-V2-001.
 
 Documentation historique : [tâche de bootstrap](tasks/ASF-BOOT-001.md), [plan ASF-V2](tasks/ASF-V2-README.md), [architecture validée](specs/README.md).
+
+## Réconciliation automatique des dépendances (ASF-BOOT-002, en PR)
+
+Le précontrôle du workflow consulte maintenant GitHub en lecture seule, avant tout appel OpenRouter, pour chaque dépendance : PR Agent ASF fusionnée et unique, auteur GitHub App, branche corrélée au run owner-only, réussite du run, check indépendant de la PR et de main, CI et Pages post-fusion, appartenance du merge SHA à main. Le statut Markdown n'est plus la preuve de livraison ; il reste une information documentaire et est actualisé séparément.
+
+Le contrôle GitHub utilise `checks: read` et `actions: read` dans le **job précontrôle uniquement** ; aucune permission d'écriture additionnelle et aucun nouveau secret. Une API indisponible, une preuve ambiguë, un run échoué ou une livraison incomplète bloquent la tâche avant coût. Ce changement ne déclenche aucune exécution payante, aucun retry et aucun auto-merge.
