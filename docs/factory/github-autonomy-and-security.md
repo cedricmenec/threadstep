@@ -59,7 +59,21 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 - Idempotence, preuves de CI et versions figées des outils/actions dans le modèle industrialisé.
 - Toutes les actions dangereuses (`main`, changements de secrets, migrations destructives, règles GitHub) doivent respecter leur politique d'autorisation.
 
-## 7. Documentation officielle vérifiée
+## 7. Régression YAML du workflow manuel et garde de CI
+
+La PR #29 a été fusionnée alors que `.github/workflows/agent.yml` était
+syntaxiquement endommagé : motif `grep` tronqué et fin de job recopiée,
+entraînant des runs « Workflows / Agent » sans jobs. La CI classique
+était verte parce qu'elle ne contrôlait pas la syntaxe YAML GitHub Actions
+ni les commandes Bash incorporées.
+
+La correction [ASF-WF-003](tasks/ASF-WF-003.md) ajoute à la CI
+indépendante `actionlint` épinglé et un test Node `bash -n` sur les
+blocs `run: |` de tous les workflows. Ces contrôles doivent bloquer la
+prochaine PR qui introduirait une erreur de ce type. Aucun contournement
+du ruleset `Protect Main` n'est autorisé.
+
+## 8. Documentation officielle vérifiée
 
 **Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; l'invocation native et le garde-fou SHA-256 ont été validés E2E sur TS-009 (run 38712079641, PR #26). La protection de main reste absente après fusion, selon l'API GitHub.
 
