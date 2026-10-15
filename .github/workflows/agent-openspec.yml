@@ -4,33 +4,35 @@ on:
   workflow_dispatch:
     inputs:
       task_id:
-        description: 'Existing backlog task, e.g. TS-005'
+        description: 'Task number (9 or 009) or full ID (TS-009); existing backlog only'
         required: true
         type: string
       phase:
-        description: 'plan, apply, auto or finalize (semantic sync via paid model)'
+        description: 'auto is default: 3 paid OpenCode calls (plan, apply, OPSX sync); no USD cap'
         required: true
         type: choice
-        default: plan
+        default: auto
         options:
+          - auto
           - plan
           - apply
-          - auto
           - finalize
       model:
         description: 'OpenRouter model'
         required: true
         type: choice
-        default: 'openrouter/z-ai/glm-5.3-flash'
+        default: 'openrouter/deepseek/deepseek-v4.1-flash'
         options:
-          - 'openrouter/z-ai/glm-5.3-flash'
           - 'openrouter/deepseek/deepseek-v4.1-flash'
+          - 'openrouter/z-ai/glm-5.3-flash'
 
 permissions:
   contents: read
 
 concurrency:
-  group: agent-openspec-${{ inputs.task_id }}
+  # All aliases (9, 009, TS-009) must share one lane. Serialize the pilot
+  # rather than allow the same persistent task branch to race across spellings.
+  group: agent-openspec
   cancel-in-progress: false
 
 jobs:
@@ -67,7 +69,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$TASK_ID" =~ ^TS-[0-9]{3}$ ]] || { echo "::error::Invalid task ID"; exit 1; }
+          # Canonicalize once before backlog lookup, branch creation and paid calls.
+          # GITHUB_ENV carries TS-NNN into every following workflow step.
+          TASK_ID="$(node scripts/normalize-task-id.mjs "$TASK_ID")"
+          echo "TASK_ID=$TASK_ID" >> "$GITHUB_ENV"
           [[ "$PHASE" == plan || "$PHASE" == apply || "$PHASE" == auto || "$PHASE" == finalize ]] || { echo "::error::Invalid phase"; exit 1; }
           test -f "backlog/tasks/$TASK_ID.md" || { echo "::error::Backlog file missing"; exit 1; }
           test -f openspec/config.yaml || { echo "::error::OpenSpec config missing"; exit 1; }
