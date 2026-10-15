@@ -23,7 +23,7 @@ Il n'est pas nécessaire de créer une issue GitHub.
   tâche canonique. Le formulaire pré-sélectionne `auto` et DeepSeek V4.1
   Flash, que l'utilisateur peut modifier avant de lancer le run.
   `auto` effectue normalement trois appels OpenCode payants ; il n'existe
-  pas encore de plafond USD automatique. Les exécutions sont sérialisées.
+  pas encore de plafond USD automatique. Les exécutions du même TS-NNN sont sérialisées ; les tâches différentes peuvent tourner en parallèle.
 - **Plan puis apply** : plan génère une PR brouillon de spécifications.
   La conserver ouverte pour revue avant d'exécuter apply sur la branche
   persistante, puis fusionner la PR de livraison après CI. Fusionner la
