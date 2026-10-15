@@ -40,12 +40,16 @@ TS-008 a créé la **nouvelle** capacité resume-tracking : 10 exigences et 31 s
   de code publiée : les modifications non commitées du runner ont été perdues.
 - Une correction ciblée de tasks.md a été faite sur la branche
   agent/openspec/TS-009. Elle ne nécessite pas de refaire plan ; il faut
-  relancer apply pour reconstruire le code puis effectuer sync. Une PR factory
-  distincte propose d'empêcher les futures checklists impossibles.
+  relancer apply pour reconstruire le code puis effectuer sync. Le second run
+  [38712079641](https://github.com/cedricmenec/threadstep/actions/runs/38712079641)
+  a **réussi** (55 tests, commande OPSX, garde-fou de contenu, archive) et
+  ouvert la [PR #26](https://github.com/cedricmenec/threadstep/pull/26).
+  La CI de la PR est passée ; fusion encore soumise à revue. Une PR factory
+  distincte (#25) empêche désormais les futurs plans impossibles après fusion.
 
 ## Risques et limites
 
-1. **Intégration OPSX** : le lancement de la commande générée et le chargement réel des Agent Skills restent à éprouver en exécution autorisée ; leur simple présence ne prouve pas leur usage.
+1. **Intégration OPSX** : TS-009 run 38712079641 a confirmé la commande OpenCode opsx-sync, le garde-fou de contenu et une modification MODIFIED d'une capacité canonique existante. La sémantique de la spécification reste revue par un humain ; les opérations RENAMED/REMOVED n'ont pas encore été éprouvées.
 2. **Protection de main** : GitHub signale protected: false au 15 octobre ; la lecture détaillée retourne 403 avec les permissions du connecteur. Aucune règle n'a été modifiée.
 3. **Isolation** : le garde-fou proposé vérifie les empreintes des fichiers hors openspec/specs/ avant/après sync, y compris les fichiers déjà modifiés, et exige un changement canonique. Il ne remplace ni une sandbox, ni la validation sémantique humaine.
 4. **Dépenses** : pas de plafond USD, ni de montant réel de TS-008 observé dans les logs ; aucune dépense sans consentement.
