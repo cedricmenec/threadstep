@@ -38,28 +38,29 @@ peut toujours désactiver la fusion automatique au lancement.
   les décisions et la feuille de route de la factory.
 - [ ] Obtenir un avis de CI sur la PR et la revue humaine avant fusion.
 
-## État GitHub constaté avant préparation
+## État GitHub constaté, puis corrigé le 15 octobre 2026
 
 - Le dépôt autorise Allow auto-merge : true.
 - La branche main est protected : true.
 - Le ruleset actif Protect Main (id 25163425) impose la création de PR,
-  interdit les force-pushs et la suppression, et n'a pas de bypass déclaré.
-- **Blocage critique :** la règle required_status_checks existe, mais
-  required_status_checks est une **liste vide**. Le contrôle CI check
-  n'est donc pas actuellement obligatoire.
+  interdit les force-pushs et la suppression, sans bypass déclaré.
+- **Première lecture** : la règle required_status_checks existait, mais
+  sa liste était vide. La CI n'était donc pas encore obligatoire.
+- **Seconde lecture, pendant la revue de cette PR** : le propriétaire a
+  ajouté le required status check `check` associé à GitHub Actions
+  (integration_id 15368). La règle est désormais active et vérifiée.
 - L'API historique branch-protection retourne 403 pour le connecteur,
-  mais la lecture du ruleset public a réussi. Le vérificateur de fusion
-  s'appuie sur les règles actives, pas seulement sur le booléen protected.
+  mais la lecture du ruleset public permet de contrôler les exigences.
+- La suite du travail ne nécessite pas de changer encore les règles
+  pour ce scénario, tant que `Protect Main` reste inchangé.
 
-## Action manuelle de configuration avant usage
+## Précaution permanente
 
-Dans Settings > Rules > Rulesets > Protect Main, ajouter le contrôle
-GitHub Actions `check` à la liste Required status checks, si possible
-en imposant la source GitHub Actions. Vérifier que le ruleset est actif.
-
-Tant que cette condition manque, un workflow lancé avec auto_merge=true
-publiera la PR (si le développement réussit) mais s'arrêtera sur le
-contrôle de prérequis, **sans demander ni effectuer de fusion**.
+Le workflow reverifie la présence du check obligatoire à **chaque run**.
+Si l'administrateur supprime `check` ou désactive le ruleset, la demande
+de fusion automatique échoue en laissant la PR ouverte. Cela empêche
+qu'une évolution ultérieure des paramètres GitHub crée un auto-merge
+sans CI indépendante.
 
 ## Limites explicites
 
