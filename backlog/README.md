@@ -19,6 +19,11 @@ Il n'est pas nécessaire de créer une issue GitHub.
 - **Direct** : workflow Agent (manual, OpenRouter), avec task_id et modèle.
 - **OpenSpec** : workflow Agent OpenSpec (manual, staged or auto), avec
   task_id, modèle OpenRouter et phase plan, apply, auto ou finalize.
+  Saisie simplifiée : `9`, `009` et `TS-009` sélectionnent la même
+  tâche canonique. Le formulaire pré-sélectionne `auto` et DeepSeek V4.1
+  Flash, que l'utilisateur peut modifier avant de lancer le run.
+  `auto` effectue normalement trois appels OpenCode payants ; il n'existe
+  pas encore de plafond USD automatique. Les exécutions sont sérialisées.
 - **Plan puis apply** : plan génère une PR brouillon de spécifications.
   La conserver ouverte pour revue avant d'exécuter apply sur la branche
   persistante, puis fusionner la PR de livraison après CI. Fusionner la
