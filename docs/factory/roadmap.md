@@ -12,7 +12,7 @@
 | Fonctionnalité `TS-004` par OpenCode/OpenRouter | **Fait** : PR #4 fusionnée, CI et Pages réussis |
 | Sélection automatique de tâches et orchestration de vagues | **Non implémenté** |
 | Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, TS-008 (auto) et TS-009 (plan/apply + sync MODIFIED), PR #26 fusionnée |
-| GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées**. `main` protégée par `Protect Main` mais la liste des contrôles obligatoires est vide. ASF-WF-002 prépare l'auto-merge conditionnel, non prouvé E2E et bloqué tant que `check` n'est pas ajouté aux contrôles requis. |
+| GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées**. `main` protégée par `Protect Main` avec `check` requis (GitHub Actions, integration_id 15368). ASF-WF-002 prépare l'auto-merge conditionnel, dont le fonctionnement E2E reste à démontrer. |
 | Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
 | Réconciliation documentaire | **Acquise** : [ASF-DOC-001](tasks/ASF-DOC-001.md), statuts du backlog actualisés après la livraison #26. |
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
@@ -31,7 +31,7 @@
 
 - **Acquis** : GitHub App à permissions ciblées pour les PR ; conserver ce mode.
 - **Acquis sur TS-008** : une PR créée par la GitHub App déclenche la CI sans approbation supplémentaire ; surveiller ce comportement sur les prochaines PR.
-- **Protection partielle faite** : ruleset `Protect Main` actif, suppression et force-push interdits, PR requise ; `allow_auto_merge` activé. **À faire : rendre `check` obligatoire**, vérifier la politique d'approbation, puis tester un cas rouge où la PR ne fusionne pas.
+- **Protection faite** : ruleset `Protect Main` actif, suppression et force-push interdits, PR et contrôle `check` requis ; `allow_auto_merge` activé. **À faire** : tester le refus de fusion quand la CI échoue et vérifier la politique d'approbation.
 - Valider de bout en bout : création PR automatique → CI sans approbation de démarrage → fusion autorisée selon règles → Pages.
 - Tester un cas rouge pour prouver que la PR **ne fusionne pas**.
 - **Alternative limitée :** explorer un `workflow_dispatch` de validation ou la promotion fast-forward façon Mestryn ; ne pas les assimiler à un équivalent de required PR checks.
