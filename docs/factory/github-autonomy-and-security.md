@@ -43,9 +43,9 @@ La **GitHub App** est le choix cible pour la production d'une PR et la continuit
 - **Vérifié le 15 octobre** : `main` protégée par le ruleset actif `Protect Main` (PR requise, suppression/force-push bloqués), contrôle `check` désormais obligatoire, source GitHub Actions. Revalider après tout changement administratif.
 - Conserver la CI `pull_request` **sans secrets OpenRouter** et sans droits d'écriture. Aucun `pull_request_target` lançant du code issu de PR, aucune chaîne privilégiée `workflow_run` non auditée.
 - Vérifier `head SHA` courant, absence de conflit, état et provenance des checks et diff autorisé ; privilégier le merge GitHub respectant les protections.
-- **État du 15/10/2026** : `allow_auto_merge=true`, `main` protégée par le ruleset actif `Protect Main` (id 25163425). Une première lecture a détecté la liste de checks obligatoire vide ; lors de la revue de la PR #29, cette configuration a été corrigée. Le required status check `check` avec la source GitHub Actions (integration_id 15368) est désormais présent. La protection de configuration est vérifiée, mais un test E2E de refus sur CI rouge reste à réaliser.
-- **Évolution ASF-WF-002** : les deux workflows d'agent proposent `auto_merge=true` par défaut, désactivable à chaque lancement. Ils demandent à GitHub la fusion native différée uniquement après la publication d'une PR finale, et seulement lorsque les conditions suivantes sont vérifiables : repo auto-merge autorisé, `main` protégée, ruleset actif exigeant une PR **et le check `check`**, PR ouverte non brouillon ciblant `main` avec le même head SHA. Sinon, la PR reste ouverte et le workflow échoue explicitement à l'étape de demande d'auto-merge. La phase OpenSpec `plan` est toujours exclue.
-- Le mécanisme appelle `gh pr merge --auto --merge --match-head-commit` avec le jeton temporaire GitHub App, **jamais** `--admin` ni une fusion ou un push direct contournant le ruleset. La fusion ne se fera qu'après satisfaction des exigences GitHub ; si un check obligatoire passe au rouge, GitHub doit la bloquer.
+- **État du 15/10/2026** : `allow_auto_merge=true`, `main` protégée par le ruleset actif `Protect Main` (id 25163425). Une première lecture a détecté la liste de checks obligatoire vide ; lors de la revue de la PR #29, cette configuration a été corrigée. Le required status check `check` avec la source GitHub Actions (integration_id 15368) est désormais présent. La protection de configuration est vérifiée et deux auto-merges réels après CI verte sont prouvés (PR #32 et #34). Le refus E2E sur CI rouge reste à réaliser.
+- **Implémentation ASF-WF-002, testée avec OpenSpec TS-010/011** : les deux workflows d'agent proposent `auto_merge=true` par défaut, désactivable à chaque lancement. Ils demandent à GitHub la fusion native différée uniquement après la publication d'une PR finale, et seulement lorsque les conditions suivantes sont vérifiables : repo auto-merge autorisé, `main` protégée, ruleset actif exigeant une PR **et le check `check`**, PR ouverte non brouillon ciblant `main` avec le même head SHA. Sinon, la PR reste ouverte et le workflow échoue explicitement à l'étape de demande d'auto-merge. La phase OpenSpec `plan` est toujours exclue.
+- Le mécanisme appelle `gh pr merge --auto --merge --match-head-commit` avec le jeton temporaire GitHub App, **jamais** `--admin` ni un push direct. Les PR #32 et #34 confirment la fusion automatique par `threadstep-software-factory[bot]` après CI de PR réussie. Un scénario CI rouge et le workflow direct restent à tester.
 - **Action admin déjà réalisée** : [Protect Main](https://github.com/cedricmenec/threadstep/rules/25163425) exige `check`. Vérifier cette exigence régulièrement : le script bloque toute demande de fusion si elle disparaît. Aucun nouveau secret OpenRouter n'est nécessaire.
 - Ne pas demander à un bot de « s'approuver » en remplacement d'une review humaine formellement requise. Selon le niveau de risque, conserver review humaine obligatoire.
 - Pour la livraison directe à `main`, exiger une autorisation **`DELIVERY: MAIN`** distincte, un commit fast-forward vérifié, aucune protection contournée et une validation indépendante **avant** la promotion. Ne pas compter sur un push `GITHUB_TOKEN` pour déclencher ensuite la CI/Pages.
@@ -67,15 +67,33 @@ entraînant des runs « Workflows / Agent » sans jobs. La CI classique
 était verte parce qu'elle ne contrôlait pas la syntaxe YAML GitHub Actions
 ni les commandes Bash incorporées.
 
-La correction [ASF-WF-003](tasks/ASF-WF-003.md) ajoute à la CI
-indépendante `actionlint` épinglé et un test Node `bash -n` sur les
-blocs `run: |` de tous les workflows. Ces contrôles doivent bloquer la
-prochaine PR qui introduirait une erreur de ce type. Aucun contournement
+La [PR #30](https://github.com/cedricmenec/threadstep/pull/30),
+documentée dans [ASF-WF-003](tasks/ASF-WF-003.md), **a restauré**
+le workflow manuel et ajouté à la CI `actionlint` épinglé et un test Node
+`bash -n` sur les blocs `run: |`. La CI de la PR #30 puis celle de main
+ont réussi ; TS-010/011 confirment que les nouveaux contrôles de CI
+restent actifs. Aucun contournement
 du ruleset `Protect Main` n'est autorisé.
+
+### Vérification effective des fusions OpenSpec (15 octobre 2026)
+
+- [Run TS-010](https://github.com/cedricmenec/threadstep/actions/runs/38749526539)
+  → [PR #32](https://github.com/cedricmenec/threadstep/pull/32) :
+  fusion automatique par `threadstep-software-factory[bot]`.
+- [Run TS-011](https://github.com/cedricmenec/threadstep/actions/runs/38753301546)
+  → [PR #34](https://github.com/cedricmenec/threadstep/pull/34) :
+  même auteur de fusion après check de PR réussi.
+- [CI main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920)
+  (97 tests, Actionlint et OpenSpec) et
+  [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38755434958)
+  réussis après #34.
+
+Le merge sur CI **verte** est démontré. Aucune conclusion n'est tirée sur
+un scénario volontairement rouge ni sur l'auto-merge du workflow direct.
 
 ## 8. Documentation officielle vérifiée
 
-**Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; l'invocation native et le garde-fou SHA-256 ont été validés E2E sur TS-009 (run 38712079641, PR #26). La protection de main reste absente après fusion, selon l'API GitHub.
+**Reprise :** [current-state.md](current-state.md) fait foi pour les preuves récentes et les limites. La synchronisation OPSX guidée par modèle reste non sandboxée ; l'invocation native et le garde-fou SHA-256 ont été validés E2E sur TS-009 (run 38712079641, PR #26). Main est désormais protégée par le ruleset actif `Protect Main`, avec `check` requis ; les PR #32/#34 prouvent le parcours de fusion automatique sans contournement.
 
 - [GITHUB_TOKEN et exceptions, PR bot soumises à approbation, alternatives App/PAT](https://docs.github.com/en/actions/concepts/security/github_token)
 - [Triggering a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)

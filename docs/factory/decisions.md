@@ -19,7 +19,7 @@ Les entrées **Acceptée** fixent l'intention de l'architecture cible ; elles ne
 | ASF-ADR-013 | Acceptée, implémentée et validée E2E | OpenSpec init --tools opencode,agents, commande OpenCode --command opsx-sync et garde-fou SHA-256. Prouvé sur TS-009 run 38712079641 et PR #26 ; isolation hors sandbox non garantie. |
 | ASF-ADR-014 | Acceptée, implémentée | Contrat de checklist pré-sync : contrôles post-sync hors cases à cocher ; validateur statique dans plan/apply (PR #25), testé en CI. |
 | ASF-ADR-015 | Acceptée, implémentée (tests CI) | Formulaire OpenSpec : auto et DeepSeek V4.1 Flash par défaut, mais déclenchement manuel uniquement ; raccourci numérique 1-999 normalisé en TS-NNN, compatibilité des IDs complets, runs OpenSpec verrouillés par tâche canonique pour éviter les alias concurrents sans réduire le parallélisme entre tâches. Cette préférence entraîne trois appels OpenCode plan/apply/sync lors d'un lancement auto. Voir ASF-WF-001. |
-| ASF-ADR-016 | Acceptée, implémentée sans preuve E2E | Deux workflows d'agent : `auto_merge` activé par défaut, désactivable ; refus fermé sans ruleset main actif, PR obligatoire et `check` requis. Native GitHub auto-merge avec vérification du SHA, aucune fusion OpenSpec plan. `Protect Main` est actif mais le contrôle `check` n'est pas encore requis. [ASF-WF-002](tasks/ASF-WF-002.md). |
+| ASF-ADR-016 | Acceptée, éprouvée E2E sur OpenSpec | Les deux workflows exposent `auto_merge=true` (désactivable), refus fermé sans ruleset actif, PR obligatoire et `check` requis. Fusion native GitHub par la GitHub App prouvée pour TS-010 (#32) et TS-011 (#34), jamais en phase OpenSpec plan. Le mode direct et l'échec volontaire de CI restent non testés E2E. [ASF-WF-002](tasks/ASF-WF-002.md). |
 
 ## Origines vérifiables
 
@@ -29,7 +29,11 @@ Les entrées **Acceptée** fixent l'intention de l'architecture cible ; elles ne
 - Référence GitHub au 14/10/2026 : [GITHUB_TOKEN](https://docs.github.com/en/actions/concepts/security/github_token) et [GitHub App](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/making-authenticated-api-requests-with-a-github-app-in-a-github-actions-workflow).
 - Référence OpenSpec : [CLI](https://openspec.dev/docs/cli) et [Setup](https://openspec.dev/docs/setup).
 
-**Statut actualisé le 15 octobre 2026, après PR #26.** L'historique initial n'est pas l'état courant ; voir [current-state.md](current-state.md) et [ASF-DOC-001](tasks/ASF-DOC-001.md).
+**Statut actualisé le 15 octobre 2026, après PR #34.** L'historique initial n'est pas l'état courant ; voir [current-state.md](current-state.md) et [ASF-DOC-001](tasks/ASF-DOC-001.md).
+
+Les PR #30 (YAML corrigé et Actionlint), #32 et #34 (auto-merge OpenSpec)
+ont validé la politique de livraison conditionnelle. Le caractère automatique
+du merge ne supprime pas l'autorisation humaine **du déclenchement payant**.
 
 ## Questions à décider avant autonomie totale
 

@@ -23,7 +23,7 @@
 | ASF-09 | Modèles OpenRouter | Le modèle est explicite et autorisé ; clés jamais incluses dans les sources ou fichiers Pages. |
 | ASF-10 | Durabilité / reprise | Une interruption conserve checkpoints, artefacts, logs et ID de run ; un redémarrage ne reproduit pas aveuglément les travaux finis. |
 | ASF-11 | Vérification indépendante | Une PR ne devient livrable qu'après tests réels sur le SHA exact, validation OpenSpec et conformité du périmètre. |
-| ASF-12 | Livraison configurable | Mode PR par défaut, fusion humaine durant le pilote ; auto-merge possible uniquement si la politique de branche et les checks l'autorisent. |
+| ASF-12 | Livraison configurable | PR par défaut ; auto-merge natif GitHub activé par défaut et désactivable, seulement sur livraison finale et avec `Protect Main` + CI `check` obligatoire. E2E réussi sur PR #32 et #34, pas encore sur le mode direct ou sur CI rouge. |
 | ASF-13 | Enchaînement des tâches | La vague attend la livraison confirmée d'une tâche avant de débloquer les dépendantes ; aucun lancement spéculatif sur `main`. |
 | ASF-14 | Observabilité | Une synthèse « en cours / livré / bloqué / échoué », avec URL des runs/PR, erreurs et consommation estimée, est accessible. |
 | ASF-15 | Budget et périmètre | Limites par run/vague et stop sur anomalie, sans exposition de secrets ou contournement des contrôles. |
@@ -45,7 +45,7 @@
 2. Le code et les spécifications doivent raconter la même évolution ; sync et archive ne maquillent pas un échec de validation.
 3. Un blocage de sécurité, de données ou de contrat public requiert une décision explicite.
 4. Les modes manuel et orchestré ont la même définition de « terminé ».
-5. La PR pilote `TS-002` peut rester ouverte en témoin ; elle ne doit pas empêcher des tâches indépendantes.
+5. La PR pilote `TS-002` était un témoin historique ; elle a finalement été fusionnée. Elle ne bloque plus aucune tâche.
 6. Le backlog Markdown est la source canonique initiale ; une issue GitHub est une vue/synchronisation optionnelle, pas une obligation.
 
 ## 5. Exigences non fonctionnelles

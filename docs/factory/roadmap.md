@@ -11,10 +11,10 @@
 | Premier run OpenCode/OpenRouter `TS-002` | **Fait** : PR #2 créée, CI après approbation, puis fusionnée le 14 octobre |
 | Fonctionnalité `TS-004` par OpenCode/OpenRouter | **Fait** : PR #4 fusionnée, CI et Pages réussis |
 | Sélection automatique de tâches et orchestration de vagues | **Non implémenté** |
-| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, TS-008 (auto) et TS-009 (plan/apply + sync MODIFIED), PR #26 fusionnée |
-| GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées**. `main` protégée par `Protect Main` avec `check` requis (GitHub Actions, integration_id 15368). ASF-WF-002 prépare l'auto-merge conditionnel, dont le fonctionnement E2E reste à démontrer. |
+| Exécution complète OpenSpec (Explore/Propose/Apply/Sync/Archive) dans ThreadStep | **Pilote E2E réalisé** : TS-005, TS-008, TS-009 et **TS-010/TS-011 en auto** (#32/#34 fusionnées) |
+| GitHub App / auto-merge sécurisé / protection main | **App + CI sur PR vérifiées**. `main` protégée par `Protect Main` avec `check` requis (GitHub Actions, integration_id 15368). ASF-WF-002 est opérationnel : auto-merge via GitHub App prouvé sur PR #32 et #34, après CI `check`. Le refus sur CI rouge et le mode direct restent à tester. |
 | Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
-| Réconciliation documentaire | **Acquise** : [ASF-DOC-001](tasks/ASF-DOC-001.md), statuts du backlog actualisés après la livraison #26. |
+| Réconciliation documentaire | **Actualisée** : [ASF-DOC-001](tasks/ASF-DOC-001.md) (TS-009) puis [ASF-DOC-002](tasks/ASF-DOC-002.md) (TS-010/011 et fusion conditionnelle). |
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
@@ -31,7 +31,7 @@
 
 - **Acquis** : GitHub App à permissions ciblées pour les PR ; conserver ce mode.
 - **Acquis sur TS-008** : une PR créée par la GitHub App déclenche la CI sans approbation supplémentaire ; surveiller ce comportement sur les prochaines PR.
-- **Protection faite** : ruleset `Protect Main` actif, suppression et force-push interdits, PR et contrôle `check` requis ; `allow_auto_merge` activé. **À faire** : tester le refus de fusion quand la CI échoue et vérifier la politique d'approbation.
+- **Protection faite** : ruleset `Protect Main` actif, suppression et force-push interdits, PR et contrôle `check` requis ; `allow_auto_merge` activé. **À faire** : tester le refus de fusion quand la CI échoue, le mode direct et les cas de conflit.
 - Valider de bout en bout : création PR automatique → CI sans approbation de démarrage → fusion autorisée selon règles → Pages.
 - Tester un cas rouge pour prouver que la PR **ne fusionne pas**.
 - **Alternative limitée :** explorer un `workflow_dispatch` de validation ou la promotion fast-forward façon Mestryn ; ne pas les assimiler à un équivalent de required PR checks.
@@ -44,7 +44,7 @@
 `Agent OpenSpec (manual, staged)`, sans suppression de `agent.yml`. Le run
 `plan` produit une PR brouillon ; le run `apply` reprend le même change,
 vérifie, synchronise et archive. Voir [mode opératoire](openspec-manual-pilot.md).
-TS-005 (#8), TS-008 (#21) et TS-009 (#26) ont démontré les cycles manuels et auto, dont la fusion sémantique MODIFIED. La protection main, les plafonds et les reprises transactionnelles restent à industrialiser.
+TS-005 (#8), TS-008 (#21) et TS-009 (#26) ont démontré les cycles manuels et auto, dont la fusion sémantique MODIFIED. La protection main est active et l'auto-merge OpenSpec a été prouvé sur #32/#34 ; les plafonds et les reprises transactionnelles restent à industrialiser.
 
 - **Acquis** : OpenSpec 1.14.1 et skills/commandes OpenCode générés dans le runner, usage E2E démontré sur TS-009 ; **reste** : épingler OpenCode (@latest actuellement).
 - Introduire `openspec/`, choisir le schéma `spec-driven`, associer `TS-NNN` à des changes déterministes.

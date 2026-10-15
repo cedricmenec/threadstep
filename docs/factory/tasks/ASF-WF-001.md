@@ -1,6 +1,6 @@
 # ASF-WF-001 | Simplifier le formulaire GitHub Actions OpenSpec
 
-Status: implemented in PR (pending independent CI and merge)
+Status: implemented; PR #28 merged, operational use validated by TS-010/TS-011
 Date: 2026-10-15
 Priority: normal
 Scope: workflow OpenSpec, deterministic task-id normalization, tests, factory docs
@@ -41,9 +41,9 @@ et le modèle DeepSeek V4.1 Flash.
 
 ## Vérifications après fusion
 
-Contrôler la CI sur main et Pages. La sélection effective des valeurs par
-l'interface GitHub sera vérifiable au prochain lancement manuel, sans
-exécuter un nouveau workflow payant pour cette seule modification.
+CI sur main et Pages réussies. Les runs OpenSpec TS-010/TS-011 confirment
+l'usage réel du workflow après PR #28. La validation exhaustive de toutes
+les variantes de formulaire reste distincte des tests statiques.
 
 ## Précaution sur les coûts
 
@@ -64,3 +64,11 @@ et vérifie l'existence de la tâche avant les appels payants.
 Le verrou de concurrence s'applique à chaque tâche canonique :
 les autres tâches conservent leur parallélisme. GitHub peut remplacer
 un run encore en attente par une exécution plus récente du même groupe.
+
+## Vérification de livraison (15 octobre 2026)
+
+[PR #28](https://github.com/cedricmenec/threadstep/pull/28)
+fusionnée ; runs [TS-010](https://github.com/cedricmenec/threadstep/actions/runs/38749526539)
+et [TS-011](https://github.com/cedricmenec/threadstep/actions/runs/38753301546)
+réussis. La vérification des préférences de saisie dans toutes les variantes
+du formulaire n'est pas équivalente à une campagne d'acceptation UI exhaustive.
