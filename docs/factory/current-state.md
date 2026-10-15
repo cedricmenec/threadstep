@@ -98,6 +98,22 @@ Ce cas rappelle que le plan fusionné dans main avant apply est une exception,
 pas le parcours recommandé : conserver le plan en PR brouillon, exécuter
 apply sur la branche d'agent, puis fusionner la PR finale.
 
+## Incident du 15 octobre 2026 : workflow manuel temporairement invalide
+
+La fusion de la [PR #29](https://github.com/cedricmenec/threadstep/pull/29)
+a introduit une régression dans `.github/workflows/agent.yml` : garde-fou
+`grep` tronqué et fin du job dupliquée. GitHub a alors affiché le chemin du
+workflow et émis des exécutions en erreur, sans jobs, lors de pushs. Voir
+[run 38745517607](https://github.com/cedricmenec/threadstep/actions/runs/38745517607).
+La CI de main et Pages avaient réussi, car l'ancien pipeline ne vérifiait
+pas la syntaxe complète des workflows.
+
+La tâche [ASF-WF-003](tasks/ASF-WF-003.md) prépare la réparation :
+restauration de l'unique job manuel, lint YAML/expressions par actionlint
+et validation Bash des blocs `run` dans tous les workflows. Aucune
+exécution OpenRouter n'est nécessaire. Tant que la PR corrective n'est
+pas fusionnée et la CI passée, ne pas démarrer l'agent manuel.
+
 ## Risques et limites encore ouverts
 
 1. **Protection de main configurée, E2E auto-merge restant à vérifier** :
