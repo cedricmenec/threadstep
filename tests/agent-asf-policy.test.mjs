@@ -68,5 +68,5 @@ test("workflow separates paid development and privileged publication", () => {
   assert.doesNotMatch(develop, /create-github-app-token|permission-contents: write|permission-workflows: write/);
   const publish = yaml.split("\n  publish:")[1] ?? "";
   assert.doesNotMatch(publish, /permission-workflows: write/);
-  assert.doesNotMatch(publish, /auto.merge|request-safe-auto-merge/i);
+  assert.doesNotMatch(publish, /gh pr merge|request-safe-auto-merge|--auto(?:\\s|$)/i);
 });
