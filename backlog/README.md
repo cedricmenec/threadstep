@@ -4,7 +4,7 @@ Les besoins produit versionnés vivent dans backlog/tasks/TS-NNN.md.
 Le contrat de travail des agents figure dans [AGENTS.md](../AGENTS.md),
 les exigences dans docs/product/ et les spécifications canoniques dans
 openspec/specs/. Les états ci-dessous ont été **réconciliés le
-15 octobre 2026**, après fusion de la PR #26.
+15 octobre 2026**, après fusion des PR #32 et #34.
 
 ## Proposer une fonctionnalité
 
@@ -57,15 +57,17 @@ Il n'est pas nécessaire de créer une issue GitHub.
 | TS-007 | Suggestion déterministe d'action | Livrée, [PR #18](https://github.com/cedricmenec/threadstep/pull/18) fusionnée et archivée |
 | TS-008 | « Je reprends ici » | Livrée, [PR #21](https://github.com/cedricmenec/threadstep/pull/21) fusionnée, capacité ADDED |
 | TS-009 | Expliquer la suggestion | Livrée, [PR #26](https://github.com/cedricmenec/threadstep/pull/26) fusionnée, capacité MODIFIED et sync OPSX native |
-| TS-010 | Retirer une étape avec « Annuler » pendant 10 secondes (snackbar mobile) | **Prête pour exécution** : [TS-010](tasks/TS-010.md), non implémentée ; workflow OpenSpec auto à lancer manuellement après fusion de la PR de backlog |
-| TS-011 | Réordonner par glisser-déposer des actions de même priorité dans un sujet | **Prête pour exécution** : [TS-011](tasks/TS-011.md), non implémentée ; compatibilité mobile, limites de priorité et alternative clavier spécifiées |
+| TS-010 | Retirer une étape avec « Annuler » pendant 10 secondes (snackbar mobile) | **Livrée** : [PR #32](https://github.com/cedricmenec/threadstep/pull/32) fusionnée, capacité action-removal et CI/Pages réussies |
+| TS-011 | Réordonner par glisser-déposer des actions de même priorité dans un sujet | **Livrée** : [PR #34](https://github.com/cedricmenec/threadstep/pull/34) fusionnée, capacité action-ordering et CI/Pages réussies |
 
 **Important :** les cases historiques des fichiers de tâche ne sont pas
 systématiquement mises à jour par le workflow. Le statut livré provient
 des PR et CI vérifiées, pas de cases cochées a posteriori. Pour TS-005
 et suivantes, les archives OpenSpec contiennent des checklists d'exécution.
 
-L'historique exact est dans
+La prise en main des fonctions livrées est dans
+[le guide d'utilisation](../docs/product/guide-utilisation.md).
+L'historique de la factory est dans
 [docs/factory/current-state.md](../docs/factory/current-state.md) et
 la tâche de mise en cohérence
 [ASF-DOC-001](../docs/factory/tasks/ASF-DOC-001.md).

@@ -24,3 +24,14 @@ Collaboration, authentication, remote synchronization, hosted database, project 
 
 ## Success criterion for experiment
 A publicly hosted static app usable from a phone, with creation, completion and deletion of subjects/actions, priorities, substeps, persistence, backup/restore, tests and automated deployment.
+
+## État du pilote (15 octobre 2026)
+
+Le MVP a livré des fonctions complémentaires sans élargir sa mission :
+annulation d'un retrait pendant dix secondes (TS-010, PR #32)
+et réordonnancement tactile/souris des actions **de même priorité**
+avec alternative clavier (TS-011, PR #34). Le document reste local,
+sans compte ni synchronisation cloud.
+
+Voir [le guide d'utilisation](guide-utilisation.md) pour les gestes
+et limites, et [les exigences MVP](mvp.md) pour le contrat fonctionnel.
