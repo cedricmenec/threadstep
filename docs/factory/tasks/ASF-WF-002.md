@@ -1,7 +1,7 @@
 # ASF-WF-002 | Fusion automatique conditionnée à la CI
 
 Date: 2026-10-15
-Status: implemented in PR, waiting for review/merge
+Status: implemented; PR #29 merged, E2E OpenSpec auto-merge proven by PRs #32 and #34
 Priority: high
 Scope: two agent workflows, guarded native auto-merge, tests and documentation
 
@@ -36,7 +36,9 @@ peut toujours désactiver la fusion automatique au lancement.
   de refus et des paramètres de PR, sans déclencher OpenRouter.
 - [x] Mettre à jour le mode opératoire, la sécurité, l'état actuel,
   les décisions et la feuille de route de la factory.
-- [ ] Obtenir un avis de CI sur la PR et la revue humaine avant fusion.
+- [x] PR #29 fusionnée avec CI réussie, puis PR #30 corrective fusionnée.
+- [x] Deux PR OpenSpec (#32, #34) ont été fusionnées automatiquement
+  par la GitHub App après réussite du check indépendant.
 
 ## État GitHub constaté, puis corrigé le 15 octobre 2026
 
@@ -65,10 +67,21 @@ sans CI indépendante.
 ## Limites explicites
 
 - Aucun agent payant n'a été exécuté pour valider cette modification.
-- CI/tests valident le garde-fou, mais pas un cycle GitHub auto-merge
-  opérationnel en situation réelle.
+- Le cycle GitHub auto-merge est maintenant **prouvé sur les PR OpenSpec**
+  #32 et #34, mais pas sur un workflow direct ni sur une CI volontairement rouge.
 - Le required status check de GitHub peut avoir besoin d'une mise à
   jour de la branche selon les règles choisies et les autres PR fusionnées.
 - Les exigences d'approbation de PR restent appliquées si l'administrateur
   décide de les ajouter ; la fusion pourrait alors attendre une revue.
 - Les scripts de CI et de publication Pages sont inchangés.
+
+## Vérification E2E postérieure (15 octobre 2026)
+
+[PR #32](https://github.com/cedricmenec/threadstep/pull/32)
+et [PR #34](https://github.com/cedricmenec/threadstep/pull/34) :
+`auto_merge.enabled_by` et `merged_by` signalent tous deux
+`threadstep-software-factory[bot]`, après passage de CI sur PR.
+[CI main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920)
+et [Pages](https://github.com/cedricmenec/threadstep/actions/runs/38755434958)
+réussis. L'échec volontaire de CI, l'auto-merge de l'agent direct
+et les contraintes d'approbation supplémentaires n'ont pas été testés.
