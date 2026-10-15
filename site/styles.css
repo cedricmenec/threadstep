@@ -37,6 +37,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .focus-label{font-size:.69rem;font-weight:800;letter-spacing:.14em;color:#68766a;margin:0}
 .focus-title{margin:2px 0 0;font-size:1.05rem;font-weight:700;overflow-wrap:anywhere}
 .focus-meta{margin:0;font-size:.82rem;color:#657366}
+.focus-reason{margin:0;font-size:.82rem;color:#657366;overflow-wrap:anywhere}
 .focus-empty{margin:0;color:#657366;font-size:.9rem}
 .focus-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .add-subject,.task-form{display:flex;gap:9px}
