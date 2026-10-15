@@ -74,6 +74,7 @@ function isBetterRank(rank, bestRank) {
 }
 const reasonLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 export function suggestionReason(priority) {
+  if (!PRIORITIES.includes(priority)) return null;
   const label = reasonLabels[priority];
   if (!label) return null;
   return "Choisie selon sa priorité « " + label +
