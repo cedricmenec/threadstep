@@ -16,7 +16,8 @@
 | Sync OPSX natif et durcissement | **Implémenté et vérifié** : PR #22 (skills, commande, garde-fou SHA-256), run 38712079641 et PR #26 (MODIFIED), PR #25 (contrat de checklist). REMOVED/RENAMED non prouvés. |
 | Réconciliation documentaire | **Actualisée** : [ASF-DOC-001](tasks/ASF-DOC-001.md) (TS-009) puis [ASF-DOC-002](tasks/ASF-DOC-002.md) (TS-010/011 et fusion conditionnelle). |
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
-| Contrat des tâches Backlog V2 | **Documentaire, en revue (PR non fusionnée)** : [ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) et ses tests statiques ; aucune migration, aucun index et aucune automatisation. |
+| Contrat des tâches Backlog V2 | **Livré** : [ASF-V2-001](tasks/ASF-V2-001.md) (PR #40) définit le [contrat des tâches V2](backlog-v2-task-contract.md) et ses tests statiques. |
+| Index et validation stricte du backlog | **Implémenté, en revue (PR de tâche non fusionnée)** : [ASF-V2-002](tasks/ASF-V2-002.md) fournit `scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json` et l'[index déterministe](backlog-v2-index.md). Migration [ASF-V2-003](tasks/ASF-V2-003.md) non démarrée. |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 
@@ -107,3 +108,10 @@ L'accord sur la feuille de route n'est pas une autorisation d'activer une exécu
 - [x] Réconcilier ASF-V2-001 après fusion réelle et CI (PR #41).
 - [ ] Livrer ASF-BOOT-002 : contrôle GitHub déterministe des dépendances sans synchronisation documentaire bloquante, avec tests d'erreurs et CI indépendante.
 - [ ] Poursuivre avec ASF-V2-002 uniquement après autorisation d'un nouveau lancement OpenRouter.
+
+Note de statut (non cochée) : une PR d'implémentation ASF-V2-002 propose
+`scripts/asf/`, les index `backlog/index.json` / `backlog/archive-index.json` et
+l'intégration de `check` à `npm run check`. Elle exige encore une CI `check`
+indépendante réussie sur son SHA, une revue de diff et une fusion explicitement
+autorisée. Les preuves actuelles sont locales (`npm run check` → 130 tests) et
+ne valent pas livraison sur `main`.

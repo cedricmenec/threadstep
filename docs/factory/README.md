@@ -48,7 +48,9 @@ restent dans ce dossier et dans GitHub.
 
 Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.md) sont validées pour être découpées en travail de développement, mais **aucune implémentation n'est encore livrée**. Voir le [plan de onze tâches ASF-V2](tasks/ASF-V2-README.md), leurs dépendances et restrictions d'exécution. La préparation du backlog ne constitue pas une autorisation de déclencher OpenRouter ni de fusionner une PR d'implémentation.
 
-[ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) : frontmatter versionné (`schema_version: 2`), enums, séparation état déclaratif/état GitHub, valeurs par défaut de génération et isolation des règles `TS-NNN`. Ce contrat est documentaire et couvert par des tests statiques ; aucune migration, aucun index et aucune exécution automatique ne sont livrés. Le statut reste « en revue » tant que la PR d'implémentation n'est pas fusionnée et vérifiée sur `main`.
+[ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) : frontmatter versionné (`schema_version: 2`), enums, séparation état déclaratif/état GitHub, valeurs par défaut de génération et isolation des règles `TS-NNN`. Ce contrat est documentaire et couvert par des tests statiques. Sa livraison est tracée dans la fiche ([PR #40](https://github.com/cedricmenec/threadstep/pull/40)).
+
+[ASF-V2-002](tasks/ASF-V2-002.md) ajoute l'[index déterministe et le validateur strict](backlog-v2-index.md) (`scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json`, commande `check` intégrée à `npm run check`). Cette implémentation est **en revue dans sa propre PR** ; elle n'est ni fusionnée ni vérifiée sur `main` et n'autorise aucune exécution payante. Aucun fichier `backlog/tasks/` ne portant encore de frontmatter V2, les index committés sont vides jusqu'à la migration [ASF-V2-003](tasks/ASF-V2-003.md).
 
 ## Exécuteur ASF dédié (bootstrap)
 
