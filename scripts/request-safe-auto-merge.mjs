@@ -18,10 +18,10 @@ export function applicableMainRule(rule) {
   return rule?.enforcement === "active" &&
     rule?.target === "branch" &&
     Array.isArray(refs?.include) &&
-    (refs.include.includes(TARGET_REF) || refs.include.includes("~DEFAULT_BRANCH") || refs.include.includes("~ALL")) &&
-    !refs?.exclude?.includes(TARGET_REF) &&
-    !refs?.exclude?.includes("~DEFAULT_BRANCH") &&
-    !refs?.exclude?.includes("~ALL");
+    (refs.include.includes(TARGET_REF) || refs.include.includes("~DEFAULT_BRANCH")) &&
+    // Fail closed if any exclusion patterns exist, including wildcards which
+    // could exclude main despite an apparently applicable inclusion rule.
+    Array.isArray(refs.exclude) && refs.exclude.length === 0;
 }
 
 export function validateAutoMergePrerequisites({ repository, branch, rulesets }) {
