@@ -16,6 +16,25 @@ test('OpenSpec pilot needs explicit manual phase and task', () => {
   assert.match(agent, /if: github.actor == github.repository_owner/);
 });
 
+test('OpenSpec manual dispatch defaults to auto and DeepSeek V4.1 Flash', () => {
+  assert.ok(agent.includes('default: auto\n        options:\n          - auto'.replaceAll('\\n', '\n')));
+  assert.ok(agent.includes("default: 'openrouter/deepseek/deepseek-v4.1-flash'"));
+  assert.ok(agent.includes("- 'openrouter/z-ai/glm-5.3-flash'"));
+  assert.ok(agent.includes('auto is default: 3 paid OpenCode calls'));
+});
+
+test('Short task IDs normalize before paths, branches and model calls', () => {
+  assert.ok(agent.includes('task_id="$(node scripts/normalize-task-id.mjs "$RAW_TASK_ID")"'));
+  assert.ok(agent.includes('test -f "backlog/tasks/$task_id.md"'));
+  assert.ok(agent.includes('echo "task_id=$task_id" >> "$GITHUB_OUTPUT"'));
+  assert.ok(agent.includes('needs: normalize-task'));
+  assert.ok(agent.includes('TASK_ID: ${{ needs.normalize-task.outputs.task_id }}'));
+  assert.ok(agent.includes('group: agent-openspec-${{ needs.normalize-task.outputs.task_id }}'));
+  assert.ok(agent.includes('branch="agent/openspec/$TASK_ID"'));
+  assert.ok(agent.indexOf('normalize-task:') < agent.indexOf('staged-development:'));
+  assert.ok(!agent.includes('group: agent-openspec-${{ inputs.task_id }}'));
+});
+
 test('Plan is isolated and apply checks task completion and tests', () => {
   assert.match(agent, /Plan changed a forbidden path/);
   assert.match(agent, /Apply changed a protected path/);
