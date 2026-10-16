@@ -1,5 +1,32 @@
 # Backlog ThreadStep
 
+## Nouvelles tâches proposées le 17 octobre 2026 (non implémentées)
+
+- **[TS-015](tasks/TS-015.md) : modifier la priorité depuis son badge.**
+  Le badge « Urgent / Normal / Plus tard » d'une tâche ou sous-tâche
+  devient un contrôle de choix rapide et accessible, avec persistance
+  dans le document actuel. Le terme « statut » demandé est interprété
+  comme la **priorité déjà affichée**, sans créer de statut métier
+  distinct de la case « terminée ». État déclaratif :
+  `product / ready / allowed / low`.
+- **[TS-016](tasks/TS-016.md) : vue de détail d'un projet.**
+  Une action sur la carte de la vue d'ensemble ouvre une vue dédiée
+  moins dense et navigable par URL, avec tâches et sous-tâches, plus
+  **renommage** du projet, tout en conservant le modèle
+  `subject` et le stockage local existants. La duplication est
+  explicitement **hors périmètre**. État déclaratif :
+  `product / ready / allowed / low`, avec risque résiduel borné
+  par des tests de navigation, de non-mutation et de régression.
+  La sélection automatique reste subordonnée à la présence sur
+  `main` et aux contrôles opérationnels du scheduler.
+
+Ces fiches constituent une **préparation documentaire**, pas des
+fonctionnalités présentes en production. La PR de backlog n'implémente
+pas l'interface. Le déclenchement d'un modèle payant, le lancement
+d'une vague, la fusion et tout changement de workflow demandent des
+autorisations distinctes. L'index est régénéré avec `npm run backlog:index`
+ou son équivalent déterministe.
+
 ## Statut de livraison au 16 octobre 2026
 
 Les tâches **TS-012**, **TS-013** et **TS-014** ont été réellement
