@@ -436,11 +436,16 @@ function moveItem(subject, item, direction) {
 }
 function renderReorderControls(subject, item) {
   const controls = el("div", "task-reorder");
-  const priorityLabel = priorityLabels[item.priority];
+  const parent = item.parentId === null
+    ? null
+    : subject.items.find((entry) => entry.id === item.parentId);
+  const context = parent
+    ? "sous-étape de « " + parent.title + " », priorité " + priorityLabels[item.priority]
+    : "priorité " + priorityLabels[item.priority];
   if (!hideCompleted) {
     const handle = el("button", "task-handle", "⠿");
     handle.type = "button";
-    handle.setAttribute("aria-label", "Déplacer « " + item.title + " » (priorité " + priorityLabel + ")");
+    handle.setAttribute("aria-label", "Déplacer « " + item.title + " » (" + context + ")");
     handle.setAttribute("aria-describedby", "reorder-note");
     handle.addEventListener("pointerdown", (event) => startDrag(event, subject, item, handle));
     controls.append(handle);
@@ -448,12 +453,12 @@ function renderReorderControls(subject, item) {
   const up = el("button", "subtle task-move-up", "Monter");
   up.type = "button";
   up.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "up");
-  up.setAttribute("aria-label", "Monter « " + item.title + " » (priorité " + priorityLabel + ")");
+  up.setAttribute("aria-label", "Monter « " + item.title + " » (" + context + ")");
   up.addEventListener("click", () => moveItem(subject, item, "up"));
   const down = el("button", "subtle task-move-down", "Descendre");
   down.type = "button";
   down.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "down");
-  down.setAttribute("aria-label", "Descendre « " + item.title + " » (priorité " + priorityLabel + ")");
+  down.setAttribute("aria-label", "Descendre « " + item.title + " » (" + context + ")");
   down.addEventListener("click", () => moveItem(subject, item, "down"));
   controls.append(up, down);
   return controls;
@@ -565,7 +570,7 @@ function renderSubstepToggle(item, view) {
 }
 function renderActions(subject, item, view) {
   const actions = el("div", "task-actions");
-  if (item.parentId === null) actions.append(renderReorderControls(subject, item));
+  actions.append(renderReorderControls(subject, item));
   if (item.parentId === null && view && view.hasVisibleSubsteps) actions.append(renderSubstepToggle(item, view));
   const edit = el("button", "subtle task-edit", "Modifier");
   edit.type = "button";

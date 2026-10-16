@@ -48,6 +48,38 @@ et inclus dans le fichier exporté. À priorité égale,
 des actions, tout en conservant l'ordre des sujets comme
 critère de départage.
 
+## Réorganiser les sous-étapes de même priorité (TS-014)
+
+L'ordre des sous-étapes d'une **même action parente** est
+personnalisable **à l'intérieur d'un groupe de priorité** :
+
+- Faire glisser la **poignée ⠿** d'une sous-étape vers une autre
+  sous-étape **du même parent et de la même priorité**, à la
+  souris, au doigt ou au stylet. Les dépôts sur une action
+  principale, un autre parent, un autre sujet, une autre priorité
+  ou une zone vide sont refusés : rien n'est déplacé ni enregistré.
+- Pour utiliser le clavier, ou si le glisser-déposer est peu
+  pratique sur téléphone, activer **« Monter »** ou **« Descendre »**
+  à côté de la sous-étape ; chaque activation la déplace d'une
+  place dans son groupe. Les directions impossibles sont
+  désactivées. Le nom accessible indique la sous-étape, sa
+  priorité et son action parente.
+- Le déplacement ne change jamais le parent, la priorité, le titre,
+  l'identifiant ni l'état terminé : seule la position dans le groupe
+  change.
+- Si **« Masquer les étapes terminées »** est coché, le
+  réordonnancement des sous-étapes est temporairement désactivé,
+  comme pour les actions principales.
+- Une action parente repliée ne montre pas ses sous-étapes : aucune
+  poignée n'est proposée et aucun dépôt invisible n'est possible.
+  Déplier réaffiche les sous-étapes dans le même ordre.
+
+L'ordre choisi est sauvegardé localement, rétabli au rechargement
+et inclus dans le fichier exporté, sans nouvelle clé ni nouveau
+champ. Le réordonnancement des actions principales (TS-011) reste
+inchangé, et le compteur, la suggestion et le suivi
+« Je reprends ici » ne sont pas affectés.
+
 ## Replier et déplier les sous-étapes (TS-012)
 
 Lorsqu'une action principale possède au moins une sous-étape
@@ -136,5 +168,7 @@ Références techniques :
 [Backlog TS-010](../../backlog/tasks/TS-010.md) ·
 [Backlog TS-011](../../backlog/tasks/TS-011.md) ·
 [Backlog TS-012](../../backlog/tasks/TS-012.md) ·
+[Backlog TS-014](../../backlog/tasks/TS-014.md) ·
 [Spécification action-removal](../../openspec/specs/action-removal/spec.md) ·
-[Spécification action-ordering](../../openspec/specs/action-ordering/spec.md).
+[Spécification action-ordering](../../openspec/specs/action-ordering/spec.md) ·
+[Spécification substep-ordering](../../openspec/specs/substep-ordering/spec.md).
