@@ -11,7 +11,10 @@ const tasksDir = new URL("backlog/tasks/", root);
 const read = url => readFileSync(url, "utf8");
 
 const HISTORICAL = readdirSync(tasksDir)
-  .filter(name => /^TS-\d{3}\.md$/.test(name))
+  // The 2026-10-14/15 migration covered TS-001..TS-011 only.
+  // New tasks must not be misclassified as historical migration data.
+  .filter(name => /^TS-\d{3}\.md$/.test(name) &&
+    Number(name.slice(3, 6)) >= 1 && Number(name.slice(3, 6)) <= 11)
   .sort();
 
 const EXPECTED_IDS = ["TS-001", "TS-002", "TS-003", "TS-004", "TS-005", "TS-006",
@@ -110,7 +113,8 @@ test("historical criteria and unchecked checkboxes are preserved verbatim", () =
 
 test("the generated index matches the migrated tasks byte for byte", () => {
   const entries = JSON.parse(read(new URL("backlog/index.json", root)));
-  assert.deepEqual(entries.map(entry => entry.id), EXPECTED_IDS);
+  assert.deepEqual(entries.filter(entry => EXPECTED_IDS.includes(entry.id))
+    .map(entry => entry.id), EXPECTED_IDS);
   for (const entry of entries) {
     const text = read(new URL(entry.path, root));
     assert.equal(entry.content_sha256, contentSha256(Buffer.from(text, "utf8")), entry.id);
@@ -130,6 +134,8 @@ test("the builder indexes all migrated tasks without diagnostics or archive infe
   const report = buildBacklogIndex({ root: fileURLToPath(root) });
   assert.deepEqual(report.diagnostics, []);
   assert.deepEqual(report.legacy, []);
-  assert.equal(report.active.length, 11);
+  assert.ok(report.active.length >= 11, "migrated tasks must remain indexed");
+  assert.deepEqual(report.active.filter(entry => EXPECTED_IDS.includes(entry.id))
+    .map(entry => entry.id), EXPECTED_IDS);
   assert.equal(report.archive.length, 0);
 });

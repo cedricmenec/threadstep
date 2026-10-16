@@ -86,3 +86,20 @@ Conserver des tâches suffisamment petites pour une seule exécution
 bornée. Les priorités et dépendances sont déclaratives : il n'y a pas
 encore de moteur d'ordonnancement transactionnel. Ne pas relancer une
 tâche déjà archivée uniquement pour « tester OPSX ».
+
+## Première tâche pilote éligible au scheduler (TS-012)
+
+[TS-012](tasks/TS-012.md) décrit le repli/dépli visuel des sous-étapes
+existantes, avec des critères testables et **sans modification du stockage**.
+Contrairement aux tâches historiques TS-001 à TS-011 (toutes `on_hold`),
+son contrat déclare `type: product`, `status: ready`,
+`automation: allowed`, `risk: low`, `depends_on: []`.
+Cette éligibilité sert au **premier pilote ASF** ; elle n'est ni une
+autorisation de dépenses OpenRouter, ni une autorisation de fusion.
+
+Procédure de recette : après fusion de la PR documentaire et CI sur
+`main`, lancer `Backlog Orchestrator V1` en `dry-run` avec
+`max_tasks=1` et confirmer la sélection de TS-012. Ensuite, demander
+séparément l'autorisation du premier `mode=execute`,
+`max_tasks=1`, avec coût et fusion contrôlés. Ne pas activer une vague
+de deux tâches pour cette seule fiche.
