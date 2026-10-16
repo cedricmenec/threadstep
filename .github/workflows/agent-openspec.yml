@@ -114,9 +114,9 @@ jobs:
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Built-in token stays read-only; the existing installation token handles PR writes.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     env:
       TASK_ID: ${{ needs.normalize-task.outputs.task_id }}
       PHASE: ${{ inputs.phase }}
