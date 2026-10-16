@@ -186,5 +186,29 @@
     "depends_on": [],
     "created_at": "2026-10-16",
     "content_sha256": "38b1e274c74b1adf7e46d84e0b5422413a84c041c17b3b4a534ad1e0cd1b0e8b"
+  },
+  {
+    "id": "TS-015",
+    "path": "backlog/tasks/TS-015.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "allowed",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-10-17",
+    "content_sha256": "590495552d1cd6f3f7e061aa0b150df5f071cab8de76687911d7f36e2275011d"
+  },
+  {
+    "id": "TS-016",
+    "path": "backlog/tasks/TS-016.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [],
+    "created_at": "2026-10-17",
+    "content_sha256": "9d9e483170ed5f20656b693d7f5103c11daa045d29f4dc207d330ad12b39669c"
   }
 ]
