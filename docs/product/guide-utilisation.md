@@ -48,6 +48,29 @@ et inclus dans le fichier exporté. À priorité égale,
 des actions, tout en conservant l'ordre des sujets comme
 critère de départage.
 
+## Replier et déplier les sous-étapes (TS-012)
+
+Lorsqu'une action principale possède au moins une sous-étape
+visible, un bouton **« Replier »** apparaît à côté de ses commandes.
+
+- **« Replier »** masque temporairement uniquement les sous-étapes
+  de cette action : son titre, sa priorité, son état et ses boutons
+  restent affichés et utilisables, comme les actions voisines.
+  **« Déplier »** les réaffiche dans le même ordre et avec les mêmes
+  états.
+- Chaque action se replie indépendamment : plusieurs actions peuvent
+  être repliées en même temps, dans un même sujet ou dans des sujets
+  différents.
+- Le repli est **temporaire et propre à l'onglet** : il survit aux
+  opérations ordinaires, mais un rechargement, un nouvel onglet ou un
+  import repartent avec toutes les actions dépliées. Aucun réglage
+  n'est enregistré et le fichier exporté reste identique.
+- Le bouton est utilisable à la souris, au doigt et au clavier
+  (Tab, Entrée, Espace). Si **« Masquer les étapes terminées »** est
+  actif, déplier ne révèle jamais une étape terminée masquée ; une
+  action dont toutes les sous-étapes sont masquées n'affiche pas de
+  bouton.
+
 ## Retirer et annuler une étape (TS-010)
 
 - **« Retirer »** enlève immédiatement une action ou une sous-étape.
@@ -105,5 +128,6 @@ Références techniques :
 [Spécification MVP](mvp.md) ·
 [Backlog TS-010](../../backlog/tasks/TS-010.md) ·
 [Backlog TS-011](../../backlog/tasks/TS-011.md) ·
+[Backlog TS-012](../../backlog/tasks/TS-012.md) ·
 [Spécification action-removal](../../openspec/specs/action-removal/spec.md) ·
 [Spécification action-ordering](../../openspec/specs/action-ordering/spec.md).

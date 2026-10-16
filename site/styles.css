@@ -72,6 +72,8 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .priority-later{background:#ecedf0;color:#777f8c}
 .task-actions{display:flex;gap:2px;margin-left:21px;margin-top:3px;flex-wrap:wrap;align-items:center}
 .task-reorder{display:flex;gap:2px;align-items:center}
+.task-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:7px 12px;overflow-wrap:anywhere}
+@media(prefers-reduced-motion:no-preference){.task-toggle{transition:background .12s ease}}
 .task-handle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:6px;background:transparent;border:1px solid transparent;border-radius:10px;color:#859087;font-size:1.05rem;line-height:1;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 .task-handle:hover{background:#eef2e8;color:#415748}
 .task-handle:active,.task-handle.dragging-handle{cursor:grabbing;color:#263d31;background:#eef2e8}
