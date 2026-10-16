@@ -60,7 +60,8 @@ export function verifyV3SignedAdmissionPermit({ claim, permit, verificationKey }
       !/^[a-zA-Z0-9+/]{86}==$/.test(permit.signature) ||
       !verificationKey) return false;
   try {
-    const key = createPublicKey(verificationKey);
+    const key = verificationKey?.type === "public" ? verificationKey :
+      createPublicKey(verificationKey);
     if (key.asymmetricKeyType !== "ed25519" || key.type !== "public") return false;
     const signature = Buffer.from(permit.signature, "base64");
     if (signature.length !== 64 ||
