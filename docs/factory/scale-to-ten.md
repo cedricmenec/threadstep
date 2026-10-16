@@ -1,4 +1,6 @@
-# Étude d'évolution — de 2 à 10 tâches par vague ASF
+# Étude d'évolution — de 2 à 10 puis 15 tâches par vague ASF
+
+**Note de reprise du 16 octobre 2026 :** l'utilisateur souhaite un nombre de tâches paramétrable, potentiellement jusqu'à **10 ou 15**. Le [backlog de préparation ASF V3](tasks/ASF-V3-README.md) conserve ce souhait et un découpage indicatif en PR. Cette page décrit principalement le premier palier technique **10** : les garanties devront être **étendues et prouvées jusqu'à 15**, notamment `maxTaskStarts <= 15`, rejet d'un 16e départ, sécurité/authentification, journal, timeouts, reprise et tests. Le maximum effectif, le budget et les étapes de mise en service sont **à décider plus tard**. L'orchestrateur V1 en production reste limité à 1 ou 2 tâches.
 
 **Statut : proposition d'architecture, pas une fonctionnalité disponible.** La V1 réelle supporte exclusivement `max_tasks=1|2`. Une vague à deux tâches a été validée sur [run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187). Aucun plafond USD fournisseur n'est garanti.
 

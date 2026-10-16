@@ -1,5 +1,10 @@
 # Feuille de route de la factory
 
+## Note prospective ASF V3 — 16 octobre 2026
+
+Une [entrée de backlog ASF V3](tasks/ASF-V3-README.md) a été préparée pour une **future session** : permettre un plafond de **démarrages de tâches paramétrable**, potentiellement **10 ou 15**, avec une seule exécution payante à la fois, checkpoints durables, budget/risques revus et vérification PR/CI/Pages entre chaque tâche. Le document propose des lots de PR ASF-V3-001..006 **indicatifs**, sans les rendre exécutables ni autoriser leurs fusions. La V1 à deux tâches reste inchangée. Aucun run payant, paramètre GitHub, secret ou code factory n'est modifié par cette note.
+
+
 ## Clôture de recette — 16 octobre 2026
 
 **Décision : ASF V2 clôturée pour son périmètre défini (vague V1 1..2 tâches).** Les composants ASF-V2-001 à 011 sont livrés ; les runs [38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) démontrent les parcours payants 1/1 et 2/2, avec CI et Pages après chaque fusion.
