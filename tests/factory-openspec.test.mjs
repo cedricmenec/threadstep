@@ -29,7 +29,7 @@ test('Short task IDs normalize before paths, branches and model calls', () => {
   assert.ok(agent.includes('echo "task_id=$task_id" >> "$GITHUB_OUTPUT"'));
   assert.ok(agent.includes('needs: normalize-task'));
   assert.ok(agent.includes('TASK_ID: ${{ needs.normalize-task.outputs.task_id }}'));
-  assert.ok(agent.includes('group: agent-openspec-${{ needs.normalize-task.outputs.task_id }}'));
+  assert.ok(agent.includes('group: threadstep-paid-development-v1'));
   assert.ok(agent.includes('branch="agent/openspec/$TASK_ID"'));
   assert.ok(agent.indexOf('normalize-task:') < agent.indexOf('staged-development:'));
   assert.ok(!agent.includes('group: agent-openspec-${{ inputs.task_id }}'));
