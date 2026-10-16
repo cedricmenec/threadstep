@@ -10,9 +10,11 @@ grouping, hierarchy and stored data stay untouched.
 ### Requirement: Drag handle on top-level actions
 
 Every top-level action SHALL render a visible French drag handle with an
-accessible name naming the action and its priority. Substeps MUST NOT render a
-handle. The handle MUST be at least 44 × 44 px and MUST begin a pointer drag
-without triggering editing, removal, tracking or completion.
+accessible name naming the action and its priority, used to rank it among the
+top-level actions of one priority in its subject. The handle MUST be at least
+44 × 44 px and MUST begin a pointer drag without triggering editing, removal,
+tracking or completion. A one-level substep MUST NOT render a top-level handle;
+substep ordering is owned by its own capability.
 
 #### Scenario: Top-level action shows a handle
 
@@ -22,7 +24,7 @@ without triggering editing, removal, tracking or completion.
 #### Scenario: Substeps have no handle
 
 - **WHEN** a subject displays a one-level substep
-- **THEN** that substep shows no drag handle
+- **THEN** no top-level drag handle is rendered on that substep
 
 #### Scenario: Handle name includes action and priority
 
@@ -124,8 +126,9 @@ survive a reload and a JSON export/import round-trip.
 ### Requirement: Parent carries its substeps
 
 Moving a top-level action SHALL keep its substeps attached. Their `parentId`,
-ids, titles, priorities, completion flags and mutual order MUST be unchanged, and
-substeps MUST NOT be independent reorder targets in this change.
+ids, titles, priorities, completion flags and mutual order MUST be unchanged by a
+top-level reorder, and a top-level reorder MUST NOT move, reorder or re-parent
+any substep.
 
 #### Scenario: Parent move keeps its children
 
@@ -135,8 +138,10 @@ substeps MUST NOT be independent reorder targets in this change.
 
 #### Scenario: Substeps are not reorder targets
 
-- **WHEN** the user attempts to drag a substep
-- **THEN** no substep moves and its parent is unchanged
+- **GIVEN** a top-level action has substeps
+- **WHEN** a top-level action is dragged or moved with the move controls
+- **THEN** no substep becomes a top-level reorder target and every substep stays
+  attached with unchanged data and order
 
 ### Requirement: Accessible move controls
 

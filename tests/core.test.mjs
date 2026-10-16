@@ -917,3 +917,152 @@ test("a reordered document round-trips through parseDocument without migration",
   assert.equal(parsed.version, 1);
   assert.deepEqual(Object.keys(parsed.subjects[0].items[0]).sort(), ["done", "id", "parentId", "priority", "title"]);
 });
+
+test("reorderWithinPriority moves a substep before another substep of the same parent and priority", () => {
+  const items = [
+    newItem("P", "normal", "p"),
+    newItem("A", "normal", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+    newItem("C", "normal", "c", "p"),
+  ];
+  const next = reorderWithinPriority(items, "c", "a", "before");
+  assert.notEqual(next, items);
+  assert.deepEqual(next.map((i) => i.id), ["p", "c", "a", "b"]);
+  assert.deepEqual(items.map((i) => i.id), ["p", "a", "b", "c"]);
+  assert.deepEqual(visibleItems(next, "p", false).map((i) => i.id), ["c", "a", "b"]);
+  assert.equal(next.find((i) => i.id === "c").parentId, "p");
+  assert.equal(next.find((i) => i.id === "c").priority, "normal");
+});
+
+test("reorderWithinPriority supports dropping a substep after its target", () => {
+  const items = [
+    newItem("P", "normal", "p"),
+    newItem("A", "normal", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+    newItem("C", "normal", "c", "p"),
+  ];
+  assert.deepEqual(reorderWithinPriority(items, "a", "c", "after").map((i) => i.id), ["p", "b", "c", "a"]);
+});
+
+test("moveWithinPriority moves a substep one rank inside its parent group only", () => {
+  const items = [
+    newItem("P", "normal", "p"),
+    newItem("A", "normal", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+    newItem("C", "normal", "c", "p"),
+  ];
+  assert.deepEqual(moveWithinPriority(items, "c", "up").map((i) => i.id), ["p", "a", "c", "b"]);
+  assert.deepEqual(moveWithinPriority(items, "a", "down").map((i) => i.id), ["p", "b", "a", "c"]);
+  assert.equal(moveWithinPriority(items, "a", "up"), items);
+  assert.equal(moveWithinPriority(items, "c", "down"), items);
+  assert.equal(canMoveWithinPriority(items, "a", "up"), false);
+  assert.equal(canMoveWithinPriority(items, "b", "up"), true);
+  assert.equal(canMoveWithinPriority(items, "c", "down"), false);
+});
+
+test("reorderWithinPriority refuses substep moves across parent, priority, level and invalid targets", () => {
+  const items = [
+    newItem("P1", "normal", "p1"),
+    newItem("P2", "normal", "p2"),
+    newItem("A1", "normal", "a1", "p1"),
+    newItem("B1", "normal", "b1", "p1"),
+    newItem("C2", "normal", "c2", "p2"),
+    newItem("U1", "urgent", "u1", "p1"),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  assert.equal(reorderWithinPriority(items, "a1", "c2", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "u1", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "p1", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "p2", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "missing", "before"), items);
+  assert.equal(reorderWithinPriority(items, "missing", "a1", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "a1", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "b1", "before"), items);
+  assert.equal(reorderWithinPriority(items, "a1", "b1", "sideways"), items);
+  assert.equal(canReorderWithinPriority(items, "a1", "c2", "before"), false);
+  assert.equal(canReorderWithinPriority(items, "b1", "a1", "before"), true);
+  assert.deepEqual(items, snapshot);
+});
+
+test("substep reorder keeps mixed priorities grouped and other groups intact", () => {
+  const items = [
+    newItem("P", "normal", "p"),
+    newItem("A", "urgent", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+    newItem("C", "normal", "c", "p"),
+    newItem("D", "normal", "d", "p"),
+  ];
+  const next = reorderWithinPriority(items, "c", "b", "before");
+  assert.deepEqual(next.map((i) => i.id), ["p", "a", "c", "b", "d"]);
+  assert.deepEqual(visibleItems(next, "p", false).map((i) => i.id), ["a", "c", "b", "d"]);
+  assert.equal(next.find((i) => i.id === "a").priority, "urgent");
+});
+
+test("substep reorder only changes the target group in an interleaved array", () => {
+  const items = [
+    newItem("P1", "normal", "p1"),
+    newItem("N1", "normal", "n1", "p1"),
+    newItem("P2", "normal", "p2"),
+    newItem("N2", "normal", "n2", "p2"),
+    newItem("N3", "normal", "n3", "p1"),
+    newItem("U1", "urgent", "u1", "p1"),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  const next = reorderWithinPriority(items, "n3", "n1", "before");
+  assert.deepEqual(next.map((i) => i.id), ["p1", "n3", "p2", "n2", "n1", "u1"]);
+  assert.equal(next[2], items[2]);
+  assert.equal(next[3], items[3]);
+  assert.equal(next[5], items[5]);
+  assert.deepEqual(items, snapshot);
+});
+
+test("substep reorder never mutates its input and preserves every identity field", () => {
+  const items = [
+    newItem("P", "normal", "p"),
+    newItem("A", "normal", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  const next = reorderWithinPriority(items, "b", "a", "before");
+  assert.notEqual(next, items);
+  assert.equal(next[1], items[2]);
+  assert.equal(next[2], items[1]);
+  assert.deepEqual(items, snapshot);
+  assert.equal(next[1].id, "b");
+  assert.equal(next[1].parentId, "p");
+  assert.equal(next[1].priority, "normal");
+  assert.equal(next[1].done, false);
+  assert.equal(next[1].title, "B");
+  assert.equal(next.every((item) => Object.keys(item).sort().join(",") === "done,id,parentId,priority,title"), true);
+});
+
+test("a reordered substep document round-trips through parseDocument without migration", () => {
+  const subject = newSubject("S", "s1");
+  subject.items.push(
+    newItem("P", "normal", "p"),
+    newItem("A", "normal", "a", "p"),
+    newItem("B", "normal", "b", "p"),
+  );
+  const doc = { version: 1, subjects: [subject] };
+  subject.items = reorderWithinPriority(subject.items, "b", "a", "before");
+  const parsed = parseDocument(JSON.stringify(doc));
+  assert.deepEqual(parsed, JSON.parse(JSON.stringify(doc)));
+  assert.deepEqual(parsed.subjects[0].items.map((i) => i.id), ["p", "b", "a"]);
+  assert.equal(parsed.version, 1);
+  assert.equal(parsed.subjects[0].items[1].parentId, "p");
+  assert.deepEqual(Object.keys(parsed.subjects[0].items[1]).sort(), ["done", "id", "parentId", "priority", "title"]);
+});
+
+test("top-level reorder behavior stays identical after the helper is generalised", () => {
+  const items = [
+    newItem("A", "urgent", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+    newItem("D", "later", "d"),
+    newItem("Child", "normal", "child", "b"),
+  ];
+  assert.deepEqual(reorderWithinPriority(items, "c", "b", "before").map((i) => i.id), ["a", "c", "b", "d", "child"]);
+  assert.deepEqual(moveWithinPriority(items, "c", "up").map((i) => i.id), ["a", "c", "b", "d", "child"]);
+  assert.equal(reorderWithinPriority(items, "b", "child", "before"), items);
+  assert.equal(reorderWithinPriority(items, "child", "b", "before"), items);
+});

@@ -72,13 +72,14 @@ export function reorderWithinPriority(items, itemId, targetId, position) {
   const source = items.find((item) => item && item.id === itemId);
   const target = items.find((item) => item && item.id === targetId);
   if (!source || !target) return items;
-  if (source.parentId !== null || target.parentId !== null) return items;
+  if (source.parentId !== target.parentId) return items;
   if (source.priority !== target.priority) return items;
+  const parentId = source.parentId;
   const priority = source.priority;
   const slots = [];
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
-    if (item.parentId === null && item.priority === priority) slots.push(index);
+    if (item.parentId === parentId && item.priority === priority) slots.push(index);
   }
   const group = slots.map((slot) => items[slot]);
   const from = group.indexOf(source);
@@ -97,9 +98,9 @@ export function moveWithinPriority(items, itemId, direction) {
   if (!Array.isArray(items)) return items;
   if (direction !== "up" && direction !== "down") return items;
   const source = items.find((item) => item && item.id === itemId);
-  if (!source || source.parentId !== null) return items;
+  if (!source) return items;
   const group = items.filter((item) =>
-    item.parentId === null && item.priority === source.priority);
+    item.parentId === source.parentId && item.priority === source.priority);
   const index = group.indexOf(source);
   if (index === -1) return items;
   const neighbour = direction === "up" ? group[index - 1] : group[index + 1];
