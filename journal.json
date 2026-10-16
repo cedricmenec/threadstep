@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "waveId": "wave-38886939283",
   "manifestHash": "ca8a7898fb4dbfb6b5a7b8597bb6cabfbe0f84349787141fd72b9d9842563d00",
-  "revision": 2,
+  "revision": 7,
   "quota": {
     "maxTaskStarts": 1,
     "taskStartsReserved": 1
@@ -21,6 +21,47 @@
       "state": "DISPATCH_RESERVED",
       "event": "RESERVE_DISPATCH",
       "at": "2026-10-16T10:23:53.637Z"
+    },
+    {
+      "seq": 3,
+      "taskId": "TS-012",
+      "state": "EXECUTING",
+      "event": "DISPATCH_CONFIRMED",
+      "at": "2026-10-16T10:29:52.027Z",
+      "workflowRunId": "38886939283",
+      "workflowRunUrl": "https://github.com/cedricmenec/threadstep/actions/runs/38886939283"
+    },
+    {
+      "seq": 4,
+      "taskId": "TS-012",
+      "state": "PR_PUBLISHED",
+      "event": "PR_PUBLISHED",
+      "at": "2026-10-16T10:31:03.613Z",
+      "prNumber": 55,
+      "prUrl": "https://github.com/cedricmenec/threadstep/pull/55",
+      "headSha": "3b285a92697ae943260ad2b697474055a5478496"
+    },
+    {
+      "seq": 5,
+      "taskId": "TS-012",
+      "state": "CI_PENDING",
+      "event": "CI_PENDING",
+      "at": "2026-10-16T10:31:03.614Z"
+    },
+    {
+      "seq": 6,
+      "taskId": "TS-012",
+      "state": "MERGE_PENDING",
+      "event": "MERGE_PENDING",
+      "at": "2026-10-16T10:31:03.614Z"
+    },
+    {
+      "seq": 7,
+      "taskId": "TS-012",
+      "state": "DELIVERED",
+      "event": "DELIVERED",
+      "at": "2026-10-16T10:31:03.614Z",
+      "mergeCommit": "33adc80a9c090e166e132c7494066511311f16f8"
     }
   ],
   "stop": null
