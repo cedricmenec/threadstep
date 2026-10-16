@@ -206,9 +206,9 @@
     "status": "ready",
     "priority": "high",
     "automation": "allowed",
-    "risk": "medium",
+    "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "4e55bf472d07f97d9f73a651f7cb545a4c4783e04a4377bb64af25d5bd699c60"
+    "content_sha256": "039458601320a4ed7519cdee92f0eebcc38597c502f58a9b9f71f0a7db35a14e"
   }
 ]
