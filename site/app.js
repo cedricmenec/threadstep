@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -21,6 +21,7 @@ let resumeRef = null;
 let documentLoaded = false;
 let pendingMoveFocus = null;
 let pendingCollapseFocus = null;
+let pendingPriorityFocus = null;
 let collapsedParents = new Set();
 let dragState = null;
 
@@ -130,6 +131,17 @@ function applyFocus() {
     pendingCollapseFocus = null;
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
     const target = card && card.querySelector(".task-toggle");
+    if (target) {
+      target.focus();
+      if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
+    }
+    return;
+  }
+  if (pendingPriorityFocus) {
+    const itemId = pendingPriorityFocus;
+    pendingPriorityFocus = null;
+    const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
+    const target = card && card.querySelector(".priority-control");
     if (target) {
       target.focus();
       if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
@@ -422,8 +434,23 @@ function renderRow(subject, item) {
     persist();
   });
   const title = el("span", "task-title", item.title);
-  const badge = el("span", "priority priority-" + item.priority, priorityLabels[item.priority]);
-  row.append(check, title, badge);
+  const control = el("select", "priority priority-" + item.priority + " priority-control");
+  control.setAttribute("aria-label", "Priorité de « " + item.title + " » : " + priorityLabels[item.priority]);
+  for (const priority of PRIORITIES) {
+    const option = el("option", "", priorityLabels[priority]);
+    option.value = priority;
+    if (priority === item.priority) option.selected = true;
+    control.append(option);
+  }
+  control.addEventListener("change", () => {
+    const next = setItemPriority(documentState, subject.id, item.id, control.value);
+    if (next === documentState) return;
+    documentState = next;
+    pendingPriorityFocus = item.id;
+    persist();
+    notify("Priorité mise à jour");
+  });
+  row.append(check, title, control);
   return row;
 }
 function moveItem(subject, item, direction) {

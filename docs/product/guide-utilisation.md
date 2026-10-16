@@ -24,6 +24,36 @@ serveur applicatif ni intelligence artificielle dans le navigateur.
    descendre ce sujet. « Supprimer » un sujet demande une confirmation
    et retire aussi ses actions.
 
+## Changer la priorité depuis son badge (TS-015)
+
+Le badge **Urgent**, **Normal** ou **Plus tard** de chaque action
+principale et de chaque sous-étape est un contrôle interactif :
+
+- Un clic ou un appui sur le badge ouvre un choix explicite parmi
+  **Urgent**, **Normal** et **Plus tard**. La valeur actuelle est
+  indiquée. Au clavier, un **Tab** place le focus sur le badge, puis
+  **Entrée** ou **Espace** ouvre le choix ; **Échap** le referme sans
+  rien changer.
+- Choisir une autre priorité l'applique **uniquement à l'étape
+  visée**, immédiatement : le badge et sa couleur sont actualisés et
+  l'étape reprend sa place dans le groupe de priorité correspondant
+  (Urgent, Normal, Plus tard). L'enregistrement local est automatique,
+  comme pour les autres modifications.
+- Choisir la valeur déjà sélectionnée, fermer le choix sans sélection
+  ou appuyer sur **Échap** n'écrit rien : ni le document, ni le
+  stockage local, ni l'export JSON.
+- Le badge ne déclenche ni le déplacement, ni la case de complétion,
+  ni le repli des sous-tâches, ni « Retirer », ni l'édition du titre.
+  Les identifiants, les titres, l'état terminé, le parent et l'ordre
+  relatif des autres étapes restent inchangés ; changer la priorité
+  d'une sous-étape ne la rattache jamais à un autre parent.
+- Le formulaire complet **« Modifier »** reste disponible et son
+  réglage de priorité fonctionne toujours. Le compteur, la suggestion
+  « Une étape pour maintenant », le suivi « Je reprends ici » et le
+  réordonnancement par groupe reflètent la nouvelle priorité. Une
+  priorité modifiée survit à un rechargement et à un export suivi
+  d'un import.
+
 ## Réorganiser les actions de même priorité (TS-011)
 
 L'ordre est personnalisable **à l'intérieur d'un groupe de priorité
