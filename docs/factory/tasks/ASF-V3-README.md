@@ -2,6 +2,9 @@
 
 **Créé le 16 octobre 2026, pour reprise dans une autre session.**
 
+**Cadrage décidé le 16 octobre 2026 (proposition de PR documentaire ASF-V3-001, en revue) :** première cible de mise en service **1 à 10 tâches**, champ **numérique entier** strictement validé, reprise après panne **uniquement sur diagnostic et autorisation explicite**, documentation détaillée des workflows **en parallèle**. L'extension à 15 est un objectif ultérieur et non une capacité disponible. Voir [fiche ASF-V3-001](ASF-V3-001.md) et [architecture/ADR proposée](../asf-v3-architecture.md). Les choix techniques de dispatch, de continuité nominale inter-runs, de budget et de timeouts restent à arbitrer ; aucune exécution V3 n'est autorisée.
+
+
 **État : `proposed` — réflexion et découpage documentaire uniquement.** La phase [ASF V2 est clôturée](../closeout-2026-10-16.md). Le workflow opérationnel reste **Backlog Orchestrator V1**, limité à **1 ou 2 démarrages payants séquentiels**. La création de ce backlog **n'autorise** ni implémentation, ni run OpenRouter, ni nouveaux secrets/permissions, ni modification de `main` sans PR et contrôles.
 
 ## Demande à conserver
