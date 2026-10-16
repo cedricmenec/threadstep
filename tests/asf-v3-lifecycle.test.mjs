@@ -87,7 +87,7 @@ test("manifest is versioned, frozen, and rejects unrecognized origin or candidat
   assert.equal(m.limits.maxConcurrentTasks, 1);
   assert.equal(m.limits.maxPaidRetries, 0);
   assert.ok(Object.isFrozen(m) && Object.isFrozen(m.candidateTasks[0]));
-  mustReject(() => { m.limits.maxTaskStarts = 100; }, "never_used");
+  assert.throws(() => { m.limits.maxTaskStarts = 100; }, TypeError);
 });
 test("model origin and V3 quota cannot be silently widened", () => {
   const m = manifest();
