@@ -55,8 +55,7 @@ export function createV3Manifest(input) {
   keys(auth, ["runId", "actor", "workflowRef", "sourceSha"]);
   requireThat(waveId.test(input.waveId) && repository.test(input.repository) &&
     sha40.test(input.backlogCommit), "invalid_identity");
-  requireThat(typeof input.model === "string" && input.model.startsWith("openrouter/") &&
-    input.model.length < 120 && !/[\s"'<>]/.test(input.model), "invalid_model");
+  requireThat(MODEL_ALLOWLIST.includes(input.model), "invalid_model");
   requireThat(typeof input.autoMerge === "boolean", "invalid_auto_merge");
   requireThat(Number.isInteger(input.maxTaskStarts) && input.maxTaskStarts >= 1 &&
     input.maxTaskStarts <= V3_MAX_TASKS, "invalid_max_tasks");
