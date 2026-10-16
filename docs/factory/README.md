@@ -11,7 +11,8 @@
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
 | Consulter la décision formelle de clôture | [Rapport ASF V2 du 16 octobre 2026](closeout-2026-10-16.md) |
 | Tester panne, CI rouge, permissions et reprise | [Recette finale et reprise](validation-and-recovery.md) |
-| Comprendre la limite à deux tâches et le passage à dix | [Étude ASF V3 1..10](scale-to-ten.md) |
+| Consulter le backlog de préparation ASF V3 (plafond envisagé 10 à 15 tâches) | [Backlog ASF V3 proposé](tasks/ASF-V3-README.md) |
+| Comprendre les verrous techniques du passage de deux à dix puis quinze | [Étude de changement d'échelle](scale-to-ten.md) |
 | Consulter les critères ASF-V2-001 à 011 | [Backlog ASF V2](tasks/ASF-V2-README.md) |
 | Spécifications de Backlog V2, Scheduler V1, Orchestrator V1 | [Spécifications](specs/README.md) |
 | Schémas d'architecture et contrats | [Architecture technique](technical-architecture.md) |

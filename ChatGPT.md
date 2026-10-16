@@ -37,7 +37,7 @@
 | Statut **vérifié** de la factory, preuves et limites | [`docs/factory/current-state.md`](docs/factory/current-state.md) |
 | Carte de la factory et documentation de référence | [`docs/factory/README.md`](docs/factory/README.md) |
 | Développer et maintenir la factory ASF V2 | [`docs/factory/developer-guide.md`](docs/factory/developer-guide.md), [`docs/factory/validation-and-recovery.md`](docs/factory/validation-and-recovery.md) |
-| Orchestration owner-only 1..2 tâches ; envisager 1..10 | [`docs/factory/backlog-orchestrator-manual.md`](docs/factory/backlog-orchestrator-manual.md), [`docs/factory/scale-to-ten.md`](docs/factory/scale-to-ten.md) |
+| Orchestration V1 1..2 tâches ; backlog proposé ASF V3 jusqu'à 10/15 | [`docs/factory/backlog-orchestrator-manual.md`](docs/factory/backlog-orchestrator-manual.md), [`docs/factory/tasks/ASF-V3-README.md`](docs/factory/tasks/ASF-V3-README.md), [`docs/factory/scale-to-ten.md`](docs/factory/scale-to-ten.md) |
 | Guide développeur et recette ThreadStep | [`docs/product/developer-guide.md`](docs/product/developer-guide.md), [`docs/product/acceptance-checklist.md`](docs/product/acceptance-checklist.md) |
 | Exécution OpenSpec et commande de lancement | [`docs/factory/openspec-manual-pilot.md`](docs/factory/openspec-manual-pilot.md) |
 | Procédure GitHub, permissions, CI et fusion | [`docs/factory/github-autonomy-and-security.md`](docs/factory/github-autonomy-and-security.md) |
