@@ -119,3 +119,21 @@ puis valider que le scheduler choisit TS-013 avant TS-014.
 Ne lancer la vague payante `max_tasks=2` qu'après cette validation
 et sur autorisation explicite du propriétaire : `ready` et `allowed`
 ne valent pas consentement à payer ou fusionner.
+
+### TS-014 — réordonner les sous-tâches de même priorité
+
+[TS-014](tasks/TS-014.md) ajoute le déplacement tactile/souris et les boutons
+« Monter »/« Descendre » pour les enfants **du même parent et de la même
+priorité**, sans modifier leur identité ou leur priorité. Le déplacement
+persiste dans le tableau `subject.items` existant ; tout drop hors du
+groupe est refusé. La tâche est `product / ready / allowed / low`,
+avec `depends_on: []` et **sans dépendance envers TS-013**.
+
+Les deux tâches TS-013 et TS-014 sont désormais des candidates pour un
+**unique pilote de deux tâches**. Le propriétaire doit attendre CI **et**
+Pages réussis sur le commit de fusion de cette PR, puis lancer
+`Backlog Orchestrator V1` sur `main` en mode `dry-run` avec
+`max_tasks=2`. Le dry-run ne montre que la première sélection ;
+le scheduler choisira TS-014 *après* la livraison vérifiée de TS-013.
+L'exécution `mode=execute` est payante (quota de départs, pas budget USD)
+et requiert une autorisation distincte.
