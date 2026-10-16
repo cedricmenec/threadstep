@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1219,5 +1219,150 @@ test("priority changes leave updateItem, reorderWithinPriority and moveWithinPri
   assert.equal(edited.subjects[0].items.find((i) => i.id === "b").priority, "later");
   assert.equal(edited.subjects[0].items.find((i) => i.id === "a").priority, "urgent");
   assert.equal(doc.subjects[0].items.find((i) => i.id === "a").priority, "normal");
+});
+
+function detailDocument() {
+  const doc = emptyDocument();
+  const alpha = newSubject("Alpha", "s-a");
+  alpha.items.push(
+    newItem("Urgent top", "urgent", "t1"),
+    newItem("Normal top", "normal", "t2"),
+    newItem("Child one", "normal", "c1", "t2"),
+    newItem("Child two", "urgent", "c2", "t2"),
+    newItem("Done top", "later", "t3"),
+  );
+  alpha.items.find((item) => item.id === "t3").done = true;
+  const beta = newSubject("Beta", "s-b");
+  beta.items.push(newItem("Beta task", "normal", "b1"));
+  doc.subjects.push(alpha, beta);
+  return doc;
+}
+
+test("subjectRoute builds a canonical fragment only for a valid id", () => {
+  assert.equal(subjectRoute("abc"), "#/sujet/abc");
+  assert.equal(subjectRoute("a b/c#d"), "#/sujet/" + encodeURIComponent("a b/c#d"));
+  assert.equal(subjectRoute(""), null);
+  assert.equal(subjectRoute(null), null);
+  assert.equal(subjectRoute(undefined), null);
+  assert.equal(subjectRoute(42), null);
+  assert.equal(subjectRoute("x".repeat(101)), null);
+});
+
+test("parseRoute maps fragments deterministically without throwing", () => {
+  assert.deepEqual(parseRoute(""), { view: "overview" });
+  assert.deepEqual(parseRoute("#"), { view: "overview" });
+  assert.deepEqual(parseRoute("#/"), { view: "overview" });
+  assert.deepEqual(parseRoute("#/autre"), { view: "overview" });
+  assert.deepEqual(parseRoute(null), { view: "overview" });
+  assert.deepEqual(parseRoute(undefined), { view: "overview" });
+  assert.deepEqual(parseRoute(7), { view: "overview" });
+  assert.deepEqual(parseRoute("#/sujet"), { view: "invalid" });
+  assert.deepEqual(parseRoute("#/sujet/"), { view: "invalid" });
+  assert.deepEqual(parseRoute("#/sujet/%E0%A4%A"), { view: "invalid" });
+  assert.deepEqual(parseRoute("#/sujet/" + "x".repeat(101)), { view: "invalid" });
+});
+
+test("subjectRoute and parseRoute round-trip a URL-special id", () => {
+  const id = "sujet 42/été#1";
+  assert.deepEqual(parseRoute(subjectRoute(id)), { view: "subject", subjectId: id });
+  assert.deepEqual(parseRoute("#/sujet/plain-id"), { view: "subject", subjectId: "plain-id" });
+});
+
+test("findSubject returns the identical reference and never mutates the document", () => {
+  const doc = detailDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  assert.equal(findSubject(doc, "s-a"), doc.subjects[0]);
+  assert.equal(findSubject(doc, "s-b"), doc.subjects[1]);
+  assert.equal(findSubject(doc, "missing"), null);
+  assert.equal(findSubject(null, "s-a"), null);
+  assert.equal(findSubject({}, "s-a"), null);
+  assert.deepEqual(doc, snapshot);
+});
+
+test("parseRoute and findSubject never mutate their inputs", () => {
+  const doc = detailDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  parseRoute("#/sujet/" + encodeURIComponent(doc.subjects[0].id));
+  findSubject(doc, doc.subjects[0].id);
+  findSubject(doc, "absent");
+  assert.deepEqual(doc, snapshot);
+});
+
+test("renameSubject changes only the title and preserves identity, steps and relations", () => {
+  const doc = detailDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  const next = renameSubject(doc, "s-a", "  Alpha renommé  ");
+  assert.notEqual(next, doc);
+  assert.equal(next.subjects[0].title, "Alpha renommé");
+  assert.equal(next.subjects[0].id, "s-a");
+  assert.deepEqual(next.subjects[0].items, snapshot.subjects[0].items);
+  assert.deepEqual(next.subjects[1], snapshot.subjects[1]);
+  assert.notEqual(next.subjects[0], doc.subjects[0]);
+  assert.deepEqual(
+    next.subjects[0].items.map((item) => [item.id, item.parentId, item.priority, item.done]),
+    snapshot.subjects[0].items.map((item) => [item.id, item.parentId, item.priority, item.done]));
+  assert.deepEqual(doc, snapshot);
+});
+
+test("renameSubject returns the same reference for invalid, unknown and unchanged input", () => {
+  const doc = detailDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  const cases = [
+    ["s-a", ""],
+    ["s-a", "   "],
+    ["s-a", "x".repeat(101)],
+    ["missing", "Nouveau"],
+    ["s-a", "Alpha"],
+    ["s-a", null],
+    ["s-a", 5],
+  ];
+  for (const [id, title] of cases) {
+    assert.equal(renameSubject(doc, id, title), doc);
+  }
+  assert.deepEqual(doc, snapshot);
+});
+
+test("renameSubject rejects a trimmed name that is unchanged", () => {
+  const doc = detailDocument();
+  assert.equal(renameSubject(doc, "s-a", "  Alpha  "), doc);
+});
+
+test("a renamed document round-trips through parseDocument without migration", () => {
+  const doc = detailDocument();
+  const next = renameSubject(doc, "s-a", "Nouveau nom");
+  const stored = JSON.stringify(next);
+  const restored = parseDocument(stored);
+  assert.deepEqual(restored, JSON.parse(stored));
+  assert.equal(restored.version, 1);
+  assert.equal(restored.subjects[0].title, "Nouveau nom");
+  assert.equal(restored.subjects[0].id, "s-a");
+  assert.deepEqual(
+    Object.keys(restored.subjects[0].items[0]).sort(),
+    ["done", "id", "parentId", "priority", "title"]);
+  assert.equal(restored.subjects[0].items.find((i) => i.id === "c1").parentId, "t2");
+  assert.equal(STORAGE_KEY, "threadstep.document.v1");
+});
+
+test("existing task functions behave identically on a renamed and navigated document", () => {
+  const doc = detailDocument();
+  const next = renameSubject(doc, "s-a", "Renommé");
+  const route = subjectRoute(next.subjects[0].id);
+  assert.deepEqual(parseRoute(route), { view: "subject", subjectId: "s-a" });
+  assert.equal(findSubject(next, "s-a"), next.subjects[0]);
+  assert.deepEqual(
+    visibleItems(next.subjects[0].items).map((i) => i.id),
+    visibleItems(doc.subjects[0].items).map((i) => i.id));
+  assert.deepEqual(
+    reorderWithinPriority(next.subjects[0].items, "t1", "t2", "after").map((i) => i.id),
+    reorderWithinPriority(doc.subjects[0].items, "t1", "t2", "after").map((i) => i.id));
+  assert.deepEqual(
+    planRemoval(next, "s-a", "t2").document.subjects[0].items.map((i) => i.id),
+    planRemoval(doc, "s-a", "t2").document.subjects[0].items.map((i) => i.id));
+  const before = nextActionSuggestion(doc);
+  const after = nextActionSuggestion(next);
+  assert.equal(after.subjectId, before.subjectId);
+  assert.equal(after.itemId, before.itemId);
+  assert.equal(after.priority, before.priority);
+  assert.equal(after.subjectTitle, "Renommé");
 });
 

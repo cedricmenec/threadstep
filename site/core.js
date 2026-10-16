@@ -8,6 +8,31 @@ export const newSubject = (title, id) => ({ id, title: title.trim(), items: [] }
 export const newItem = (title, priority, id, parentId = null) => ({
   id, title: title.trim(), priority, done: false, parentId
 });
+export function subjectRoute(subjectId) {
+  if (!validId(subjectId)) return null;
+  return "#/sujet/" + encodeURIComponent(subjectId);
+}
+export function parseRoute(hash) {
+  if (typeof hash !== "string") return { view: "overview" };
+  const fragment = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (fragment === "" || fragment === "/") return { view: "overview" };
+  if (fragment === "/sujet") return { view: "invalid" };
+  if (!fragment.startsWith("/sujet/")) return { view: "overview" };
+  const rawId = fragment.slice("/sujet/".length);
+  if (rawId === "") return { view: "invalid" };
+  let subjectId;
+  try {
+    subjectId = decodeURIComponent(rawId);
+  } catch {
+    return { view: "invalid" };
+  }
+  if (!validId(subjectId)) return { view: "invalid" };
+  return { view: "subject", subjectId };
+}
+export function findSubject(document, subjectId) {
+  if (!document || !Array.isArray(document.subjects)) return null;
+  return document.subjects.find((entry) => entry.id === subjectId) || null;
+}
 export function moveSubject(subjects, subjectId, direction) {
   const from = subjects.findIndex((subject) => subject.id === subjectId);
   const to = direction === "up" ? from - 1 : from + 1;
@@ -30,6 +55,18 @@ export function updateItem(document, subjectId, itemId, patch) {
     entry.id === itemId ? { ...entry, title, priority: patch.priority } : entry);
   const subjects = document.subjects.map((entry) =>
     entry.id === subjectId ? { ...entry, items } : entry);
+  return { ...document, subjects };
+}
+export function renameSubject(document, subjectId, title) {
+  if (!document || !Array.isArray(document.subjects)) return document;
+  if (typeof title !== "string") return document;
+  const trimmed = title.trim();
+  if (trimmed.length === 0 || trimmed.length > 100) return document;
+  const subject = document.subjects.find((entry) => entry.id === subjectId);
+  if (!subject) return document;
+  if (trimmed === subject.title) return document;
+  const subjects = document.subjects.map((entry) =>
+    entry.id === subjectId ? { ...entry, title: trimmed } : entry);
   return { ...document, subjects };
 }
 export function setItemPriority(document, subjectId, itemId, priority) {

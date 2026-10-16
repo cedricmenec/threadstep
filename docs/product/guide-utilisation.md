@@ -2,6 +2,8 @@
 
 **État technique vérifié : 16 octobre 2026**, après les PR #55 (TS-012),
 #58 (TS-013) et #59 (TS-014), avec CI et Pages post-fusion réussies.
+TS-016 (vue de détail et renommage ciblé d'un projet) est documentée ici ;
+sa vérification par PR, CI sur SHA exact et Pages reste à confirmer après fusion.
 Recette manuelle : **déclarée OK par le propriétaire le 16 octobre 2026** ; [checklist détaillée et limites de preuve](acceptance-checklist.md).
 Application : https://cedricmenec.github.io/threadstep/
 
@@ -23,6 +25,53 @@ serveur applicatif ni intelligence artificielle dans le navigateur.
 5. Les boutons fléchés de chaque **sujet** permettent de monter ou
    descendre ce sujet. « Supprimer » un sujet demande une confirmation
    et retire aussi ses actions.
+
+## Ouvrir un projet dans une vue dédiée (TS-016)
+
+Chaque carte de la vue d'ensemble propose un bouton **« Ouvrir le projet »**
+dans son en-tête. L'activer affiche une vue interne dédiée au sujet choisi,
+sans quitter l'application ni recharger la page :
+
+- La vue de détail montre le **titre du projet**, son compteur d'étapes en
+  attente, ses actions principales et leurs sous-étapes directes dans une
+  présentation plus aérée que l'overview. Aucune carte d'un autre projet
+  n'apparaît.
+- Toutes les commandes d'étape restent disponibles et se comportent comme
+  dans la vue d'ensemble : ajouter, modifier, terminer, filtrer, replier ou
+  déplier, réordonner dans le groupe autorisé (même sujet, même priorité),
+  retirer et annuler le retrait. Les mêmes règles de validation, de
+  priorité, de parenté, de filtre et d'ordre s'appliquent.
+- Les deux vues lisent et modifient **le même document et les mêmes
+  identifiants** : aucune copie de projet, d'action ou de sous-étape. Toute
+  modification faite dans le détail apparaît immédiatement dans l'overview,
+  le compteur global, la suggestion, le suivi « Je reprends ici » et
+  l'export JSON.
+- Le bouton **« Retour à la vue d'ensemble »** ramène aux cartes. Les
+  boutons Précédent/Suivant du navigateur et le rechargement d'un lien de
+  détail valide restaurent la bonne vue.
+- L'ouverture, la fermeture et le changement de vue sont des opérations
+  d'**affichage uniquement** : elles n'écrivent rien dans le stockage local,
+  ne modifient pas le document et ne créent aucune nouvelle préférence, clé
+  ni identifiant.
+- Si l'adresse ne correspond à aucun projet présent (lien mal formé, projet
+  importé absent ou supprimé depuis un autre onglet), un message accessible
+  « Projet introuvable » et un bouton de retour s'affichent, sans créer ni
+  modifier de projet.
+
+### Renommer le projet depuis le détail
+
+Le bouton **« Renommer le projet »** ouvre une saisie explicite pré-remplie
+avec le nom actuel, avec **« Enregistrer »** et **« Annuler »** :
+
+- Le nom est nettoyé de ses espaces de début et de fin ; il doit rester
+  **non vide** et **au plus 100 caractères**, comme à la création d'un sujet.
+- Enregistrer un nom valide change **uniquement le titre** du projet visé et
+  actualise aussitôt la vue de détail puis la carte de l'overview. Son
+  identifiant, ses étapes, les `parentId`, l'ordre et les priorités restent
+  inchangés, et le nouveau nom est conservé au rechargement comme à
+  l'export/import JSON.
+- Annuler, proposer un nom vide ou trop long, ou enregistrer le nom déjà en
+  place n'écrit rien : ni le document, ni le stockage local, ni l'export JSON.
 
 ## Changer la priorité depuis son badge (TS-015)
 
@@ -207,6 +256,7 @@ Références techniques :
 [Backlog TS-011](../../backlog/tasks/TS-011.md) ·
 [Backlog TS-012](../../backlog/tasks/TS-012.md) ·
 [Backlog TS-014](../../backlog/tasks/TS-014.md) ·
+[Backlog TS-016](../../backlog/tasks/TS-016.md) ·
 [Spécification action-removal](../../openspec/specs/action-removal/spec.md) ·
 [Spécification action-ordering](../../openspec/specs/action-ordering/spec.md) ·
 [Spécification substep-ordering](../../openspec/specs/substep-ordering/spec.md).
