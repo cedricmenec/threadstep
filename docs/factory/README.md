@@ -65,3 +65,7 @@ Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.m
 ## Exécuteur ASF dédié (bootstrap)
 
 Voir [l'exécuteur manuel ASF proposé](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md). Son statut devient opérationnel uniquement après revue, CI, fusion et vérification sur main. Il accepte les tâches de factory ASF-V2 sans affaiblir le workflow ThreadStep TS-NNN.
+
+## ASF-V2-008 : intégration OpenSpec orchestrée, à confirmer en CI
+
+L'intégration ajoute une entrée réutilisable `workflow_call` pour le futur orchestrateur ASF-V2-009. Elle vérifie un manifeste et un journal à SHA épinglé, le run parent autorisé, une réservation payante et l'empreinte de tâche avant OpenRouter. Un verrou partagé sérialise les jobs payants de trois exécuteurs, sans verrouiller le parent. Voir [ASF-V2-008](tasks/ASF-V2-008.md). Aucune vague payante n'est activée avant l'implémentation et l'autorisation de 009.
