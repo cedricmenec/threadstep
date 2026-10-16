@@ -44,7 +44,7 @@ L'exécuteur ASF est volontairement distinct des agents produit. Il ne possède 
 
 ## Où sont les autres références ?
 
-[Guide développeur](../developer-guide.md) · [mode opératoire V1](../backlog-orchestrator-manual.md) · [pilote OpenSpec](../openspec-manual-pilot.md) · [Agent ASF](../agent-asf-manual.md) · [sécurité et GitHub App](../github-autonomy-and-security.md) · [état vérifié](../current-state.md) · [architecture cible V3](../asf-v3-architecture.md, uniquement si fusionnée sur la branche consultée).
+[Guide développeur](../developer-guide.md) · [mode opératoire V1](../backlog-orchestrator-manual.md) · [pilote OpenSpec](../openspec-manual-pilot.md) · [Agent ASF](../agent-asf-manual.md) · [sécurité et GitHub App](../github-autonomy-and-security.md) · [état vérifié](../current-state.md) · [proposition d'architecture V3 en PR #66](https://github.com/cedricmenec/threadstep/pull/66).
 
 ## Couverture actuelle et maintenance
 
