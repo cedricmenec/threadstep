@@ -31,6 +31,31 @@ on:
           - 'openrouter/deepseek/deepseek-v4.1-flash'
           - 'openrouter/z-ai/glm-5.3-flash'
 
+  workflow_call:
+    # Reusable entry for a reviewed, owner-dispatched orchestrator on main only.
+    inputs:
+      task_id:
+        required: true
+        type: string
+      phase:
+        required: true
+        type: string
+      auto_merge:
+        required: true
+        type: boolean
+      model:
+        required: true
+        type: string
+      wave_id:
+        required: true
+        type: string
+      parent_run_id:
+        required: true
+        type: string
+      reservation_sha:
+        required: true
+        type: string
+
 permissions:
   contents: read
 
@@ -42,6 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     outputs:
       task_id: ${{ steps.normalize.outputs.task_id }}
     steps:
@@ -54,26 +80,43 @@ jobs:
         shell: bash
         env:
           RAW_TASK_ID: ${{ inputs.task_id }}
+          GH_TOKEN: ${{ github.token }}
+          ASF_WAVE_ID: ${{ inputs.wave_id }}
+          ASF_PARENT_RUN_ID: ${{ inputs.parent_run_id }}
+          ASF_RESERVATION_SHA: ${{ inputs.reservation_sha }}
+          PHASE: ${{ inputs.phase }}
+          OPENCODE_MODEL: ${{ inputs.model }}
+          ASF_AUTO_MERGE: ${{ inputs.auto_merge }}
         run: |
           set -euo pipefail
           task_id="$(node scripts/normalize-task-id.mjs "$RAW_TASK_ID")"
           test -f "backlog/tasks/$task_id.md" || {
             echo "::error::Backlog file missing: $task_id"; exit 1;
           }
+          # Manual dispatch stays owner-only; a reusable call must prove
+          # immutable wave authorization and one reserved paid task first.
+          if [[ -n "${ASF_WAVE_ID:-}" || -n "${ASF_PARENT_RUN_ID:-}" || -n "${ASF_RESERVATION_SHA:-}" ]]; then
+            if [[ -z "${ASF_WAVE_ID:-}" || -z "${ASF_PARENT_RUN_ID:-}" || -z "${ASF_RESERVATION_SHA:-}" ]]; then
+              echo "::error::Incomplete orchestrated authorization"; exit 1
+            fi
+            TASK_ID="$task_id" node scripts/asf/waves/authenticate-executor.mjs
+          elif [[ "$GITHUB_WORKFLOW_REF" != "$GITHUB_REPOSITORY/.github/workflows/agent-openspec.yml@$GITHUB_REF" ]]; then
+            echo "::error::Unrecognized workflow caller without a verified reservation"; exit 1
+          fi
           echo "task_id=$task_id" >> "$GITHUB_OUTPUT"
 
   staged-development:
     needs: normalize-task
     if: github.actor == github.repository_owner
-    # All aliases for one task serialize; independent tasks retain parallelism.
+    # Shared paid job lock, never held by the future orchestrator parent.
     concurrency:
-      group: agent-openspec-${{ needs.normalize-task.outputs.task_id }}
+      group: threadstep-paid-development-v1
       cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Built-in token stays read-only; the existing installation token handles PR writes.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     env:
       TASK_ID: ${{ needs.normalize-task.outputs.task_id }}
       PHASE: ${{ inputs.phase }}

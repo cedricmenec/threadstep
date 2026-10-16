@@ -64,6 +64,9 @@ jobs:
   develop:
     needs: preflight
     if: github.actor == github.repository_owner
+    concurrency:
+      group: threadstep-paid-development-v1
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
