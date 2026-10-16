@@ -88,3 +88,37 @@ Ils valident une séquence de **logique applicative** en mémoire, pas un déplo
 6. Ne modifier aucun workflow sans accord owner spécifique, et ne lancer aucun appel OpenRouter pendant la qualification.
 
 **Décision actuelle : prototype en PR Draft, utilisation opérationnelle interdite.**
+
+
+## Durcissement : preuve durable et rejeu complet de l'historique signé
+
+L'audit suivant a identifié une insuffisance initiale : le registre append-only conservait l'événement \`ADMIT\` mais ne conservait **pas** la signature Ed25519 ayant permis cet ADMIT. Une lecture ultérieure de \`registry.json\` pouvait donc certifier le rejeu des états et compteurs mais **pas** l'origine cryptographique de chaque admission. En présence d'un writer de ref abusif, un registre cohérent non signé pouvait paraître valide au lecteur.
+
+Cette version propose désormais une écriture Git **à deux fichiers dans le même tree**, basée sur le tree parent :
+
+| Chemin sous le ref global | Contenu |
+|---|---|
+| \`registry.json\` | État et événements complets, exclusivement append-only |
+| \`admission-evidence/<waveId>.json\` | Payload d'admission exact et signature Ed25519 Base64 du justificatif, conservés sans secret privé |
+
+Le ref de commit lu par \`observeGlobalAdmissionSnapshot(readClient, verificationKey)\` épingle **à la fois** le registre et chaque témoin historique. Le nouveau \`auditV3AdmissionWitnessChain\` :
+
+1. Rejoue intégralement le registre V3 et refuse divergence.
+2. Exige une clé publique Ed25519 fournie par le contexte de **confiance** (la politique réelle de pinning n'existe pas encore).
+3. Pour chaque \`ADMIT\` depuis la genèse, charge \`admission-evidence/<waveId>.json?ref=<HEAD_SAME_SHA>\`.
+4. Vérifie la forme fermée, la taille maximale de 4 KiB, le Base64 strict, UTF-8, puis la signature couvrant le claim exact, le dépôt et le ref global.
+5. Refuse tout historique avec un témoin manquant, modifié, mal signé ou émis pour une autre vague ; le nombre de preuves relues est borné à 100 admissions. Au-delà : refus conservateur, procédure de migration et revue nécessaires.
+6. Retourne seulement le statut \`signature_chain_verified\` avec \`authorized:false\`. **Il ne donne aucun droit de dispatch ou de paiement**.
+
+Le read-back qui suit le PATCH exige désormais que l'état soit rejoué **et que les témoins de toutes les admissions historiques soient encore vérifiables** sous le nouveau HEAD. Une corruption de témoin après la mise à jour, un refus de GET ou une réponse perdue renvoie \`uncertain\` ou \`rejected\` sans retry automatique.
+
+### Ce que ce durcissement ne résout pas
+
+- La fonction pure \`replayAdmissionRegistry\` de #75 reste un validateur **de forme**, non une attestation d'origine. Aucun consommateur ne doit traiter \`replayAdmissionRegistry\` seul comme une autorisation.
+- Le paramètre \`verificationKey\` est injectable pour la qualification, pas épinglé dans une racine de confiance de production. Une clé choisie par un agent ou un manifest pourrait valider une admission qu'il a lui-même signée. Le **P0 issuer/pinning/mandat propriétaire** demeure non résolu.
+- La protection du ref global contre la réécriture ou le remplacement par un acteur externe est indispensable ; une signature n'assure pas à elle seule la conservation d'un historique dans Git.
+- Une signature prouve seulement la possession de la clé privée. Un issuer indépendant doit d'abord établir le mandat propriétaire en vérifiant le run GitHub réel, ses inputs autorisés et la politique d'émission.
+- Les événements \`RELEASE\`, \`QUARANTINE\` et les futurs événements de diagnostic nécessitent **leurs propres preuves et pouvoirs d'écriture**. Le module présent n'expose qu'\`ADMIT\`.
+- Le témoin reste sur la même branche Git et au même SHA que le registre ; il s'agit d'une cohérence vérifiable et non d'un registre immuable hébergé par une autorité externe.
+
+En conséquence : **la traçabilité est améliorée, mais l'activation V3 reste bloquée** jusqu'à approbation de l'issuer, de son ancre de clé, de l'initialisation du ref et des permissions.
