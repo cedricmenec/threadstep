@@ -270,3 +270,27 @@ n'est pas fusionnée avec une CI `check` indépendante réussie sur le bon SHA, 
 manifeste, ce journal et ce moteur de quota ne doivent pas être décrits comme
 livrés sur `main`, et aucun appel OpenRouter payant n'a été effectué pour cette
 tâche.
+
+## Adaptateur GitHub de vérification des livraisons ASF-V2-007 (en revue, non fusionné)
+
+[ASF-V2-007](tasks/ASF-V2-007.md) ajoute l'[adaptateur GitHub de vérification
+des livraisons](delivery-verification.md) sous `scripts/asf/github/` et
+`scripts/asf/delivery/` : une observation GitHub **en lecture seule** qui
+distingue un run `success` d'une livraison réellement vérifiée. Le verdict pur
+`verifyDelivery` renvoie `verified` (PR finale fusionnée à la branche, au
+`head SHA`, à la base `main` et à l'auteur attendus, contrôle indépendant
+`check` prouvé sur le SHA de tête et le commit de fusion, commit présent dans
+`main`, runs post-fusion `CI`/`Pages` verts), `pending` (PR ouverte/brouillon,
+run ou contrôle manquant, attente post-fusion — ne débloque rien) ou `unknown`
+(erreur API, pagination tronquée, PR ambiguë ou concurrente, identité/SHA
+divergents, contrôle absent ou non prouvé). Le client borne la pagination
+(`truncated`) et les timeouts et convertit toute erreur en valeur d'erreur,
+**jamais** en absence de conflit. Livré mais non archivé satisfait une
+dépendance ; l'archivage est observé mais ne conditionne pas le verdict. Preuve
+locale uniquement : `node --test tests/asf-github-delivery.test.mjs` → 23 tests
+réussis, puis `npm run check` → 233 tests réussis, `backlog:check` (11 actifs,
+0 archivé), `node --check` sur `site/core.js` et `site/app.js`. Aucun workflow
+n'est modifié. Tant que la PR n'est pas fusionnée avec une CI `check`
+indépendante réussie sur le bon SHA, cet adaptateur ne doit pas être décrit
+comme livré sur `main`, et aucun appel OpenRouter payant n'a été effectué pour
+cette tâche.
