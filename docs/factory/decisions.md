@@ -1,5 +1,13 @@
 # Journal des décisions de conception
 
+## ASF V3, décisions de cadrage propriétaire (16 octobre 2026)
+
+- **Décisions fonctionnelles retenues, conception en revue :** premier plafond numérique **1 à 10** démarrages réservés par vague ; objectif **15** différé et soumis à qualification indépendante. Une seule tâche payante à la fois, jamais de retry payant automatique.
+- **Reprise en échec/incertitude :** diagnostic puis autorisation propriétaire explicite. La continuation *nominale* entre runs après livraison vérifiée exige une nouvelle preuve de mandat et reste un choix technique ouvert.
+- **Documentation :** inventaire et description fonctionnelle et technique de chaque workflow/job/step en parallèle du chantier d'orchestration.
+- **ASF-ADR-V3-001, proposée et NON implémentée :** contrôleur de vague itératif, manifeste/journal versionnés, preuves GitHub après livraison, limites/risques détaillés et séparation des permissions. Lire [architecture cible](asf-v3-architecture.md) et [tâche de cadrage](tasks/ASF-V3-001.md). L'approbation de conception ne vaut ni fusion ni autorisation de dépense.
+
+
 ## Décisions opérationnelles confirmées — 16 octobre 2026
 
 - **ASF-ADR-V2-EXEC-01 — Acceptée et prouvée :** owner-only, quota 1 ou 2 réservations avant exécution ; OpenSpec authentifié, journal append-only, une tâche à la fois ; requérir PR/SHAs/required `check`/CI/Pages après chaque fusion avant le départ suivant. Preuves [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187).
