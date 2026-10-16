@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "waveId": "wave-38886939283",
+  "repository": "cedricmenec/threadstep",
+  "authorizedBy": "repository_owner",
+  "backlogCommit": "5616b29962500704c5e0348b6340666b24ba70f0",
+  "policyVersion": "asf-orch-v1",
+  "mode": "execute",
+  "executor": "openspec",
+  "phase": "auto",
+  "model": "openrouter/deepseek/deepseek-v4.1-flash",
+  "limits": {
+    "maxTaskStarts": 1,
+    "maxConcurrentTasks": 1,
+    "maxPaidRetries": 0
+  },
+  "autoMerge": true,
+  "candidateTasks": [
+    {
+      "id": "TS-012",
+      "sha256": "b4c73ecdc30b7d051d21a1ea8859538f904b5ac64924733d5e230c025255357d"
+    }
+  ],
+  "authorization": {
+    "parentRunId": 38886939283,
+    "reference": "workflow_dispatch:38886939283"
+  }
+}

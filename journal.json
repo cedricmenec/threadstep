@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "waveId": "wave-38886939283",
+  "manifestHash": "ca8a7898fb4dbfb6b5a7b8597bb6cabfbe0f84349787141fd72b9d9842563d00",
+  "revision": 2,
+  "quota": {
+    "maxTaskStarts": 1,
+    "taskStartsReserved": 1
+  },
+  "entries": [
+    {
+      "seq": 1,
+      "taskId": "TS-012",
+      "state": "SELECTED",
+      "event": "SELECT",
+      "at": "2026-10-16T10:23:53.637Z"
+    },
+    {
+      "seq": 2,
+      "taskId": "TS-012",
+      "state": "DISPATCH_RESERVED",
+      "event": "RESERVE_DISPATCH",
+      "at": "2026-10-16T10:23:53.637Z"
+    }
+  ],
+  "stop": null
+}
