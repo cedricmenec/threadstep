@@ -10,6 +10,7 @@
 import { createPublicKey, verify as cryptoVerify } from "node:crypto";
 import { canonicalize, contentSha256 } from "../waves/hash.mjs";
 import { findSecretPaths } from "../waves/secrets.mjs";
+import { auditV3AdmissionWitnessChain, v3AdmissionWitnessPath } from "./signed-global-witness.mjs";
 import {
   ADMISSION_REGISTRY_REF, advanceAdmissionRegistry, replayAdmissionRegistry
 } from "./global-admission.mjs";
@@ -76,7 +77,7 @@ export function v3AdmissionPermitSigningPayload(payload) {
   return Buffer.from(DOMAIN + canonicalize(payload), "utf8");
 }
 
-async function readSnapshot(readClient) {
+async function readSnapshot(readClient, verificationKey) {
   if (!readClient || typeof readClient.get !== "function") return uncertain("missing_read_client");
   const ref = await readClient.get(REF_PATH);
   if (!ref?.ok || ref.data?.ref !== ADMISSION_REGISTRY_REF ||
@@ -105,13 +106,20 @@ async function readSnapshot(readClient) {
     if (findSecretPaths(registry).length)
       return rejected("registry_contains_secret");
     const replayed = replayAdmissionRegistry(registry);
-    return outcome("snapshot_verified", "pinned_global_registry_replayed", {
+    // A replayed state is not sufficient: each ADMIT must have an unmodified
+    // signed witness in this same Git commit. Without a pinned key, refuse.
+    const audit = await auditV3AdmissionWitnessChain({
+      registry: replayed, headSha, readClient, verificationKey
+    });
+    if (audit.status !== "signature_chain_verified")
+      return outcome(audit.status, "untrusted_admission_witness_" + audit.reason);
+    return outcome("snapshot_verified", "pinned_global_registry_and_witnesses", {
       headSha, registry: replayed
     });
   } catch { return rejected("invalid_global_registry_replay"); }
 }
-export async function observeGlobalAdmissionSnapshot(readClient) {
-  try { return await readSnapshot(readClient); }
+export async function observeGlobalAdmissionSnapshot(readClient, verificationKey) {
+  try { return await readSnapshot(readClient, verificationKey); }
   catch { return uncertain("global_read_failure"); }
 }
 
@@ -130,7 +138,7 @@ export async function attemptSignedGlobalAdmission({
     return rejected("no_valid_trusted_bootstrap_permit");
   if (typeof writeTransport !== "function")
     return rejected("missing_global_git_writer");
-  const snapshot = await observeGlobalAdmissionSnapshot(readClient);
+  const snapshot = await observeGlobalAdmissionSnapshot(readClient, verificationKey);
   if (snapshot.status !== "snapshot_verified") return snapshot;
   let next;
   try {
@@ -146,8 +154,11 @@ export async function attemptSignedGlobalAdmission({
   } catch { return rejected("wave_admission_blocked"); }
   if (findSecretPaths(next).length) return rejected("registry_contains_secret");
   const body = JSON.stringify(next, null, 2) + "\n";
+  const witnessBody = JSON.stringify(permit, null, 2) + "\n";
   if (Buffer.byteLength(body, "utf8") > MAX_BYTES)
     return rejected("registry_size_limit");
+  if (Buffer.byteLength(witnessBody, "utf8") > 4096)
+    return rejected("admission_witness_size_limit");
 
   const request = async (method, path, payload) => {
     // Only fixed endpoints. Do not expose arbitrary write path or URL.
@@ -175,8 +186,12 @@ export async function attemptSignedGlobalAdmission({
     stage = "tree";
     const tree = await request("POST", PREFIX + "/git/trees", {
       base_tree: parent.data.tree.sha,
-      tree: [{ path: V3_GLOBAL_REGISTRY_FILE, mode: "100644",
-        type: "blob", content: body }]
+      tree: [
+        { path: V3_GLOBAL_REGISTRY_FILE, mode: "100644",
+          type: "blob", content: body },
+        { path: v3AdmissionWitnessPath(claim.waveId), mode: "100644",
+          type: "blob", content: witnessBody }
+      ]
     });
     if (!SHA.test(tree.sha ?? "")) return uncertain("new_tree_not_confirmed");
 
@@ -201,7 +216,7 @@ export async function attemptSignedGlobalAdmission({
       return uncertain("global_ref_update_unconfirmed");
 
     stage = "confirm";
-    const verified = await observeGlobalAdmissionSnapshot(readClient);
+    const verified = await observeGlobalAdmissionSnapshot(readClient, verificationKey);
     if (verified.status !== "snapshot_verified" ||
         verified.headSha !== commit.sha ||
         canonicalize(verified.registry) !== canonicalize(next))
