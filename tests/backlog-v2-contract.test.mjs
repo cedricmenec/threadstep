@@ -76,8 +76,9 @@ test("factory V2 task descriptions are explicitly manual", () => {
 
 test("historical backlog tasks never claim automatic eligibility", () => {
   const dir = new URL("backlog/tasks/", root);
-  const files = readdirSync(dir).filter(name => /^TS-\d{3}\.md$/.test(name));
-  assert.ok(files.length > 0, "expected existing historical tasks");
+  const files = readdirSync(dir).filter(name => /^TS-\d{3}\.md$/.test(name) &&
+    Number(name.slice(3, 6)) >= 1 && Number(name.slice(3, 6)) <= 11);
+  assert.equal(files.length, 11, "expected the original eleven migrated tasks");
   for (const file of files) {
     const text = readFileSync(new URL(file, dir), "utf8");
     assert.doesNotMatch(text, /^automation:\s*allowed\s*$/im, file);
