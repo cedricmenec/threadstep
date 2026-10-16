@@ -122,3 +122,9 @@ Le read-back qui suit le PATCH exige désormais que l'état soit rejoué **et qu
 - Le témoin reste sur la même branche Git et au même SHA que le registre ; il s'agit d'une cohérence vérifiable et non d'un registre immuable hébergé par une autorité externe.
 
 En conséquence : **la traçabilité est améliorée, mais l'activation V3 reste bloquée** jusqu'à approbation de l'issuer, de son ancre de clé, de l'initialisation du ref et des permissions.
+
+### Durcissement de la libération non attestée
+
+La vérification des seuls témoins `ADMIT` n'est pas suffisante : un writer abusif pourrait insérer un `RELEASE` de forme valide et des compteurs de fin inventés, ce qui rendrait `AVAILABLE` une vague non réellement livrée. **Le lecteur signé de cette version refuse donc tout événement autre que `ADMIT`** (`RELEASE`, `QUARANTINE`, `DIAGNOSTIC_NOTE`), même si le rejeu de la machine pure est correct. Cette restriction est volontaire : une future PR, avec décision propriétaire spécifique, devra créer et authentifier les preuves de clôture et de quarantaine avant de permettre ces transitions. Sans ce protocole, aucune seconde vague ne peut être ouverte après la première ; le prototype n'est pas exploitable comme ordonnanceur complet.
+
+Un test adversarial construit un véritable successeur Git simulé portant un `RELEASE` non signé après une admission portant un témoin Ed25519 authentique : le nouvel instantané est refusé, et aucun second `PATCH` d'admission n'est émis.
