@@ -150,5 +150,17 @@
     ],
     "created_at": "2026-10-15",
     "content_sha256": "67f79aa93ca88c71188714044ef2d411b7fd7ea0b49444b0cdc56e9b550f7e60"
+  },
+  {
+    "id": "TS-012",
+    "path": "backlog/tasks/TS-012.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "allowed",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-10-16",
+    "content_sha256": "b4c73ecdc30b7d051d21a1ea8859538f904b5ac64924733d5e230c025255357d"
   }
 ]
