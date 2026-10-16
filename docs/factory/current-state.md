@@ -247,3 +247,26 @@ tests/asf-scheduler-dry-run.test.mjs` → 16 tests réussis, puis `npm run check
 n'est pas fusionnée avec une CI `check` indépendante réussie sur le bon SHA,
 cette CLI ne doit pas être décrite comme livrée sur `main`, et aucun appel
 OpenRouter payant n'a été effectué pour cette tâche.
+
+## Manifeste immuable, journal durable et quotas ASF-V2-006 (en revue, non fusionné)
+
+[ASF-V2-006](tasks/ASF-V2-006.md) ajoute le [manifeste immuable, le journal
+durable et les quotas](wave-manifest-journal.md) sous `scripts/asf/waves/` :
+création d'un manifeste figé et gelé (SHA source, candidates + hash, identité de
+vague, allowlist de modèle, `limits` `1..2`/`1`/`0`, `openspec`, `auto_merge`,
+référence d'autorisation sans secret), journal append-only à états (`SELECTED`,
+`DISPATCH_RESERVED`, `EXECUTING`, `PR_PUBLISHED`, `CI_PENDING`, `MERGE_PENDING`,
+`DELIVERED`, `FAILED`, `UNKNOWN`), réservation du quota **avant** dispatch et
+arrêt au premier échec. Le stockage durable simulé applique une comparaison de
+SHA attendu (compare-and-swap) ; les fenêtres de crash avant, pendant et après
+dispatch ainsi que les conflits de mise à jour sont testés sans paiement. Une
+issue de dispatch incertaine produit `STOP_UNCERTAIN` et interdit tout second
+dispatch automatique. Preuve locale uniquement : `node --test
+tests/asf-waves-manifest.test.mjs` → 9 tests réussis, `node --test
+tests/asf-waves-journal.test.mjs` → 18 tests réussis, puis `npm run check` → 210
+tests réussis, `backlog:check` (11 actifs, 0 archivé), `node --check` sur
+`site/core.js` et `site/app.js`. Aucun workflow n'est modifié. Tant que la PR
+n'est pas fusionnée avec une CI `check` indépendante réussie sur le bon SHA, ce
+manifeste, ce journal et ce moteur de quota ne doivent pas être décrits comme
+livrés sur `main`, et aucun appel OpenRouter payant n'a été effectué pour cette
+tâche.
