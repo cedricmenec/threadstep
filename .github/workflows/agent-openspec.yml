@@ -96,9 +96,9 @@ jobs:
           # Manual dispatch stays owner-only; a reusable call must prove
           # immutable wave authorization and one reserved paid task first.
           if [[ -n "${ASF_WAVE_ID:-}" || -n "${ASF_PARENT_RUN_ID:-}" || -n "${ASF_RESERVATION_SHA:-}" ]]; then
-            test -n "${ASF_WAVE_ID:-}" && test -n "${ASF_PARENT_RUN_ID:-}" && test -n "${ASF_RESERVATION_SHA:-}" || {
-              echo "::error::Incomplete orchestrated authorization"; exit 1;
-            }
+            if [[ -z "${ASF_WAVE_ID:-}" || -z "${ASF_PARENT_RUN_ID:-}" || -z "${ASF_RESERVATION_SHA:-}" ]]; then
+              echo "::error::Incomplete orchestrated authorization"; exit 1
+            fi
             TASK_ID="$task_id" node scripts/asf/waves/authenticate-executor.mjs
           elif [[ "$GITHUB_WORKFLOW_REF" != "$GITHUB_REPOSITORY/.github/workflows/agent-openspec.yml@$GITHUB_REF" ]]; then
             echo "::error::Unrecognized workflow caller without a verified reservation"; exit 1
