@@ -1,5 +1,15 @@
 # Recette E2E progressive et mise en service contrôlée (ASF-V2-011)
 
+## Statut opérationnel actualisé — 16 octobre 2026
+
+La recette **simulée** décrite plus bas a été **fusionnée** dans [PR #53](https://github.com/cedricmenec/threadstep/pull/53). Les deux phases **réelles** initialement marquées « non exécutées » ont désormais abouti :
+
+- [Pilote 1/1, run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283), PR #55, journal `wave-38886939283` en `DELIVERED`.
+- [Vague 2/2, run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187), PR #58/#59, journal `wave-38910657187` avec deux `DELIVERED`, `stop: null`, vérification CI + Pages après la première avant le second slot.
+
+**Reste non testé réellement** : refus de fusion sur `check` rouge en conditions GitHub, revue finale des permissions et recette manuelle produit. L'ancien protocole ci-dessous est conservé comme historique **avant** les runs ; voir [recette et reprise actuelles](validation-and-recovery.md) pour l'état et les actions de clôture.
+
+
 **Statut :** recette **simulée** livrée dans la PR de la tâche, **non fusionnée**
 et **non vérifiée par une CI GitHub indépendante**. Les phases payantes (pilote,
 vague à deux tâches, CI rouge réel) restent **non exécutées** et exigent une

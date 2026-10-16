@@ -1,9 +1,13 @@
 # MVP specification
 
-**État : 15 octobre 2026.** Les fonctions FR-02 (annulation du retrait)
-et FR-15 (ordre manuel à priorité égale) sont livrées par les
-[PR #32](https://github.com/cedricmenec/threadstep/pull/32) et
-[PR #34](https://github.com/cedricmenec/threadstep/pull/34).
+**État : 16 octobre 2026.** Les fonctions FR-02/15 sont livrées par
+les PR #32/#34. FR-16 (repli et nombre de sous-tâches, TS-012/TS-013)
+et FR-17 (réordonnancement des sous-tâches TS-014) sont livrées par
+[PR #55](https://github.com/cedricmenec/threadstep/pull/55),
+[PR #58](https://github.com/cedricmenec/threadstep/pull/58) et
+[PR #59](https://github.com/cedricmenec/threadstep/pull/59). CI et Pages
+post-fusion ont réussi ; recette manuelle
+[à effectuer séparément](acceptance-checklist.md).
 Le comportement utilisateur est détaillé dans
 [le guide d'utilisation](guide-utilisation.md). Les spécifications
 canoniques sont dans `openspec/specs/action-removal/` et
@@ -56,7 +60,7 @@ canoniques sont dans `openspec/specs/action-removal/` et
 
 ## Delivery verification and remaining manual checks
 
-- Merged product PRs: [TS-010 #32](https://github.com/cedricmenec/threadstep/pull/32) and [TS-011 #34](https://github.com/cedricmenec/threadstep/pull/34).
-- [Post-merge CI on main](https://github.com/cedricmenec/threadstep/actions/runs/38755434920): 97 Node tests passed; Actionlint and strict OpenSpec validations passed.
-- [GitHub Pages deployment](https://github.com/cedricmenec/threadstep/actions/runs/38755434958): successful.
+- Merged product PRs: [TS-010 #32](https://github.com/cedricmenec/threadstep/pull/32), [TS-011 #34](https://github.com/cedricmenec/threadstep/pull/34), [TS-012 #55](https://github.com/cedricmenec/threadstep/pull/55), [TS-013 #58](https://github.com/cedricmenec/threadstep/pull/58), [TS-014 #59](https://github.com/cedricmenec/threadstep/pull/59).
+- [Post-merge CI on main](https://github.com/cedricmenec/threadstep/actions/runs/38912890270): success on TS-014 merge commit `97d326c5b262622f8146348f385eb1e0d838829c`.
+- [GitHub Pages deployment](https://github.com/cedricmenec/threadstep/actions/runs/38912890267): successful on the same merge commit.
 - These automated checks do **not** establish a complete manual touch-device, focus/keyboard or screen-reader acceptance campaign. That remains a user validation activity, not a reason to describe TS-010/011 as unimplemented.

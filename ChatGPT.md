@@ -36,6 +36,9 @@
 | Règles applicables aux agents et aux changements | [`AGENTS.md`](AGENTS.md) |
 | Statut **vérifié** de la factory, preuves et limites | [`docs/factory/current-state.md`](docs/factory/current-state.md) |
 | Carte de la factory et documentation de référence | [`docs/factory/README.md`](docs/factory/README.md) |
+| Développer et maintenir la factory ASF V2 | [`docs/factory/developer-guide.md`](docs/factory/developer-guide.md), [`docs/factory/validation-and-recovery.md`](docs/factory/validation-and-recovery.md) |
+| Orchestration owner-only 1..2 tâches ; envisager 1..10 | [`docs/factory/backlog-orchestrator-manual.md`](docs/factory/backlog-orchestrator-manual.md), [`docs/factory/scale-to-ten.md`](docs/factory/scale-to-ten.md) |
+| Guide développeur et recette ThreadStep | [`docs/product/developer-guide.md`](docs/product/developer-guide.md), [`docs/product/acceptance-checklist.md`](docs/product/acceptance-checklist.md) |
 | Exécution OpenSpec et commande de lancement | [`docs/factory/openspec-manual-pilot.md`](docs/factory/openspec-manual-pilot.md) |
 | Procédure GitHub, permissions, CI et fusion | [`docs/factory/github-autonomy-and-security.md`](docs/factory/github-autonomy-and-security.md) |
 | Méthode, architecture, décisions et suite | [`docs/factory/operating-methodology.md`](docs/factory/operating-methodology.md), [`technical-architecture.md`](docs/factory/technical-architecture.md), [`decisions.md`](docs/factory/decisions.md), [`roadmap.md`](docs/factory/roadmap.md) |
@@ -144,6 +147,7 @@ les paramètres : les options, modèles et valeurs par défaut peuvent changer.*
 | Action GitHub | Définition (source de vérité) | Rôle |
 | --- | --- | --- |
 | **Agent (manual, OpenRouter)** | [`.github/workflows/agent.yml`](.github/workflows/agent.yml) | Implémentation directe depuis le backlog, **sans OpenSpec**. Tâche au format complet, modèle et option de fusion. |
+| **Backlog Orchestrator V1 (owner, bounded wave)** | [`.github/workflows/backlog-orchestrator.yml`](.github/workflows/backlog-orchestrator.yml) | `dry-run` gratuit ou `execute` explicitement autorisé ; `max_tasks=1|2`, une tâche à la fois, preuve de CI/Pages post-fusion entre tâches. |
 | **Agent OpenSpec (manual, staged or auto)** | [`.github/workflows/agent-openspec.yml`](.github/workflows/agent-openspec.yml) | Développement spec-driven : `plan`, `apply`, `auto`, `finalize`. Normalisation des numéros courts (`11` → `TS-011`) si cette capacité reste activée dans le YAML. |
 | **CI** | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) | Contrôle indépendant sur PR et `main` : tests, syntaxe GitHub Actions, validation OpenSpec. Ne lance pas OpenRouter. |
 | **Pages** | [`.github/workflows/pages.yml`](.github/workflows/pages.yml) | Vérifie puis publie le site statique depuis `main`. |
