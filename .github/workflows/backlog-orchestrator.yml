@@ -1,0 +1,201 @@
+name: Backlog Orchestrator V1 (owner, bounded wave)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "execute authorizes a bounded paid wave; dry-run never spends"
+        required: true
+        type: choice
+        default: execute
+        options:
+          - execute
+          - dry-run
+      max_tasks:
+        description: "Maximum paid task starts, never successful deliveries"
+        required: true
+        type: choice
+        default: "2"
+        options:
+          - "1"
+          - "2"
+      model:
+        description: "Only approved OpenRouter models can be used"
+        required: true
+        type: choice
+        default: "openrouter/deepseek/deepseek-v4.1-flash"
+        options:
+          - "openrouter/deepseek/deepseek-v4.1-flash"
+          - "openrouter/z-ai/glm-5.3-flash"
+      auto_merge:
+        description: "Only native merge after required independent CI, never bypass"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# The parent must not take the child paid-development lock.
+concurrency:
+  group: threadstep-asf-parent-wave-v1
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.actor == github.repository_owner && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      checks: read
+    outputs:
+      wave_id: ${{ steps.wave.outputs.wave_id }}
+      task_id: ${{ steps.wave.outputs.task_id }}
+      reservation_sha: ${{ steps.wave.outputs.reservation_sha }}
+      decision: ${{ steps.wave.outputs.decision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Mint limited installation token for execute only
+        id: app-token
+        if: inputs.mode == 'execute'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Validate owner policy, snapshot, GitHub state, then reserve
+        id: wave
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASF_GIT_TOKEN: ${{ steps.app-token.outputs.token }}
+          ASF_MODE: ${{ inputs.mode }}
+          ASF_MAX_TASKS: ${{ inputs.max_tasks }}
+          ASF_MODEL: ${{ inputs.model }}
+          ASF_AUTO_MERGE: ${{ inputs.auto_merge }}
+        run: |
+          set -euo pipefail
+          node scripts/asf/waves/orchestrate.mjs prepare
+
+  first:
+    needs: prepare
+    if: inputs.mode == 'execute' && needs.prepare.outputs.decision == 'SELECT'
+    uses: ./.github/workflows/agent-openspec.yml
+    permissions:
+      contents: read
+      actions: read
+    with:
+      task_id: ${{ needs.prepare.outputs.task_id }}
+      phase: auto
+      auto_merge: ${{ inputs.auto_merge }}
+      model: ${{ inputs.model }}
+      wave_id: ${{ needs.prepare.outputs.wave_id }}
+      parent_run_id: ${{ github.run_id }}
+      reservation_sha: ${{ needs.prepare.outputs.reservation_sha }}
+    secrets: inherit
+
+  after_first:
+    needs: [prepare, first]
+    if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.decision == 'SELECT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      checks: read
+    outputs:
+      task_id: ${{ steps.wave.outputs.task_id }}
+      wave_id: ${{ steps.wave.outputs.wave_id }}
+      reservation_sha: ${{ steps.wave.outputs.reservation_sha }}
+      decision: ${{ steps.wave.outputs.decision }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Mint temporary journal-writer token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Verify actual delivery and deterministically reserve next task
+        id: wave
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASF_GIT_TOKEN: ${{ steps.app-token.outputs.token }}
+          ASF_CHILD_RESULT: ${{ needs.first.result }}
+          ASF_TASK_ID: ${{ needs.prepare.outputs.task_id }}
+          ASF_SLOT: "1"
+        run: |
+          set -euo pipefail
+          node scripts/asf/waves/orchestrate.mjs settle
+
+  second:
+    needs: [prepare, after_first]
+    if: inputs.mode == 'execute' && needs.after_first.outputs.decision == 'SELECT'
+    uses: ./.github/workflows/agent-openspec.yml
+    permissions:
+      contents: read
+      actions: read
+    with:
+      task_id: ${{ needs.after_first.outputs.task_id }}
+      phase: auto
+      auto_merge: ${{ inputs.auto_merge }}
+      model: ${{ inputs.model }}
+      wave_id: ${{ needs.after_first.outputs.wave_id }}
+      parent_run_id: ${{ github.run_id }}
+      reservation_sha: ${{ needs.after_first.outputs.reservation_sha }}
+    secrets: inherit
+
+  after_second:
+    needs: [prepare, after_first, second]
+    if: always() && needs.after_first.result == 'success' && needs.after_first.outputs.decision == 'SELECT'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Mint temporary journal-writer token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Verify the second delivery and close the wave
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASF_GIT_TOKEN: ${{ steps.app-token.outputs.token }}
+          ASF_CHILD_RESULT: ${{ needs.second.result }}
+          ASF_TASK_ID: ${{ needs.after_first.outputs.task_id }}
+          ASF_SLOT: "2"
+        run: |
+          set -euo pipefail
+          node scripts/asf/waves/orchestrate.mjs settle
