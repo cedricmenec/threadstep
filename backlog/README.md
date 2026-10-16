@@ -103,3 +103,19 @@ Procédure de recette : après fusion de la PR documentaire et CI sur
 séparément l'autorisation du premier `mode=execute`,
 `max_tasks=1`, avec coût et fusion contrôlés. Ne pas activer une vague
 de deux tâches pour cette seule fiche.
+
+## Deuxième pilote ASF : vague de deux tâches indépendantes
+
+[TS-013](tasks/TS-013.md) — remplacer le texte du bouton de repli par
+« Voir N sous-tâches » quand les enfants sont masqués et
+« Masquer les sous-tâches » quand ils sont affichés.
+La nouvelle tâche est `product / ready / allowed / low`, indépendante
+des autres développements en attente (`depends_on: []`).
+
+Une **deuxième PR documentaire** ajoutera TS-014, réordonnancement des
+enfants de même parent et de même priorité. Après fusion **des deux PR**,
+attendre la **CI et Pages sur le dernier commit de main** avant le dry-run,
+puis valider que le scheduler choisit TS-013 avant TS-014.
+Ne lancer la vague payante `max_tasks=2` qu'après cette validation
+et sur autorisation explicite du propriétaire : `ready` et `allowed`
+ne valent pas consentement à payer ou fusionner.
