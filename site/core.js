@@ -43,6 +43,21 @@ export function isItemVisible(item, items, hideCompleted) {
 export function visibleItems(items, parentId = null, hideCompleted = false) {
   return sortedItems(items, parentId).filter((item) => isItemVisible(item, items, hideCompleted));
 }
+export function substepView(items, parentId, hideCompleted, collapsedIds) {
+  if (parentId === null || parentId === undefined) {
+    return { children: [], hasVisibleSubsteps: false, collapsed: false, renderChildren: false };
+  }
+  const children = visibleItems(items, parentId, hideCompleted);
+  const hasVisibleSubsteps = children.length > 0;
+  const collapsed = hasVisibleSubsteps && collapsedIds instanceof Set && collapsedIds.has(parentId);
+  return { children, hasVisibleSubsteps, collapsed, renderChildren: hasVisibleSubsteps && !collapsed };
+}
+export function toggleCollapsedParent(collapsedIds, parentId) {
+  const next = collapsedIds instanceof Set ? new Set(collapsedIds) : new Set();
+  if (next.has(parentId)) next.delete(parentId);
+  else next.add(parentId);
+  return next;
+}
 export function reorderWithinPriority(items, itemId, targetId, position) {
   if (!Array.isArray(items)) return items;
   if (position !== "before" && position !== "after") return items;

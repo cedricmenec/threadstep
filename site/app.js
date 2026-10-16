@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -20,6 +20,8 @@ let hideCompleted = false;
 let resumeRef = null;
 let documentLoaded = false;
 let pendingMoveFocus = null;
+let pendingCollapseFocus = null;
+let collapsedParents = new Set();
 let dragState = null;
 
 const UNDO_WINDOW_MS = 10000;
@@ -117,6 +119,17 @@ function applyFocus() {
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
     const target = card && card.querySelector(".task-edit");
     focusItemId = null;
+    if (target) {
+      target.focus();
+      if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
+    }
+    return;
+  }
+  if (pendingCollapseFocus) {
+    const itemId = pendingCollapseFocus;
+    pendingCollapseFocus = null;
+    const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
+    const target = card && card.querySelector(".task-toggle");
     if (target) {
       target.focus();
       if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
@@ -377,19 +390,23 @@ function renderSubject(subject) {
   card.append(list);
   return card;
 }
+function substepListId(itemId) {
+  return "substeps-" + encodeURIComponent(String(itemId));
+}
 function renderItem(subject, item) {
   const li = el("li", "task" + (item.done ? " done" : "") + (revealItemId === item.id ? " reveal" : ""));
   li.dataset.item = item.id;
+  const view = substepView(subject.items, item.id, hideCompleted, collapsedParents);
   if (editingItemId === item.id) {
     li.append(renderEditor(subject, item));
   } else {
     li.append(renderRow(subject, item));
-    li.append(renderActions(subject, item));
+    li.append(renderActions(subject, item, view));
   }
-  const children = visibleItems(subject.items, item.id, hideCompleted);
-  if (children.length) {
+  if (view.renderChildren) {
     const list = el("ul", "tasks children");
-    for (const child of children) list.append(renderItem(subject, child));
+    list.id = substepListId(item.id);
+    for (const child of view.children) list.append(renderItem(subject, child));
     li.append(list);
   }
   return li;
@@ -532,9 +549,23 @@ function cancelDrag(event) {
   releaseDrag(state, pointerId);
   notify("Déplacement annulé");
 }
-function renderActions(subject, item) {
+function renderSubstepToggle(item, view) {
+  const toggle = el("button", "subtle task-toggle", view.collapsed ? "Déplier" : "Replier");
+  toggle.type = "button";
+  toggle.setAttribute("aria-expanded", view.collapsed ? "false" : "true");
+  toggle.setAttribute("aria-label", (view.collapsed ? "Déplier" : "Replier") + " les sous-étapes de « " + item.title + " »");
+  if (view.renderChildren) toggle.setAttribute("aria-controls", substepListId(item.id));
+  toggle.addEventListener("click", () => {
+    collapsedParents = toggleCollapsedParent(collapsedParents, item.id);
+    pendingCollapseFocus = item.id;
+    render();
+  });
+  return toggle;
+}
+function renderActions(subject, item, view) {
   const actions = el("div", "task-actions");
   if (item.parentId === null) actions.append(renderReorderControls(subject, item));
+  if (item.parentId === null && view && view.hasVisibleSubsteps) actions.append(renderSubstepToggle(item, view));
   const edit = el("button", "subtle task-edit", "Modifier");
   edit.type = "button";
   edit.setAttribute("aria-label", "Modifier " + item.title);
@@ -681,6 +712,8 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     const incoming = parseDocument(await file.text());
     if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
     invalidatePendingRemoval();
+    collapsedParents = new Set();
+    pendingCollapseFocus = null;
     documentState = incoming;
     documentLoaded = true;
     persist();
