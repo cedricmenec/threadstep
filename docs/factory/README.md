@@ -73,3 +73,7 @@ L'intégration ajoute une entrée réutilisable `workflow_call` pour le futur or
 ## Orchestrateur V1 (ASF-V2-009)
 
 [Mode opératoire Backlog Orchestrator](backlog-orchestrator-manual.md) et [tâche 009](tasks/ASF-V2-009.md). Cette implémentation n'autorise aucun lancement OpenRouter par elle-même ; les prochains essais réels nécessitent une validation distincte.
+
+## Livraison (ASF-V2-010)
+
+[Archiveur déterministe et PR documentaire](agent-asf-archive.md) et [tâche 010](tasks/ASF-V2-010.md). Le noyau pur (`scripts/asf/archive/core.mjs`) archive uniquement les livraisons vérifiées, en une seule PR documentaire, sans cocher les cases historiques ni rendre une tâche `archive_pending` réexécutable. La garde de fusion conserve des familles de branches séparées (`agent/...` vs `asf/archive/...`) et les mêmes prérequis `Protect Main`/`check`. Implémentation **en revue dans sa PR** ; couverture par `tests/asf-archive.test.mjs` (17 tests) et `npm run check` local (265 tests), sans preuve de CI GitHub indépendante ni de fusion. Aucun lancement OpenRouter n'est autorisé par cette tâche.
