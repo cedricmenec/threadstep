@@ -271,3 +271,20 @@ test("no-work close requires an idle wave; compatibility keeps V1 max 2", () => 
   });
   assert.equal(v1.ok, false, "V1 must reject a ten-task manifest");
 });
+
+test("forged manifest policy and event payloads cannot be reinterpreted as authority", () => {
+  const m = manifest(10);
+  const journal = createV3Journal(m);
+  mustReject(() => createV3Journal({
+    ...m, limits: { ...m.limits, maxPaidRetries: 1 }
+  }), "invalid_manifest_policy");
+  mustReject(() => createV3Journal({
+    ...m, model: "openrouter/attacker/unknown-model"
+  }), "invalid_model");
+  mustReject(() => event(m, journal, {
+    type: "RESERVE", taskId: "TS-001", proof: { token: "not-allowed" }
+  }), "invalid_or_unknown_fields");
+  mustReject(() => event(m, journal, {
+    type: "RESERVE", taskId: "TS-001", reason: "hiding_data"
+  }), "invalid_or_unknown_fields");
+});
