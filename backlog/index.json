@@ -205,10 +205,10 @@
     "type": "product",
     "status": "ready",
     "priority": "high",
-    "automation": "manual",
+    "automation": "allowed",
     "risk": "medium",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "9d9e483170ed5f20656b693d7f5103c11daa045d29f4dc207d330ad12b39669c"
+    "content_sha256": "4e55bf472d07f97d9f73a651f7cb545a4c4783e04a4377bb64af25d5bd699c60"
   }
 ]
