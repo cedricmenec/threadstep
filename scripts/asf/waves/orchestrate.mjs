@@ -37,6 +37,10 @@ function invoke(command,args,{binary=false}={}){
  });
 }
 function git(...args){return invoke("git",args).trim();}
+function gitIdentity(){
+ git("config","user.name","threadstep-software-factory[bot]");
+ git("config","user.email","threadstep-software-factory[bot]@users.noreply.github.com");
+}
 function api(path){demand(process.env.GH_TOKEN,"read-only GH_TOKEN required");return JSON.parse(invoke("gh",["api",path]));}
 function push(branch,expectedSha=null){
  const token=process.env.ASF_GIT_TOKEN;
@@ -126,12 +130,15 @@ function checkStatus(sha){
  if(checks.length && checks.some(c=>c.status==="completed"))return "failed";
  return "unknown";
 }
-function mergeDelivery(pr){
+function mergeDelivery(pr,id){
  demand(pr && pr.number && SHA.test(pr.merge_commit_sha??""),"merge commit missing");
  const full=api("repos/"+process.env.GITHUB_REPOSITORY+"/pulls/"+pr.number);
  demand(full?.merged===true && full.state==="closed" && full.base?.ref==="main" &&
    full.head?.repo?.full_name===process.env.GITHUB_REPOSITORY &&
-   full.user?.login===APP && SHA.test(full.head?.sha??"") &&
+   full.user?.login===APP &&
+   ((full.title==="OpenSpec: "+id && full.head?.ref==="agent/openspec/"+id) ||
+    (full.title==="Agent: "+id && full.head?.ref==="agent/"+id)) &&
+   SHA.test(full.head?.sha??"") &&
    typeof full.merged_at==="string","merged PR identity is not trustworthy");
  // Both checks must have the expected GitHub Actions provenance.
  const head=checkStatus(full.head.sha),main=checkStatus(full.merge_commit_sha);
@@ -163,13 +170,16 @@ export function assessTask(id,prs){
  const unmerged=matching.filter(pr=>pr.state==="closed"&&!pr.merged_at);
  if(merged.length>1||unmerged.length)return {status:"unknown"};
  if(!merged.length)return {status:"clear"};
- const proof=mergeDelivery(merged[0]);
+ const proof=mergeDelivery(merged[0],id);
  return proof.status==="verified"
    ? {status:"verified",proof:{pr:proof.pr.number,mergeSha:proof.pr.merge_commit_sha}}
    : {status:proof.status};
 }
 function gatherEvidence(snapshot,candidates,journal){
  const prs=listAllPrs();
+ // There may be only one active PR repo-wide during a wave. Other PRs
+ // cannot be silently treated as absent engineering conflicts.
+ demand(!prs.some(pr=>pr.state==="open"),"open PR exists; explicit reconciliation required");
  const ids=new Set(candidates.map(x=>x.id));
  for(const id of [...ids]){
   const card=snapshot.active.find(x=>x.id===id);
@@ -226,6 +236,7 @@ function reserve(manifest,snapshot,journal){
 }
 function waveBranch(waveId){demand(WAVE.test(waveId),"invalid wave id");return "asf/waves/"+waveId;}
 function saveInitial(manifest,journal){
+ gitIdentity();
  const branch=waveBranch(manifest.waveId);
  git("checkout","-b",branch);
  writeFileSync("manifest.json",JSON.stringify(manifest,null,2)+"\n");
@@ -251,6 +262,7 @@ function loadCommitted(context){
  return {branch,sha,manifest,journal};
 }
 function saveUpdate(state,journal){
+ gitIdentity();
  writeFileSync("journal.json",JSON.stringify(journal,null,2)+"\n");
  git("add","journal.json");
  git("commit","-m","chore(asf): checkpoint "+state.manifest.waveId+" revision "+journal.revision);
@@ -315,7 +327,7 @@ async function settle(taskId,result){
    fail("ambiguous or incomplete OpenSpec PR");
   }
   if(merged.length===1){
-   const outcome=mergeDelivery(merged[0]);
+   const outcome=mergeDelivery(merged[0],taskId);
    if(outcome.status==="verified"){delivery=outcome.pr;break;}
    if(outcome.status==="failed"){
     journal=record(journal,WAVE_EVENT.FAILED,taskId,{reason:"ci_or_pages_failed"});
