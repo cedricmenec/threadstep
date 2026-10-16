@@ -62,6 +62,117 @@ export function validateAsfDelivery(dep, repository, evidence) {
   return Object.freeze({task:dep,pr:pr.number,headSha,mergeSha,runId});
 }
 
+
+/**
+ * Explicit, immutable review ledger for the two sensitive ASF tasks that could
+ * not be delegated to the OpenRouter factory agent. This is a trusted source
+ * file, NOT a task-editable Markdown flag or user-supplied PR number.
+ *
+ * Each entry pins the reviewed PR, original head SHA, branch and merge SHA.
+ * GitHub remains the source of truth for actual merge, checks and deployment.
+ * Extending this ledger requires a distinct, CI-gated review on protected main.
+ */
+export const TRUSTED_MANUAL_DELIVERIES = Object.freeze({
+  "ASF-V2-008": Object.freeze({
+    prNumber: 49,
+    title: "feat(asf): ASF-V2-008, authentifier OpenSpec orchestré et verrouiller les jobs payants",
+    branch: "feat/asf-v2-008-secure-openspec-orchestrated",
+    headSha: "a2589a2dcf3601eb69bb9aacbed1c916e8c2312b",
+    mergeSha: "3282e27053b107c8b69ba660a58f67b3b0d1ece3"
+  }),
+  "ASF-V2-009": Object.freeze({
+    prNumber: 50,
+    title: "feat(asf): ASF-V2-009, orchestrateur de vagues bornées et contrôlées",
+    branch: "feat/asf-v2-009-bounded-orchestrator",
+    headSha: "ae2ac09696c04b0151465dbad6c393c7df8b5057",
+    mergeSha: "a3abd31f3b09265563255b7aef56089d082ab50f"
+  })
+});
+
+function hasIndependentCheck(checks, sha) {
+  return Array.isArray(checks) && checks.some(c =>
+    c?.name === "check" && c?.head_sha === sha &&
+    c?.status === "completed" && c?.conclusion === "success" &&
+    c?.app?.slug === "github-actions" && c?.app?.id === 15368);
+}
+
+/**
+ * Pure validator for reviewed sensitive PRs. The registry pins the identity,
+ * while each read-only GitHub observation proves the delivery is still real.
+ * An agent-created or merely similarly titled PR can never satisfy this path.
+ */
+export function validateTrustedManualDelivery(dep, repository, evidence) {
+  const approved = TRUSTED_MANUAL_DELIVERIES[dep];
+  if (!approved || repository !== "cedricmenec/threadstep") {
+    throw new Error("Manual ASF dependency is not explicitly approved: " + dep);
+  }
+  const { pullRequests, headChecks, mainChecks, mainRuns, comparison } = evidence ?? {};
+  if (!Array.isArray(pullRequests) || pullRequests.length !== 1 ||
+      !Array.isArray(headChecks) || !Array.isArray(mainChecks) ||
+      !Array.isArray(mainRuns) || !comparison) {
+    throw new Error("Incomplete or ambiguous manual ASF GitHub evidence: " + dep);
+  }
+  const pr = pullRequests[0];
+  const owner = repository.split("/")[0];
+  if (pr?.number !== approved.prNumber || pr?.title !== approved.title ||
+      pr?.state !== "closed" || pr?.merged !== true ||
+      typeof pr?.merged_at !== "string" || !pr.merged_at ||
+      pr?.base?.ref !== "main" || pr?.base?.repo?.full_name !== repository ||
+      pr?.head?.repo?.full_name !== repository ||
+      pr?.head?.ref !== approved.branch || pr?.head?.sha !== approved.headSha ||
+      pr?.merge_commit_sha !== approved.mergeSha ||
+      pr?.user?.login !== owner || pr?.merged_by?.login !== owner) {
+    throw new Error("Manual ASF PR identity or review evidence does not match: " + dep);
+  }
+  if (!hasIndependentCheck(headChecks, approved.headSha) ||
+      !hasIndependentCheck(mainChecks, approved.mergeSha)) {
+    throw new Error("Required independent check not verified for manual ASF delivery: " + dep);
+  }
+  if (!["ahead", "identical"].includes(comparison.status)) {
+    throw new Error("Manual ASF merge SHA is not in main history: " + dep);
+  }
+  for (const name of ["CI", "Pages"]) {
+    if (!mainRuns.some(run =>
+      run?.name === name && run?.head_sha === approved.mergeSha &&
+      run?.event === "push" && run?.status === "completed" &&
+      run?.conclusion === "success" && typeof run?.created_at === "string" &&
+      run.created_at >= pr.merged_at)) {
+      throw new Error("Post-merge " + name + " not verified for manual ASF delivery: " + dep);
+    }
+  }
+  return Object.freeze({
+    task: dep, pr: approved.prNumber, headSha: approved.headSha,
+    mergeSha: approved.mergeSha, mode: "trusted_manual_review"
+  });
+}
+
+/** Live read-only checks for exactly the pinned, reviewed sensitive PR. */
+export function verifyTrustedManualFromGithub(dep, repo) {
+  const pinned = TRUSTED_MANUAL_DELIVERIES[dep];
+  if (!pinned || repo !== "cedricmenec/threadstep") {
+    throw new Error("No trusted manual delivery for dependency: " + dep);
+  }
+  const pr = api("repos/" + repo + "/pulls/" + pinned.prNumber);
+  // Validate identity *before* fetching dependent resources.
+  if (pr?.number !== pinned.prNumber || pr?.head?.sha !== pinned.headSha ||
+      pr?.merge_commit_sha !== pinned.mergeSha || pr?.merged !== true) {
+    throw new Error("Trusted manual PR identity differs from reviewed evidence: " + dep);
+  }
+  const main = api("repos/" + repo + "/actions/runs?head_sha=" + pinned.mergeSha +
+    "&event=push&per_page=100");
+  if (!Array.isArray(main.workflow_runs) || !Number.isInteger(main.total_count) ||
+      main.total_count > 100) {
+    throw new Error("Incomplete post-merge manual ASF run evidence: " + dep);
+  }
+  return validateTrustedManualDelivery(dep, repo, {
+    pullRequests: [pr],
+    headChecks: checks(repo, pinned.headSha),
+    mainChecks: checks(repo, pinned.mergeSha),
+    mainRuns: main.workflow_runs,
+    comparison: api("repos/" + repo + "/compare/" + pinned.mergeSha + "...main")
+  });
+}
+
 function api(path) {
   const out = execFileSync("gh", ["api", path], {
     encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000,
@@ -95,6 +206,9 @@ function checks(repo, sha) {
 }
 
 export function verifyFromGithub(dep, repo) {
+  if (Object.hasOwn(TRUSTED_MANUAL_DELIVERIES, dep)) {
+    return verifyTrustedManualFromGithub(dep, repo);
+  }
   const pr = findMergedAsfPr(dep, repo);
   const ref = /^agent\/asf\/ASF-V2-0(?:0[1-9]|1[01])-run-(\d+)$/.exec(pr.head?.ref ?? "");
   if (!ref || !SHA.test(pr.head?.sha ?? "") || !SHA.test(pr.merge_commit_sha ?? "")) {
