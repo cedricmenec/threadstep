@@ -30,7 +30,6 @@ jobs:
     concurrency:
       group: threadstep-paid-development-v1
       cancel-in-progress: false
-      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
