@@ -56,6 +56,8 @@ Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.m
 
 [ASF-V2-004](tasks/ASF-V2-004.md) implémente le [noyau pur du scheduler](scheduler-core.md) (`scripts/asf/scheduler/`) : décision déterministe à entrées injectées (instantané validé, manifeste figé, preuves de livraison/conflit, journal), sans réseau, sans horloge et sans mutation. L'implémentation est **en revue dans sa PR** ; couverture par `tests/asf-scheduler-core.test.mjs` et `npm run check` local, sans preuve de CI GitHub indépendante ni de fusion.
 
+[ASF-V2-005](tasks/ASF-V2-005.md) ajoute la [simulation dry-run](scheduler-dry-run.md) (`scripts/asf/scheduler/dry-run.mjs` et `fixtures.mjs`) : inspection du choix du scheduler sans appel OpenRouter, sans dispatch, sans réservation de quota ni écriture de journal. Elle réutilise le noyau, expose candidates, exclusions et ordre potentiel, et distingue preuve de livraison `verified`, état `unknown` (`STOP_UNCERTAIN`, jamais présumé libre) et projection hypothétique non probante. Implémentation **en revue dans sa PR** ; couverture par `tests/asf-scheduler-dry-run.test.mjs` (16 tests) et `npm run check` local, sans preuve de CI GitHub indépendante ni de fusion.
+
 ## Exécuteur ASF dédié (bootstrap)
 
 Voir [l'exécuteur manuel ASF proposé](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md). Son statut devient opérationnel uniquement après revue, CI, fusion et vérification sur main. Il accepte les tâches de factory ASF-V2 sans affaiblir le workflow ThreadStep TS-NNN.
