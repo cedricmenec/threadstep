@@ -294,3 +294,28 @@ n'est modifié. Tant que la PR n'est pas fusionnée avec une CI `check`
 indépendante réussie sur le bon SHA, cet adaptateur ne doit pas être décrit
 comme livré sur `main`, et aucun appel OpenRouter payant n'a été effectué pour
 cette tâche.
+
+## Recette E2E progressive ASF-V2-011 (recette simulée, en revue, non fusionnée)
+
+[ASF-V2-011](tasks/ASF-V2-011.md) ajoute la [recette E2E progressive](e2e-validation.md)
+(`scripts/asf/fixtures/e2e.mjs`, `tests/asf-e2e-validation.test.mjs`) : six
+scénarios déterministes **hors paiement** qui réutilisent les modules purs
+ASF-V2-004..010 et prouvent la logique de contrôle de l'orchestrateur. Backlog
+vide ⇒ `NO_WORK` et zéro départ ; une dépendance livrée `verified` débloque son
+dépendant dans la même vague figée ; les trois fenêtres de crash sont fermées
+(`DISPATCH` avant, `STOP_UNCERTAIN` pendant `DISPATCH_RESERVED`, `IN_FLIGHT`
+après, jamais de second dispatch) ; une CI rouge simulée n'est **jamais**
+`verified` et produit `STOP_FAILED` sans fusion forcée ; une vague à deux tâches
+réserve exactement deux départs (`QUOTA_REACHED` sur le troisième) avec recalcul
+dynamique ; un accès concurrent est refusé par compare-and-swap et par le verrou
+global de développement payant. Preuve locale : `node scripts/asf/fixtures/e2e.mjs`
+→ 6/6 scénarios OK, `paidCalls = 0`, `dispatches = 0` ; `node --test
+tests/asf-e2e-validation.test.mjs` → 10 tests réussis, puis `npm run check`.
+
+**Non exécuté et non revendiqué** : phases **payantes** (pilote à une tâche,
+vague à deux tâches, cas CI rouge réel), vérification au moment de la recette du
+ruleset `Protect Main`, du `check` requis, des permissions réelles de la GitHub
+App et de l'absence de bypass, CI GitHub indépendante sur le bon SHA, fusion,
+post-fusion `main`/`Pages`, création réelle de PR documentaire. Aucun appel
+OpenRouter payant n'a été effectué pour cette tâche ; la fusion de cette PR
+n'autorise pas ces phases.
