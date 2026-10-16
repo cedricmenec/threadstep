@@ -1,5 +1,16 @@
 # ThreadStep
 
+**Mise à jour : 16 octobre 2026.** ThreadStep comprend maintenant le
+repli « Voir N sous-tâches » / « Masquer les sous-tâches » (TS-012/13)
+et le réordonnancement des sous-tâches par parent/priorité (TS-014).
+Le [guide utilisateur](docs/product/guide-utilisation.md) et la
+[recette](docs/product/acceptance-checklist.md) couvrent ces fonctions.
+La [factory ASF V2](docs/factory/README.md) a livré ses vagues à une
+et deux tâches ; [guide développeur ASF](docs/factory/developer-guide.md),
+[reprise et tests de panne](docs/factory/validation-and-recovery.md)
+et [évolution vers dix tâches](docs/factory/scale-to-ten.md).
+
+
 A lightweight, browser-only workspace for tracking the next action across several parallel subjects.
 
 Public demo: https://cedricmenec.github.io/threadstep/
@@ -7,9 +18,9 @@ Public demo: https://cedricmenec.github.io/threadstep/
 This repository is the first experimental product for a reusable, GitHub Actions-based autonomous software factory. Development is driven by versioned specifications, a Markdown backlog, tests, and explicit agent triggers. Never commit API keys.
 
 **Utiliser ThreadStep :** [guide en français](docs/product/guide-utilisation.md)
-(sujets, priorités, glisser-déposer au sein d'une priorité,
-suppression avec « Annuler » pendant 10 secondes, sauvegarde/export).
-Les fonctions TS-010 et TS-011 sont livrées depuis les PR #32 et #34.
+(sujets, priorités, actions et sous-tâches réordonnables, repli avec
+compteur, suppression annulable pendant 10 secondes, sauvegarde/export).
+Les fonctionnalités TS-012/013/014 sont livrées via les PR #55/#58/#59.
 
 **Nouvelle conversation avec ChatGPT :** lire d'abord
 [**ChatGPT.md**](ChatGPT.md), puis les sources de vérité qu'il indique.

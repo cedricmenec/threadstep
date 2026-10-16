@@ -1,7 +1,9 @@
 # ThreadStep | Guide d'utilisation
 
-**État vérifié : 15 octobre 2026**, après les PR #32 (TS-010) et #34
-(TS-011). Application : https://cedricmenec.github.io/threadstep/
+**État technique vérifié : 16 octobre 2026**, après les PR #55 (TS-012),
+#58 (TS-013) et #59 (TS-014), avec CI et Pages post-fusion réussies.
+Recette physique/clavier : [checklist à réaliser](acceptance-checklist.md).
+Application : https://cedricmenec.github.io/threadstep/
 
 ThreadStep est une page web personnelle en français pour retrouver
 rapidement la prochaine action de plusieurs sujets de travail.
@@ -39,8 +41,9 @@ du même sujet uniquement** :
 - Si **« Masquer les étapes terminées »** est coché, le réordonnancement
   est temporairement désactivé. Afficher de nouveau toutes les étapes
   pour les déplacer.
-- Une action parente conserve ses sous-étapes ; celles-ci ne se
-  réorganisent pas indépendamment par ce geste.
+- Une action parente conserve ses sous-étapes. Le geste de déplacement
+  d'une **action principale** ne déplace pas indépendamment ses enfants ;
+  ceux-ci possèdent leur propre réordonnancement décrit ci-dessous.
 
 L'ordre choisi est sauvegardé localement, rétabli au rechargement
 et inclus dans le fichier exporté. À priorité égale,
@@ -86,14 +89,16 @@ Lorsqu'une action principale possède au moins une sous-étape
 visible, un bouton de repli apparaît à côté de ses commandes. Son
 libellé indique combien de sous-étapes sont concernées.
 
-- Au repos, le bouton affiche **« Voir 1 sous-tâche »** lorsqu'une
-  seule sous-étape est visible, et **« Voir N sous-tâches »** lorsque
-  plusieurs le sont.
-- Le clic masque temporairement uniquement les sous-étapes de cette
+- **Par défaut, les sous-tâches sont affichées** : le bouton indique
+  **« Masquer les sous-tâches »**.
+- Un clic masque temporairement uniquement les sous-tâches de cette
   action : son titre, sa priorité, son état et ses boutons restent
   affichés et utilisables, comme les actions voisines. Le bouton
-  devient alors **« Masquer les sous-tâches »** ; un nouveau clic les
-  réaffiche dans le même ordre et avec les mêmes états.
+  devient alors **« Voir 1 sous-tâche »** lorsqu'une seule sous-tâche
+  est visible sous les filtres courants, ou **« Voir N sous-tâches »**
+  lorsqu'il y en a plusieurs. Un nouveau clic les réaffiche dans
+  le même ordre et avec les mêmes états, avec
+  **« Masquer les sous-tâches »**.
 - Le décompte suit le filtre **« Masquer les étapes terminées »** :
   une sous-étape terminée et masquée par ce filtre n'est pas comptée,
   même si l'action parente est repliée.
@@ -159,12 +164,15 @@ indisponible, exporter manuellement les données avant de quitter.
 
 Le déplacement dispose de boutons clavier/tactiles ; le snackbar
 dispose d'un bouton d'annulation et d'une zone d'annonce.
-Les validations automatisées et le déploiement Pages sont réussis,
+Les validations automatisées TS-012/013/014 et le déploiement Pages sont réussis,
 mais ils ne constituent **pas** une preuve de recette manuelle complète
 sur appareils iOS/Android ni avec tous les lecteurs d'écran.
 
 Références techniques :
 [Spécification MVP](mvp.md) ·
+[Recette manuelle](acceptance-checklist.md) ·
+[Guide développeur](developer-guide.md) ·
+[Backlog TS-013](../../backlog/tasks/TS-013.md) ·
 [Backlog TS-010](../../backlog/tasks/TS-010.md) ·
 [Backlog TS-011](../../backlog/tasks/TS-011.md) ·
 [Backlog TS-012](../../backlog/tasks/TS-012.md) ·

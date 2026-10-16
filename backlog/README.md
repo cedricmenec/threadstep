@@ -1,5 +1,21 @@
 # Backlog ThreadStep
 
+## Statut de livraison au 16 octobre 2026
+
+Les tâches **TS-012**, **TS-013** et **TS-014** ont été réellement
+implémentées et fusionnées via les PR
+[#55](https://github.com/cedricmenec/threadstep/pull/55),
+[#58](https://github.com/cedricmenec/threadstep/pull/58) et
+[#59](https://github.com/cedricmenec/threadstep/pull/59).
+Leur présence dans `backlog/index.json` avec `ready/allowed/low` est un
+**état déclaratif d'origine**, pas une invitation à les relancer.
+Les preuves opérationnelles et le journal `asf/waves/wave-38910657187`
+les classent **livrées**. Aucune archive documentaire de ces trois
+fiches n'est revendiquée. Les sections « première tâche pilote » et
+« deuxième pilote » plus bas décrivent le protocole **historique**
+qui a été exécuté, et non des étapes restant à faire.
+
+
 Les besoins versionnés vivent dans `backlog/tasks/TS-NNN.md`, chaque fichier
 portant le frontmatter V2 décrit par le
 [contrat des tâches V2](../docs/factory/backlog-v2-task-contract.md) et la

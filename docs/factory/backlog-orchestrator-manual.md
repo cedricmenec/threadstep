@@ -1,32 +1,29 @@
-# Backlog Orchestrator V1 : mode opératoire
+# Backlog Orchestrator V1 — mode opératoire vérifié
 
-**Statut : implémentation proposée en PR ASF-V2-009.** Vérifier sa présence et ses contrôles dans main avant toute utilisation.
+**Version en service : 16 octobre 2026.** Deux vraies expériences de livraison, [une tâche](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [deux tâches](https://github.com/cedricmenec/threadstep/actions/runs/38910657187), ont réussi. **Max 2 tâches ; 1 agent payant simultané ; pas de plafond USD.** Voir [le guide développeur](developer-guide.md) et [la recette finale](validation-and-recovery.md).
 
-## Commande d'entrée
+## Lancer un dry-run non payant
 
-GitHub Actions > **Backlog Orchestrator V1 (owner, bounded wave)** > Run workflow, branche `main`. Réservé au propriétaire du dépôt.
+1. Sur GitHub, [Backlog Orchestrator V1](https://github.com/cedricmenec/threadstep/actions/workflows/backlog-orchestrator.yml) > **Run workflow**, branche `main`.
+2. Choisir `mode=dry-run`, `max_tasks=1` ou `2`, modèle autorisé et `auto_merge` selon la stratégie de la future exécution.
+3. Lire le job `prepare` : décision `SELECT` / `NO_WORK` / arrêt conservateur et `task_id`. Le dry-run ne crée ni branche de vague, ni réservation, ni token d'écriture, ni appel OpenRouter. **Il n'exécute pas la deuxième candidate** : celle-ci dépendra du recalcul après livraison vérifiée.
 
-- `mode=dry-run` : inspection du snapshot et de l'état GitHub, **zéro modèle, zéro paiement, zéro branche de journal**.
-- `mode=execute` : le clic propriétaire **autorise un maximum de 1 ou 2 démarrages payants**, selon `max_tasks`. Le modèle est explicitement choisi. Un échec consomme le quota réservé et arrête la vague. Aucune tentative payante supplémentaire sans nouveau lancement approuvé.
-- `auto_merge` n'autorise que la demande native de fusion après contrôle de Protect Main + required check ; pas de contournement.
-- `model` est limité aux deux modèles OpenRouter approuvés.
+## Lancer execute (autorisation distincte)
 
-Le workflow ne sélectionne que les tâches **product**, `ready`, `automation: allowed`, `risk: low`, contenues dans son manifeste initial, avec dépendances prouvées livrées. Le scheduler est purement déterministe et recalcule après chaque livraison vérifiée. Si une PR concurrente, une preuve inconnue, un drift de brief ou un API GitHub inaccessible est détecté, la vague s'arrête.
+1. Relire les fiches `backlog/tasks/TS-NNN.md` (statut `ready`, `automation: allowed`, `risk: low`, `type: product`), les PR ouvertes (aucune), les protections `main`, la disponibilité CI/Pages, le montant acceptable des coûts OpenRouter et le dernier dry-run.
+2. Sur `main`, sélectionner `mode=execute`, `max_tasks=1|2`, `model=openrouter/deepseek/deepseek-v4.1-flash` ou modèle autorisé, `auto_merge=true|false`. **Le clic engage la dépense** ; une auto-merge fausse exige fusion manuelle compatible avec le délai de vérification de la vague.
+3. Consulter `prepare` : réservation persistante `DISPATCH_RESERVED` sur `asf/waves/wave-<run_id>`. Ne pas redéclencher ce même run.
+4. Sur `first`, contrôler le job OpenSpec, la PR finale et le required `check`; `after_first` attend **check PR + merge**, puis **CI + Pages après fusion**. Fenêtre : **15 s entre vérifications, sept minutes maximum**. Si le slot 2 est autorisé et qu'une autre candidate est éligible, réserver la prochaine tâche après cette preuve — jamais avant.
+5. Vérifier `second` puis `after_second` si applicable. Lire `journal.json` : `taskStartsReserved <= maxTaskStarts`, chaque tâche `DELIVERED` avec PR/SHA ou état `FAILED` / `UNKNOWN` explicite, `stop` documenté. Le succès du workflow seul **ne suffit pas** à prouver une livraison.
 
-## Sécurité et journal
+**Mode V1 :** le manifeste fige les candidates et SHA des briefs ; priorité, date et ID déterminent l'ordre. Le scheduler refuse les tâches déjà prouvées livrées, même si elles sont encore `ready` dans `backlog/index.json`. Plusieurs tâches peuvent viser les mêmes fichiers si elles sont **séquentielles** et que chaque livraison est revérifiée.
 
-Chaque vague est identifiée par `wave-<github.run_id>`. Son journal et son manifeste sont conservés sur une branche `asf/waves/<id>`, inaccessible aux modèles d'exécution. Une réservation `DISPATCH_RESERVED` y est écrite et son SHA exact transmis à OpenSpec **avant** le premier appel payant. Un agent exécuteur indépendant réévalue propriétaire, ref main, parent et statut, manifeste, empreintes et quota. Les changements du journal s'effectuent avec une lease sur le SHA de branche.
+## Échecs et « reset »
 
-Il y a **deux emplacements de job** au maximum, avec un contrôle GitHub complet entre les deux : run OpenSpec, PR finale fusionnée, SHA, check indépendant sur PR et merge commit, CI main et Pages. Un succès de workflow seul ne vaut pas livraison.
+- **PR ouverte** lors du précontrôle : arrêt, réconcilier/fermer/fusionner la PR sous protections, attendre post-CI et refaire un **nouveau dry-run**.
+- **CI/Pages en attente** : patienter jusqu'à conclusion ; dans une vague, `after_first` attend déjà. Après sept minutes, arrêt fail-closed ; **pas de deuxième démarrage**.
+- **`UNKNOWN` / crash / run annulé / GitHub indisponible** : bloquer le prochain lancement, examiner manifeste, journal, PR et checks, garder le quota réservé. **Ne jamais** supprimer ou réécrire le journal pour « reset ».
+- **CI rouge réelle** : ne pas forcer `--admin` ni affaiblir le required check ; laisser la PR non fusionnée et réaliser une analyse humaine. [Procédure de test isolé](validation-and-recovery.md#d-tester-réellement-un-refus-sur-ci-rouge--procédure-isolée).
+- **Besoin de dix tâches** : la V1 ne sait pas le faire ; lire [la proposition d'architecture](scale-to-ten.md), puis développer/tester une version dédiée.
 
-Les trois types d'agent rémunéré ont un verrou partagé de **job** ; l'orchestrateur parent détient un autre verrou pour les vagues. L'absence de `queue:max` garanti rend possible le remplacement d'un job en attente : l'annulation ou l'incertitude bloque et ne relance jamais le modèle.
-
-## Restrictions de mise en service
-
-1. Ne lancer **aucune** vague `execute` pour valider cette PR.
-2. Faire valider Actionlint, Bash, tests Node, CI indépendante puis la fusion sous Protect Main.
-3. ASF-V2-010 ajoute l'archivage automatique. ASF-V2-011 réalise d'abord des simulations E2E non payantes puis une expérimentation réelle séparément autorisée, limitée à une tâche, puis deux.
-4. Aucune limite de coût USD n'est disponible dans cette V1 : `max_tasks` borne les *démarrages*, pas la facture du fournisseur.
-5. Les livraisons et les branches de journal doivent être inspectées en cas d'arrêt `UNKNOWN` ; ne pas relancer directement un run échoué.
-
-Références : [tâche ASF-V2-009](tasks/ASF-V2-009.md), [Orchestrator V1](specs/orchestrator-v1.md), [Agent ASF](agent-asf-manual.md).
+Les protections GitHub et les secrets ne sont jamais modifiés par ce mode opératoire.
