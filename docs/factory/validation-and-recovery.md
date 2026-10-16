@@ -1,5 +1,16 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Clôture de recette — 16 octobre 2026
+
+**Décision : ASF V2 clôturée pour son périmètre défini (vague V1 1..2 tâches).** Les composants ASF-V2-001 à 011 sont livrés ; les runs [38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) démontrent les parcours payants 1/1 et 2/2, avec CI et Pages après chaque fusion.
+
+**Test négatif réel autorisé et exécuté :** [PR #63](https://github.com/cedricmenec/threadstep/pull/63), commit `53a9c5074b579a1ffe94a9ae0409996b5fb4a48d`, [run 38935289219](https://github.com/cedricmenec/threadstep/actions/runs/38935289219) : `check=completed/failure`, `mergeable_state=blocked`, ruleset `Protect Main` actif (id 25163425), `check` obligatoire depuis GitHub Actions (integration 15368), `bypass_actors=[]`, `main` inchangé pendant la vérification ; PR fermée **sans fusion**. Ce test n'est **pas** une exécution rouge d'agent OpenSpec : cette branche de l'orchestrateur est prouvée par la simulation `red-ci` uniquement.
+
+**Recette utilisateur ThreadStep :** propriétaire, déclarée **OK** le 16 octobre 2026 (détail appareils / cases non fourni). **Permissions GitHub App :** propriétaire, vérifiées et déclarées conformes le 16 octobre 2026 ; vérification privée non reproduite par l'assistant. Protections ruleset et checks : vérifiées via GitHub.
+
+**Limites acceptées :** aucun test destructif de crash en production, pas de CI rouge d'agent payant en conditions réelles, pas de plafond monétaire USD, `max_tasks=1|2`, `strict_required_status_checks_policy=false`. Ces limites ne doivent pas être requalifiées en preuves positives. L'évolution à dix tâches relève d'une phase **ASF V3 ultérieure**, sans backlog ni implémentation à ce stade.
+
+
 **Clôture au 16 octobre 2026 : ASF-V2-001..011 validées pour le périmètre V1 borné.** Runs réels 1/2 tâches, simulation des six scénarios, vrai blocage de PR sur CI rouge et contrôles de branche vérifiés. La recette ThreadStep et les permissions d'installation sont **attestées par le propriétaire**, sans détail par appareil ni accès direct à la configuration sensible. Les tests destructifs dans un agent payant restent hors de cette clôture. Voir [rapport de clôture](closeout-2026-10-16.md).
 
 > Cette page est une procédure de qualification, **pas** une autorisation pour créer une PR avec une CI cassée, désactiver les protections ou dépenser sur OpenRouter. Toute opération risquée a besoin d'un périmètre et d'une approbation indépendants. Les incidents se corrigent en PR et non en altérant une branche de journal déjà écrite.
