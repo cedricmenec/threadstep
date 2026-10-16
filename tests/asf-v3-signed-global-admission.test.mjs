@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { createGithubClient } from "../scripts/asf/github/client.mjs";
-import { createAdmissionRegistry, ADMISSION_REGISTRY_REF }
+import { createAdmissionRegistry, advanceAdmissionRegistry, ADMISSION_REGISTRY_REF }
   from "../scripts/asf/v3/global-admission.mjs";
 import {
   attemptSignedGlobalAdmission, observeGlobalAdmissionSnapshot,
@@ -29,9 +29,12 @@ function permit(privateKey, c) {
 }
 const keys = () => generateKeyPairSync("ed25519");
 function fakeServer({ lostPatch = false, invalidAfter = false,
-  failure = "", missingRef = false } = {}) {
+  failure = "", missingRef = false, unsignedAdmit = false,
+  tamperWitness = false } = {}) {
   const all = [];
-  const trees = new Map([[ROOT_TREE, { "registry.json": createAdmissionRegistry() }]]);
+  const initial = unsignedAdmit ? advanceAdmissionRegistry(createAdmissionRegistry(),
+    { type: "ADMIT", claim: claim("wave-malicious") }, 0) : createAdmissionRegistry();
+  const trees = new Map([[ROOT_TREE, { "registry.json": initial }]]);
   const commits = new Map([[HEAD, {
     sha: HEAD, tree: { sha: ROOT_TREE }, parents: []
   }]]);
@@ -44,14 +47,19 @@ function fakeServer({ lostPatch = false, invalidAfter = false,
         path === PREFIX + "/git/ref/heads/asf/control/active-wave-v3") {
       return { ref: R, object: { type: "commit", sha: head } };
     }
-    if (method === "GET" &&
-        path.startsWith(PREFIX + "/contents/registry.json?ref=")) {
-      const id = path.split("ref=")[1];
+    if (method === "GET" && path.startsWith(PREFIX + "/contents/")) {
+      const match = path.match(/^repos\/cedricmenec\/threadstep\/contents\/(registry\.json|admission-evidence\/[a-z0-9._-]+\.json)\?ref=([a-f0-9]{40})$/);
+      if (!match) throw Error("unexpected contents route");
+      const [, filePath, id] = match;
       const commit = commits.get(id);
       if (!commit) throw Error("unknown commit");
-      const record = trees.get(commit.tree.sha)["registry.json"];
-      const bytes = Buffer.from(JSON.stringify(record), "utf8");
-      return {type:"file",path:"registry.json",encoding:"base64",
+      const record = trees.get(commit.tree.sha)[filePath];
+      if (!record) throw Object.assign(Error("witness absent"),{status:404});
+      const copied = structuredClone(record);
+      if (tamperWitness && filePath.startsWith("admission-evidence/"))
+        copied.payload.manifestHash = "a".repeat(64);
+      const bytes = Buffer.from(JSON.stringify(copied), "utf8");
+      return {type:"file",path:filePath,encoding:"base64",
         size:bytes.length,content:bytes.toString("base64")};
     }
     if (method === "GET" && path.startsWith(PREFIX + "/git/commits/")) {
@@ -60,14 +68,22 @@ function fakeServer({ lostPatch = false, invalidAfter = false,
       return commits.get(id);
     }
     if (method === "POST" && path === PREFIX + "/git/trees") {
-      assert.equal(body.tree.length, 1);
-      assert.deepEqual(body.tree[0],{
-        path:"registry.json",mode:"100644",type:"blob",content:body.tree[0].content
-      });
+      assert.equal(body.tree.length, 2);
+      assert.deepEqual(body.tree.map(x => x.path), [
+        "registry.json", "admission-evidence/" +
+        JSON.parse(body.tree[0].content).active.waveId + ".json"
+      ]);
+      for (const x of body.tree) {
+        assert.equal(x.mode, "100644");
+        assert.equal(x.type, "blob");
+      }
       const base = trees.get(body.base_tree);
       if (!base) throw Error("unknown base tree");
       const id = sha(seq++);
-      trees.set(id,{...base,"registry.json":JSON.parse(body.tree[0].content)});
+      const files = Object.fromEntries(body.tree.map(x => [
+        x.path, JSON.parse(x.content)
+      ]));
+      trees.set(id,{...base,...files});
       return {sha:id};
     }
     if (method === "POST" && path === PREFIX + "/git/commits") {
@@ -137,7 +153,7 @@ test("permit verifies Ed25519 detached domain-separated signature, not a bare ha
 });
 test("signed permit and empty genesis become one persisted global ADMIT via Git Data",async()=>{
   const s=fakeServer(),key=keys();
-  const initial=await observeGlobalAdmissionSnapshot(s.readClient);
+  const initial=await observeGlobalAdmissionSnapshot(s.readClient,key.publicKey);
   assert.equal(initial.status,"snapshot_verified");
   assert.equal(initial.registry.state,"AVAILABLE");
   const result=await attemptSignedGlobalAdmission(request(s,key));
@@ -151,7 +167,7 @@ test("signed permit and empty genesis become one persisted global ADMIT via Git 
   assert.equal(s.all.filter(c=>c.method==="PATCH").length,1);
   const patch=s.all.find(c=>c.method==="PATCH");
   assert.deepEqual(patch.body,{sha:s.head,force:false});
-  const persisted=await observeGlobalAdmissionSnapshot(s.readClient);
+  const persisted=await observeGlobalAdmissionSnapshot(s.readClient,key.publicKey);
   assert.equal(persisted.registry.revision,1);
 });
 test("a second wave is denied while the first is ACTIVE without mutating ref",async()=>{
