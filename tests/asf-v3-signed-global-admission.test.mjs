@@ -118,7 +118,26 @@ function fakeServer({ lostPatch = false, invalidAfter = false,
   return {
     readClient:reader,writeTransport:writer,
     all, get head(){return head;},
-    get registry(){return trees.get(commits.get(head).tree.sha)["registry.json"];}
+    get registry(){return trees.get(commits.get(head).tree.sha)["registry.json"];},
+    // Inject a structurally valid but UNAUTHORIZED Git successor. This
+    // models a writer capable of publishing a forged RELEASE after ADMIT.
+    forgeUnsignedRelease(){
+      const original=trees.get(commits.get(head).tree.sha);
+      const registry=original["registry.json"];
+      const c=registry.active;
+      if(!c)throw Error("must first admit a wave");
+      const event={type:"RELEASE",waveId:c.waveId,manifestHash:c.manifestHash,
+        terminal:{status:"COMPLETED_QUOTA",waveId:c.waveId,
+          manifestHash:c.manifestHash,journalHash:"c".repeat(64),
+          reserved:10,delivered:10,maxTaskStarts:10}};
+      const forged=advanceAdmissionRegistry(registry,event,registry.revision);
+      const treeSha=sha(seq++);
+      trees.set(treeSha,{...original,"registry.json":forged});
+      const commitSha=sha(seq++);
+      commits.set(commitSha,{sha:commitSha,tree:{sha:treeSha},
+        parents:[{sha:head}]});
+      head=commitSha;
+    }
   };
 }
 const request = (server, key, waveId = "wave-001") => {
@@ -287,4 +306,19 @@ test("witness path does not permit arbitrary branches or workflow files",async()
   for(const name of ["../main","wave/other","a%2fmain","UPPER","a".repeat(80)]){
     assert.throws(()=>v3AdmissionWitnessPath(name),TypeError);
   }
+});
+
+
+test("forged RELEASE after genuine signed ADMIT cannot reopen a new wave",async()=>{
+  const s=fakeServer(),key=keys();
+  assert.equal((await attemptSignedGlobalAdmission(request(s,key))).ok,true);
+  s.forgeUnsignedRelease();
+  assert.equal(s.registry.state,"AVAILABLE","pure replay would accept forged terminal");
+  const snap=await observeGlobalAdmissionSnapshot(s.readClient,key.publicKey);
+  assert.equal(snap.status,"rejected");
+  assert.equal(snap.code,"untrusted_admission_witness_unattested_global_transition");
+  const before=s.all.filter(x=>x.method==="PATCH").length;
+  const second=await attemptSignedGlobalAdmission(request(s,key,"wave-002"));
+  assert.equal(second.ok,false);
+  assert.equal(s.all.filter(x=>x.method==="PATCH").length,before);
 });
