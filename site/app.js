@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -24,6 +24,11 @@ let pendingCollapseFocus = null;
 let pendingPriorityFocus = null;
 let collapsedParents = new Set();
 let dragState = null;
+let route = parseRoute(location.hash);
+let renamingSubject = false;
+let focusDetailHeading = false;
+let focusOpenSubjectId = null;
+let focusRenameControl = false;
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -96,6 +101,16 @@ function render() {
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
+  const detail = route.view !== "overview";
+  subjectForm.hidden = detail;
+  focusSuggestEl.hidden = detail;
+  if (detail) {
+    focusCardEl.hidden = true;
+    resumeCardEl.hidden = true;
+    renderDetail();
+    applyFocus();
+    return;
+  }
   renderSuggestion();
   renderResumeCard();
   if (!documentState.subjects.length) {
@@ -105,10 +120,152 @@ function render() {
   for (const subject of documentState.subjects) subjectsEl.append(renderSubject(subject));
   applyFocus();
 }
+function navigate(hash) {
+  if (location.hash === hash) {
+    route = parseRoute(hash);
+    render();
+    return;
+  }
+  location.hash = hash;
+}
+function renderDetail() {
+  if (route.view === "invalid") {
+    subjectsEl.append(renderDetailFallback());
+    return;
+  }
+  const subject = findSubject(documentState, route.subjectId);
+  if (!subject) {
+    subjectsEl.append(renderDetailFallback());
+    return;
+  }
+  subjectsEl.append(renderDetailView(subject));
+}
+function renderDetailView(subject) {
+  const card = el("section", "subject detail");
+  card.dataset.subject = subject.id;
+  card.setAttribute("aria-label", subject.title);
+  card.tabIndex = -1;
+  const nav = el("div", "detail-nav");
+  const back = el("button", "secondary detail-return", "Retour à la vue d'ensemble");
+  back.type = "button";
+  back.setAttribute("aria-label", "Retour à la vue d'ensemble depuis " + subject.title);
+  back.addEventListener("click", () => returnToOverview(subject.id));
+  nav.append(back);
+  card.append(nav);
+  card.append(renderDetailHead(subject));
+  card.append(renderTaskArea(subject));
+  return card;
+}
+function renderDetailFallback() {
+  const card = el("section", "subject detail fallback");
+  card.tabIndex = -1;
+  const heading = el("h2", "detail-title", "Projet introuvable");
+  heading.tabIndex = -1;
+  const message = el("p", "detail-message", "Ce projet n'est pas disponible. Il a peut-être été supprimé, remplacé par un import, ou n'existe pas.");
+  message.setAttribute("role", "alert");
+  const back = el("button", "secondary detail-return", "Retour à la vue d'ensemble");
+  back.type = "button";
+  back.setAttribute("aria-label", "Retour à la vue d'ensemble");
+  back.addEventListener("click", () => navigate("#/"));
+  card.append(heading, message, back);
+  return card;
+}
+function renderDetailHead(subject) {
+  if (renamingSubject) return renderRenameForm(subject);
+  const head = el("div", "subject-head detail-head");
+  const titleBox = el("div");
+  const heading = el("h2", "detail-title", subject.title);
+  heading.tabIndex = -1;
+  titleBox.append(heading);
+  const pending = subject.items.filter((item) => !item.done).length;
+  titleBox.append(el("p", "small", pending + " étape" + (pending > 1 ? "s" : "") + " en attente"));
+  const controls = el("div", "subject-controls");
+  const rename = el("button", "subtle subject-rename", "Renommer le projet");
+  rename.type = "button";
+  rename.setAttribute("aria-label", "Renommer le projet " + subject.title);
+  rename.addEventListener("click", () => {
+    renamingSubject = true;
+    render();
+  });
+  controls.append(rename);
+  head.append(titleBox, controls);
+  return head;
+}
+function renderRenameForm(subject) {
+  const form = el("form", "subject-rename-form");
+  const input = el("input", "subject-rename-input");
+  input.type = "text";
+  input.maxLength = 100;
+  input.required = true;
+  input.value = subject.title;
+  input.setAttribute("aria-label", "Nouveau nom du projet " + subject.title);
+  const save = el("button", "primary", "Enregistrer");
+  save.type = "submit";
+  const cancel = el("button", "subtle subject-rename-cancel", "Annuler");
+  cancel.type = "button";
+  const error = el("p", "rename-error");
+  error.hidden = true;
+  error.setAttribute("role", "alert");
+  form.append(input, save, cancel, error);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const trimmed = input.value.trim();
+    if (!trimmed || trimmed.length > 100) {
+      error.textContent = "Le nom doit contenir entre 1 et 100 caractères.";
+      error.hidden = false;
+      input.focus();
+      return;
+    }
+    const next = renameSubject(documentState, subject.id, input.value);
+    renamingSubject = false;
+    focusRenameControl = true;
+    if (next === documentState) { render(); return; }
+    documentState = next;
+    persist();
+  });
+  cancel.addEventListener("click", () => {
+    renamingSubject = false;
+    focusRenameControl = true;
+    render();
+  });
+  return form;
+}
+function returnToOverview(subjectId) {
+  renamingSubject = false;
+  focusOpenSubjectId = subjectId;
+  navigate("#/");
+}
+function openSubject(subject) {
+  const target = subjectRoute(subject.id);
+  if (!target) return;
+  renamingSubject = false;
+  focusDetailHeading = true;
+  navigate(target);
+}
 function applyFocus() {
   if (editingItemId) {
     const input = subjectsEl.querySelector(".task-edit-title");
     if (input) { input.focus(); input.select(); return; }
+  }
+  if (renamingSubject) {
+    const input = subjectsEl.querySelector(".subject-rename-input");
+    if (input) { input.focus(); input.select(); return; }
+  }
+  if (focusDetailHeading) {
+    focusDetailHeading = false;
+    const heading = subjectsEl.querySelector(".detail-title");
+    if (heading) { heading.focus(); return; }
+  }
+  if (focusOpenSubjectId) {
+    const id = focusOpenSubjectId;
+    focusOpenSubjectId = null;
+    const control = [...subjectsEl.querySelectorAll(".subject-open")].find((node) => node.dataset.subject === id);
+    if (control) { control.focus(); return; }
+  }
+  if (focusRenameControl) {
+    focusRenameControl = false;
+    const control = subjectsEl.querySelector(".subject-rename");
+    if (control) { control.focus(); return; }
   }
   if (focusSubjectId) {
     const card = [...subjectsEl.querySelectorAll(".subject")].find((node) => node.dataset.subject === focusSubjectId);
@@ -342,6 +499,11 @@ function renderSubject(subject) {
   const pending = subject.items.filter((item) => !item.done).length;
   titleBox.append(el("p", "small", pending + " étape" + (pending > 1 ? "s" : "") + " en attente"));
   const controls = el("div", "subject-controls");
+  const open = el("button", "secondary subject-open", "Ouvrir le projet");
+  open.type = "button";
+  open.dataset.subject = subject.id;
+  open.setAttribute("aria-label", "Ouvrir le projet " + subject.title);
+  open.addEventListener("click", () => openSubject(subject));
   const up = el("button", "subtle subject-move", "↑");
   up.type = "button";
   up.dataset.subject = subject.id;
@@ -365,10 +527,14 @@ function renderSubject(subject) {
     documentState.subjects = documentState.subjects.filter((s) => s.id !== subject.id);
     persist();
   });
-  controls.append(up, down, remove);
+  controls.append(open, up, down, remove);
   head.append(titleBox, controls);
   card.append(head);
-
+  card.append(renderTaskArea(subject));
+  return card;
+}
+function renderTaskArea(subject) {
+  const area = el("div", "task-area");
   const form = el("form", "task-form");
   const input = el("input");
   input.required = true;
@@ -394,13 +560,13 @@ function renderSubject(subject) {
     persist();
     input.focus();
   });
-  card.append(form);
+  area.append(form);
 
   const list = el("ul", "tasks");
   for (const item of visibleItems(subject.items, null, hideCompleted)) list.append(renderItem(subject, item));
-  if (!subject.items.length) card.append(el("p", "empty", "Aucune étape. Ajoutez la prochaine action à faire."));
-  card.append(list);
-  return card;
+  if (!subject.items.length) area.append(el("p", "empty", "Aucune étape. Ajoutez la prochaine action à faire."));
+  area.append(list);
+  return area;
 }
 function substepListId(itemId) {
   return "substeps-" + encodeURIComponent(String(itemId));
@@ -761,6 +927,10 @@ window.addEventListener("storage", (event) => {
   if (event.key !== STORAGE_KEY) return;
   invalidatePendingRemoval();
   load();
+});
+window.addEventListener("hashchange", () => {
+  route = parseRoute(location.hash);
+  render();
 });
 snackbarEl.addEventListener("focusin", suspendRemovalTimer);
 snackbarEl.addEventListener("focusout", (event) => {
