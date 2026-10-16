@@ -14,8 +14,9 @@
   moins dense et navigable par URL, avec tâches et sous-tâches, plus
   **renommage et duplication** du projet, tout en conservant le modèle
   `subject` et le stockage local existants. État déclaratif :
-  `product / ready / manual / medium`, avec revue humaine obligatoire
-  avant toute exécution.
+  `product / ready / allowed / medium`. Le risque moyen bloque
+  toutefois la **sélection automatique** selon le contrat V2, même
+  avec `allowed` ; une revue humaine reste nécessaire.
 
 Ces fiches constituent une **préparation documentaire**, pas des
 fonctionnalités présentes en production. La PR de backlog n'implémente
