@@ -229,3 +229,21 @@ preuves ambiguës, un hash divergent ou un instantané invalide produisent
 fusionnée avec une CI `check` indépendante réussie sur le bon SHA, ce noyau ne
 doit pas être décrit comme livré sur `main`, et aucun appel OpenRouter payant
 n'a été effectué pour cette tâche.
+
+## Simulation dry-run du scheduler ASF-V2-005 (en revue, non fusionnée)
+
+[ASF-V2-005](tasks/ASF-V2-005.md) ajoute la [simulation dry-run](scheduler-dry-run.md)
+sous `scripts/asf/scheduler/` : une CLI (`dry-run.mjs`) et des fixtures
+(`fixtures.mjs`) qui réutilisent le noyau pur ASF-V2-004 et n'ont **aucun
+effet** — pas d'appel OpenRouter, pas de dispatch, pas de réservation de quota,
+pas d'écriture de journal. Elle expose les candidates, leurs motifs d'exclusion,
+l'ordre potentiel et distingue les livraisons `verified`, l'état `unknown`
+(→ `STOP_UNCERTAIN`, jamais présumé libre) et les `assumptions` hypothétiques
+(projection explicitement non probante). Un backlog vide termine `NO_WORK` avec
+zéro dispatch. Preuve locale uniquement : `node --test
+tests/asf-scheduler-dry-run.test.mjs` → 16 tests réussis, puis `npm run check`
+→ 183 tests réussis, `backlog:check` (11 actifs, 0 archivé), `node --check` sur
+`site/core.js` et `site/app.js`. Aucun workflow n'est modifié. Tant que la PR
+n'est pas fusionnée avec une CI `check` indépendante réussie sur le bon SHA,
+cette CLI ne doit pas être décrite comme livrée sur `main`, et aucun appel
+OpenRouter payant n'a été effectué pour cette tâche.
