@@ -1,10 +1,23 @@
 # Backlog ThreadStep
 
-Les besoins produit versionnés vivent dans backlog/tasks/TS-NNN.md.
-Le contrat de travail des agents figure dans [AGENTS.md](../AGENTS.md),
-les exigences dans docs/product/ et les spécifications canoniques dans
-openspec/specs/. Les états ci-dessous ont été **réconciliés le
-15 octobre 2026**, après fusion des PR #32 et #34.
+Les besoins versionnés vivent dans `backlog/tasks/TS-NNN.md`, chaque fichier
+portant le frontmatter V2 décrit par le
+[contrat des tâches V2](../docs/factory/backlog-v2-task-contract.md) et la
+[spécification Backlog V2](../docs/factory/specs/backlog-v2.md). Le contrat de
+travail des agents figure dans [AGENTS.md](../AGENTS.md), les exigences dans
+`docs/product/` et les spécifications canoniques dans `openspec/specs/`.
+
+## Index généré
+
+`backlog/index.json` (tâches actives) et `backlog/archive-index.json`
+(historique archivé) sont des **projections générées**, jamais éditées à la
+main. La CI les recalcule avec `npm run backlog:check` et refuse toute
+divergence. Pour les régénérer volontairement après une migration ou l'ajout
+d'une tâche :
+
+```text
+npm run backlog:index
+```
 
 ## Proposer une fonctionnalité
 
@@ -23,7 +36,8 @@ Il n'est pas nécessaire de créer une issue GitHub.
   tâche canonique. Le formulaire pré-sélectionne `auto` et DeepSeek V4.1
   Flash, que l'utilisateur peut modifier avant de lancer le run.
   `auto` effectue normalement trois appels OpenCode payants ; il n'existe
-  pas encore de plafond USD automatique. Les exécutions du même TS-NNN sont sérialisées ; les tâches différentes peuvent tourner en parallèle.
+  pas encore de plafond USD automatique. Les exécutions du même TS-NNN sont
+  sérialisées ; les tâches différentes peuvent tourner en parallèle.
 - **Fusion** : les deux workflows proposent `auto_merge=true` par défaut
   pour leurs PR finales, à condition que `main` impose réellement le check
   indépendant `check` ; sinon la demande de fusion échoue sans fusion.
@@ -46,35 +60,29 @@ Il n'est pas nécessaire de créer une issue GitHub.
 
 ## État du backlog
 
-| Tâche | Objet | Statut vérifié |
-| --- | --- | --- |
-| TS-001 | MVP statique | Livrée, CI et Pages réussies |
-| TS-002 | Smoke test agent OpenCode | Livrée, [PR #2](https://github.com/cedricmenec/threadstep/pull/2) fusionnée |
-| TS-003 | Orchestration de vagues autonomes | **Backlog uniquement**, non implémentée |
-| TS-004 | Réordonner les sujets | Livrée, [PR #4](https://github.com/cedricmenec/threadstep/pull/4) fusionnée |
-| TS-005 | Modifier une action/sous-étape | Livrée, [PR #8](https://github.com/cedricmenec/threadstep/pull/8) fusionnée et archivée |
-| TS-006 | Masquer les étapes terminées | Livrée, [PR #12](https://github.com/cedricmenec/threadstep/pull/12) fusionnée |
-| TS-007 | Suggestion déterministe d'action | Livrée, [PR #18](https://github.com/cedricmenec/threadstep/pull/18) fusionnée et archivée |
-| TS-008 | « Je reprends ici » | Livrée, [PR #21](https://github.com/cedricmenec/threadstep/pull/21) fusionnée, capacité ADDED |
-| TS-009 | Expliquer la suggestion | Livrée, [PR #26](https://github.com/cedricmenec/threadstep/pull/26) fusionnée, capacité MODIFIED et sync OPSX native |
-| TS-010 | Retirer une étape avec « Annuler » pendant 10 secondes (snackbar mobile) | **Livrée** : [PR #32](https://github.com/cedricmenec/threadstep/pull/32) fusionnée, capacité action-removal et CI/Pages réussies |
-| TS-011 | Réordonner par glisser-déposer des actions de même priorité dans un sujet | **Livrée** : [PR #34](https://github.com/cedricmenec/threadstep/pull/34) fusionnée, capacité action-ordering et CI/Pages réussies |
+L'état **déclaratif** (type, statut, priorité, automation, risque,
+dépendances, date) est porté par le frontmatter de chaque fichier et projeté
+dans `backlog/index.json`. La livraison **opérationnelle** (PR fusionnées, CI,
+Pages) reste une observation GitHub consignée dans
+[docs/factory/current-state.md](../docs/factory/current-state.md) et dans les
+sections « Delivery status verification » des tâches : ni un statut Markdown,
+ni une case cochée ne prouvent une livraison.
 
-**Important :** les cases historiques des fichiers de tâche ne sont pas
-systématiquement mises à jour par le workflow. Le statut livré provient
-des PR et CI vérifiées, pas de cases cochées a posteriori. Pour TS-005
-et suivantes, les archives OpenSpec contiennent des checklists d'exécution.
+Les tâches historiques `TS-001` à `TS-011` ont été migrées avec
+`automation: manual` et `risk: unknown` : elles ne sont jamais sélectionnées
+automatiquement, et leurs cases d'acceptation d'origine restent intactes.
+`TS-003` relève de la dette factory, hors éligibilité produit. Détails et
+incertitudes dans
+[docs/factory/backlog-v2-migration.md](../docs/factory/backlog-v2-migration.md).
 
 La prise en main des fonctions livrées est dans
 [le guide d'utilisation](../docs/product/guide-utilisation.md).
 L'historique de la factory est dans
-[docs/factory/current-state.md](../docs/factory/current-state.md) et
-la tâche de mise en cohérence
-[ASF-DOC-001](../docs/factory/tasks/ASF-DOC-001.md).
+[docs/factory/current-state.md](../docs/factory/current-state.md).
 
 ## Précautions
 
 Conserver des tâches suffisamment petites pour une seule exécution
-bornée. Les priorités et dépendances sont du texte Markdown pendant
-le pilote : il n'y a pas de moteur d'ordonnancement transactionnel.
-Ne pas relancer une tâche déjà archivée uniquement pour « tester OPSX ».
+bornée. Les priorités et dépendances sont déclaratives : il n'y a pas
+encore de moteur d'ordonnancement transactionnel. Ne pas relancer une
+tâche déjà archivée uniquement pour « tester OPSX ».

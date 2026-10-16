@@ -50,7 +50,9 @@ Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.m
 
 [ASF-V2-001](tasks/ASF-V2-001.md) définit le [contrat des tâches V2](backlog-v2-task-contract.md) : frontmatter versionné (`schema_version: 2`), enums, séparation état déclaratif/état GitHub, valeurs par défaut de génération et isolation des règles `TS-NNN`. Ce contrat est documentaire et couvert par des tests statiques. Sa livraison est tracée dans la fiche ([PR #40](https://github.com/cedricmenec/threadstep/pull/40)).
 
-[ASF-V2-002](tasks/ASF-V2-002.md) ajoute l'[index déterministe et le validateur strict](backlog-v2-index.md) (`scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json`, commande `check` intégrée à `npm run check`). Cette implémentation est **en revue dans sa propre PR** ; elle n'est ni fusionnée ni vérifiée sur `main` et n'autorise aucune exécution payante. Aucun fichier `backlog/tasks/` ne portant encore de frontmatter V2, les index committés sont vides jusqu'à la migration [ASF-V2-003](tasks/ASF-V2-003.md).
+[ASF-V2-002](tasks/ASF-V2-002.md) ajoute l'[index déterministe et le validateur strict](backlog-v2-index.md) (`scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json`, commande `check` intégrée à `npm run check`). L'implémentation est présente sur `main` (PR #43 fusionnée) ; les index restent la seule projection déclarative, sans preuve de livraison.
+
+[ASF-V2-003](tasks/ASF-V2-003.md) migre les tâches historiques `TS-001` à `TS-011` vers le frontmatter V2 sans modifier leur corps, classe `TS-003` en dette factory et régénère `backlog/index.json` (11 fiches actives, `automation: manual`, `risk: unknown`). Détails et incertitudes dans [migration historique](backlog-v2-migration.md). Cette migration est **en revue dans sa propre PR** et ne constitue pas une livraison vérifiée sur GitHub.
 
 ## Exécuteur ASF dédié (bootstrap)
 

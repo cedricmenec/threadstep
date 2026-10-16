@@ -186,18 +186,28 @@ La PR bootstrap propose un exécuteur **manuel** de tasks ASF-V2 avec jobs sépa
 
 Après la livraison ASF-V2-001 en PR #40, deux tentatives ASF-V2-002 ont échoué en précontrôle (runs 38821781408, 38822070883) car la fiche précédente demeurait `ready`. Aucune facture OpenRouter n'a été engagée par ces runs. La PR #41 a réconcilié le statut et ses preuves. Le changement ASF-BOOT-002 propose de lire directement les preuves GitHub pendant le précontrôle de l'Agent ASF, indépendamment d'un statut de tâche documentaire encore non actualisé. Tant que cette PR n'est pas fusionnée et validée, ne pas décrire cette capacité comme opérationnelle.
 
-## Implémentation ASF-V2-002 : index déterministe (en revue, non fusionné)
+## Implémentation ASF-V2-002 : index déterministe (sur main)
 
 [ASF-V2-002](tasks/ASF-V2-002.md) apporte un parseur YAML strict, un
 validateur de backlog et les projections `backlog/index.json` /
 `backlog/archive-index.json`, avec `check` intégré à `npm run check`. Détails
-dans [index déterministe](backlog-v2-index.md). Preuves disponibles à ce jour,
-**uniquement locales** : `npm run check` exécuté sur la branche de la PR de
-tâche → `npm test` **130 tests réussis**, `backlog:check` (0 actif, 0 archivé),
-puis `node --check site/core.js` et `node --check site/app.js`. Aucun workflow
-n'est modifié. Tant que la PR n'est pas fusionnée avec une CI `check`
-indépendante réussie sur le bon SHA, cette capacité ne doit pas être décrite
-comme livrée sur `main`. Les index restent vides car aucun fichier
-`backlog/tasks/` ne porte encore de frontmatter V2 (migration
-[ASF-V2-003](tasks/ASF-V2-003.md) à venir). Aucun appel OpenRouter payant n'a
-été effectué pour cette tâche.
+dans [index déterministe](backlog-v2-index.md). L'implémentation est présente
+sur `main` par la PR #43 (commit de fusion `294c67f`) ; la vérification GitHub
+indépendante de cette PR n'est pas rejouée ici. Aucun appel OpenRouter payant
+n'a été effectué pour cette tâche.
+
+## Migration historique ASF-V2-003 (en revue, non fusionnée)
+
+[ASF-V2-003](tasks/ASF-V2-003.md) ajoute le frontmatter V2 aux onze tâches
+`backlog/tasks/TS-NNN.md` **sans modifier leur corps** (critères, cases non
+cochées et preuves conservés), classe `TS-003` en dette factory, régénère
+`backlog/index.json` (11 fiches actives, 0 archivée) et simplifie
+`backlog/README.md`. Décisions, inventaire et incertitudes dans
+[migration historique](backlog-v2-migration.md). Toutes les tâches historiques
+portent `automation: manual` et `risk: unknown` : elles ne sont jamais
+sélectionnées automatiquement. Preuve locale uniquement : `npm run check`
+exécuté sur la branche de la PR → 137 tests réussis, `backlog:check`
+(11 actifs, 0 archivé), puis `node --check` sur `site/core.js` et
+`site/app.js`. Aucun workflow n'est modifié. Tant que la PR n'est pas
+fusionnée avec une CI `check` indépendante réussie sur le bon SHA, cette
+migration ne doit pas être décrite comme livrée sur `main`.

@@ -6,9 +6,10 @@ approuvée pour découpage). Ce document décrit le contrat effectivement appliq
 à `backlog/tasks/TEMPLATE.md`, `AGENTS.md` et `ChatGPT.md` par ASF-V2-001. Le
 validateur strict et la régénération des index sont implémentés par
 [ASF-V2-002](tasks/ASF-V2-002.md) (voir
-[index déterministe](backlog-v2-index.md)) ; la migration historique reste
-portée par [ASF-V2-003](tasks/ASF-V2-003.md). Aucune migration, aucun
-déplacement d'archive et aucune exécution automatique ne sont livrés.
+[index déterministe](backlog-v2-index.md)) ; la migration historique est
+implémentée en revue par [ASF-V2-003](tasks/ASF-V2-003.md) (voir
+[migration historique](backlog-v2-migration.md)). Aucune migration physique
+d'archive et aucune exécution automatique ne sont livrées.
 
 ## 1. Portée
 
