@@ -9,7 +9,7 @@
  * never supplied via workflow input, untrusted repo file or agent.
  * No network or secrets: all reads occur through injected read-only client.
  */
-import { canonicalize } from "../waves/hash.mjs";
+import { contentSha256 } from "../waves/hash.mjs";
 import { replayAdmissionRegistry } from "./global-admission.mjs";
 import { verifyV3SignedAdmissionPermit } from "./signed-global-admission.mjs";
 
@@ -67,6 +67,12 @@ export async function auditV3AdmissionWitnessChain({
   let replayed;
   try { replayed = replayAdmissionRegistry(registry); }
   catch { return deny("registry_replay_invalid"); }
+  // This prototype implements signed ADMIT only. A structural RELEASE with
+  // a fabricated terminal status could otherwise reopen the registry while
+  // retaining an authentic ADMIT witness. QUARANTINE/DIAGNOSTIC_NOTE also
+  // require a separately reviewed writer/evidence protocol.
+  if (replayed.events.some(e => e.type !== "ADMIT"))
+    return deny("unattested_global_transition");
   const admits = replayed.events.filter(e => e.type === "ADMIT");
   if (admits.length > MAX_ADMISSIONS) return deny("witness_audit_limit_reached");
   for (const event of admits) {
@@ -91,6 +97,6 @@ export async function auditV3AdmissionWitnessChain({
     // informational only; never a paid or dispatch capability
     admissions: admits.length,
     registryRevision: replayed.revision,
-    registryHash: canonicalize(replayed).length
+    registryHash: contentSha256(replayed)
   });
 }
