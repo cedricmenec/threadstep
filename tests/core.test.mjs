@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1066,3 +1066,158 @@ test("top-level reorder behavior stays identical after the helper is generalised
   assert.equal(reorderWithinPriority(items, "b", "child", "before"), items);
   assert.equal(reorderWithinPriority(items, "child", "b", "before"), items);
 });
+
+function priorityDocument() {
+  const doc = emptyDocument();
+  const subject = newSubject("Appels", "s1");
+  subject.items.push(
+    newItem("Urgent 1", "urgent", "u1"),
+    newItem("Normal 1", "normal", "n1"),
+    newItem("Normal 2", "normal", "n2"),
+    newItem("Plus tard 1", "later", "l1"),
+    newItem("Parent", "normal", "p"),
+    newItem("Enfant plus tard", "later", "c1", "p"),
+    newItem("Enfant urgent", "urgent", "c2", "p"),
+  );
+  const other = newSubject("Autre", "s2");
+  other.items.push(newItem("Autre étape", "urgent", "o1"));
+  doc.subjects.push(subject, other);
+  return doc;
+}
+
+test("setItemPriority accepts each allowed priority", () => {
+  for (const priority of PRIORITIES) {
+    const doc = priorityDocument();
+    const from = priority === "urgent" ? "later" : "urgent";
+    const before = setItemPriority(doc, "s1", "n1", from);
+    const next = setItemPriority(before, "s1", "n1", priority);
+    assert.notEqual(next, before);
+    assert.equal(next.subjects[0].items.find((i) => i.id === "n1").priority, priority);
+  }
+});
+
+test("setItemPriority rejects any priority outside the allowed values", () => {
+  const doc = priorityDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  for (const invalid of ["demain", "Urgent", "URGENT", "later ", "", "normal ", null, undefined, 42, {}, [], true]) {
+    assert.equal(setItemPriority(doc, "s1", "n1", invalid), doc);
+  }
+  assert.deepEqual(doc, snapshot);
+});
+
+test("setItemPriority returns the identical reference on every no-op path", () => {
+  const doc = priorityDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  assert.equal(setItemPriority(doc, "missing", "n1", "urgent"), doc);
+  assert.equal(setItemPriority(doc, "s1", "missing", "urgent"), doc);
+  assert.equal(setItemPriority(doc, "s1", "n1", "normal"), doc);
+  assert.equal(setItemPriority(doc, "s1", "n1", "demain"), doc);
+  assert.equal(setItemPriority(null, "s1", "n1", "urgent"), null);
+  assert.equal(setItemPriority(undefined, "s1", "n1", "urgent"), undefined);
+  assert.equal(setItemPriority({}, "s1", "n1", "urgent").subjects, undefined);
+  assert.deepEqual(doc, snapshot);
+});
+
+test("setItemPriority preserves identity, completion, hierarchy and unrelated references", () => {
+  const doc = priorityDocument();
+  const snapshot = JSON.parse(JSON.stringify(doc));
+  const nextTop = setItemPriority(doc, "s1", "p", "later");
+  assert.notEqual(nextTop, doc);
+  const parent = nextTop.subjects[0].items.find((i) => i.id === "p");
+  assert.equal(parent.id, "p");
+  assert.equal(parent.title, "Parent");
+  assert.equal(parent.done, false);
+  assert.equal(parent.parentId, null);
+  assert.equal(parent.priority, "later");
+  assert.equal(nextTop.subjects[0].items.find((i) => i.id === "c1").parentId, "p");
+  assert.equal(nextTop.subjects[0].items.find((i) => i.id === "c2").parentId, "p");
+  assert.equal(nextTop.subjects[0].items.find((i) => i.id === "c1").priority, "later");
+  assert.equal(nextTop.subjects[0].items.find((i) => i.id === "n1"), doc.subjects[0].items.find((i) => i.id === "n1"));
+  assert.equal(nextTop.subjects[1], doc.subjects[1]);
+  assert.deepEqual(doc, snapshot);
+
+  const nextChild = setItemPriority(doc, "s1", "c1", "urgent");
+  const child = nextChild.subjects[0].items.find((i) => i.id === "c1");
+  assert.equal(child.parentId, "p");
+  assert.equal(child.id, "c1");
+  assert.equal(child.title, "Enfant plus tard");
+  assert.equal(child.done, false);
+  assert.equal(child.priority, "urgent");
+  assert.equal(nextChild.subjects[0].items.find((i) => i.id === "p"), doc.subjects[0].items.find((i) => i.id === "p"));
+  assert.equal(nextChild.subjects[0].items.find((i) => i.id === "c2"), doc.subjects[0].items.find((i) => i.id === "c2"));
+  assert.deepEqual(doc, snapshot);
+});
+
+test("setItemPriority returns new structures without sharing the changed item", () => {
+  const doc = priorityDocument();
+  const next = setItemPriority(doc, "s1", "n1", "urgent");
+  assert.notEqual(next, doc);
+  assert.notEqual(next.subjects, doc.subjects);
+  assert.notEqual(next.subjects[0], doc.subjects[0]);
+  assert.notEqual(next.subjects[0].items, doc.subjects[0].items);
+  assert.notEqual(next.subjects[0].items.find((i) => i.id === "n1"), doc.subjects[0].items.find((i) => i.id === "n1"));
+  assert.deepEqual(
+    Object.keys(next.subjects[0].items.find((i) => i.id === "n1")).sort(),
+    ["done", "id", "parentId", "priority", "title"]);
+  assert.equal(next.subjects[0].items.find((i) => i.id === "n1").title, "Normal 1");
+  assert.equal(next.subjects[0].items.find((i) => i.id === "n1").done, false);
+});
+
+test("setItemPriority regroups a changed action through sortedItems and visibleItems", () => {
+  const doc = priorityDocument();
+  const before = sortedItems(doc.subjects[0].items).map((i) => i.id);
+  assert.deepEqual(before, ["u1", "n1", "n2", "p", "l1"]);
+  const next = setItemPriority(doc, "s1", "n1", "later");
+  assert.deepEqual(sortedItems(next.subjects[0].items).map((i) => i.id), ["u1", "n2", "p", "n1", "l1"]);
+  assert.deepEqual(visibleItems(next.subjects[0].items).map((i) => i.id), ["u1", "n2", "p", "n1", "l1"]);
+  const urgent = setItemPriority(doc, "s1", "l1", "urgent");
+  assert.deepEqual(sortedItems(urgent.subjects[0].items).map((i) => i.id), ["u1", "l1", "n1", "n2", "p"]);
+});
+
+test("setItemPriority regroups a changed substep without touching its parent or siblings", () => {
+  const doc = priorityDocument();
+  const before = visibleItems(doc.subjects[0].items, "p").map((i) => i.id);
+  assert.deepEqual(before, ["c2", "c1"]);
+  const next = setItemPriority(doc, "s1", "c1", "urgent");
+  assert.deepEqual(visibleItems(next.subjects[0].items, "p").map((i) => i.id), ["c1", "c2"]);
+  assert.equal(next.subjects[0].items.find((i) => i.id === "p").priority, "normal");
+  assert.equal(next.subjects[0].items.find((i) => i.id === "c1").parentId, "p");
+  assert.equal(next.subjects[0].items.find((i) => i.id === "c2").parentId, "p");
+  assert.deepEqual(
+    visibleItems(next.subjects[0].items, null).map((i) => i.id),
+    ["u1", "n1", "n2", "p", "l1"]);
+});
+
+test("a changed priority round-trips through parseDocument without migration", () => {
+  const doc = priorityDocument();
+  const next = setItemPriority(doc, "s1", "n1", "later");
+  const stored = JSON.stringify(next);
+  const restored = parseDocument(stored);
+  assert.deepEqual(restored, JSON.parse(stored));
+  assert.equal(restored.version, 1);
+  assert.equal(restored.subjects[0].items.find((i) => i.id === "n1").priority, "later");
+  assert.deepEqual(
+    Object.keys(restored.subjects[0].items.find((i) => i.id === "n1")).sort(),
+    ["done", "id", "parentId", "priority", "title"]);
+  assert.equal(STORAGE_KEY, "threadstep.document.v1");
+  assert.deepEqual(PRIORITIES, ["urgent", "normal", "later"]);
+});
+
+test("priority changes leave updateItem, reorderWithinPriority and moveWithinPriority behavior unchanged", () => {
+  const items = [
+    newItem("A", "normal", "a"),
+    newItem("B", "normal", "b"),
+    newItem("C", "normal", "c"),
+  ];
+  const doc = { version: 1, subjects: [{ id: "s1", title: "S", items }] };
+  const next = setItemPriority(doc, "s1", "a", "urgent");
+  assert.deepEqual(reorderWithinPriority(next.subjects[0].items, "c", "b", "before").map((i) => i.id), ["a", "c", "b"]);
+  assert.deepEqual(moveWithinPriority(next.subjects[0].items, "c", "up").map((i) => i.id), ["a", "c", "b"]);
+  assert.equal(canMoveWithinPriority(next.subjects[0].items, "a", "up"), false);
+  const edited = updateItem(next, "s1", "b", { title: "B2", priority: "later" });
+  assert.equal(edited.subjects[0].items.find((i) => i.id === "b").title, "B2");
+  assert.equal(edited.subjects[0].items.find((i) => i.id === "b").priority, "later");
+  assert.equal(edited.subjects[0].items.find((i) => i.id === "a").priority, "urgent");
+  assert.equal(doc.subjects[0].items.find((i) => i.id === "a").priority, "normal");
+});
+

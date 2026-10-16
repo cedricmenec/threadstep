@@ -32,6 +32,20 @@ export function updateItem(document, subjectId, itemId, patch) {
     entry.id === subjectId ? { ...entry, items } : entry);
   return { ...document, subjects };
 }
+export function setItemPriority(document, subjectId, itemId, priority) {
+  if (!document || !Array.isArray(document.subjects)) return document;
+  const subject = document.subjects.find((entry) => entry.id === subjectId);
+  if (!subject || !Array.isArray(subject.items)) return document;
+  const item = subject.items.find((entry) => entry.id === itemId);
+  if (!item) return document;
+  if (!PRIORITIES.includes(priority)) return document;
+  if (priority === item.priority) return document;
+  const items = subject.items.map((entry) =>
+    entry.id === itemId ? { ...entry, priority } : entry);
+  const subjects = document.subjects.map((entry) =>
+    entry.id === subjectId ? { ...entry, items } : entry);
+  return { ...document, subjects };
+}
 export function sortedItems(items, parentId = null) {
   return items.filter((item) => item.parentId === parentId)
     .sort((a, b) => priorityIndex(a.priority) - priorityIndex(b.priority));
