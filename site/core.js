@@ -52,6 +52,13 @@ export function substepView(items, parentId, hideCompleted, collapsedIds) {
   const collapsed = hasVisibleSubsteps && collapsedIds instanceof Set && collapsedIds.has(parentId);
   return { children, hasVisibleSubsteps, collapsed, renderChildren: hasVisibleSubsteps && !collapsed };
 }
+export function substepToggleLabel(visibleCount, collapsed) {
+  if (!collapsed) return "Masquer les sous-tâches";
+  const count = Number(visibleCount);
+  if (count === 1) return "Voir 1 sous-tâche";
+  if (Number.isFinite(count) && count > 1) return "Voir " + count + " sous-tâches";
+  return "Masquer les sous-tâches";
+}
 export function toggleCollapsedParent(collapsedIds, parentId) {
   const next = collapsedIds instanceof Set ? new Set(collapsedIds) : new Set();
   if (next.has(parentId)) next.delete(parentId);

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, toggleCollapsedParent } from "../site/core.js";
+import { RESUME_KEY, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -257,6 +257,58 @@ test("substepView respects the completion filter without revealing hidden subste
   assert.equal(hidden.hasVisibleSubsteps, false);
   assert.equal(hidden.collapsed, false);
   assert.equal(hidden.renderChildren, false);
+});
+
+test("substepToggleLabel returns the exact expanded, singular and plural labels", () => {
+  assert.equal(substepToggleLabel(1, false), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel(3, false), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel(1, true), "Voir 1 sous-tâche");
+  assert.equal(substepToggleLabel(2, true), "Voir 2 sous-tâches");
+  assert.equal(substepToggleLabel(5, true), "Voir 5 sous-tâches");
+  assert.equal(substepToggleLabel(0, true), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel(0, false), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel("abc", true), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel(undefined, true), "Masquer les sous-tâches");
+  assert.equal(substepToggleLabel(2, undefined), "Masquer les sous-tâches");
+});
+
+test("substepToggleLabel count follows the completion filter and matches substepView", () => {
+  const items = [
+    newItem("Parent", "normal", "p"),
+    newItem("Un", "normal", "c1", "p"),
+    newItem("Deux", "normal", "c2", "p"),
+    newItem("Trois", "normal", "c3", "p"),
+  ];
+  items[3].done = true;
+  const unfiltered = substepView(items, "p", false, new Set(["p"]));
+  assert.equal(unfiltered.children.length, 3);
+  assert.equal(substepToggleLabel(unfiltered.children.length, unfiltered.collapsed), "Voir 3 sous-tâches");
+  const filtered = substepView(items, "p", true, new Set(["p"]));
+  assert.equal(filtered.children.length, 2);
+  assert.equal(substepToggleLabel(filtered.children.length, filtered.collapsed), "Voir 2 sous-tâches");
+  const allDone = [
+    newItem("Parent", "normal", "p"),
+    newItem("Fait", "normal", "c1", "p"),
+  ];
+  allDone[1].done = true;
+  const noneVisible = substepView(allDone, "p", true, new Set());
+  assert.equal(noneVisible.hasVisibleSubsteps, false);
+  assert.deepEqual(noneVisible.children, []);
+});
+
+test("substepView and substepToggleLabel never mutate items or the collapsed set", () => {
+  const items = [
+    newItem("Parent", "normal", "p"),
+    newItem("Enfant", "later", "c1", "p"),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  const collapsedIds = new Set(["p"]);
+  const before = [...collapsedIds];
+  const view = substepView(items, "p", false, collapsedIds);
+  substepToggleLabel(view.children.length, view.collapsed);
+  assert.equal(view.collapsed, true);
+  assert.deepEqual(items, snapshot);
+  assert.deepEqual([...collapsedIds], before);
 });
 
 test("import rejects invalid hierarchy, IDs and versions", () => {

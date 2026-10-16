@@ -51,13 +51,20 @@ critère de départage.
 ## Replier et déplier les sous-étapes (TS-012)
 
 Lorsqu'une action principale possède au moins une sous-étape
-visible, un bouton **« Replier »** apparaît à côté de ses commandes.
+visible, un bouton de repli apparaît à côté de ses commandes. Son
+libellé indique combien de sous-étapes sont concernées.
 
-- **« Replier »** masque temporairement uniquement les sous-étapes
-  de cette action : son titre, sa priorité, son état et ses boutons
-  restent affichés et utilisables, comme les actions voisines.
-  **« Déplier »** les réaffiche dans le même ordre et avec les mêmes
-  états.
+- Au repos, le bouton affiche **« Voir 1 sous-tâche »** lorsqu'une
+  seule sous-étape est visible, et **« Voir N sous-tâches »** lorsque
+  plusieurs le sont.
+- Le clic masque temporairement uniquement les sous-étapes de cette
+  action : son titre, sa priorité, son état et ses boutons restent
+  affichés et utilisables, comme les actions voisines. Le bouton
+  devient alors **« Masquer les sous-tâches »** ; un nouveau clic les
+  réaffiche dans le même ordre et avec les mêmes états.
+- Le décompte suit le filtre **« Masquer les étapes terminées »** :
+  une sous-étape terminée et masquée par ce filtre n'est pas comptée,
+  même si l'action parente est repliée.
 - Chaque action se replie indépendamment : plusieurs actions peuvent
   être repliées en même temps, dans un même sujet ou dans des sujets
   différents.

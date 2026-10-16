@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -550,10 +550,11 @@ function cancelDrag(event) {
   notify("Déplacement annulé");
 }
 function renderSubstepToggle(item, view) {
-  const toggle = el("button", "subtle task-toggle", view.collapsed ? "Déplier" : "Replier");
+  const label = substepToggleLabel(view.children.length, view.collapsed);
+  const toggle = el("button", "subtle task-toggle", label);
   toggle.type = "button";
   toggle.setAttribute("aria-expanded", view.collapsed ? "false" : "true");
-  toggle.setAttribute("aria-label", (view.collapsed ? "Déplier" : "Replier") + " les sous-étapes de « " + item.title + " »");
+  toggle.setAttribute("aria-label", label + " de « " + item.title + " »");
   if (view.renderChildren) toggle.setAttribute("aria-controls", substepListId(item.id));
   toggle.addEventListener("click", () => {
     collapsedParents = toggleCollapsedParent(collapsedParents, item.id);
