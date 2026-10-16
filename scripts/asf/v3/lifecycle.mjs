@@ -5,6 +5,7 @@
  * The V1 modules and workflows are deliberately unchanged.
  */
 import { contentSha256, canonicalize } from "../waves/hash.mjs";
+import { MODEL_ALLOWLIST } from "../waves/manifest.mjs";
 
 export const V3_SCHEMA = 2;
 export const V3_POLICY = "asf-orch-v3";
@@ -94,11 +95,23 @@ export function createV3Journal(manifest) {
 }
 export function v3JournalHash(journal) { return contentSha256(journal); }
 
+const eventFields = Object.freeze({
+  RESERVE: ["taskId"], DISPATCH_INTENT: ["taskId"],
+  ACK_CHILD: ["taskId", "childRunId", "runAttempt", "workflowRef"],
+  CLAIM_CHILD: ["taskId", "childRunId", "runAttempt", "workflowRef"],
+  PR_PUBLISHED: ["taskId", "childRunId", "prNumber", "headSha"],
+  DELIVERED: ["taskId", "proof"], CHECKPOINT: ["taskId"],
+  ATTACH_CONTROLLER: ["controllerRunId", "checkpointRevision", "checkpointHash",
+    "origin", "controller"],
+  COMPLETE_NO_WORK: [], STOP_FAILED: ["reason"], STOP_UNCERTAIN: ["reason"],
+  RECONCILE_NOTE: ["reason"]
+});
 function assertEventFields(event) {
-  keys(event, ["type", "taskId", "childRunId", "runAttempt", "workflowRef", "prNumber",
-    "headSha", "proof", "controllerRunId", "checkpointRevision", "checkpointHash",
-    "origin", "controller", "reason"]);
-  requireThat(typeof event.type === "string", "invalid_event");
+  requireThat(isObject(event) && typeof event.type === "string" &&
+    Object.hasOwn(eventFields, event.type), "unknown_event");
+  keys(event, ["type", ...eventFields[event.type]]);
+  requireThat(eventFields[event.type].every(key => Object.hasOwn(event, key)),
+    "missing_event_fields");
 }
 function requireActive(journal, event, status) {
   requireThat(journal.status === status && journal.active !== null &&
