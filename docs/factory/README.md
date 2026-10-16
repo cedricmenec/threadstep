@@ -54,6 +54,8 @@ Les spécifications [Backlog V2, Scheduler V1 et Orchestrator V1](specs/README.m
 
 [ASF-V2-003](tasks/ASF-V2-003.md) migre les tâches historiques `TS-001` à `TS-011` vers le frontmatter V2 sans modifier leur corps, classe `TS-003` en dette factory et régénère `backlog/index.json` (11 fiches actives, `automation: manual`, `risk: unknown`). Détails et incertitudes dans [migration historique](backlog-v2-migration.md). Cette migration est **en revue dans sa propre PR** et ne constitue pas une livraison vérifiée sur GitHub.
 
+[ASF-V2-004](tasks/ASF-V2-004.md) implémente le [noyau pur du scheduler](scheduler-core.md) (`scripts/asf/scheduler/`) : décision déterministe à entrées injectées (instantané validé, manifeste figé, preuves de livraison/conflit, journal), sans réseau, sans horloge et sans mutation. L'implémentation est **en revue dans sa PR** ; couverture par `tests/asf-scheduler-core.test.mjs` et `npm run check` local, sans preuve de CI GitHub indépendante ni de fusion.
+
 ## Exécuteur ASF dédié (bootstrap)
 
 Voir [l'exécuteur manuel ASF proposé](agent-asf-manual.md) et [ASF-BOOT-001](tasks/ASF-BOOT-001.md). Son statut devient opérationnel uniquement après revue, CI, fusion et vérification sur main. Il accepte les tâches de factory ASF-V2 sans affaiblir le workflow ThreadStep TS-NNN.

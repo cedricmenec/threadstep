@@ -18,6 +18,7 @@
 | Ergonomie lancement OpenSpec | **Évolution ASF-WF-001** : auto/DeepSeek V4.1 Flash pré-sélectionnés, alias numériques normalisés via prévalidation et verrou de concurrence par tâche ; tests CI de configuration et du normaliseur, aucun lancement OpenRouter pour cette modification. |
 | Contrat des tâches Backlog V2 | **Livré** : [ASF-V2-001](tasks/ASF-V2-001.md) (PR #40) définit le [contrat des tâches V2](backlog-v2-task-contract.md) et ses tests statiques. |
 | Index et validation stricte du backlog | **Livré sur `main`** : [ASF-V2-002](tasks/ASF-V2-002.md) fournit `scripts/asf/`, `backlog/index.json`, `backlog/archive-index.json` et l'[index déterministe](backlog-v2-index.md) (PR #43 fusionnée). Migration [ASF-V2-003](tasks/ASF-V2-003.md) **en revue dans sa PR** : frontmatter V2 des tâches historiques et index peuplé (11 actives), détails dans [migration historique](backlog-v2-migration.md). |
+| Noyau pur du scheduler | **En revue dans sa PR** : [ASF-V2-004](tasks/ASF-V2-004.md) fournit le [noyau pur du scheduler](scheduler-core.md) (`scripts/asf/scheduler/`) à entrées injectées, sans réseau, horloge ni mutation, avec 30 tests dédiés et `npm run check` local (167 tests). Aucune CI GitHub indépendante ni fusion revendiquée ; CLI dry-run et adaptateurs à venir (ASF-V2-005/006/007). |
 
 **Dette restante** : les cases historiques d'acceptation dans les tâches TS-NNN ne sont pas cochées automatiquement par l'agent. Leur statut de livraison est désormais réconcilié à partir des PR, sans réécrire a posteriori leurs checklists.
 

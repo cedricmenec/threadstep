@@ -211,3 +211,21 @@ exécuté sur la branche de la PR → 137 tests réussis, `backlog:check`
 `site/app.js`. Aucun workflow n'est modifié. Tant que la PR n'est pas
 fusionnée avec une CI `check` indépendante réussie sur le bon SHA, cette
 migration ne doit pas être décrite comme livrée sur `main`.
+
+## Noyau pur du scheduler ASF-V2-004 (en revue, non fusionné)
+
+[ASF-V2-004](tasks/ASF-V2-004.md) ajoute le [noyau pur du scheduler](scheduler-core.md)
+sous `scripts/asf/scheduler/` : décision déterministe à partir d'entrées
+injectées uniquement (instantané de backlog validé, manifeste de vague figé,
+preuves de livraison/conflit, journal), sans réseau, sans horloge, sans mutation
+et sans aucun dispatch. L'éligibilité V1 exige `product`/`ready`/`allowed`/`low`,
+un hash autorisé, l'absence de livraison/tentative/conflit et des dépendances
+prouvées livrées ; l'ordre est priorité, puis `created_at`, puis `id`. Les
+preuves ambiguës, un hash divergent ou un instantané invalide produisent
+`STOP_UNCERTAIN`, le quota épuisé `QUOTA_REACHED`. Preuve locale uniquement :
+`node --test tests/asf-scheduler-core.test.mjs` → 30 tests réussis, puis
+`npm run check` → 167 tests réussis, `backlog:check` (11 actifs, 0 archivé) et
+`node --check` sur `site/core.js` et `site/app.js`. Tant que la PR n'est pas
+fusionnée avec une CI `check` indépendante réussie sur le bon SHA, ce noyau ne
+doit pas être décrit comme livré sur `main`, et aucun appel OpenRouter payant
+n'a été effectué pour cette tâche.
