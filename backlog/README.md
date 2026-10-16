@@ -12,11 +12,13 @@
 - **[TS-016](tasks/TS-016.md) : vue de détail d'un projet.**
   Une action sur la carte de la vue d'ensemble ouvre une vue dédiée
   moins dense et navigable par URL, avec tâches et sous-tâches, plus
-  **renommage et duplication** du projet, tout en conservant le modèle
-  `subject` et le stockage local existants. État déclaratif :
-  `product / ready / allowed / medium`. Le risque moyen bloque
-  toutefois la **sélection automatique** selon le contrat V2, même
-  avec `allowed` ; une revue humaine reste nécessaire.
+  **renommage** du projet, tout en conservant le modèle
+  `subject` et le stockage local existants. La duplication est
+  explicitement **hors périmètre**. État déclaratif :
+  `product / ready / allowed / low`, avec risque résiduel borné
+  par des tests de navigation, de non-mutation et de régression.
+  La sélection automatique reste subordonnée à la présence sur
+  `main` et aux contrôles opérationnels du scheduler.
 
 Ces fiches constituent une **préparation documentaire**, pas des
 fonctionnalités présentes en production. La PR de backlog n'implémente
