@@ -128,6 +128,10 @@ Déployer sur un chemin V3 séparé ou sous un `feature flag` explicite, puis qu
 6. ASF-V3-EXEC-001 (intitulé provisoire) : généraliser l'Agent ASF hors des IDs V2 par **politiques versionnées et profils de risque distincts**, en conservant une voie humaine spéciale pour les workflows, les droits et la politique de publication.
 7. ASF-V3-DOC-001 : cartographier et décrire chaque workflow, job et step, en parallèle des changements techniques.
 
+## Étude approfondie du cycle de vie d'une vague
+
+Le document [cycle de vie détaillé V3](asf-v3-wave-lifecycle.md) décrit l'autorisation, le manifeste figé, la sélection, la réservation, le dispatch à deux temps, l'authentification du run enfant, la preuve de livraison, les checkpoints, les arrêts et les reprises, avec exemples sur 10 tâches et incident en cinquième position. Cette spécification est **proposée et non implémentée**.
+
 ## 10. Arbitrages encore ouverts
 
 - Définition exacte et vérification du **mandat de continuation** inter-runs : nouveau workflow contrôleur ou `repository_dispatch`, conditions d'activation, mécanisme d'idempotence.
