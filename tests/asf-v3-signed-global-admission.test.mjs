@@ -242,3 +242,49 @@ test("registry CAS does not expose RELEASE, bootstrap or paid start operations",
   assert.equal(s.all.some(x=>x.path.includes("asf/waves/")),false);
   assert.equal(s.all.some(x=>x.path.includes("workflow_dispatch")),false);
 });
+
+
+test("forged unsigned ADMIT may replay structurally but NEVER verifies as signed snapshot",async()=>{
+  const s=fakeServer({unsignedAdmit:true}),key=keys();
+  assert.equal(s.registry.state,"ACTIVE","pure policy replay accepts structurally coherent forged entry");
+  const read=await observeGlobalAdmissionSnapshot(s.readClient,key.publicKey);
+  assert.equal(read.status,"uncertain");
+  assert.equal(read.ok,false);
+  assert.match(read.code,/untrusted_admission_witness_witness_unavailable/);
+  const attempted=await attemptSignedGlobalAdmission(request(s,key,"wave-002"));
+  assert.equal(attempted.ok,false);
+  assert.equal(s.all.filter(x=>x.method!=="GET").length,0);
+});
+
+test("signed admission stores its permit in same commit tree; no witness means no trusted future read",async()=>{
+  const s=fakeServer(),key=keys();
+  assert.equal((await attemptSignedGlobalAdmission(request(s,key))).status,"persisted");
+  const paths=s.all.filter(x=>x.method==="POST"&&x.path.endsWith("/git/trees"))
+    .flatMap(x=>x.body.tree.map(y=>y.path));
+  assert.deepEqual(paths,["registry.json","admission-evidence/wave-001.json"]);
+  const withKey=await observeGlobalAdmissionSnapshot(s.readClient,key.publicKey);
+  assert.equal(withKey.status,"snapshot_verified");
+  const withoutKey=await observeGlobalAdmissionSnapshot(s.readClient);
+  assert.equal(withoutKey.ok,false);
+  assert.equal(withoutKey.code,"untrusted_admission_witness_missing_pinned_audit_context");
+  const wrongKey=await observeGlobalAdmissionSnapshot(s.readClient,keys().publicKey);
+  assert.equal(wrongKey.ok,false);
+  assert.equal(wrongKey.code,"untrusted_admission_witness_witness_signature_or_claim_mismatch");
+});
+
+test("tampering with persisted permit after branch update blocks confirmation, never retries",async()=>{
+  const s=fakeServer({tamperWitness:true}),key=keys();
+  const r=await attemptSignedGlobalAdmission(request(s,key));
+  assert.equal(r.ok,false);
+  assert.equal(r.status,"uncertain");
+  assert.equal(s.registry.state,"ACTIVE","remote admission may already have been recorded");
+  assert.equal(s.all.filter(x=>x.method==="PATCH").length,1);
+});
+
+test("witness path does not permit arbitrary branches or workflow files",async()=>{
+  const {v3AdmissionWitnessPath}=await import("../scripts/asf/v3/signed-global-witness.mjs");
+  assert.equal(v3AdmissionWitnessPath("wave-123"),"admission-evidence/wave-123.json");
+  for(const name of ["../main","wave/other","a%2fmain","UPPER","a".repeat(80)]){
+    assert.throws(()=>v3AdmissionWitnessPath(name),TypeError);
+  }
+});
