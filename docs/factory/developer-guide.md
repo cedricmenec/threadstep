@@ -1,6 +1,6 @@
 # Guide développeur — Autonomous Software Factory (ASF V2)
 
-**État vérifié : 16 octobre 2026.** Le programme ASF-V2-001 à ASF-V2-011 est implémenté sur `main`. Deux exécutions de bout en bout ont livré une, puis deux tâches, avec contrôles de livraison. La recette négative **CI rouge réelle** et la revue finale des permissions restent ouvertes : voir [validation et reprise](validation-and-recovery.md) et [preuves](current-state.md).
+**Clôture ASF V2 : 16 octobre 2026, périmètre V1 borné.** Le programme ASF-V2-001 à ASF-V2-011 est livré ; vrais pilotes 1/2 tâches, vrai blocage GitHub du `check` rouge (PR #61), protections vérifiées par API et permissions App/recette produit attestées par le propriétaire. Pas d'injection de panne réelle dans un agent payant. Voir [rapport de clôture](closeout-2026-10-16.md), [validation/reprise](validation-and-recovery.md) et [preuves](current-state.md).
 
 ## Démarrage rapide
 

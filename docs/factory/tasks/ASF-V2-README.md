@@ -1,6 +1,6 @@
 # Backlog de développement ASF V2
 
-**Actualisation opérationnelle du 16 octobre 2026 : les onze tâches ASF V2 ont été implémentées et fusionnées.** La recette technique d'une puis deux tâches réelles a réussi ([runs](../validation-and-recovery.md)). **Ne pas interpréter l'ancien statut de planification ci-dessous comme la vérité GitHub.** Les tests de CI rouge réelle et la revue sécurité de clôture demeurent ouverts.
+**Actualisation opérationnelle du 16 octobre 2026 : les onze tâches ASF V2 ont été implémentées et fusionnées.** La recette technique d'une puis deux tâches réelles a réussi ([runs](../validation-and-recovery.md)). **Ne pas interpréter l'ancien statut de planification ci-dessous comme la vérité GitHub.** Le test de CI rouge réel sur PR #61 a été réalisé et bloqué ; les permissions de l'App et la recette manuelle sont attestées par le propriétaire. [ASF V2 clôturée](../closeout-2026-10-16.md) dans le périmètre V1 sans démonstration de panne réelle d'un agent payant.
 
 
 **Statut :** découpage de conception approuvé, tâches prêtes pour revue documentaire, aucune implémentation ni exécution autorisée.

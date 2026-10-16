@@ -5,8 +5,8 @@ repli « Voir N sous-tâches » / « Masquer les sous-tâches » (TS-012/13)
 et le réordonnancement des sous-tâches par parent/priorité (TS-014).
 Le [guide utilisateur](docs/product/guide-utilisation.md) et la
 [recette](docs/product/acceptance-checklist.md) couvrent ces fonctions.
-La [factory ASF V2](docs/factory/README.md) a livré ses vagues à une
-et deux tâches ; [guide développeur ASF](docs/factory/developer-guide.md),
+La [factory ASF V2](docs/factory/README.md) est **clôturée pour son périmètre 1–2 tâches**
+([rapport vérifié](docs/factory/closeout-2026-10-16.md)) ; [guide développeur ASF](docs/factory/developer-guide.md),
 [reprise et tests de panne](docs/factory/validation-and-recovery.md)
 et [évolution vers dix tâches](docs/factory/scale-to-ten.md).
 

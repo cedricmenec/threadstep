@@ -5,7 +5,7 @@
 - ASF-V2-001 à ASF-V2-011 : **implémentées et fusionnées**, avec des preuves réelles pour l'orchestration V1 ; l'ancien tableau « non implémenté » ci-dessous est **historique**.
 - Pilote réel **1/1** : [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283), PR #55.
 - Pilote réel **2/2** : [run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187), PR #58 et #59, contrôle intermédiaire des checks de PR/fusion/CI/Pages.
-- Prochain jalon de recette : [test CI rouge réel et contrôle permissions](validation-and-recovery.md), puis signature de clôture ASF-V2-011. Recette utilisateur [ThreadStep](../product/acceptance-checklist.md).
+- **Recette ASF V2 clôturée dans le périmètre V1 borné** : [rapport de clôture](closeout-2026-10-16.md), [CI rouge réellement bloquée sur PR #61](https://github.com/cedricmenec/threadstep/pull/61), audit GitHub API et attestation propriétaire (permissions App, recette produit). Cas d'injection de panne dans un agent payé non réalisé et non revendiqué.
 - Évolutions optionnelles : archivage documentaire réel de TS-012/013/014 (une livraison n'est pas un archivage), métriques de budget, et [architecture V2 jusqu'à dix démarrages](scale-to-ten.md). Aucune extension payante ou sensible n'est autorisée par la roadmap.
 
 **Les lignes datées du 15 octobre ci-dessous restent le journal des objectifs initiaux, et non l'état en service.**

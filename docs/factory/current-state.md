@@ -1,6 +1,9 @@
 # État courant de l'Autonomous Software Factory
 
-## Actualisation vérifiée — 16 octobre 2026 (à lire avant l'historique)
+## Clôture ASF V2 — 16 octobre 2026 (à lire avant l'historique)
+
+**ASF V2 clôturée pour le périmètre de l'orchestrateur V1 (`max_tasks=1|2`)**. La [décision motivée et les limites de preuve](closeout-2026-10-16.md) intègrent les deux pilotes réels, le `check` rouge de [PR #61](https://github.com/cedricmenec/threadstep/pull/61) bloquée puis fermée sans fusion, l'inspection du ruleset ainsi que l'attestation du propriétaire pour permissions App et recette manuelle. L'injection de panne dans un agent payant reste hors des essais réalisés.
+
 
 Le titre « État courant » et les affirmations datées du 15 octobre conservées **ci-dessous** sont des instantanés historiques des premières PR. **L'état opérationnel réel** est désormais le suivant :
 
@@ -9,8 +12,8 @@ Le titre « État courant » et les affirmations datées du 15 octobre conservé
 - **Pilote à une tâche** : [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283), PR [#55](https://github.com/cedricmenec/threadstep/pull/55), merge `33adc80a9c090e166e132c7494066511311f16f8`, journal `wave-38886939283` : TS-012 `DELIVERED`, quota 1/1, CI et Pages post-fusion réussies.
 - **Pilote à deux tâches** : [run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) ; TS-013 [PR #58](https://github.com/cedricmenec/threadstep/pull/58), merge `eba9fd15ff9e2ac24ece20f742e0f12f78047856` ; TS-014 [PR #59](https://github.com/cedricmenec/threadstep/pull/59), merge `97d326c5b262622f8146348f385eb1e0d838829c`. Journal `wave-38910657187` : deux `DELIVERED`, 2 réservations/2, `stop: null`; contrôle intermédiaire réussi avant sélection du second.
 - **Dernier commit de produit vérifié** : `97d326c5b262622f8146348f385eb1e0d838829c` ; CI [38912890270](https://github.com/cedricmenec/threadstep/actions/runs/38912890270) et Pages [38912890267](https://github.com/cedricmenec/threadstep/actions/runs/38912890267) réussies.
-- **Protection** : `main` signalée comme `protected`, ruleset `Protect Main` actif (id 25163425) ; source d'identité GitHub Actions attendue pour `check` : app 15368. **Revue finale des permissions effectives App et des bypass non encore consignée**.
-- **À fermer** : test `check` rouge **réel** sans fusion forcée, recette manuelle téléphone/clavier et relevé permissions/ruleset daté. Les six simulations E2E ne doivent pas être présentées comme ces tests réels.
+- **Protection** : `main` signalée comme `protected`, ruleset `Protect Main` actif (id 25163425) ; source d'identité GitHub Actions attendue pour `check` : app 15368. **BYPASS absent selon le ruleset lu par API `bypass_actors=[]` ; permissions fines App attestées conformes par le propriétaire le 16/10/2026** (non auditables indépendamment par l'API disponible).
+- **Clôture** : `check` rouge **réel** observé sur [PR #61](https://github.com/cedricmenec/threadstep/pull/61) / [CI #38925574700](https://github.com/cedricmenec/threadstep/actions/runs/38925574700), état `blocked`, PR fermée non fusionnée ; recette manuelle **déclarée OK** par le propriétaire, permissions App **attestées** conformes ; ruleset API vérifié. Les six simulations E2E ne constituent toujours pas un crash réel ou une panne d'agent payant.
 - **Archives produits** : `backlog/archive-index.json` est encore vide. TS-012/013/014 sont présentes en `ready/allowed/low` mais leurs PR sont déjà livrées ; **ne pas les relancer**. ASF-V2-010 fournit un archiveur déterministe ; aucune PR d'archivage automatique pour ces trois fiches n'est revendiquée.
 
 Voir [guide ASF](developer-guide.md), [validation et reprise](validation-and-recovery.md) et [changement d'échelle](scale-to-ten.md).
