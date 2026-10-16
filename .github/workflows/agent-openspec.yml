@@ -121,6 +121,7 @@ jobs:
       TASK_ID: ${{ needs.normalize-task.outputs.task_id }}
       PHASE: ${{ inputs.phase }}
       OPENCODE_MODEL: ${{ inputs.model }}
+      ASF_WAVE_ID: ${{ inputs.wave_id }}
       OPENSPEC_NO_UPDATE_CHECK: '1'
       OPENSPEC_NO_ANIMATION: '1'
     steps:
@@ -154,6 +155,16 @@ jobs:
           git config user.name "threadstep-software-factory[bot]"
           git config user.email "threadstep-software-factory[bot]@users.noreply.github.com"
           git fetch origin main
+          if [[ -n "${ASF_WAVE_ID:-}" ]]; then
+            # Each slot starts from the latest main containing earlier verified
+            # deliveries; the task brief must still match the original snapshot.
+            before="$(git show "HEAD:backlog/tasks/$TASK_ID.md" | sha256sum | cut -d ' ' -f1)"
+            git checkout --detach origin/main
+            after="$(sha256sum "backlog/tasks/$TASK_ID.md" | cut -d ' ' -f1)"
+            if [[ "$before" != "$after" ]]; then
+              echo "::error::Authorized task brief changed since wave opening"; exit 1
+            fi
+          fi
           branch="agent/openspec/$TASK_ID"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
             git fetch origin "$branch"
