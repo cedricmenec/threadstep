@@ -82,9 +82,25 @@ export function createV3Manifest(input) {
   });
 }
 
+export function assertV3Manifest(manifest) {
+  keys(manifest, ["schemaVersion", "policyVersion", "waveId", "repository", "backlogCommit",
+    "model", "autoMerge", "limits", "candidateTasks", "authorization"]);
+  keys(manifest.limits, ["maxTaskStarts", "maxConcurrentTasks", "maxPaidRetries"]);
+  requireThat(manifest.schemaVersion === V3_SCHEMA && manifest.policyVersion === V3_POLICY &&
+    manifest.limits.maxConcurrentTasks === 1 && manifest.limits.maxPaidRetries === 0,
+    "invalid_manifest_policy");
+  const reconstructed = createV3Manifest({
+    waveId: manifest.waveId, repository: manifest.repository,
+    backlogCommit: manifest.backlogCommit, model: manifest.model,
+    autoMerge: manifest.autoMerge, maxTaskStarts: manifest.limits.maxTaskStarts,
+    candidateTasks: manifest.candidateTasks, authorization: manifest.authorization
+  });
+  requireThat(canonicalize(reconstructed) === canonicalize(manifest), "invalid_manifest");
+  return true;
+}
+
 export function createV3Journal(manifest) {
-  requireThat(manifest.schemaVersion === V3_SCHEMA && manifest.policyVersion === V3_POLICY,
-    "wrong_manifest_version");
+  assertV3Manifest(manifest);
   return freezeDeep({
     schemaVersion: V3_SCHEMA, waveId: manifest.waveId, manifestHash: contentSha256(manifest),
     revision: 0, status: V3_STATES.READY, reserved: 0, delivered: 0,
