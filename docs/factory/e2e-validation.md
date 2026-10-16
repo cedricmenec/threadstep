@@ -7,7 +7,7 @@ La recette **simulée** décrite plus bas a été **fusionnée** dans [PR #53](h
 - [Pilote 1/1, run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283), PR #55, journal `wave-38886939283` en `DELIVERED`.
 - [Vague 2/2, run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187), PR #58/#59, journal `wave-38910657187` avec deux `DELIVERED`, `stop: null`, vérification CI + Pages après la première avant le second slot.
 
-**Reste non testé réellement** : refus de fusion sur `check` rouge en conditions GitHub, revue finale des permissions et recette manuelle produit. L'ancien protocole ci-dessous est conservé comme historique **avant** les runs ; voir [recette et reprise actuelles](validation-and-recovery.md) pour l'état et les actions de clôture.
+**Depuis vérifié** : [PR #61](https://github.com/cedricmenec/threadstep/pull/61) avec `check` rouge et merge GitHub `blocked`, fermée sans fusion ([run #38925574700](https://github.com/cedricmenec/threadstep/actions/runs/38925574700)). Permissions GitHub App et recette manuelle ThreadStep **attestées par le propriétaire** le 16 octobre 2026. **Non testé** : panne intentionnelle d'un agent payant OpenSpec. L'ancien protocole ci-dessous est conservé comme historique **avant** les runs ; voir [recette et reprise actuelles](validation-and-recovery.md) pour l'état et les actions de clôture.
 
 
 **Statut :** recette **simulée** livrée dans la PR de la tâche, **non fusionnée**

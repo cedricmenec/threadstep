@@ -2,7 +2,7 @@
 
 **État technique vérifié : 16 octobre 2026**, après les PR #55 (TS-012),
 #58 (TS-013) et #59 (TS-014), avec CI et Pages post-fusion réussies.
-Recette physique/clavier : [checklist à réaliser](acceptance-checklist.md).
+Recette manuelle : **déclarée OK par le propriétaire le 16 octobre 2026** ; [checklist détaillée et limites de preuve](acceptance-checklist.md).
 Application : https://cedricmenec.github.io/threadstep/
 
 ThreadStep est une page web personnelle en français pour retrouver

@@ -3,7 +3,7 @@
 ## Décisions opérationnelles confirmées — 16 octobre 2026
 
 - **ASF-ADR-V2-EXEC-01 — Acceptée et prouvée :** owner-only, quota 1 ou 2 réservations avant exécution ; OpenSpec authentifié, journal append-only, une tâche à la fois ; requérir PR/SHAs/required `check`/CI/Pages après chaque fusion avant le départ suivant. Preuves [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187).
-- **ASF-ADR-V2-SAFETY-02 — Acceptée :** une livraison ne peut jamais être inférée d'un statut Markdown ou d'un job `success` ; en cas d'incertitude, conserver le quota et arrêter, sans reset ni retry payant automatique. CI rouge réelle encore à qualifier dans la recette.
+- **ASF-ADR-V2-SAFETY-02 — Acceptée :** une livraison ne peut jamais être inférée d'un statut Markdown ou d'un job `success` ; en cas d'incertitude, conserver le quota et arrêter, sans reset ni retry payant automatique. CI rouge **réelle côté GitHub**, PR #61 bloquée et fermée sans fusion ; pas d'injection de panne d'agent payant.
 - **ASF-ADR-FUTURE-10 — À instruire, NON implémentée :** pour monter à 10, préférer une boucle d'orchestration durable avec preuve entre chaque tâche, plutôt que 10 jobs dupliqués ou une matrix parallèle. [Étude de faisabilité](scale-to-ten.md). Un plafond USD fournisseur doit être traité séparément.
 
 Les décisions datées ci-dessous sont conservées comme historique ; consulter [l'état courant](current-state.md) et le [guide développeur](developer-guide.md) pour la réalité déployée.

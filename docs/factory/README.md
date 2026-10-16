@@ -1,6 +1,6 @@
 # Autonomous Software Factory — documentation de référence
 
-**État : 16 octobre 2026.** Le programme ASF-V2-001 à ASF-V2-011 est **livré sur `main`**. La V1 a exécuté et livré **une tâche** (TS-012) puis **deux tâches** (TS-013/TS-014) dans une même vague, avec PR, CI et Pages indépendamment vérifiés. **Validation finale partielle** : une expérience *CI rouge réelle*, la revue datée des permissions GitHub App et les essais matériels manuels demeurent à réaliser. Une checklist ancienne non cochée ne transforme pas une livraison vérifiée en échec, mais ne constitue pas non plus la preuve du test manquant.
+**État : 16 octobre 2026.** Le programme ASF-V2-001 à ASF-V2-011 est **livré sur `main`**. La V1 a exécuté et livré **une tâche** (TS-012) puis **deux tâches** (TS-013/TS-014) dans une même vague, avec PR, CI et Pages indépendamment vérifiés. **ASF V2 clôturée dans son périmètre V1** : test `check` rouge réel bloquant la fusion GitHub effectué (PR #61), ruleset vérifié et permissions/recette manuelle confirmées par le propriétaire. Les essais de panne interne à un agent payant restent non exécutés : [rapport de clôture](closeout-2026-10-16.md). Une checklist ancienne non cochée ne transforme pas une livraison vérifiée en échec, mais ne constitue pas non plus la preuve du test manquant.
 
 ## Pour commencer
 
@@ -9,6 +9,7 @@
 | Comprendre les composants, le code et les contrôles | [Guide développeur ASF](developer-guide.md) |
 | Vérifier l'état, les SHAs, PR et runs de référence | [État courant](current-state.md) |
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
+| Consulter la décision formelle de clôture | [Rapport ASF V2 du 16 octobre 2026](closeout-2026-10-16.md) |
 | Tester panne, CI rouge, permissions et reprise | [Recette finale et reprise](validation-and-recovery.md) |
 | Comprendre la limite à deux tâches et le passage à dix | [Étude ASF V3 1..10](scale-to-ten.md) |
 | Consulter les critères ASF-V2-001 à 011 | [Backlog ASF V2](tasks/ASF-V2-README.md) |
@@ -41,7 +42,7 @@ Voir les pages de module existantes (`backlog-v2-*.md`, `scheduler-*.md`, `wave-
 - L'auto-merge est **natif GitHub**, et ne doit pas contourner le `check` indépendant ; le contrôle post-fusion exige CI et Pages avant le prochain slot.
 - L'archiveur ASF-V2-010 est une capacité de planification/PR indépendante ; les trois nouvelles tâches produits demeurent dans l'index actif tant qu'aucun archivage réellement réalisé n'est observé.
 - Le journal sur la branche `asf/waves/wave-<run_id>` ne doit jamais être modifié manuellement comme si un échec pouvait être réinitialisé sans danger.
-- Les six scénarios de panne **simulés** sont en place ; le refus réel de fusion après CI rouge et les vérifications matérielles restent à documenter une fois exécutés.
+- Les six scénarios de panne **simulés** sont en place ; la CI rouge réelle a bloqué la PR #61. La recette manuelle et les permissions GitHub App ont été attestées par le propriétaire le 16 octobre 2026, sans journal technique matériel ni capture sensible. Voir [clôture](closeout-2026-10-16.md).
 
 ## Vision
 

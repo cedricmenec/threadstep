@@ -1,6 +1,6 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
-**État au 16 octobre 2026 :** parcours E2E à une tâche et à deux tâches **vérifiés**. Les six simulations E2E passent dans le code livré. **CI rouge réelle**, tests matériels (clavier/mobile), contrôle de permissions GitHub App à l'instant de clôture et tests destructifs en conditions réelles **non revendiqués**.
+**Clôture au 16 octobre 2026 : ASF-V2-001..011 validées pour le périmètre V1 borné.** Runs réels 1/2 tâches, simulation des six scénarios, vrai blocage de PR sur CI rouge et contrôles de branche vérifiés. La recette ThreadStep et les permissions d'installation sont **attestées par le propriétaire**, sans détail par appareil ni accès direct à la configuration sensible. Les tests destructifs dans un agent payant restent hors de cette clôture. Voir [rapport de clôture](closeout-2026-10-16.md).
 
 > Cette page est une procédure de qualification, **pas** une autorisation pour créer une PR avec une CI cassée, désactiver les protections ou dépenser sur OpenRouter. Toute opération risquée a besoin d'un périmètre et d'une approbation indépendants. Les incidents se corrigent en PR et non en altérant une branche de journal déjà écrite.
 
@@ -13,10 +13,10 @@
 | Pilote 1 tâche | [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) ; PR #55, journal `wave-38886939283` en `DELIVERED`, quota 1/1 | Vérifier l'absence de redémarrage/duplicata |
 | Vague 2 tâches | [run 38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) ; PR #58/#59, journal `wave-38910657187`, 2/2, `stop: null` | Vérifier les SHA et CI/Pages de chaque fusion |
 | Aucun troisième départ | Quota 2/2, deux réservations et deux PR de produit ; troisième slot absent de V1 | Conserver les preuves |
-| `check` réellement rouge | **Non testé sur GitHub** ; seulement simulé par `red-ci` | Test isolé ci-dessous, avec autorisation préalable |
+| `check` réellement rouge | **Observé** : [PR #61](https://github.com/cedricmenec/threadstep/pull/61), [CI #38925574700](https://github.com/cedricmenec/threadstep/actions/runs/38925574700) rouge, merge bloquée ; PR fermée sans fusion | Test GitHub réussi ; injection de panne agent non éprouvée |
 | Reprise après interruption | Fenêtres de crash et CAS **simulées** | Revue des journaux, éventuellement exercice non-payant sur un banc dédié |
-| Protect Main / App / absence de bypass | `main` protégé et ruleset actif observés ; permissions fines à contrôler par owner | Relevé daté + capture/settings et comparaison avec le YAML |
-| Recette utilisateur ThreadStep | CI/Pages réussies pour TS-012/13/14 ; test physique non observé | [Checklist manuelle produit](../product/acceptance-checklist.md) |
+| Protect Main / App / absence de bypass | Ruleset `25163425` actif, `bypass_actors=[]`, `check` requis (GitHub Actions 15368) vérifiés par API ; permissions fines vérifiées **par le propriétaire** le 16/10/2026 | Attestation owner, pas inspection indépendante de l'installation |
+| Recette utilisateur ThreadStep | Propriétaire : **recette manuelle OK**, attestation du 16/10/2026 | Pas de détails sur l'appareil ni de cases individuelles vérifiées indépendamment |
 
 Une réussite de GitHub Actions ne suffit pas à cocher un test réellement non exécuté.
 
@@ -39,6 +39,8 @@ npm run check
 Relever la sortie dans la PR de recette. La suite simule : `empty-backlog` / `NO_WORK`, dépendance débloquée, crash avant/pendant/après dispatch (`STOP_UNCERTAIN` si ambigu), `red-ci` (pas de livraison), vague de deux tâches (quota, troisième interdit), accès concurrent (journal CAS et verrou de jobs). Les simulations **ne valident pas** à elles seules les permissions ou la protection du GitHub distant.
 
 ## D. Tester réellement un refus sur CI rouge — procédure isolée
+
+**Exécuté une fois, le 16 octobre 2026 :** [PR #61](https://github.com/cedricmenec/threadstep/pull/61) ; [CI rouge #38925574700](https://github.com/cedricmenec/threadstep/actions/runs/38925574700) ; `check: failure`, `mergeable_state: blocked`, PR fermée **sans fusion** ; main inchangé. La procédure ci-dessous est conservée pour de futurs audits autorisés. Ne pas relancer ce test sur la branche du jour.
 
 À faire **uniquement après autorisation spécifique**, en évitant une tâche payante :
 
