@@ -6,8 +6,8 @@ import { emptyDocument, newSubject, newItem, promoteItemToTopLevel, totalTaskCou
 const app = readFileSync(new URL("../site/app.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../site/styles.css", import.meta.url), "utf8");
 const promoteBody = app.slice(
-  app.indexOf('const promote = el("button"'),
-  app.indexOf("actions.append(promote);"),
+  app.indexOf('case "promote": {'),
+  app.indexOf('case "keep-track":', app.indexOf('case "promote": {')),
 );
 
 function fixture({ childPriority = "normal" } = {}) {
@@ -24,12 +24,11 @@ function fixture({ childPriority = "normal" } = {}) {
   return doc;
 }
 
-test("renderActions renders the French promotion control for direct substeps only", () => {
-  assert.match(app, /if \(item\.parentId !== null\) \{/);
-  assert.match(promoteBody, /el\("button", "subtle task-promote", "Promouvoir en tâche principale"\)/);
-  assert.match(promoteBody, /promote\.type = "button";/);
-  assert.match(promoteBody, /"Promouvoir en tâche principale : " \+ item\.title/);
-  assert.match(app, /actions\.append\(promote\);/);
+test("the per-item menu renders the French promotion command for direct substeps only", () => {
+  assert.match(app, /const commands = itemMenuCommands\(item, \{/);
+  assert.match(app, /case "promote":/);
+  assert.match(app, /"Promouvoir en tâche principale : " \+ item\.title/);
+  assert.match(promoteBody, /promoteItemToTopLevel\(documentState, subject\.id, item\.id\)/);
 });
 
 test("the promotion control reuses the core operation and never duplicates domain logic", () => {
@@ -41,10 +40,10 @@ test("the promotion control reuses the core operation and never duplicates domai
 
 test("a successful promotion persists exactly once and a refusal writes nothing", () => {
   assert.match(promoteBody, /const next = promoteItemToTopLevel\(documentState, subject\.id, item\.id\)/);
-  assert.match(promoteBody, /if \(next === documentState\) return;/);
+  assert.match(promoteBody, /if \(next === documentState\) \{ if \(wasOpen\) render\(\); return; \}/);
   const persistCalls = promoteBody.match(/persist\(\)/g) || [];
   assert.equal(persistCalls.length, 1);
-  const guardIndex = promoteBody.indexOf("if (next === documentState) return;");
+  const guardIndex = promoteBody.indexOf("if (next === documentState)");
   const persistIndex = promoteBody.indexOf("persist()");
   assert.ok(guardIndex !== -1 && guardIndex < persistIndex);
 });
@@ -59,8 +58,8 @@ test("the promotion control never uses innerHTML and names the substep as text",
   assert.match(app, /function el\(tag, cls, text\) \{[\s\S]*?node\.textContent = text;/);
 });
 
-test("the promotion control keeps a 44 × 44 px touch target and the visible focus outline", () => {
-  assert.match(styles, /\.task-promote\{[^}]*min-width:44px[^}]*min-height:44px/);
+test("the promotion command keeps a 44 × 44 px touch target and the visible focus outline", () => {
+  assert.match(styles, /\.task-menu-command\{[^}]*min-width:44px[^}]*min-height:44px/);
   assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:3px solid/);
 });
 

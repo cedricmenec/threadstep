@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -29,6 +29,8 @@ let renamingSubject = false;
 let focusDetailHeading = false;
 let focusOpenSubjectId = null;
 let focusRenameControl = false;
+let openMenuId = null;
+let pendingMenuFocus = null;
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -55,6 +57,7 @@ function persist() {
 }
 function load() {
   expandedParents = new Set();
+  openMenuId = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -317,17 +320,22 @@ function applyFocus() {
     }
     return;
   }
+  if (pendingMenuFocus) {
+    const itemId = pendingMenuFocus;
+    pendingMenuFocus = null;
+    const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
+    const target = card && card.querySelector(".task-menu-button");
+    if (target) {
+      target.focus();
+      if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
+    }
+    return;
+  }
   if (pendingMoveFocus) {
-    const { itemId, direction } = pendingMoveFocus;
+    const { itemId } = pendingMoveFocus;
     pendingMoveFocus = null;
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === itemId);
-    if (!card) return;
-    const sameDirection = direction === "up"
-      ? card.querySelector(".task-move-up")
-      : direction === "down" ? card.querySelector(".task-move-down") : null;
-    const target = (sameDirection && !sameDirection.disabled)
-      ? sameDirection
-      : card.querySelector(".task-handle") || sameDirection;
+    const target = card && card.querySelector(".task-handle");
     if (target) {
       target.focus();
       if (target.scrollIntoView) target.scrollIntoView({ block: "nearest" });
@@ -664,34 +672,22 @@ function moveItem(subject, item, direction) {
   persist();
   notify(direction === "up" ? "Étape montée" : "Étape descendue");
 }
-function renderReorderControls(subject, item) {
-  const controls = el("div", "task-reorder");
+function moveContext(subject, item) {
   const parent = item.parentId === null
     ? null
     : subject.items.find((entry) => entry.id === item.parentId);
-  const context = parent
+  return parent
     ? "sous-étape de « " + parent.title + " », priorité " + priorityLabels[item.priority]
     : "priorité " + priorityLabels[item.priority];
-  if (!hideCompleted) {
-    const handle = el("button", "task-handle", "⠿");
-    handle.type = "button";
-    handle.setAttribute("aria-label", "Déplacer « " + item.title + " » (" + context + ")");
-    handle.setAttribute("aria-describedby", "reorder-note");
-    handle.addEventListener("pointerdown", (event) => startDrag(event, subject, item, handle));
-    controls.append(handle);
-  }
-  const up = el("button", "subtle task-move-up", "Monter");
-  up.type = "button";
-  up.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "up");
-  up.setAttribute("aria-label", "Monter « " + item.title + " » (" + context + ")");
-  up.addEventListener("click", () => moveItem(subject, item, "up"));
-  const down = el("button", "subtle task-move-down", "Descendre");
-  down.type = "button";
-  down.disabled = hideCompleted || !canMoveWithinPriority(subject.items, item.id, "down");
-  down.setAttribute("aria-label", "Descendre « " + item.title + " » (" + context + ")");
-  down.addEventListener("click", () => moveItem(subject, item, "down"));
-  controls.append(up, down);
-  return controls;
+}
+function renderDragHandle(subject, item) {
+  if (hideCompleted) return null;
+  const handle = el("button", "task-handle", "⠿");
+  handle.type = "button";
+  handle.setAttribute("aria-label", "Déplacer « " + item.title + " » (" + moveContext(subject, item) + ")");
+  handle.setAttribute("aria-describedby", "reorder-note");
+  handle.addEventListener("pointerdown", (event) => startDrag(event, subject, item, handle));
+  return handle;
 }
 function startDrag(event, subject, item, handle) {
   if (hideCompleted || dragState) return;
@@ -800,67 +796,118 @@ function renderSubstepToggle(item, view) {
 }
 function renderActions(subject, item, view) {
   const actions = el("div", "task-actions");
-  actions.append(renderReorderControls(subject, item));
-  if (item.parentId !== null) {
-    const promote = el("button", "subtle task-promote", "Promouvoir en tâche principale");
-    promote.type = "button";
-    promote.setAttribute("aria-label", "Promouvoir en tâche principale : " + item.title);
-    promote.addEventListener("click", () => {
+  const handle = renderDragHandle(subject, item);
+  if (handle) actions.append(handle);
+  if (item.parentId === null && view && view.hasVisibleSubsteps) actions.append(renderSubstepToggle(item, view));
+  actions.append(renderItemMenu(subject, item));
+  return actions;
+}
+function menuPanelId(itemId) {
+  return "task-menu-" + encodeURIComponent(String(itemId));
+}
+function menuAccessibleName(subject, item, command) {
+  switch (command.id) {
+    case "edit": return "Modifier " + item.title;
+    case "remove": return "Retirer " + item.title;
+    case "add-substep": return "Ajouter une sous-tâche à " + item.title;
+    case "promote": return "Promouvoir en tâche principale : " + item.title;
+    case "keep-track": return command.label + " : " + item.title;
+    case "move-up":
+    case "move-down": return command.label + " « " + item.title + " » (" + moveContext(subject, item) + ")";
+    default: return command.label;
+  }
+}
+function renderMenuCommand(subject, item, command) {
+  const button = el("button", "subtle task-menu-command task-menu-" + command.id, command.label);
+  button.type = "button";
+  button.disabled = command.disabled === true;
+  button.dataset.command = command.id;
+  button.setAttribute("aria-label", menuAccessibleName(subject, item, command));
+  button.addEventListener("click", () => runMenuCommand(subject, item, command.id));
+  return button;
+}
+function renderMenuPanel(subject, item) {
+  const panel = el("div", "task-menu");
+  panel.id = menuPanelId(item.id);
+  panel.setAttribute("role", "group");
+  panel.setAttribute("aria-label", "Actions pour " + item.title);
+  const tracked = !!(resumeRef && resumeRef.subjectId === subject.id && resumeRef.itemId === item.id);
+  const commands = itemMenuCommands(item, {
+    tracked,
+    canMoveUp: !hideCompleted && canMoveWithinPriority(subject.items, item.id, "up"),
+    canMoveDown: !hideCompleted && canMoveWithinPriority(subject.items, item.id, "down")
+  });
+  for (const command of commands) panel.append(renderMenuCommand(subject, item, command));
+  return panel;
+}
+function renderItemMenu(subject, item) {
+  const open = openMenuId === item.id;
+  const wrap = el("div", "task-menu-wrap");
+  const button = el("button", "subtle task-menu-button", "⋮");
+  button.type = "button";
+  button.setAttribute("aria-label", "Actions pour " + item.title);
+  button.setAttribute("aria-expanded", open ? "true" : "false");
+  button.setAttribute("aria-controls", menuPanelId(item.id));
+  button.addEventListener("click", () => toggleItemMenu(item.id));
+  wrap.append(button);
+  if (open) wrap.append(renderMenuPanel(subject, item));
+  return wrap;
+}
+function toggleItemMenu(itemId) {
+  if (openMenuId === itemId) {
+    openMenuId = null;
+    pendingMenuFocus = itemId;
+  } else {
+    openMenuId = itemId;
+    pendingMenuFocus = null;
+  }
+  render();
+}
+function runMenuCommand(subject, item, commandId) {
+  const wasOpen = openMenuId === item.id;
+  if (wasOpen) openMenuId = null;
+  switch (commandId) {
+    case "edit":
+      editingItemId = item.id;
+      focusItemId = null;
+      render();
+      return;
+    case "remove":
+      retirerAction(subject, item);
+      return;
+    case "add-substep": {
+      const title = prompt("Nom de la sous-étape :");
+      if (!title || !title.trim() || title.length > 300 || subject.items.length >= 500) {
+        if (wasOpen) render();
+        return;
+      }
+      subject.items.push(newItem(title, "normal", crypto.randomUUID(), item.id));
+      persist();
+      return;
+    }
+    case "promote": {
       const next = promoteItemToTopLevel(documentState, subject.id, item.id);
-      if (next === documentState) return;
+      if (next === documentState) { if (wasOpen) render(); return; }
       documentState = next;
       persist();
       revealAction(subject.id, item.id);
-    });
-    actions.append(promote);
-  }
-  if (item.parentId === null && view && view.hasVisibleSubsteps) actions.append(renderSubstepToggle(item, view));
-  const edit = el("button", "subtle task-edit", "Modifier");
-  edit.type = "button";
-  edit.setAttribute("aria-label", "Modifier " + item.title);
-  edit.addEventListener("click", () => {
-    editingItemId = item.id;
-    focusItemId = null;
-    render();
-  });
-  actions.append(edit);
-  if (item.parentId === null) {
-    const sub = el("button", "subtle", "+ Sous-étape");
-    sub.type = "button";
-    sub.addEventListener("click", () => {
-      const title = prompt("Nom de la sous-étape :");
-      if (!title || !title.trim() || title.length > 300 || subject.items.length >= 500) return;
-      subject.items.push(newItem(title, "normal", crypto.randomUUID(), item.id));
-      persist();
-    });
-    actions.append(sub);
-    if (!item.done) {
-      if (resumeRef && resumeRef.subjectId === subject.id && resumeRef.itemId === item.id) {
-        const tracked = el("button", "subtle resume-held", "Action suivie");
-        tracked.type = "button";
-        tracked.disabled = true;
-        tracked.setAttribute("aria-label", "Action suivie : " + item.title);
-        actions.append(tracked);
-      } else {
-        const keep = el("button", "subtle resume-keep", "Garder le fil");
-        keep.type = "button";
-        keep.setAttribute("aria-label", "Garder le fil : " + item.title);
-        keep.addEventListener("click", () => {
-          resumeRef = { subjectId: subject.id, itemId: item.id };
-          saveResumePreference(resumeRef);
-          if (pendingRemoval) pendingRemoval.trackedRef = null;
-          render();
-        });
-        actions.append(keep);
-      }
+      return;
     }
+    case "keep-track":
+      resumeRef = { subjectId: subject.id, itemId: item.id };
+      saveResumePreference(resumeRef);
+      if (pendingRemoval) pendingRemoval.trackedRef = null;
+      render();
+      return;
+    case "move-up":
+      moveItem(subject, item, "up");
+      return;
+    case "move-down":
+      moveItem(subject, item, "down");
+      return;
+    default:
+      return;
   }
-  const remove = el("button", "subtle", "Retirer");
-  remove.type = "button";
-  remove.setAttribute("aria-label", "Retirer " + item.title);
-  remove.addEventListener("click", () => retirerAction(subject, item));
-  actions.append(remove);
-  return actions;
 }
 function renderEditor(subject, item) {
   const form = el("form", "task-edit-form");
@@ -927,9 +974,26 @@ hideCompletedEl.addEventListener("change", () => {
   render();
 });
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && openMenuId) {
+    event.preventDefault();
+    pendingMenuFocus = openMenuId;
+    openMenuId = null;
+    render();
+    return;
+  }
   if (event.key !== "Escape" || !dragState) return;
   event.preventDefault();
   cancelDrag(null);
+});
+document.addEventListener("click", (event) => {
+  if (!openMenuId) return;
+  const target = event.target;
+  if (target && typeof target.closest === "function" &&
+      (target.closest(".task-menu") || target.closest(".task-menu-button"))) {
+    return;
+  }
+  openMenuId = null;
+  render();
 });
 window.addEventListener("pointermove", (event) => {
   if (dragState) onDragMove(event);
@@ -976,6 +1040,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     invalidatePendingRemoval();
     expandedParents = new Set();
     pendingCollapseFocus = null;
+    openMenuId = null;
     documentState = incoming;
     documentLoaded = true;
     persist();
@@ -994,6 +1059,7 @@ window.addEventListener("storage", (event) => {
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
   if (isViewEntry(route, nextRoute)) expandedParents = new Set();
+  openMenuId = null;
   route = nextRoute;
   render();
 });

@@ -204,6 +204,43 @@ export function canReorderWithinPriority(items, itemId, targetId, position) {
 export function canMoveWithinPriority(items, itemId, direction) {
   return moveWithinPriority(items, itemId, direction) !== items;
 }
+const menuLabels = {
+  edit: "Modifier",
+  remove: "Retirer",
+  "add-substep": "Ajouter une sous-tâche",
+  promote: "Promouvoir en tâche principale",
+  "keep-track": "Garder le fil",
+  tracked: "Action suivie",
+  "move-up": "Monter",
+  "move-down": "Descendre"
+};
+export function itemMenuCommands(item, options = {}) {
+  if (!item || typeof item !== "object") return [];
+  const settings = options && typeof options === "object" ? options : {};
+  const tracked = settings.tracked === true;
+  const canMoveUp = settings.canMoveUp === true;
+  const canMoveDown = settings.canMoveDown === true;
+  const isSubstep = item.parentId !== null && item.parentId !== undefined;
+  const commands = [
+    { id: "edit", label: menuLabels.edit, disabled: false },
+    { id: "remove", label: menuLabels.remove, disabled: false }
+  ];
+  if (isSubstep) {
+    commands.push({ id: "promote", label: menuLabels.promote, disabled: false });
+  } else {
+    commands.push({ id: "add-substep", label: menuLabels["add-substep"], disabled: false });
+    if (item.done !== true) {
+      commands.push({
+        id: "keep-track",
+        label: tracked ? menuLabels.tracked : menuLabels["keep-track"],
+        disabled: tracked
+      });
+    }
+  }
+  commands.push({ id: "move-up", label: menuLabels["move-up"], disabled: !canMoveUp });
+  commands.push({ id: "move-down", label: menuLabels["move-down"], disabled: !canMoveDown });
+  return commands;
+}
 function promotionTarget(document, subjectId, itemId) {
   if (!document || !Array.isArray(document.subjects)) return null;
   const subject = document.subjects.find((entry) => entry && entry.id === subjectId);
