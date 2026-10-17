@@ -116,7 +116,7 @@ test("active global registry history blocks a second genesis entirely",async()=>
  },0);
  const r=await inspectV3OwnerGenesisReadiness(f({exists:true,registry}));
  assert.equal(r.status,"rejected");
- assert.equal(r.code,"global_registry_has_history_do_not_recreate");
+ assert.equal(r.reason,"global_registry_has_history_do_not_recreate");
  mustNotGrant(r);
 });
 test("ruleset wrong pattern or owner run mismatch blocks before reading globals",async()=>{
