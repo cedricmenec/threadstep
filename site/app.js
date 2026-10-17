@@ -1,4 +1,6 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
+import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -10,6 +12,11 @@ const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
 const resumeCardEl = document.querySelector("#resume-card");
 const snackbarEl = document.querySelector("#snackbar");
+const cloudConfigEl = document.querySelector("#cloud-config");
+const cloudConfigFormEl = document.querySelector("#cloud-config-form");
+const cloudUrlEl = document.querySelector("#cloud-url");
+const cloudConfigErrorEl = document.querySelector("#cloud-config-error");
+let syncedDatabase = null;
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
@@ -39,6 +46,33 @@ let removalDeadline = 0;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
+function bootstrapSyncedDatabase() {
+  const config = readCloudConfig();
+  if (!shouldOpenSyncedDatabase(config)) return null;
+  const schema = dexieSchema();
+  const options = cloudConfigureOptions(config.databaseUrl);
+  const db = new Dexie(schema.name, { addons: [dexieCloud] });
+  db.version(schema.version).stores(schema.stores).upgrade(schema.upgrade);
+  db.cloud.configure(options);
+  return db;
+}
+function showCloudConfigError(message) {
+  if (!cloudConfigErrorEl) return;
+  cloudConfigErrorEl.textContent = message;
+  cloudConfigErrorEl.hidden = false;
+}
+function hideCloudConfigError() {
+  if (!cloudConfigErrorEl) return;
+  cloudConfigErrorEl.textContent = "";
+  cloudConfigErrorEl.hidden = true;
+}
+function renderCloudConfig() {
+  const config = readCloudConfig();
+  const open = shouldOpenSyncedDatabase(config);
+  if (cloudConfigEl) cloudConfigEl.hidden = open;
+  if (open && cloudUrlEl) cloudUrlEl.value = config.databaseUrl;
+  return open;
+}
 function el(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -1068,4 +1102,25 @@ snackbarEl.addEventListener("focusout", (event) => {
   if (event.relatedTarget && snackbarEl.contains(event.relatedTarget)) return;
   resumeRemovalTimer();
 });
+if (cloudConfigFormEl) {
+  cloudConfigFormEl.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const result = validateCloudUrl(cloudUrlEl ? cloudUrlEl.value : "");
+    if (!result.valid) {
+      showCloudConfigError(result.message);
+      return;
+    }
+    if (!writeCloudConfig(localStorage, result.url)) {
+      showCloudConfigError("Impossible d'enregistrer l'URL dans ce navigateur.");
+      return;
+    }
+    if (cloudUrlEl) cloudUrlEl.value = result.url;
+    hideCloudConfigError();
+    syncedDatabase = bootstrapSyncedDatabase();
+    renderCloudConfig();
+    notify("Instance Dexie Cloud enregistrée");
+  });
+}
+syncedDatabase = bootstrapSyncedDatabase();
+renderCloudConfig();
 load();

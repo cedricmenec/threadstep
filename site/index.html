@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f5f1">
   <meta name="description" content="ThreadStep : gardez le fil de vos sujets et de leurs prochaines étapes.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://*.dexie.cloud wss://*.dexie.cloud; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>ThreadStep | Gardez le fil</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="modulepreload" href="./vendor/dexie-cloud.mjs">
   <link rel="stylesheet" href="./styles.css">
   <script type="module" src="./app.js"></script>
 </head>
@@ -48,6 +49,16 @@
       </label>
       <p id="reorder-note" class="reorder-note" hidden>Pour réorganiser les étapes, affichez toutes les étapes en désactivant « Masquer les étapes terminées ».</p>
       <div id="subjects" class="subjects" aria-live="polite"></div>
+    </section>
+    <section id="cloud-config" class="cloud-config" aria-labelledby="cloud-config-title" hidden>
+      <form id="cloud-config-form" class="cloud-config-form">
+        <h2 id="cloud-config-title">Configurer la synchronisation Dexie Cloud</h2>
+        <p id="cloud-config-help">Saisissez l'URL HTTPS de votre instance Dexie Cloud. Elle reste dans ce navigateur et n'est jamais envoyée au build.</p>
+        <label for="cloud-url">URL de l'instance Dexie Cloud</label>
+        <input id="cloud-url" name="cloudUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" required aria-describedby="cloud-config-help cloud-config-error">
+        <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
+        <button type="submit" class="primary">Enregistrer l'URL</button>
+      </form>
     </section>
     <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>
   </main>
