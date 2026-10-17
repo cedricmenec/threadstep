@@ -141,3 +141,12 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .subject-rename-form button{min-height:44px}
 .rename-error{flex-basis:100%;margin:0;color:#ad4938;font-size:.78rem}
 @media(max-width:620px){.subject-head{flex-wrap:wrap}.subject-controls{flex-wrap:wrap;gap:6px}.detail{padding:18px}.detail-title{font-size:1.3rem}}
+.cloud-config{margin-top:32px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:20px 22px;max-width:560px}
+.cloud-config[hidden]{display:none}
+.cloud-config-form{display:flex;flex-direction:column;gap:10px}
+.cloud-config-form h2{font-size:1.3rem;letter-spacing:-.03em}
+.cloud-config-form p{margin:0;color:#657366;font-size:.9rem}
+.cloud-config-form label{font-size:.8rem;font-weight:700;color:#30473a}
+.cloud-config-form input{min-height:44px;border:1px solid #d4dbcf;background:white;border-radius:9px;padding:10px 12px;color:#24382f}
+.cloud-config-error{margin:0;color:#ad4938;font-size:.82rem;font-weight:600}
+.cloud-config-form button{align-self:flex-start;min-height:44px}

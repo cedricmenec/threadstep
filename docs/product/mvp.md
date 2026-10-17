@@ -105,4 +105,12 @@ est intégrée à FR-24.
 
 Les exigences FR-16 à FR-24 ci-dessus décrivent le comportement livré, et non la future expérience. La TS-021 (sous-tâches repliées par défaut à chaque ouverture et entrée de vue) est intégrée à FR-16 ; la TS-023 (lignes compactes et commandes secondaires regroupées dans un menu « ⋮ », y compris l'alternative clavier « Monter » / « Descendre ») est intégrée à FR-24. Aucune évolution de backlog n'est actuellement proposée au-delà de ces exigences.
 
+**Socle Dexie Cloud (TS-024), intégré :** la configuration locale de
+l'instance, la validation syntaxique HTTPS, le portail avant ouverture et
+le schéma versionné vivent dans `site/dexie-foundation.js`, avec des assets
+`dexie`/`dexie-cloud-addon` épinglés livrés localement sous
+`site/vendor/dexie-cloud.mjs`. La synchronisation, l'authentification OTP et
+la migration restent à livrer (TS-025 à TS-030) ; le document V1 et son
+export sont inchangés.
+
 Source de périmètre : [TS-022](../../backlog/tasks/TS-022.md) et [TS-023](../../backlog/tasks/TS-023.md), désormais livrées.

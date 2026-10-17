@@ -15,5 +15,6 @@ coverage/
 *.p12
 *.pfx
 *.key
+dexie-cloud.key
 dexie-cloud.json
 .cache/

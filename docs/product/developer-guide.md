@@ -9,13 +9,21 @@ ThreadStep est une application **statique**, en JavaScript vanilla sans build fr
 ```text
 site/index.html
   ├─ site/styles.css
-  └─ site/app.js → site/core.js
+  ├─ site/app.js → site/core.js
+  │             → site/dexie-foundation.js
+  │             → site/vendor/dexie-cloud.mjs (Dexie.js + dexie-cloud-addon, buildé)
+  ├─ site/dexie-foundation.js (validation d'URL, portail, schéma, configuration locale)
+  └─ site/vendor/dexie-cloud.mjs
         ↕ localStorage du navigateur
         ↕ import / export JSON explicites
 GitHub Pages publie uniquement site/ ; aucune API produit
 ```
 
-CSP `connect-src 'none'` ; aucun contenu des tâches n'est transmis au serveur. Les valeurs utilisateur doivent devenir des nœuds texte, jamais du HTML interpolé. Un export JSON personnel doit rester local à l'utilisateur.
+CSP `connect-src https://*.dexie.cloud wss://*.dexie.cloud` : seuls les hôtes Dexie Cloud sont joignables ; aucun contenu des tâches n'est transmis avant configuration et consentement. Les valeurs utilisateur doivent devenir des nœuds texte, jamais du HTML interpolé. Un export JSON personnel doit rester local à l'utilisateur.
+
+## Socle Dexie Cloud (TS-024)
+
+Le socle local-first est amorcé par `site/dexie-foundation.js` : `validateCloudUrl` n'accepte qu'une URL HTTPS sous `dexie.cloud` (validation purement syntaxique, sans réseau), `shouldOpenSyncedDatabase` et `cloudConfigureOptions` produisent `{ databaseUrl, requireAuth: true }` sans désactiver `nameSuffix`, et `dexieSchema` déclare une version entière explicite avec des magasins synchronisés à identifiants uniques `@id` (jamais `++id`). L'URL est conservée en local sous la clé non synchronisée `threadstep.cloud.config.v1`, distincte de `threadstep.document.v1` et absente de l'export JSON. `site/app.js` ne construit et ne configure la base synchronisée que derrière `shouldOpenSyncedDatabase` ; sans URL valide, un formulaire de configuration accessible est présenté et aucune opération métier Dexie n'est exécutée. Les dépendances `dexie` et `dexie-cloud-addon` sont épinglées dans `package.json`/`package-lock.json` et livrées en ESM local `site/vendor/dexie-cloud.mjs` (`npm run vendor:build`), sans CDN tiers à l'exécution. Aucun secret, fichier `dexie-cloud.key`/`dexie-cloud.json`, jeton d'administration ni URL d'instance imposée ne doit être livré.
 
 ## Modèle de données
 
@@ -61,10 +69,7 @@ Toutes les modifications passent par une branche et PR ; les workflows CI et Pag
 
 ## Frontières de sécurité et évolution
 
-**État courant du pilote :** pas de compte ni de synchronisation ;
-la CSP bloque les connexions sortantes et les données demeurent
-dans le navigateur. C'est une **observation historique du code**,
-pas une contrainte permanente pour toutes les fonctionnalités.
+**État courant du pilote :** le socle de configuration Dexie Cloud (TS-024) est intégré, mais aucune synchronisation opérationnelle ni authentification OTP n'est encore livrée (TS-025 à TS-030). Tant qu'aucune URL valide n'est enregistrée, aucune base synchronisée n'est ouverte et les données restent dans le navigateur. La CSP n'autorise que les hôtes Dexie Cloud. Cette progression est **additive** : le document `threadstep.document.v1` et ses exports restent inchangés.
 
 **Cible Dexie Cloud, non déployée :** la
 [spécification normative](specs/dexie-cloud-local-first.md)
