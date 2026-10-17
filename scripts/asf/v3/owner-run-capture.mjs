@@ -17,6 +17,8 @@ import { createV3Manifest, parseV3MaxTasks } from "./lifecycle.mjs";
 import { inspectV3OwnerIntent } from "./owner-intent-preflight.mjs";
 import { observeV3GithubRulesetPolicy, V3_CONTROLLER_APP_ID }
  from "./github-native-control.mjs";
+import { observeV3GithubBootstrapReadiness }
+ from "./github-native-bootstrap-readiness.mjs";
 import { contentSha256 } from "../waves/hash.mjs";
 import { checkBacklogIndex } from "../backlog-index.mjs";
 import { createGithubClient } from "../github/client.mjs";
@@ -149,6 +151,55 @@ export function inspectV3OwnerEnvironmentBinding(rawAppId) {
    controllerAppId:V3_CONTROLLER_APP_ID
   });
 }
+/**
+ * ASF-V3-019 — Connect the owner runner's actual six-input mandate to a
+ * GitHub-native global genesis OBSERVATION. No write port is supplied.
+ *
+ * A 404 is an untrusted absence observation, NEVER a create permission.
+ * If the ref already exists (even empty), do not reset/recreate it.
+ * This needs a protected owner-controlled GitHub runner in production:
+ * a caller-supplied fake runner/readClient does not prove authorization.
+ */
+export async function inspectV3OwnerGenesisReadiness({
+ runner,event,index,readClient,environmentAppId
+}={}) {
+ const env=inspectV3OwnerEnvironmentBinding(environmentAppId);
+ if(env.status!=="environment_id_observed_not_authorized")
+  return deny("controller_environment_id_not_pinned");
+ let owner;
+ try {
+  owner=await inspectV3RunnerOwnerCapture({runner,event,index,readClient});
+ }catch{return uncertain("owner_capture_unavailable");}
+ if(owner.status!=="owner_intent_observed_no_write")
+  return result(owner.status==="rejected"?"rejected":"uncertain",
+   "owner_intent_not_reconciled");
+ let bootstrap;
+ try {
+  bootstrap=await observeV3GithubBootstrapReadiness({
+   readClient,expectedMainSha:owner.evidence.originSha
+  });
+ }catch{return uncertain("global_genesis_observation_failed");}
+ if(bootstrap.status==="absent_observed_untrusted")
+  return result("genesis_absent_observed_no_authority",
+   "future_owner_app_writer_only_after_separate_approval",{
+    ownerRunId:owner.evidence.ownerRunId,
+    originSha:owner.evidence.originSha,
+    manifestHash:owner.evidence.manifestHash,
+    candidateSetHash:owner.evidence.candidateSetHash,
+    globalRef:bootstrap.evidence.globalRef,
+    initialRegistryHash:bootstrap.evidence.emptyRegistryHash
+   });
+ if(bootstrap.status==="already_initialized_untrusted")
+  return result("genesis_exists_do_not_recreate",
+   "reuse_existing_only_after_independent_replay",{
+    globalHeadSha:bootstrap.evidence.globalHeadSha,
+    registryHash:bootstrap.evidence.registryHash
+   });
+ if(bootstrap.status==="existing_history_stop")
+  return deny("global_registry_has_history_do_not_recreate");
+ return result(bootstrap.status==="rejected"?"rejected":"uncertain",
+  "global_bootstrap_not_verified");
+}
 const staticFailure=code=>{
  process.stderr.write("ASF V3 owner capture: rejected/"+code+"\n");
  return 1;
@@ -161,7 +212,7 @@ function safeJson(path,limit){
 function productionReader(token){
  return createGithubClient({transport:async(path,{timeoutMs})=>{
   if(!path.startsWith("repos/"+REPO+"/"))throw Error("foreign_repo");
-  if(!/^repos\/cedricmenec\/threadstep\/(?:actions\/runs\/[1-9][0-9]*|rulesets(?:\/[1-9][0-9]*)?)$/.test(path))
+  if(!/^repos\/cedricmenec\/threadstep\/(?:actions\/runs\/[1-9][0-9]*|rulesets(?:\/[1-9][0-9]*)?|git\/ref\/heads\/(?:main|asf\/control\/active-wave-v3)|contents\/registry\.json\?ref=[a-f0-9]{40})$/.test(path))
    throw Error("read_path_not_allowlisted");
   const response=await fetch("https://api.github.com/"+path,{
    method:"GET",redirect:"error",signal:AbortSignal.timeout(timeoutMs),
@@ -204,13 +255,15 @@ export async function main(argv=process.argv.slice(2),env=process.env){
    ref:env.GITHUB_REF,sha:env.GITHUB_SHA,
    workflowRef:env.GITHUB_WORKFLOW_REF,eventName:env.GITHUB_EVENT_NAME
   };
-  const verdict=await inspectV3RunnerOwnerCapture({
+  const verdict=await inspectV3OwnerGenesisReadiness({
    runner,event,index:candidateRows,
+   environmentAppId:env.ASF_V3_CONTROLLER_APP_ID,
    readClient:productionReader(env.GH_TOKEN)
   });
   process.stdout.write("ASF V3 owner inputs: "+verdict.status+
    "/"+verdict.reason+"\n");
-  if(verdict.status==="owner_intent_observed_no_write"){
+  if(verdict.status==="genesis_absent_observed_no_authority" ||
+     verdict.status==="genesis_exists_do_not_recreate"){
    process.stdout.write(JSON.stringify(verdict.evidence)+"\n");
    return 0; // The workflow's next permanent DENY step still fails closed.
   }
