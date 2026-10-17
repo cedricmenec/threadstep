@@ -39,6 +39,8 @@ canoniques sont dans `openspec/specs/action-removal/` et
 
 - FR-20 Limit each overview project card to the first five visible top-level actions after the existing priority/manual sort and « Masquer les étapes terminées » filter, counting a parent and its direct substeps as one entry and never letting substeps consume a slot. Show exactly one accessible French « Voir plus » control, naming the project, only when more than five top-level actions remain visible; it opens the existing `#/sujet/<id>` detail route with the existing history, return and focus, where no five-task limit applies. Tasks beyond the preview are absent from the overview DOM and are neither keyboard reachable nor drag sources or targets there. Locating a tracked or suggested action that is beyond the preview opens its subject's detail view and reveals it there rather than targeting an absent element. The preview is presentation-only: no change to ids, priorities, completion flags, ordering, counters, JSON export, `threadstep.document.v1` or localStorage, and no new field, storage key or dependency.
 
+- FR-21 Show, in each overview project card header and in the detail view header, an accessible French label giving the subject's total number of top-level tasks (`parentId: null`), including completed tasks and excluding direct substeps, with the accurate agreement « 0 tâche au total » / « 1 tâche au total » / « N tâches au total » (N > 1). The total is computed from the complete `subject.items` on every render and stays independent of the « Masquer les étapes terminées » filter, the substep collapse state and the TS-017 five-entry preview; it updates after an add, a removal, an undo, an import and a reorder. The existing « N étape(s) en attente » counter keeps its exact computation (every unfinished item, substeps included) and wording, is shown as a separate label and is never replaced, renamed or re-scoped. The change is presentation-only: no new document field, id, storage key, preference, migration, network call or dependency, and the label is rendered as a text node perceptible without relying on colour alone.
+
 ## Acceptance tests
 - Data survives a reload in the same browser when localStorage is available.
 - Text input is rendered safely without HTML interpretation.
@@ -63,6 +65,8 @@ canoniques sont dans `openspec/specs/action-removal/` et
 
 - With 0, 1, 5 and 6 visible top-level actions a card renders 0, 1, 5 and 5 actions, substeps never consume a slot, the completion filter is applied before the limit and subjects are limited independently; « Voir plus » appears only beyond five, names the project and opens that project's detail view where every filtered action is available, including those beyond the preview; overview actions beyond the quota are absent from the DOM, not focusable and neither drag sources nor targets; the tracking and suggestion shortcuts reveal an action beyond the preview by opening the correct detail view; and the preview, route, filter and quota write neither the document, localStorage nor the exported JSON while counters stay complete.
 
+- With 0, 1 and several top-level tasks a project card header shows « 0 tâche au total », « 1 tâche au total » and « N tâches au total » with correct French agreement; direct substeps are excluded and completed top-level tasks are included; the total does not vary with « Masquer les étapes terminées », substep collapse or the TS-017 five-entry preview, and it updates correctly after an add, a removal, an undo, an import and a reorder while the existing « N étape(s) en attente » counter keeps its own computation and wording; the same total appears in the detail header, the label is plain text and perceptible without colour alone, and no new field, id, storage key, migration, network call or dependency is introduced.
+
 ## Open decisions
 - Manual ordering within a priority is delivered in FR-15; automatic archiving remains deferred.
 - Synchronization between browser devices is explicitly out of scope.
@@ -77,10 +81,6 @@ canoniques sont dans `openspec/specs/action-removal/` et
 
 ## Évolutions prévues au backlog (17 octobre 2026, non implémentées)
 
-- **FR-21, TS-018** : l'en-tête d'une carte de projet affiche son nombre
-  total de tâches **principales** (sous-tâches exclues), comprenant les
-  tâches terminées et indépendant des filtres et de la limite d'aperçu.
-  Le compteur « étapes en attente » conserve son sens existant.
 - **FR-22, TS-019** : chaque tâche ou sous-tâche peut porter une note
   textuelle multiligne facultative (2 000 caractères maximum), affichée
   comme texte brut, stockée dans un champ facultatif `note` du document

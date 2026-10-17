@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1511,3 +1511,119 @@ test("the reveal decision follows the preview after a priority change reorders t
 });
 
 
+
+test("totalTaskCount counts top-level tasks for 0, 1 and 3 items", () => {
+  assert.equal(totalTaskCount([]), 0);
+  assert.equal(totalTaskCount([newItem("One", "normal", "t1")]), 1);
+  const three = [
+    newItem("One", "normal", "t1"),
+    newItem("Two", "urgent", "t2"),
+    newItem("Three", "later", "t3"),
+  ];
+  assert.equal(totalTaskCount(three), 3);
+});
+
+test("totalTaskCount excludes substeps and counts a parent once", () => {
+  const items = [
+    newItem("Parent", "normal", "p1"),
+    newItem("Child A", "normal", "c1", "p1"),
+    newItem("Child B", "normal", "c2", "p1"),
+    newItem("Child C", "normal", "c3", "p1"),
+  ];
+  assert.equal(totalTaskCount(items), 1);
+});
+
+test("totalTaskCount includes completed top-level tasks", () => {
+  const items = [
+    newItem("Done", "normal", "t1"),
+    newItem("Not done", "normal", "t2"),
+  ];
+  items[0].done = true;
+  assert.equal(totalTaskCount(items), 2);
+});
+
+test("totalTaskCount is safe on invalid input and never mutates its input", () => {
+  assert.equal(totalTaskCount(undefined), 0);
+  assert.equal(totalTaskCount(null), 0);
+  assert.equal(totalTaskCount("nope"), 0);
+  assert.equal(totalTaskCount([null, undefined, newItem("Ok", "normal", "t1")]), 1);
+  const items = [
+    newItem("Parent", "normal", "p1"),
+    newItem("Child", "normal", "c1", "p1"),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(items));
+  totalTaskCount(items);
+  assert.deepEqual(items, snapshot);
+});
+
+test("totalTaskCountLabel applies French agreement for 0, 1 and many", () => {
+  assert.equal(totalTaskCountLabel(0), "0 tâche au total");
+  assert.equal(totalTaskCountLabel(1), "1 tâche au total");
+  assert.equal(totalTaskCountLabel(2), "2 tâches au total");
+  assert.equal(totalTaskCountLabel(3), "3 tâches au total");
+});
+
+test("totalTaskCountLabel normalizes invalid input to zero", () => {
+  assert.equal(totalTaskCountLabel(-1), "0 tâche au total");
+  assert.equal(totalTaskCountLabel(NaN), "0 tâche au total");
+  assert.equal(totalTaskCountLabel(Infinity), "0 tâche au total");
+  assert.equal(totalTaskCountLabel("x"), "0 tâche au total");
+});
+
+test("totalTaskCount is invariant under the completion filter and preview", () => {
+  const items = [
+    newItem("P1", "urgent", "p1"),
+    newItem("P2", "normal", "p2"),
+    newItem("P3", "normal", "p3"),
+    newItem("P4", "normal", "p4"),
+    newItem("P5", "normal", "p5"),
+    newItem("P6", "later", "p6"),
+    newItem("Child", "normal", "c1", "p1"),
+  ];
+  items[1].done = true;
+  items[6].done = true;
+  const base = totalTaskCount(items);
+  assert.equal(base, 6);
+  for (const hide of [false, true]) {
+    visibleItems(items, null, hide);
+    overviewPreview(items, hide);
+    assert.equal(totalTaskCount(items), base);
+  }
+});
+
+test("totalTaskCount follows removal, undo, add and reorder", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("Work", "s1");
+  subject.items.push(
+    newItem("One", "urgent", "t1"),
+    newItem("Two", "normal", "t2"),
+    newItem("Child", "normal", "c1", "t1"),
+  );
+  doc.subjects.push(subject);
+  assert.equal(totalTaskCount(subject.items), 2);
+
+  const removed = planRemoval(doc, "s1", "t2");
+  assert.equal(totalTaskCount(removed.document.subjects[0].items), 1);
+  const restored = restoreRemoval(removed.document, removed.removal);
+  assert.equal(totalTaskCount(restored.subjects[0].items), 2);
+
+  const added = restored.subjects[0].items.slice();
+  added.push(newItem("Three", "later", "t3"));
+  assert.equal(totalTaskCount(added), 3);
+
+  const reordered = reorderWithinPriority(added, "t3", "t2", "before");
+  assert.equal(totalTaskCount(reordered), 3);
+});
+
+test("totalTaskCount matches imported top-level tasks", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("Work", "s1");
+  subject.items.push(
+    newItem("One", "urgent", "t1"),
+    newItem("Two", "normal", "t2"),
+    newItem("Child", "normal", "c1", "t1"),
+  );
+  doc.subjects.push(subject);
+  const imported = parseDocument(JSON.stringify(doc));
+  assert.equal(totalTaskCount(imported.subjects[0].items), 2);
+});
