@@ -10,7 +10,7 @@ import { MODEL_ALLOWLIST } from "../waves/manifest.mjs";
 export const V3_SCHEMA = 2;
 export const V3_POLICY = "asf-orch-v3";
 export const V3_MAX_TASKS = 10;
-export const V3_CHILD_WORKFLOW = ".github/workflows/agent-openspec.yml@refs/heads/main";
+export const V3_CHILD_WORKFLOW = ".github/workflows/agent-openspec-v3.yml@refs/heads/main";
 export const V3_CONTROLLER_WORKFLOW = ".github/workflows/backlog-orchestrator-v3.yml@refs/heads/main";
 export const V3_STATES = Object.freeze({
   READY: "READY", RESERVED: "RESERVED", DISPATCH_PENDING: "DISPATCH_PENDING",
