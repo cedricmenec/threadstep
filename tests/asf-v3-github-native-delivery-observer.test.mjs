@@ -13,7 +13,7 @@ const mainRule={id:1,source:REPO,target:"branch",enforcement:"active",
  ]};
 const globalRule={id:2,source:REPO,target:"branch",enforcement:"active",
  conditions:{ref_name:{include:["refs/heads/asf/control/active-wave-v3"],exclude:[]}},
- bypass_actors:[{actor_type:"Integration",actor_id:42,bypass_mode:"always"}],
+ bypass_actors:[{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}],
  rules:[{type:"update"}]};
 const immutableRule={id:3,source:REPO,target:"branch",enforcement:"active",
  conditions:{ref_name:{include:["refs/heads/asf/control/active-wave-v3"],exclude:[]}},
