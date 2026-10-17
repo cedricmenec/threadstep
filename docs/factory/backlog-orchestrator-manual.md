@@ -27,3 +27,15 @@
 - **Besoin de dix tâches** : la V1 ne sait pas le faire ; lire [la proposition d'architecture](scale-to-ten.md), puis développer/tester une version dédiée.
 
 Les protections GitHub et les secrets ne sont jamais modifiés par ce mode opératoire.
+
+
+## Fiabilité OpenSpec commune (ASF-OPSX-03/04)
+
+Les jobs `first` et `second` invoquent le workflow réutilisable
+`agent-openspec.yml` en `phase=auto` : le plan et l'implémentation sont
+checkpointés sur la branche `agent/openspec/TS-NNN`, puis le sync est
+validé en mode strict avant archive. La vague ne lance **aucun retry payant**
+en cas d'échec, même avec un checkpoint. Conserver le journal d'origine,
+inspecter le checkpoint puis reprendre par une exécution manuelle
+autorisée (`apply` ou `finalize`), avant toute nouvelle vague. Voir
+[la procédure](validation-and-recovery.md).

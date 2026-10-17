@@ -1,5 +1,47 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-023 (17 octobre 2026) : checkpoints et reprise sans régénérer
+
+Le [run #39047805814](https://github.com/cedricmenec/threadstep/actions/runs/39047805814)
+a réussi la génération du plan, la validation, 444 tests Node, la checklist
+et le sync sémantique OPSX de TS-023. La vérification stricte des specs
+canoniques a échoué : l'exigence « Controls, focus and touch targets
+preserved » excédait 500 caractères. La branche TS-022 est distincte :
+[PR #95](https://github.com/cedricmenec/threadstep/pull/95) fusionnée et
+`openspec/changes/archive/2026-10-17-ts-022/` présente. TS-023 n'a
+pas été poussée, et les modifications du runner ont été perdues.
+
+**Procédure pour les nouveaux runs avec checkpoint** :
+
+1. Lire `GITHUB_STEP_SUMMARY`, le run et la branche
+   `agent/openspec/TS-NNN` ; vérifier le SHA distant effectivement
+   enregistré, les PR ouvertes, le dossier `openspec/changes/` ou
+   `openspec/changes/archive/`, les tests et les fichiers modifiés.
+2. Dernier checkpoint **plan** : inspecter proposition, design, deltas,
+   `tasks.md` et les critères ; demander une **nouvelle** autorisation
+   pour `phase=apply` (OpenRouter facturé). Ne pas lancer `auto`.
+3. Dernier checkpoint **apply** : inspecter la checklist complète,
+   le code et les résultats ; demander une **nouvelle** autorisation
+   pour `phase=finalize` (OpenRouter OPSX sync facturé), pas `apply`.
+   `finalize` exige une branche propre et un change encore actif.
+4. Si `finalize` échoue sur `openspec validate --all --strict`,
+   corriger le contenu/la qualité de sync lors d'une reprise contrôlée
+   ou d'une intervention examinée, sans retirer `--strict` ni
+   contourner le gate. Le code reste sur la branche distante.
+5. Après archive et publication **uniquement**, comparer les specs,
+   attendre le `check` indépendant sur SHA de la PR, puis la fusion
+   protégée et le succès CI/Pages post-fusion. Documenter les recettes
+   humaines séparément.
+
+En l'absence de checkpoint confirmé, n'inférer aucune persistance du
+succès d'une étape locale. Les nouveaux checkpoints ne sauvegardent
+pas les fichiers partiellement produits pendant un appel interrompu,
+et n'autorisent aucun retry payant automatique. Si l'exécuteur
+réutilisable de Backlog Orchestrator V1 échoue, le parent s'arrête
+toujours sans seconde tâche. Ne pas réinitialiser un journal de vague
+pour tenter la reprise ; utiliser la branche et les preuves GitHub.
+
+
 ## Clôture de recette — 16 octobre 2026
 
 **Décision : ASF V2 clôturée pour son périmètre défini (vague V1 1..2 tâches).** Les composants ASF-V2-001 à 011 sont livrés ; les runs [38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) démontrent les parcours payants 1/1 et 2/2, avec CI et Pages après chaque fusion.

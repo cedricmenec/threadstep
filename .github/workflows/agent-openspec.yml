@@ -175,6 +175,16 @@ jobs:
             fi
             git checkout -b "$branch"
           fi
+          # Recognize a checkpoint saved by a PREVIOUS workflow invocation.
+          # finalize/apply resumes must report the remote SHA even on early failure.
+          last_message="$(git log -1 --format=%s)"
+          if [[ "$last_message" == "agent($TASK_ID): verified implementation checkpoint" ]]; then
+            echo "LAST_DURABLE_PHASE=apply" >> "$GITHUB_ENV"
+            echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          elif [[ "$last_message" == "agent($TASK_ID): validated OpenSpec plan checkpoint" ]]; then
+            echo "LAST_DURABLE_PHASE=plan" >> "$GITHUB_ENV"
+            echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          fi
           echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
           echo "CHANGE_ID=$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
@@ -214,6 +224,11 @@ jobs:
           set -euo pipefail
           change="openspec/changes/$CHANGE_ID"
           if [[ "$PHASE" == plan || "$PHASE" == auto ]]; then
+            # A durable plan on the existing branch must be resumed with apply,
+            # not silently overwritten or regenerated with another paid plan call.
+            if [[ -s "$change/proposal.md" || -s "$change/design.md" || -s "$change/tasks.md" ]]; then
+              echo "::error::Existing OpenSpec plan on $AGENT_BRANCH; use phase=apply after reviewing it"; exit 1
+            fi
             if find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" 2>/dev/null | grep -q .; then
               echo "::error::Change already archived"; exit 1
             fi
@@ -289,24 +304,25 @@ jobs:
           node scripts/check-openspec-task-phases.mjs "openspec/changes/$CHANGE_ID/tasks.md"
           npm run check
 
-      - name: Guard auto plan scope before implementation
-        if: inputs.phase == 'auto'
+      # ASF-OPSX-03: publish a recoverable, plan-only checkpoint before paid apply.
+      # No PR is created for auto here; plan mode publishes a draft later.
+      - name: Checkpoint validated OpenSpec plan
+        if: inputs.phase == 'plan' || inputs.phase == 'auto'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
         run: |
           set -euo pipefail
-          # Reject plan-time modifications outside this change before starting the paid apply call.
-          changed="$( (git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
-          while IFS= read -r path; do
-            [[ -z "$path" ]] && continue
-            case "$path" in
-              "openspec/changes/$CHANGE_ID/"*) ;;
-              *) echo "::error::Auto plan changed a forbidden path: $path"; exit 1 ;;
-            esac
-          done <<< "$changed"
-          # Freeze the reviewed plan artifacts in a local commit so apply cannot rewrite them.
+          node scripts/agent-openspec-checkpoint.mjs plan "$CHANGE_ID"
           git add -- "openspec/changes/$CHANGE_ID"
-          git commit -m "agent($TASK_ID): OpenSpec auto plan"
-          echo "AUTO_PLAN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          if git diff --cached --quiet; then
+            echo "::error::No new validated plan to checkpoint"; exit 1
+          fi
+          git commit -m "agent($TASK_ID): validated OpenSpec plan checkpoint"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
+          echo "LAST_DURABLE_PHASE=plan" >> "$GITHUB_ENV"
+          echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Plan checkpoint pushed: $(git rev-parse HEAD)"
 
       # ASF-OPSX-02: deterministic fail-closed gate before the first paid apply call.
       # Also recheck a plan already published on a persistent branch.
@@ -348,6 +364,41 @@ jobs:
           } > "$RUNNER_TEMP/openspec-apply-prompt.txt"
           opencode run --auto --model "$OPENCODE_MODEL" "$(cat "$RUNNER_TEMP/openspec-apply-prompt.txt")"
 
+      # ASF-OPSX-03: commit and push implementation before the paid OPSX sync.
+      # This is NOT a final PR and cannot be merged as a completed feature.
+      - name: Checkpoint verified implementation before OPSX sync
+        if: inputs.phase == 'apply' || inputs.phase == 'auto'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reviewed proposal, design and deltas are immutable during apply.
+          plan_edits="$( (git diff --name-only -- "openspec/changes/$CHANGE_ID"; git diff --cached --name-only -- "openspec/changes/$CHANGE_ID"; git ls-files --others --exclude-standard -- "openspec/changes/$CHANGE_ID") | sort -u )"
+          while IFS= read -r path; do
+            [[ -z "$path" || "$path" == "openspec/changes/$CHANGE_ID/tasks.md" ]] && continue
+            echo "::error::Apply rewrote a reviewed OpenSpec artifact: $path"; exit 1
+          done <<< "$plan_edits"
+          tasks="openspec/changes/$CHANGE_ID/tasks.md"
+          test -s "$tasks" || { echo "::error::Missing OpenSpec tasks.md"; exit 1; }
+          node scripts/check-openspec-task-phases.mjs "$tasks"
+          grep -Eq '^[[:space:]]*-[[:space:]]+\[[xX]\]' "$tasks" || { echo "::error::No completed checklist entries"; exit 1; }
+          if grep -Eq '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$tasks"; then
+            echo "::error::Unchecked tasks remain; refusing checkpoint"; exit 1
+          fi
+          npm run check
+          openspec validate "$CHANGE_ID" --strict --no-interactive
+          node scripts/agent-openspec-checkpoint.mjs apply "$CHANGE_ID"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "::error::No implementation changes to checkpoint"; exit 1
+          fi
+          git commit -m "agent($TASK_ID): verified implementation checkpoint"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
+          echo "LAST_DURABLE_PHASE=apply" >> "$GITHUB_ENV"
+          echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Apply checkpoint pushed: $(git rev-parse HEAD)"
+
       - name: Verify, semantic sync and archive OpenSpec
         if: inputs.phase == 'apply' || inputs.phase == 'auto' || inputs.phase == 'finalize'
         env:
@@ -386,8 +437,16 @@ jobs:
           node scripts/sync-guard.mjs snapshot "$RUNNER_TEMP/opsx-sync-before.json"
           # Invoke the command generated by openspec init, not a plain text
           # request merely mentioning /opsx:sync.
+          # Add requirements-quality instructions to the GENERATED runner-local
+          # OPSX command: preserve semantics and keep each requirement under 500 chars.
+          # The command is excluded from Git and cannot enter the feature PR.
+          cat docs/factory/opsx-sync-quality.md >> .opencode/commands/opsx-sync.md
           opencode run --auto --model "$OPENCODE_MODEL" --command opsx-sync "$CHANGE_ID"
           node scripts/sync-guard.mjs verify "$RUNNER_TEMP/opsx-sync-before.json"
+          # Validate the resulting canonical specs WHILE the change stays active.
+          # A strict warning (e.g. >500-character requirement) must not archive
+          # or publish invalid specs. The remote apply checkpoint stays recoverable.
+          openspec validate --all --strict --no-interactive
           # The LLM already synced canonical specs; archive without a second merge.
           openspec archive "$CHANGE_ID" --yes --skip-specs
           find openspec/changes/archive -maxdepth 1 -type d -name "*-$CHANGE_ID" | grep -q . || {
@@ -405,7 +464,7 @@ jobs:
           test "$(git branch --show-current)" = "$AGENT_BRANCH" || {
             echo "::error::Work branch changed"; exit 1;
           }
-          changed="$( (git diff --name-only origin/main...HEAD; git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+          changed="$( (git diff --no-renames --name-only origin/main...HEAD; git diff --no-renames --name-only; git ls-files --others --exclude-standard) | sort -u )"
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
             if [[ "$PHASE" == plan ]]; then
@@ -465,3 +524,26 @@ jobs:
           set -euo pipefail
           # Never auto-merge plan PRs. Gate on main ruleset + CI/check.
           node scripts/request-safe-auto-merge.mjs
+
+      - name: Report durable checkpoint and safe recovery
+        if: failure()
+        shell: bash
+        run: |
+          # No tokens, prompts, secrets or worktree contents are exported.
+          set -uo pipefail
+          echo "::warning::OpenSpec run failed. Last durable checkpoint: ${LAST_DURABLE_PHASE:-none}; SHA: ${CHECKPOINT_SHA:-none}"
+          {
+            echo "### OpenSpec failure / recovery"
+            echo "- Task: \`$TASK_ID\`; phase: \`$PHASE\`"
+            echo "- Last pushed checkpoint: \`${LAST_DURABLE_PHASE:-none}\` at \`${CHECKPOINT_SHA:-none}\`"
+            echo "- Branch: \`${AGENT_BRANCH:-unknown}\`"
+            echo "- Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            if [[ "${LAST_DURABLE_PHASE:-}" == apply ]]; then
+              echo "- Recovery: inspect branch and run a separately authorized \`phase=finalize\`. Do not repeat paid apply."
+            elif [[ "${LAST_DURABLE_PHASE:-}" == plan ]]; then
+              echo "- Recovery: inspect plan and run a separately authorized \`phase=apply\`. Do not repeat paid planning."
+            else
+              echo "- No durable checkpoint was confirmed. Inspect GitHub state and logs before ANY paid retry."
+            fi
+            echo "- No automatic paid retry was started; CI, PR, merge and Pages remain unverified until independently checked."
+          } >> "$GITHUB_STEP_SUMMARY"

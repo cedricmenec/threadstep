@@ -1,5 +1,26 @@
 # Journal des décisions de conception
 
+## Décision ASF-OPSX-03/04 (17 octobre 2026, implémentation en cours de PR)
+
+- **Durabilité avant opérations payantes successives** : un plan validé,
+  puis une implémentation vérifiée reçoivent chacun un commit et un push
+  non forcé sur `agent/openspec/TS-NNN`. Avant le checkpoint, le scope
+  est vérifié ; aucune PR finale/merge n'est demandée à ce stade.
+- **Synchronisation fail-closed** : insérer dans la commande OPSX native
+  générée des instructions sur la concision des exigences (cible 400
+  caractères, seuil OpenSpec strict 500), scénarios et conservation des
+  règles ; `openspec validate --all --strict` doit réussir **avant**
+  l'archivage. Aucun relâchement de `--strict`.
+- **Reprise contrôlée** : une branche contenant le plan est reprise via
+  `apply`, une branche contenant l'implémentation via `finalize`
+  après autorisation distincte. Résumé de diagnostic ; pas de retry
+  payant automatique ; V1 conserve quota et arrêt après échec.
+- **Preuve** : tests statiques, Node, Actionlint et CI indépendante
+  à vérifier sur la PR. Un E2E payé et une injection de panne réelle
+  restent distincts. Voir [tâche](tasks/ASF-OPSX-03.md) et
+  [reprise](validation-and-recovery.md).
+
+
 ## Décision ASF-OPSX-02 (17 octobre 2026)
 
 - **Précontrôle statique avant appel payant `apply` :** la génération

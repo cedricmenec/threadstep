@@ -10,6 +10,7 @@
 | Vérifier l'état, les SHAs, PR et runs de référence | [État courant](current-state.md) |
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
 | Consulter la décision formelle de clôture | [Rapport ASF V2 du 16 octobre 2026](closeout-2026-10-16.md) |
+| Comprendre les checkpoints et la reprise après sync | [ASF-OPSX-03/04](tasks/ASF-OPSX-03.md), [procédure d'incident](validation-and-recovery.md) et [qualité OPSX](opsx-sync-quality.md) |
 | Tester panne, CI rouge, permissions et reprise | [Recette finale et reprise](validation-and-recovery.md) |
 | Consulter le backlog de préparation ASF V3 (plafond envisagé 10 à 15 tâches) | [Backlog ASF V3 proposé](tasks/ASF-V3-README.md) |
 | Comprendre les verrous techniques du passage de deux à dix puis quinze | [Étude de changement d'échelle](scale-to-ten.md) |
