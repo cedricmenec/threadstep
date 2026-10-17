@@ -23,6 +23,14 @@ const decision = (status, reason, evidence=null) => Object.freeze({
 });
 const reject = code => decision("rejected",code);
 const uncertain = code => decision("uncertain",code);
+// GitHub client adapters may expose HTTP status either on the response
+// itself or in the normalized error. Conflicting statuses are uncertain.
+const missingRef404 = res => {
+  if (res?.ok !== false) return false;
+  const codes = [res.status,res.error?.status]
+    .filter(code=>code!==null && code!==undefined);
+  return codes.length>0 && codes.every(code=>code===404);
+};
 const shaRef = (res,ref) =>
   res?.ok === true && res.data?.ref === ref &&
   res.data?.object?.type === "commit" &&
@@ -73,8 +81,7 @@ export async function observeV3GithubBootstrapReadiness({
       file=await readClient.get(BASE+"/contents/registry.json?ref="+globalHead);
       summary=decodeRegistry(file);
     } catch { return reject("existing_registry_invalid_do_not_recreate"); }
-  } else if(observedGlobal?.ok === false &&
-      observedGlobal.status === 404) {
+  } else if(missingRef404(observedGlobal)) {
     // 404 can be permission masking; this observation NEVER issues CREATE.
     summary=null;
   } else {
@@ -89,7 +96,7 @@ export async function observeV3GithubBootstrapReadiness({
   if(shaRef(finalMain,"refs/heads/main")!==expectedMainSha)
     return uncertain("main_ref_moved_during_bootstrap_observation");
   if(summary===null) {
-    if(finalGlobal?.ok !== false || finalGlobal.status !== 404)
+    if(!missingRef404(finalGlobal))
       return uncertain("global_ref_changed_during_bootstrap_observation");
     return decision("absent_observed_untrusted",
       "owner_only_create_once_not_approved_or_performed",{
