@@ -47,7 +47,10 @@ export function shouldOpenSyncedDatabase(config) {
 }
 
 export function cloudConfigureOptions(databaseUrl) {
-  return { databaseUrl, requireAuth: true };
+  // ThreadStep renders the native Dexie Cloud userInteraction prompts in its
+  // own DOM. Without customLoginGui the addon uses its default GUI instead,
+  // so our email/OTP form is never wired to that authentication dialog.
+  return { databaseUrl, requireAuth: true, customLoginGui: true };
 }
 
 export function upgradeSchema() {

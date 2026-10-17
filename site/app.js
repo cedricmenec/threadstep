@@ -3,6 +3,7 @@ import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDa
 import { documentToRecords, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
 import { detectHistoricalDocument, describeMigration, planMigration, runMigration } from "./migration.js";
 import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
+import { availableLocalBackup } from "./local-recovery.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -33,6 +34,8 @@ const authSubmitEl = document.querySelector("#auth-submit");
 const authResendEl = document.querySelector("#auth-resend");
 const authCancelEl = document.querySelector("#auth-cancel");
 const authOfflineEl = document.querySelector("#auth-offline");
+const authLocalDataEl = document.querySelector("#auth-local-data");
+const authLegacyExportEl = document.querySelector("#auth-export-legacy");
 let syncedDatabase = null;
 let authController = null;
 let authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
@@ -138,12 +141,45 @@ function setAuthError(message) {
   authErrorEl.textContent = typeof message === "string" ? message : "";
   authErrorEl.hidden = !authErrorEl.textContent;
 }
+function renderLocalRecovery() {
+  const backup = availableLocalBackup(localStorage);
+  if (authLegacyExportEl) authLegacyExportEl.hidden = !backup;
+  if (authLocalDataEl) {
+    authLocalDataEl.textContent = backup
+      ? `Une sauvegarde locale historique est présente dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). L'espace de travail est masqué avant authentification ; ces données ne sont ni effacées ni envoyées au cloud automatiquement. Vous pouvez les exporter sans vous connecter.`
+      : "L'espace de travail est masqué avant authentification. Aucune sauvegarde historique V1 lisible n'a été trouvée sur cette origine ; ne réinitialisez pas ce navigateur ni votre base.";
+  }
+}
+function downloadJsonText(json, filename) {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const link = el("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+function exportLegacyBackup() {
+  const backup = availableLocalBackup(localStorage);
+  if (!backup) {
+    setAuthError("Aucune sauvegarde historique locale lisible à exporter.");
+    return;
+  }
+  downloadJsonText(backup.json, "threadstep-historique-v1-sauvegarde.json");
+  setAuthStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
+}
 function renderAuthPanel() {
   if (!authPanelEl) return;
   const authenticated = canAccessBusiness(authState);
   authPanelEl.hidden = !requiresAuthentication() || authenticated;
   applyBusinessVisibility();
   if (authPanelEl.hidden) return;
+  renderLocalRecovery();
   const interaction = authInteraction;
   const codePhase = !!(interaction && interaction.kind === "otp");
   const errorAlerts = interaction ? interaction.alerts.filter((alert) => alert.type === "error") : [];
@@ -162,7 +198,8 @@ function renderAuthPanel() {
     authOfflineEl.hidden = authState.status !== AUTH_STATUS.OFFLINE_REQUIRED;
     authOfflineEl.textContent = authMessage("offline-first");
   }
-  setAuthStatus(infoAlerts.length ? infoAlerts[0].message : authState.message);
+  setAuthStatus(infoAlerts.length ? infoAlerts[0].message
+    : authSubmitting ? "Demande de code en cours auprès de Dexie Cloud…" : authState.message);
   if (errorAlerts.length) setAuthError(errorAlerts[0].message);
   else if (authState.kind && authState.kind !== "sign-in") setAuthError(authState.message);
   else setAuthError("");
@@ -1270,17 +1307,10 @@ subjectForm.addEventListener("submit", (event) => {
   input.focus();
 });
 document.querySelector("#export").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(documentState, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = el("a");
-  link.href = url;
-  link.download = "threadstep-backup.json";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  downloadJsonText(JSON.stringify(documentState, null, 2), "threadstep-backup.json");
   notify("Export JSON généré");
 });
+if (authLegacyExportEl) authLegacyExportEl.addEventListener("click", exportLegacyBackup);
 document.querySelector("#import").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;

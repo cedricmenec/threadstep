@@ -277,6 +277,7 @@ test("2.1 app.js uses the forced native OTP grant and native subscriptions", () 
   assert.match(app, /db\.cloud\.login\(\{\s*\.\.\.options,\s*grant_type:\s*"otp"\s*\}\)/);
   assert.match(app, /db\.cloud\.currentUser\.subscribe/);
   assert.match(app, /db\.cloud\.userInteraction\.subscribe/);
+  assert.match(read("site/dexie-foundation.js"), /requireAuth: true, customLoginGui: true/);
   assert.doesNotMatch(app, /fetchTokens/);
   assert.doesNotMatch(app, /\bfetch\s*\(/);
   assert.doesNotMatch(app, /type:\s*"password"|password/i);
@@ -290,6 +291,11 @@ test("2.2 the sign-in surface declares only email, OTP, resend and live regions"
   assert.match(html, /id="auth-email"[^>]*type="email"/);
   assert.match(html, /id="auth-otp"[^>]*type="text"/);
   assert.match(html, /id="auth-resend"/);
+  assert.match(html, /id="auth-local-data"/);
+  assert.match(html, /id="auth-export-legacy"[^>]*type="button"[^>]*hidden/);
+  assert.match(read("site/app.js"), /authLegacyExportEl\.addEventListener\("click", exportLegacyBackup\)/);
+  assert.match(read("site/app.js"), /renderLocalRecovery\(\)/);
+  assert.match(read("site/app.js"), /Demande de code en cours auprès de Dexie Cloud/);
   assert.match(html, /id="auth-error"[^>]*role="alert"/);
   assert.match(html, /id="auth-status"[^>]*role="status"[^>]*aria-live="polite"|id="auth-status"[^>]*aria-live="polite"[^>]*role="status"/);
   assert.doesNotMatch(html, /type="password"/i);
