@@ -10,7 +10,7 @@ const SHA = /^[a-f0-9]{40}$/;
 const ID = /^[1-9][0-9]{0,17}$/;
 const REPO = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const PARENT_PATH = ".github/workflows/backlog-orchestrator-v3.yml";
-const CHILD_PATH = ".github/workflows/agent-openspec.yml";
+const CHILD_PATH = ".github/workflows/agent-openspec-v3.yml";
 const BOT = "threadstep-software-factory[bot]";
 const ACTIVE = new Set(["queued", "in_progress", "waiting", "requested", "pending"]);
 
