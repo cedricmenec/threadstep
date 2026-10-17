@@ -213,3 +213,45 @@ a réussi (55 tests, commande OPSX, garde-fou SHA-256, archive) et a publié la
 La CI finale sur main a réussi avec 60 tests et Pages est déployé.
 Aucun crédit OpenRouter n'est consommé par le nouveau validateur statique,
 mais les phases apply et sync elles-mêmes restent payantes.
+
+
+## Checkpoints distants et reprise d'un run interrompu (ASF-OPSX-03/04)
+
+Depuis la correction liée à TS-023, le workflow réalise un **commit et un
+push sur `agent/openspec/TS-NNN` après le plan validé**, puis **un
+second commit et push après `apply` validé**, avant l'appel payant de
+synchronisation OPSX. En `phase=plan`, une PR brouillon reste ensuite
+créée comme auparavant. En `phase=auto`, le checkpoint du plan reste
+une branche sans PR tant que la livraison n'est pas prête.
+
+Les checkpoints sont des commits Git distants, pas des artifacts Actions ;
+un checkpoint **n'est jamais une PR finale**. Avant chaque push, un contrôle
+bloquant vérifie que le plan est limité à son dossier et que l'implémentation
+ne contient que code produit, tests, documentation produit et checklist du
+change concerné. Les fichiers générés `.opencode/` et `.agents/` restent
+ignorés. Un échec de push bloque la suite.
+
+Après OPSX sync, le workflow lance la validation **`--all --strict`
+avant `openspec archive --skip-specs`**. La commande OPSX native reçoit
+sur le runner des consignes supplémentaires de rédaction : exigences
+atomiques, texte normatif cible <=400 caractères, détails dans les scénarios,
+aucune suppression silencieuse des exigences. Le strict est conservé.
+Si cette validation échoue, aucune archive ni PR ne sont publiées et la
+branche distante conserve le code au dernier checkpoint d'apply.
+
+En cas d'échec, consulter le résumé Actions pour la phase durable et le SHA,
+puis utiliser une nouvelle autorisation explicite : `apply` si le dernier
+checkpoint est le plan ; `finalize` après l'implémentation. Ne jamais
+réessayer à l'aveugle le `phase=auto` initial et ne pas confondre le
+bouton « Re-run failed jobs » avec une reprise des fichiers du runner.
+Une nouvelle exécution de `finalize` reste payante et soumise à la même
+validation stricte. Si la branche contient déjà un plan complet,
+`plan` et `auto` refusent de l'écraser.
+
+Les jobs `first` et `second` de Backlog Orchestrator V1 invoquent le
+même workflow OpenSpec en `phase=auto` et héritent donc de ces points
+de sauvegarde. L'orchestrateur **ne reprend pas automatiquement** :
+son journal et son arrêt entre tâches restent la source de vérité et
+les appels payants ne sont jamais relancés automatiquement.
+Voir [procédure d'incident](validation-and-recovery.md) et
+[tâche factory](tasks/ASF-OPSX-03.md).
