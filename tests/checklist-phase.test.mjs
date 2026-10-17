@@ -59,7 +59,7 @@ test("ASF-OPSX-01 OpenSpec rules and AGENTS preserve human acceptance without pr
   assert.match(config, /never report unperformed checks as passed/);
   assert.match(agentContract, /Manual acceptance[\s\S]*without checkboxes/);
   assert.match(agentContract, /Post-sync review[\s\S]*without checkboxes/);
-  assert.match(manual, /still \*\*required for the human acceptance\*\*/);
+  assert.match(manual, /restent \*\*obligatoires pour l'acceptation humaine\*\*/);
   assert.match(manual, /ASF-OPSX-02/);
 });
 
