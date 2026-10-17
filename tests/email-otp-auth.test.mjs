@@ -584,3 +584,86 @@ test("4.2 no OTP value is logged or rendered by the authentication surface", () 
   const exposed = [authMessage(AUTH_MESSAGE_KINDS.SIGN_IN), authMessage(AUTH_MESSAGE_KINDS.INVALID_CODE)];
   for (const message of exposed) assert.doesNotMatch(message, /\b\d{6,8}\b/);
 });
+
+
+// Chrome mobile regression: a manual attempt must work even if the
+// native currentUser observable remains in its loading state.
+test("5.1 explicit OTP request from native loading state never runs automatically", async () => {
+  const fake = fakeAdapter();
+  const controller = createAuthController({ adapter: fake.adapter, storage: fakeStorage(), getOnline: () => true, now: () => NOW });
+  controller.applyUser({ isLoading: true });
+  assert.equal(controller.snapshot().status, AUTH_STATUS.LOADING);
+  assert.equal(fake.loginCalls.length, 0);
+  assert.equal(canStartAuthentication(controller.snapshot(), true), true);
+  const outcome = await controller.startSignIn("mobile@example.test");
+  assert.equal(outcome.started, true);
+  assert.deepEqual(fake.loginCalls, [{ grant_type: "otp", email: "mobile@example.test" }]);
+  assert.equal(controller.canAccessBusiness(), false);
+});
+
+test("5.2 one explicit email request automatically acknowledges native email prompt only once", () => {
+  const fake = fakeAdapter();
+  const controller = createAuthController({ adapter: fake.adapter, storage: fakeStorage(), getOnline: () => true, now: () => NOW });
+  controller.applyUser(signedOutUser());
+  controller.startSignIn("mobile@example.test");
+  const submitted = [];
+  controller.handleInteraction({
+    type: "email", fields: { email: {} }, alerts: [],
+    onSubmit: (answer) => submitted.push(answer),
+    onCancel: () => {}
+  });
+  assert.deepEqual(submitted, [{ email: "mobile@example.test" }]);
+  assert.equal(controller.currentInteraction(), null);
+  controller.handleInteraction({
+    type: "email", fields: { email: {} }, alerts: [],
+    onSubmit: (answer) => submitted.push(answer),
+    onCancel: () => {}
+  });
+  assert.equal(submitted.length, 1);
+  assert.equal(controller.currentInteraction()?.kind, "email");
+});
+
+test("5.3 native email errors are not resubmitted automatically and native prompts clear safely", () => {
+  const fake = fakeAdapter();
+  const controller = createAuthController({ adapter: fake.adapter, storage: fakeStorage(), getOnline: () => true, now: () => NOW });
+  controller.applyUser(signedOutUser());
+  controller.startSignIn("bad@example.test");
+  let callbacks = 0;
+  controller.handleInteraction({
+    type: "email", fields: { email: {} },
+    alerts: [{ type: "error", messageCode: "INVALID_EMAIL", message: "private", messageParams: {} }],
+    onSubmit: () => { callbacks += 1; }, onCancel: () => {}
+  });
+  assert.equal(callbacks, 0);
+  assert.equal(controller.currentInteraction()?.alerts[0].message, "Saisissez une adresse email valide.");
+  controller.handleInteraction(undefined);
+  assert.equal(controller.currentInteraction(), null);
+});
+
+test("5.4 native message alert can be acknowledged once without launching a second login", () => {
+  const fake = fakeAdapter();
+  const controller = createAuthController({ adapter: fake.adapter, storage: fakeStorage(), getOnline: () => true, now: () => NOW });
+  controller.applyUser(signedOutUser());
+  let accepts = 0;
+  controller.handleInteraction({
+    type: "message-alert", alerts: [{ type: "info", messageCode: "OTP_SENT", messageParams: {} }],
+    fields: {}, onSubmit: () => { accepts += 1; }, onCancel: () => {}
+  });
+  assert.equal(controller.currentInteraction()?.kind, "alert");
+  assert.equal(controller.submitInteraction({}), true);
+  assert.equal(accepts, 1);
+  assert.equal(controller.submitInteraction({}), false);
+  assert.equal(fake.loginCalls.length, 0);
+});
+
+test("5.5 Chrome mobile submit button is directly clickable and OTP accepts alphanumeric codes", () => {
+  const app = read("site/app.js");
+  const html = read("site/index.html");
+  assert.match(html, /id="auth-submit"[^>]*type="button"|type="button" id="auth-submit"/);
+  assert.match(app, /authSubmitEl\.addEventListener\("click", submitAuthForm\)/);
+  assert.match(app, /authFormEl\.addEventListener\("submit", submitAuthForm\)/);
+  assert.match(app, /authSubmitEl\.disabled = authSubmitting;/);
+  assert.doesNotMatch(html, /id="auth-otp"[^>]*pattern="\[0-9\]\{8\}"/);
+  assert.match(html, /id="auth-otp"[^>]*maxlength="64"/);
+  assert.match(app, /interaction\.kind === "alert"/);
+});

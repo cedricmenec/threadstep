@@ -134,6 +134,21 @@ documentation publique. La réception réelle d'un OTP, les tests multi-appareil
 le clavier, le lecteur d'écran et l'isolation entre deux identités restent une
 recette manuelle sur base isolée.
 
+**Incident Chrome mobile de connexion (18/10/2026, TS-027) :** même après
+activation de `customLoginGui: true`, un clic peut sembler inerte lorsque
+`currentUser` reste en `loading` ou que Dexie Cloud demande une confirmation
+intermédiaire de l'email sans changer l'affichage du formulaire. Le bouton
+utilise un événement `click` explicite (en plus de Enter/`submit`),
+`startSignIn` accepte un déclenchement **uniquement sur action de
+l'utilisateur** même pendant `loading`, et l'interaction `email` native est
+soumise une seule fois avec l'adresse déjà validée. Les alertes du fournisseur
+restent visibles et n'entraînent aucune nouvelle authentification. Le champ
+OTP accepte aussi les codes **alphanumériques** natifs au lieu d'imposer huit
+chiffres. Les tests unitaires vérifient ces cas sans preuve de délivrance
+réelle d'email. La recette sur Chrome mobile + instance Dexie Cloud doit
+encore confirmer les échanges réseau, l'origine autorisée et l'absence de
+régression sur les données locales.
+
 **Protection des données pendant une panne d'authentification :**
 l'interface masque les outils métier avant connexion, sans effacer le
 `localStorage`. Si une sauvegarde historique `threadstep.document.v1`

@@ -36,11 +36,11 @@
         </div>
         <div id="auth-otp-field" class="auth-field" hidden>
           <label for="auth-otp">Code reçu par email</label>
-          <input id="auth-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" maxlength="8" aria-describedby="auth-status auth-error">
+          <input id="auth-otp" name="otp" type="text" inputmode="text" autocomplete="one-time-code" maxlength="64" aria-describedby="auth-status auth-error">
         </div>
         <p id="auth-error" class="auth-error" role="alert" hidden></p>
         <div class="auth-actions">
-          <button type="submit" id="auth-submit" class="primary">Recevoir un code par email</button>
+          <button type="button" id="auth-submit" class="primary">Recevoir un code par email</button>
           <button type="button" id="auth-resend" class="secondary" hidden>Envoyer un nouveau code</button>
           <button type="button" id="auth-cancel" class="subtle" hidden>Annuler</button>
         </div>
