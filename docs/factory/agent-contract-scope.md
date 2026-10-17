@@ -51,8 +51,12 @@ un service tiers ou d'étendre le périmètre fonctionnel.
   veto d'agent, conserver les risques et préconditions réels.
 - [x] Aligner le guide de session et la documentation ASF avec
   la séparation des sources de vérité.
+- [x] Adapter les tests du contrat V2 et des phases OpenSpec pour
+  vérifier les règles dans leur bonne source, sans assouplir les
+  restrictions de sécurité ou de recette.
 
-**Validation :** modification documentaire seulement, sans
-`site/`, workflow, script, secret, ni code agent payé.
-La CI vérifiera les contrats automatisés ; aucun test
+**Validation :** documentation et tests de contrat uniquement,
+sans `site/`, workflow, script de production, secret, ni code
+d'agent payé. La CI vérifie l'emplacement des directives du backlog
+et l'interdiction de fausses cases de recette ; aucun test
 Dexie Cloud, OTP ni migration réelle n'est revendiqué.
