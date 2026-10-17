@@ -55,3 +55,7 @@ Le groupe d'exclusivité des jobs payants V1, threadstep-paid-development-v1, n'
 Aucune modification future ne doit contourner les conditions actor, main et attempt 1, introduire un secret dans ces jobs de diagnostic, changer une branche de vagues depuis un CLI non approuvé, ou remplacer un exit 1 par un succès avant la preuve GitHub E2E. CI actionlint plus tests Node à chaque révision ; les autorisations owner sont séparées de la réussite des tests.
 
 **CI verte ne signifie pas autorisation de production. Aucun workflow n'est fusionné ici.**
+
+## Qualification indépendante
+
+La CI historique est limitée aux PR vers main. Base de #87 temporairement placée sur main pour lancer actionlint, npm run check et OpenSpec, puis retour vers #85. Aucune fusion ou activation n'en résulte.
