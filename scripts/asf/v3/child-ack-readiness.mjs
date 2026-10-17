@@ -136,6 +136,9 @@ export async function observeV3GithubChildAckReadiness({
   global=registryFromFile(await readClient.get(
    BASE+"/contents/registry.json?ref="+globalSha));
  }catch(cause){
+  // DIAGNOSTIC ONLY IN THIS DRAFT BRANCH, remove before qualification.
+  process.stderr.write("ASF V3 test registry cause: "+
+   String(cause?.code??cause?.message??"unknown").replace(/[^a-z0-9_]/gi,"_").slice(0,80)+"\n");
   const known=new Set(["bad_registry_metadata","bad_registry_base64",
    "bad_registry_bytes","invalid_fields","invalid_registry",
    "registry_replay_divergence","event_sequence_corrupted",
