@@ -59,3 +59,16 @@ Current operating guides: `docs/factory/developer-guide.md`, `docs/factory/backl
 - Manual dispatch authorizes a **paid** task execution only. Task status/priority does not authorize API costs, changes of secrets or GitHub settings, or PR merge. The model provider key is available only to the paid development step.
 - ASF-V2-008/009 are **not executable by this bootstrap** because they change GitHub Actions workflows. A separately approved, human-gated publication path is required; this bootstrap neither requests `Workflows: write` nor changes App permissions.
 - Factory changes always require independent CI, checked documentation within the same PR, explicit merge authorization, and honest post-merge verification. See `docs/factory/agent-asf-manual.md`.
+
+## Durable OpenSpec checkpoints and safe recovery
+
+The OpenSpec workflow checkpoints a validated plan to the task-specific
+remote `agent/openspec/TS-NNN` branch before paid apply, then checkpoints
+verified implementation before paid semantic sync. Both intermediate pushes
+are subject to file-scope and quality gates; they do not authorize merging
+or represent a delivered feature. Strict canonical validation runs before
+archive. On failure, inspect the last confirmed remote checkpoint and request
+new, explicit paid authorization for `apply` (plan checkpoint) or `finalize`
+(apply checkpoint); no paid automatic retry. The two Backlog Orchestrator V1
+slots inherit the same checks through the reusable workflow but still stop
+on failure. See `docs/factory/validation-and-recovery.md`.
