@@ -108,6 +108,7 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 @media(max-width:620px){.shell{padding:22px 15px}.hero{padding:25px 0}.section-top{align-items:start;flex-direction:column}.subject{padding:17px}.add-subject{padding:10px}.add-subject .primary{padding:11px}.task-row{flex-wrap:wrap}.priority{margin-left:auto}.task-form{flex-wrap:wrap}.task-form input{flex-basis:100%}.task-form select{flex:1}.task-form button{flex:1}}
 
 .subject-open{min-height:44px;min-width:44px;padding:10px 14px;font-size:.82rem;white-space:nowrap}
+.overview-see-more{min-height:44px;min-width:44px;margin-top:12px;padding:10px 14px;font-size:.82rem}
 .detail{width:100%;max-width:760px;margin:0 auto;padding:28px;display:flex;flex-direction:column;gap:4px}
 .detail-nav{margin:0 0 14px}
 .detail-return{min-height:44px}
