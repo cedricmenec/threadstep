@@ -118,7 +118,7 @@ test("ASF-OPSX-02 rejects explicit sync/archive and post-publication work in che
 test("ASF-OPSX-02 rejects all checkboxes inside manual/post-sync sections regardless of wording", () => {
   const plan = "# Tasks\n## Implementation checklist\n- [ ] Add logic\n## Manual acceptance\n- [ ] Check UI\n### Keyboard\n- [x] Run npm run check\n## Post-sync review\n- [ ] Run tests\n## Appendix\n- Later, human acceptance\n";
   const problems = forbiddenImplementationTasks(plan);
-  assert.deepEqual(problems.map(x => x.line), [6, 8, 10]);
+  assert.deepEqual(problems.map(x => x.line), [5, 7, 9]);
 });
 
 test("ASF-OPSX-02 avoids false positives for automated UI checks and regression/guard tests", () => {
