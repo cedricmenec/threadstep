@@ -221,7 +221,7 @@
     "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "f254cdad294b3f88a793a525d3e954967ea8424094bb7089a926455348834ec3"
+    "content_sha256": "a850bf14745539e21f708342ec3b17259b2fc7869f2429c4086bbc3ad896d931"
   },
   {
     "id": "TS-018",
@@ -233,7 +233,7 @@
     "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "3765d0bb5fe9f76d8f83ee99b90b08fb4bc02f743a370f3f39d91001da522b98"
+    "content_sha256": "74eef8307684e583771ca13314c513b4b320598afd895d5bb0f510052e4c3797"
   },
   {
     "id": "TS-019",
@@ -245,7 +245,7 @@
     "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "eb8e31aefb9e44930974eaa9b6b6b78db3581ae398d007ce25e01aa5ffb4953a"
+    "content_sha256": "ca3d6958e094bfea83547a00d9a0156f73a4e00b9563ac11844128d7d2245db9"
   },
   {
     "id": "TS-020",
@@ -257,6 +257,6 @@
     "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-17",
-    "content_sha256": "d417a7c3b0d1470a254846c4517c7d73c2928a1ae7db89dbdaad8d17ee3f410e"
+    "content_sha256": "3a79a46086f7ee1a244fc7fa6d9a20f17ee1eb4275897a08f352f97844140491"
   }
 ]
