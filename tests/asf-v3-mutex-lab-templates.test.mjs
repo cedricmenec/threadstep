@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {readFileSync,existsSync} from "node:fs";
+import {spawnSync} from "node:child_process";
+import {join} from "node:path";
 import {inspectAsfV3MutexLabTemplates,ASF_V3_MUTEX_LAB_DIR}
   from "../scripts/asf/v3/mutex-lab-template-audit.mjs";
 
@@ -49,5 +51,26 @@ test("missing, unexpected, malformed templates cannot authorize any action",()=>
   for(const t of [null,{},{"v1-shared.yml":"bad"}, {...baseline(),"surprise.yml":""}]){
     const r=inspectAsfV3MutexLabTemplates(t);
     assert.equal(r.status,"rejected");allFalse(r);
+  }
+});
+
+test("all inert lab workflows pass actionlint, mandatory in GitHub CI",t=>{
+  // The repository CI installs actionlint@v1.7.7 with go install.
+  const go=spawnSync("go",["env","GOPATH"],{encoding:"utf8"});
+  const binary=go.status===0 ? join(go.stdout.trim(),"bin","actionlint") : null;
+  if(!binary || !existsSync(binary)){
+    if(process.env.GITHUB_ACTIONS==="true")
+      assert.fail("GitHub CI must provide actionlint before running Node tests");
+    t.skip("actionlint is unavailable in this local environment");
+    return;
+  }
+  for(const file of files){
+    const yaml=readFileSync(new URL("../"+ASF_V3_MUTEX_LAB_DIR+"/"+file,import.meta.url),"utf8");
+    const result=spawnSync(binary,["-no-color","-stdin-filename",file,"-"],{
+      input:yaml,encoding:"utf8",timeout:15000
+    });
+    assert.equal(result.status,0,
+      file+" actionlint failure: "+result.stdout+" "+result.stderr+
+      (result.error ? String(result.error):""));
   }
 });
