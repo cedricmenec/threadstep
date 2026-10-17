@@ -1,5 +1,20 @@
 # Backlog ThreadStep
 
+## Synchronisation Dexie Cloud proposée le 17 octobre 2026 (non implémentée)
+
+[Spécification normative complète](../docs/product/specs/dexie-cloud-local-first.md) · [Architecture et plan de déploiement](../docs/product/dexie-cloud-rollout.md).
+
+- **[TS-024](tasks/TS-024.md)** : Configurer le socle Dexie.js et Dexie Cloud avant l'ouverture. `proposed / manual / high`.
+- **[TS-025](tasks/TS-025.md)** : Migrer les opérations métier vers une persistance Dexie local-first. `proposed / manual / high`.
+- **[TS-026](tasks/TS-026.md)** : Migrer sans destruction le document historique localStorage V1. `proposed / manual / high`.
+- **[TS-027](tasks/TS-027.md)** : Authentifier uniquement par OTP email natif Dexie Cloud. `proposed / manual / high`.
+- **[TS-028](tasks/TS-028.md)** : Visualiser la synchronisation et le diagnostic technique. `proposed / manual / medium`.
+- **[TS-029](tasks/TS-029.md)** : Séparer changement de base, déconnexion et purge locale. `proposed / manual / high`.
+- **[TS-030](tasks/TS-030.md)** : Durcir, tester et documenter la livraison Dexie Cloud. `proposed / manual / high`.
+
+**Constat réel :** ThreadStep utilise actuellement `localStorage`, et non IndexedDB. La migration est donc une tâche explicite ; aucun état historique ne doit être supprimé ni transféré au cloud sans consentement. `AGENTS.md` interdit actuellement cloud/authentification : la mise à jour de politique exige une PR distincte approuvée avant tout développement incompatible. Ces tâches restent proposées, manuelles et de risque medium/high. Leur ajout ne lance aucun agent payant ni fusion et n'implique pas leur disponibilité en production. Prévoir une livraison cohérente protégeant les données V1.
+
+
 ## Évolutions à développer le 17 octobre 2026 (briefs uniquement)
 
 - **[TS-021](tasks/TS-021.md) : repli initial des sous-tâches.** Chaque ouverture de l'overview ou d'une vue détail présente les enfants repliés ; une expansion volontaire reste valable jusqu'à la prochaine navigation, sans modifier le stockage.
