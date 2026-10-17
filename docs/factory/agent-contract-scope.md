@@ -7,7 +7,7 @@ contrat agent, dans une PR distincte des développements applicatifs.
 
 L'ancien `AGENTS.md` proscrivait « No backend, database service,
 account, authentication », fixait `localStorage` et refusait les
-bibliothèques JS tierces. Il recopiant ainsi les restrictions du
+bibliothèques JS tierces. Il recopiait ainsi les restrictions du
 MVP en règles universelles de coding, devenues contradictoires avec
 les tâches Dexie Cloud TS-024 à TS-030.
 
