@@ -8,7 +8,7 @@ Les trois workflows V1 qui lancent potentiellement un modèle payant déclarent 
 
 | Workflow V1 | Job | Concurrence |
 |---|---|---|
-| `.github/workflows/agent-openspec.yml` | `develop` | `threadstep-paid-development-v1` / `cancel-in-progress: false` |
+| `.github/workflows/agent-openspec.yml` | `staged-development` | `threadstep-paid-development-v1` / `cancel-in-progress: false` |
 | `.github/workflows/agent-asf.yml` | `develop` | idem |
 | `.github/workflows/agent.yml` | `develop` | idem |
 
@@ -20,7 +20,7 @@ La documentation GitHub précise que les groupes de concurrence sont **partagés
 
 `scripts/asf/v3/github-native-paid-mutex-readiness.mjs` expose deux fonctions **non autorisantes** :
 
-- `inspectV3SharedPaidMutexLayout` valide la disposition du job `develop` des trois workflows V1 existants, sans accepter une simple occurrence du nom dans un commentaire ou un job différent. Le préflight V3 `child-preflight` ne doit **pas prendre le verrou payé**.
+- `inspectV3SharedPaidMutexLayout` valide les jobs V1 effectivement payants : `staged-development` pour OpenSpec et `develop` pour les deux autres, sans accepter une simple occurrence du nom dans un commentaire ou un job différent. Le préflight V3 `child-preflight` ne doit **pas prendre le verrou payé**.
 - Le futur job V3 `paid-development`, s'il est ajouté par une PR propriétaire distincte, doit déclarer **au niveau du job** `concurrency: group: threadstep-paid-development-v1` et `cancel-in-progress: false`. Un groupe de verrouillage V3 différent, un groupe workflow parent, ou une annulation en cours sont rejetés.
 - `observeV3GithubSharedPaidMutex` lit **les sources V1 au SHA `main` attendu** directement sur l'API GitHub (`contents?ref=<SHA>`), valide le metadata/base64 et relit `main` pour détecter une course. Un résultat `v1_lock_confirmed_v3_paid_job_absent` signifie précisément que **V3 n'a encore aucun job payé**.
 
