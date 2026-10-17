@@ -22,8 +22,10 @@ const rules=(id,ref,types,bypass=[])=>({
 const policyMain=()=>rules(1,"refs/heads/main",
  ["pull_request","required_status_checks","deletion","non_fast_forward"]);
 const policyGlobal=()=>rules(2,ADMISSION_REGISTRY_REF,
- ["deletion","non_fast_forward","update"],
- [{actor_type:"Integration",actor_id:42}]);
+ ["update"],
+ [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}]);
+const policyImmutable=()=>rules(3,ADMISSION_REGISTRY_REF,
+ ["deletion","non_fast_forward"]);
 function fixture({kind="RELEASE",moved=false,invalidRegistry=false,
  malformedJournal=false,missingPolicy=false,missingWave=false}={}){
  const manifest=createV3Manifest({
@@ -55,9 +57,10 @@ function fixture({kind="RELEASE",moved=false,invalidRegistry=false,
  const get=async path=>{
   paths.push(path);
   if(path===BASE+"/rulesets")
-   return {ok:true,data:missingPolicy?[{id:1}]:[{id:1},{id:2}]};
+   return {ok:true,data:missingPolicy?[{id:1}]:[{id:1},{id:2},{id:3}]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:policyMain()};
   if(path===BASE+"/rulesets/2")return {ok:true,data:policyGlobal()};
+  if(path===BASE+"/rulesets/3")return {ok:true,data:policyImmutable()};
   if(path===ROOT)return {ok:true,data:{
    ref:ADMISSION_REGISTRY_REF,object:{type:"commit",sha:
     moved&&paths.filter(p=>p===ROOT).length>1?S("3"):GLOBAL}
