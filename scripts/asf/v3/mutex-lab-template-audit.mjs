@@ -28,9 +28,10 @@ export function inspectAsfV3MutexLabTemplates(templates) {
        !yaml.includes("\non:\n  workflow_dispatch:\n") ||
        !yaml.includes("\npermissions: {}\njobs:\n"))
       return reject("invalid_trigger_or_permissions_"+filename);
+    const jobBody=yaml.split("\njobs:\n")[1];
     if((yaml.match(/^on:/gm)||[]).length!==1 ||
        (yaml.match(/^jobs:/gm)||[]).length!==1 ||
-       (yaml.match(/^  [a-z][a-z0-9-]*:/gm)||[]).length!==1)
+       !jobBody || (jobBody.match(/^  [a-z][a-z0-9-]*:/gm)||[]).length!==1)
       return reject("invalid_top_level_shape_"+filename);
     if(!yaml.includes("\n  "+job+":\n    if: ${{ github.event.repository.name == 'asf-v3-mutex-lab' }}\n"))
       return reject("isolated_repository_guard_missing_"+filename);
