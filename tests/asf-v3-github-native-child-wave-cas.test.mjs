@@ -74,8 +74,10 @@ function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
  };
  const get=async path=>{
   state.paths.push(path);
-  if(path===BASE+"/actions/runs/"+RUN)return {ok:true,data:{
-   id:Number(RUN),repository:{full_name:REPO},
+  if(path===BASE+"/actions/runs/"+RUN||
+     (state.foreignRunId&&path===BASE+"/actions/runs/"+state.foreignRunId))
+   return {ok:true,data:{
+   id:Number(path.split("/").at(-1)),repository:{full_name:REPO},
    actor:{login:wrongRun?"intruder":BOT},path:WF,
    event:"workflow_dispatch",head_branch:"main",head_sha:ORIGIN,
    run_attempt:1,status:"in_progress"
@@ -208,6 +210,8 @@ test("ACK cannot be replayed after it is persisted, nor can CLAIM repeat",async(
 test("a different executor child runner cannot steal a persisted ACK",async()=>{
  const f=fixture();
  await attemptV3GithubChildWaveCAS({phase:"ACK",...f});
+ // A second, genuine-looking REST run must not claim the FIRST run's ACK.
+ f.state.foreignRunId="91828";
  f.runner.runId="91828";
  const r=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
  assert.equal(r.status,"rejected");noRights(r);
