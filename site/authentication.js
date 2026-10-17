@@ -159,7 +159,11 @@ export function deriveAuthState(user, options = {}) {
 export function canStartAuthentication(state, online) {
   const status = typeof state === "string" ? state : state && state.status;
   if (online === false) return false;
-  return status === AUTH_STATUS.SIGNED_OUT || status === AUTH_STATUS.EXPIRED;
+  // An explicit user click may initiate login even if the native session
+  // observable never settles on a slow/mobile IndexedDB initialization.
+  // Never start the flow automatically; an authenticated session stays gated.
+  return status === AUTH_STATUS.SIGNED_OUT || status === AUTH_STATUS.EXPIRED ||
+    status === AUTH_STATUS.LOADING;
 }
 
 export function canAccessBusiness(state) {
@@ -353,6 +357,7 @@ export function createAuthController(options = {}) {
   let lastUser = null;
   let refusal = null;
   let lastEmail = "";
+  let autoSubmitEmailOnce = false;
   let interaction = null;
   let lastState = null;
 
@@ -425,6 +430,10 @@ export function createAuthController(options = {}) {
     if (normalized) lastEmail = normalized;
     const request = { grant_type: "otp" };
     if (lastEmail) request.email = lastEmail;
+    // The native addon can still emit an email confirmation interaction
+    // even with a pre-filled email. Forward exactly the email that the user
+    // explicitly submitted, only once, or the same UI appears to do nothing.
+    autoSubmitEmailOnce = !!lastEmail;
     let pending;
     try {
       pending = Promise.resolve(adapter.login(request));
@@ -446,7 +455,26 @@ export function createAuthController(options = {}) {
 
   function handleInteraction(payload) {
     const viewModel = interactionViewModel(payload);
-    if (!viewModel) return null;
+    if (!viewModel) {
+      interaction = null;
+      notifyInteraction(null);
+      return null;
+    }
+    if (viewModel.kind === "email" && autoSubmitEmailOnce && lastEmail &&
+      !viewModel.alerts.some(alert => alert.type === "error")) {
+      // Clearing before calling the native callback permits a synchronously
+      // emitted OTP interaction to become the new visible step.
+      autoSubmitEmailOnce = false;
+      interaction = null;
+      notifyInteraction(null);
+      try {
+        viewModel.submit({ email: lastEmail });
+      } catch (error) {
+        applyFailure(error);
+      }
+      return viewModel;
+    }
+    autoSubmitEmailOnce = false;
     interaction = viewModel;
     notifyInteraction(viewModel);
     return viewModel;
@@ -455,7 +483,15 @@ export function createAuthController(options = {}) {
   function submitInteraction(value) {
     if (!interaction) return false;
     const current = interaction;
-    const submitted = current.submit(value);
+    let submitted;
+    try {
+      submitted = current.submit(value);
+    } catch (error) {
+      interaction = null;
+      notifyInteraction(null);
+      applyFailure(error);
+      return false;
+    }
     if (!submitted) return false;
     if (current.kind === "email" && value && typeof value === "object" && typeof value.email === "string") {
       lastEmail = value.email.trim();

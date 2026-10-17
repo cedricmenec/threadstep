@@ -182,15 +182,19 @@ function renderAuthPanel() {
   renderLocalRecovery();
   const interaction = authInteraction;
   const codePhase = !!(interaction && interaction.kind === "otp");
+  const alertPhase = !!(interaction && interaction.kind === "alert");
   const errorAlerts = interaction ? interaction.alerts.filter((alert) => alert.type === "error") : [];
   const infoAlerts = interaction ? interaction.alerts.filter((alert) => alert.type !== "error") : [];
-  if (authEmailFieldEl) authEmailFieldEl.hidden = codePhase;
+  if (authEmailFieldEl) authEmailFieldEl.hidden = codePhase || alertPhase;
   if (authOtpFieldEl) authOtpFieldEl.hidden = !codePhase;
-  if (authEmailEl) authEmailEl.required = !codePhase;
+  if (authEmailEl) authEmailEl.required = !(codePhase || alertPhase);
   if (authOtpEl) authOtpEl.required = codePhase;
   if (authSubmitEl) {
-    authSubmitEl.textContent = codePhase ? "Valider le code" : signInMethods()[0].label;
-    authSubmitEl.disabled = authSubmitting || authState.status === AUTH_STATUS.LOADING;
+    authSubmitEl.textContent = alertPhase ? "OK" :
+      codePhase ? "Valider le code" : signInMethods()[0].label;
+    // Loading may remain stuck if native IndexedDB/session initialization
+    // stalls: a user-initiated OTP login must still be possible.
+    authSubmitEl.disabled = authSubmitting;
   }
   if (authResendEl) authResendEl.hidden = !codePhase;
   if (authCancelEl) authCancelEl.hidden = !codePhase;
@@ -206,7 +210,9 @@ function renderAuthPanel() {
 }
 function handleAuthState(next) {
   authState = next && typeof next === "object" ? next : { status: AUTH_STATUS.SIGNED_OUT, kind: null, message: "" };
-  authSubmitting = false;
+  if (canAccessBusiness(authState) || authState.status === AUTH_STATUS.REFUSED) {
+    authSubmitting = false;
+  }
   if (canAccessBusiness(authState)) {
     authInteraction = null;
     renderAuthPanel();
@@ -217,10 +223,10 @@ function handleAuthState(next) {
 }
 function handleAuthInteraction(interaction) {
   authInteraction = interaction;
-  authSubmitting = false;
-  if (!interaction) {
-    setAuthStatus("Envoi du code en cours…");
-  }
+  // A cleared native interaction can mean the provider is waiting on its
+  // network response. Keep a visible pending state instead of silently
+  // resetting the request.
+  if (interaction) authSubmitting = false;
   renderAuthPanel();
 }
 function startBusiness() {
@@ -254,8 +260,17 @@ function showAuthFieldError(message) {
 }
 function submitAuthForm(event) {
   if (event && typeof event.preventDefault === "function") event.preventDefault();
-  if (!authController) return;
+  if (!authController) {
+    setAuthError("Connexion Dexie Cloud non initialisée. Rechargez la page sans supprimer vos données.");
+    return;
+  }
+  if (authSubmitting) return;
   const interaction = authController.currentInteraction() || authInteraction;
+  if (interaction && interaction.kind === "alert") {
+    authController.submitInteraction({});
+    renderAuthPanel();
+    return;
+  }
   if (interaction && interaction.kind === "otp") {
     const otp = authOtpEl ? authOtpEl.value.trim() : "";
     if (!otp) {
@@ -295,6 +310,10 @@ function submitAuthForm(event) {
   if (outcome && typeof outcome.then === "function") {
     outcome.then(() => {
       authSubmitting = false;
+      renderAuthPanel();
+    }, () => {
+      authSubmitting = false;
+      setAuthError("Impossible de contacter Dexie Cloud. Vérifiez votre réseau et la configuration de l'instance.");
       renderAuthPanel();
     });
   }
@@ -1350,6 +1369,10 @@ snackbarEl.addEventListener("focusout", (event) => {
   resumeRemovalTimer();
 });
 if (authFormEl) authFormEl.addEventListener("submit", submitAuthForm);
+// On mobile browsers a native form submit may be blocked by HTML validation
+// or the strict form-action CSP before a visible login state transition.
+// A direct click handler keeps the user action and feedback deterministic.
+if (authSubmitEl) authSubmitEl.addEventListener("click", submitAuthForm);
 if (authResendEl) authResendEl.addEventListener("click", resendOtp);
 if (authCancelEl) authCancelEl.addEventListener("click", cancelOtp);
 window.addEventListener("online", () => { if (authController) authController.refresh(); });
