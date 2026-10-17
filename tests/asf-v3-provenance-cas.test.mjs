@@ -6,7 +6,7 @@ import { commitV3JournalCAS } from "../scripts/asf/v3/git-cas.mjs";
 
 const REPO = "cedricmenec/threadstep";
 const PARENT = ".github/workflows/backlog-orchestrator-v3.yml";
-const CHILD = ".github/workflows/agent-openspec.yml";
+const CHILD = ".github/workflows/agent-openspec-v3.yml";
 const OWNER = "cedricmenec";
 const BOT = "threadstep-software-factory[bot]";
 const A = "a".repeat(40), B = "b".repeat(40);
