@@ -1,5 +1,28 @@
 # État courant de l'Autonomous Software Factory
 
+## 17 octobre 2026 : fiabilisation ASF-OPSX-03/04 (PR en cours)
+
+Le [run TS-023 #39047805814](https://github.com/cedricmenec/threadstep/actions/runs/39047805814)
+a validé 444 tests et la checklist d'apply, puis OPSX sync a produit une
+exigence canonique de plus de 500 caractères : `--all --strict` a échoué
+après archivage local, sans commit distant. La correction déplace la
+validation stricte **avant** archivage, ajoute deux checkpoints
+**commit/push distants** après plan et apply, garde l'archive et la PR
+finale conditionnées à l'ensemble des validations et publie des diagnostics
+de reprise sans rejouer automatiquement le modèle.
+
+La branche `agent/openspec/TS-NNN` peut contenir un plan validé seul,
+puis du code validé ; sa présence ne prouve ni la synchronisation, ni la
+livraison. En cas de panne post-plan : inspecter et autoriser `apply`.
+En cas de panne post-apply : inspecter puis autoriser `finalize` (appel
+OPSX toujours payant). Une phase `auto` sur un plan déjà présent échoue
+sans le régénérer. L'orchestrateur V1 hérite de ces protections par son
+workflow réutilisable, mais conserve son arrêt fail-closed et son quota 1..2.
+Voir [tâche/checklist](tasks/ASF-OPSX-03.md) et
+[qualité sync](opsx-sync-quality.md). Pas de preuve E2E OpenRouter nouvelle
+avant une exécution distinctement autorisée ; CI/Pages à qualifier après PR.
+
+
 ## Clôture de recette — 16 octobre 2026
 
 **Décision : ASF V2 clôturée pour son périmètre défini (vague V1 1..2 tâches).** Les composants ASF-V2-001 à 011 sont livrés ; les runs [38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187) démontrent les parcours payants 1/1 et 2/2, avec CI et Pages après chaque fusion.
