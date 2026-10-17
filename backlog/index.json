@@ -296,5 +296,105 @@
     ],
     "created_at": "2026-10-17",
     "content_sha256": "8bef320fdb1e8b52441f7a730b5c75a67d58245b824971d75cbcf43982849d35"
+  },
+  {
+    "id": "TS-024",
+    "path": "backlog/tasks/TS-024.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [],
+    "created_at": "2026-10-17",
+    "content_sha256": "0eadf7791d9fbe6e59e81f7f8758142b33badfb1a9c9a3a51f2e7478a57febc2"
+  },
+  {
+    "id": "TS-025",
+    "path": "backlog/tasks/TS-025.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-024"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "5c8e82654744681e7b78e3f46803513b729f0cffaa04e991c2f3afa1c703df29"
+  },
+  {
+    "id": "TS-026",
+    "path": "backlog/tasks/TS-026.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-025",
+      "TS-027"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "227bfcecbbedab459b24a608f59aaf0e971b28878181aafe9afcad747109015c"
+  },
+  {
+    "id": "TS-027",
+    "path": "backlog/tasks/TS-027.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-024"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "d7835be21f83c301437dded60c52790140185e2ba9beab04a46c9859c598e18f"
+  },
+  {
+    "id": "TS-028",
+    "path": "backlog/tasks/TS-028.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [
+      "TS-025",
+      "TS-027"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "38e9bef9843262784363c309e5839c343204e4ae5cb759a3ff20afeabbd7e3ab"
+  },
+  {
+    "id": "TS-029",
+    "path": "backlog/tasks/TS-029.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-026",
+      "TS-028"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "63ba96390a1f18e0297fd1413cb5faded861ccc84d22301451cbdf86766ca114"
+  },
+  {
+    "id": "TS-030",
+    "path": "backlog/tasks/TS-030.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-026",
+      "TS-029"
+    ],
+    "created_at": "2026-10-17",
+    "content_sha256": "5a3b3d380ba87efba194b929784fe2077ca7791f94bfa96db58e844414e34174"
   }
 ]
