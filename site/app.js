@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -342,17 +342,27 @@ function renderSuggestion() {
   const actions = el("div", "focus-actions");
   const reveal = el("button", "subtle focus-reveal", "Voir dans la liste");
   reveal.type = "button";
-  reveal.addEventListener("click", () => revealSuggestion(suggestion.itemId));
+  reveal.addEventListener("click", () => revealSuggestion(suggestion));
   const close = el("button", "subtle focus-close", "Fermer");
   close.type = "button";
   close.addEventListener("click", hideSuggestion);
   actions.append(reveal, close);
   focusCardEl.append(actions);
 }
-function revealSuggestion(itemId) {
+function revealAction(subjectId, itemId) {
   revealItemId = itemId;
   focusItemId = itemId;
+  const subject = findSubject(documentState, subjectId);
+  if (subject && !isWithinOverviewPreview(subject.items, itemId, hideCompleted)) {
+    renamingSubject = false;
+    focusDetailHeading = false;
+    navigate(subjectRoute(subject.id));
+    return;
+  }
   render();
+}
+function revealSuggestion(suggestion) {
+  revealAction(suggestion.subjectId, suggestion.itemId);
 }
 function hideSuggestion() {
   suggestionVisible = false;
@@ -374,7 +384,7 @@ function renderResumeCard() {
   const reveal = el("button", "subtle resume-reveal", "Voir dans la liste");
   reveal.type = "button";
   reveal.setAttribute("aria-label", "Voir dans la liste : " + view.itemTitle);
-  reveal.addEventListener("click", () => revealResume(view.itemId));
+  reveal.addEventListener("click", () => revealResume(view));
   const clear = el("button", "subtle resume-clear", "Ne plus suivre");
   clear.type = "button";
   clear.setAttribute("aria-label", "Ne plus suivre : " + view.itemTitle);
@@ -382,10 +392,8 @@ function renderResumeCard() {
   actions.append(reveal, clear);
   resumeCardEl.append(actions);
 }
-function revealResume(itemId) {
-  revealItemId = itemId;
-  focusItemId = itemId;
-  render();
+function revealResume(view) {
+  revealAction(view.subjectId, view.itemId);
 }
 function clearResume() {
   resumeRef = null;
@@ -530,10 +538,17 @@ function renderSubject(subject) {
   controls.append(open, up, down, remove);
   head.append(titleBox, controls);
   card.append(head);
-  card.append(renderTaskArea(subject));
+  card.append(renderTaskArea(subject, { preview: true }));
   return card;
 }
-function renderTaskArea(subject) {
+function renderSeeMore(subject) {
+  const control = el("button", "secondary overview-see-more", "Voir plus");
+  control.type = "button";
+  control.setAttribute("aria-label", "Voir plus de tâches pour le projet " + subject.title);
+  control.addEventListener("click", () => openSubject(subject));
+  return control;
+}
+function renderTaskArea(subject, { preview = false } = {}) {
   const area = el("div", "task-area");
   const form = el("form", "task-form");
   const input = el("input");
@@ -563,9 +578,13 @@ function renderTaskArea(subject) {
   area.append(form);
 
   const list = el("ul", "tasks");
-  for (const item of visibleItems(subject.items, null, hideCompleted)) list.append(renderItem(subject, item));
+  const selection = preview
+    ? overviewPreview(subject.items, hideCompleted)
+    : { shown: visibleItems(subject.items, null, hideCompleted), hasMore: false };
+  for (const item of selection.shown) list.append(renderItem(subject, item));
   if (!subject.items.length) area.append(el("p", "empty", "Aucune étape. Ajoutez la prochaine action à faire."));
   area.append(list);
+  if (selection.hasMore) area.append(renderSeeMore(subject));
   return area;
 }
 function substepListId(itemId) {

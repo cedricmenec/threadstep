@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, emptyDocument, newSubject, newItem, sortedItems, visibleItems, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1365,4 +1365,149 @@ test("existing task functions behave identically on a renamed and navigated docu
   assert.equal(after.priority, before.priority);
   assert.equal(after.subjectTitle, "Renommé");
 });
+
+function previewItems(count) {
+  const items = [];
+  for (let index = 0; index < count; index += 1) {
+    items.push(newItem("Tâche " + index, "normal", "t" + index));
+  }
+  return items;
+}
+
+test("overviewPreview defaults to a five-entry limit", () => {
+  assert.equal(OVERVIEW_TASK_LIMIT, 5);
+  const result = overviewPreview(previewItems(3));
+  assert.equal(result.shown.length, 3);
+  assert.equal(result.hasMore, false);
+});
+
+test("overviewPreview splits 0/1/5/6 visible top-level tasks into 0/1/5/5", () => {
+  for (const count of [0, 1, 5, 6]) {
+    const expected = Math.min(count, 5);
+    const result = overviewPreview(previewItems(count));
+    assert.equal(result.shown.length, expected, "shown for " + count);
+    assert.equal(result.hasMore, count > 5, "hasMore for " + count);
+  }
+});
+
+test("overviewPreview returns the visible list in the existing priority and manual order", () => {
+  const items = [
+    newItem("Later 1", "later", "l1"),
+    newItem("Urgent 1", "urgent", "u1"),
+    newItem("Normal 1", "normal", "n1"),
+    newItem("Normal 2", "normal", "n2"),
+    newItem("Urgent 2", "urgent", "u2"),
+    newItem("Later 2", "later", "l2"),
+  ];
+  assert.deepEqual(
+    overviewPreview(items).shown.map((item) => item.id),
+    ["u1", "u2", "n1", "n2", "l1"]);
+});
+
+test("overviewPreview applies the completion filter before the limit", () => {
+  const items = previewItems(6);
+  items[0].done = true;
+  items[1].done = true;
+  const hidden = overviewPreview(items, true);
+  assert.deepEqual(hidden.shown.map((item) => item.id), ["t2", "t3", "t4", "t5"]);
+  assert.equal(hidden.hasMore, false);
+  const shown = overviewPreview(items, false);
+  assert.equal(shown.shown.length, 5);
+  assert.equal(shown.hasMore, true);
+});
+
+test("overviewPreview counts a parent and its substeps as one entry", () => {
+  const items = [
+    newItem("Parent 1", "normal", "p1"),
+    newItem("Parent 2", "normal", "p2"),
+    newItem("Parent 3", "normal", "p3"),
+    newItem("Parent 4", "normal", "p4"),
+    newItem("Parent 5", "normal", "p5"),
+    newItem("Parent 6", "normal", "p6"),
+    newItem("Enfant 1", "normal", "c1", "p1"),
+    newItem("Enfant 2", "normal", "c2", "p1"),
+    newItem("Enfant 3", "normal", "c3", "p2"),
+  ];
+  const result = overviewPreview(items);
+  assert.deepEqual(result.shown.map((item) => item.id), ["p1", "p2", "p3", "p4", "p5"]);
+  assert.equal(result.hasMore, true);
+  assert.equal(result.shown.some((item) => item.parentId !== null), false);
+});
+
+test("overviewPreview limits two subjects independently", () => {
+  const first = overviewPreview(previewItems(6));
+  const second = overviewPreview(previewItems(2));
+  assert.equal(first.shown.length, 5);
+  assert.equal(first.hasMore, true);
+  assert.equal(first.shown[0].id, "t0");
+  assert.equal(second.shown.length, 2);
+  assert.equal(second.hasMore, false);
+  assert.equal(second.shown[0].id, "t0");
+});
+
+test("overviewPreview falls back to five for a non-integer or negative limit", () => {
+  const items = previewItems(7);
+  for (const invalid of [undefined, null, -1, 2.5, NaN, "3", Infinity]) {
+    const result = overviewPreview(items, false, invalid);
+    assert.equal(result.shown.length, 5, "limit " + String(invalid));
+    assert.equal(result.hasMore, true);
+  }
+  assert.equal(overviewPreview(items, false, 0).shown.length, 0);
+  assert.equal(overviewPreview(items, false, 0).hasMore, true);
+  assert.equal(overviewPreview(items, false, 2).shown.length, 2);
+});
+
+test("overviewPreview never mutates the stored items", () => {
+  const items = previewItems(6);
+  const snapshot = JSON.parse(JSON.stringify(items));
+  overviewPreview(items, false);
+  overviewPreview(items, true);
+  assert.deepEqual(items, snapshot);
+});
+
+test("isWithinOverviewPreview reports the five previewed top-level ids", () => {
+  const items = previewItems(6);
+  for (let index = 0; index < 5; index += 1) {
+    assert.equal(isWithinOverviewPreview(items, "t" + index), true);
+  }
+  assert.equal(isWithinOverviewPreview(items, "t5"), false);
+  assert.equal(isWithinOverviewPreview(items, "missing"), false);
+});
+
+test("isWithinOverviewPreview ignores substeps and follows the completion filter", () => {
+  const items = [
+    newItem("Parent 1", "normal", "p1"),
+    newItem("Parent 2", "normal", "p2"),
+    newItem("Parent 3", "normal", "p3"),
+    newItem("Parent 4", "normal", "p4"),
+    newItem("Parent 5", "normal", "p5"),
+    newItem("Parent 6", "normal", "p6"),
+    newItem("Enfant", "normal", "c1", "p1"),
+  ];
+  assert.equal(isWithinOverviewPreview(items, "c1"), false);
+  items[0].done = true;
+  items[6].done = true;
+  assert.equal(isWithinOverviewPreview(items, "p1", true), false);
+  assert.equal(isWithinOverviewPreview(items, "p6", true), true);
+  assert.equal(isWithinOverviewPreview(items, "p1", false), true);
+});
+
+test("isWithinOverviewPreview never mutates its input", () => {
+  const items = previewItems(6);
+  const snapshot = JSON.parse(JSON.stringify(items));
+  isWithinOverviewPreview(items, "t0");
+  isWithinOverviewPreview(items, "t5", true);
+  assert.deepEqual(items, snapshot);
+});
+
+test("the reveal decision follows the preview after a priority change reorders the groups", () => {
+  const items = previewItems(6);
+  assert.equal(isWithinOverviewPreview(items, "t5"), false);
+  const reprioritized = setItemPriority({ version: 1, subjects: [{ id: "s", title: "S", items }] }, "s", "t5", "urgent");
+  const nextItems = reprioritized.subjects[0].items;
+  assert.equal(isWithinOverviewPreview(nextItems, "t5"), true);
+  assert.equal(isWithinOverviewPreview(nextItems, "t4"), false);
+  assert.equal(overviewPreview(nextItems).shown[0].id, "t5");
+});
+
 

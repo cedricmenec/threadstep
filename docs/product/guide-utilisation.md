@@ -73,6 +73,35 @@ avec le nom actuel, avec **« Enregistrer »** et **« Annuler »** :
 - Annuler, proposer un nom vide ou trop long, ou enregistrer le nom déjà en
   place n'écrit rien : ni le document, ni le stockage local, ni l'export JSON.
 
+## Aperçu limité à cinq tâches par projet (TS-017)
+
+Pour garder chaque carte compacte, la vue d'ensemble n'affiche que les
+**cinq premières tâches principales visibles** de chaque projet, dans
+l'ordre et le filtre existants (priorité puis ordre manuel ; filtre
+« Masquer les étapes terminées » appliqué avant la limite) :
+
+- Une tâche principale et ses sous-tâches directes comptent pour **une
+  seule** entrée du quota : les sous-tâches affichées ne consomment pas
+  de place supplémentaire et gardent leur repli et leur filtre habituels.
+- La limite est **propre à chaque carte** et ne modifie pas les données.
+  Une étape terminée exclue par le filtre ne consomme aucune place, et
+  les compteurs de la carte et de la page restent fondés sur le document
+  complet.
+- S'il reste plus de cinq tâches principales visibles, un **seul**
+  bouton **« Voir plus »** apparaît sous la liste, avec un nom accessible
+  qui nomme le projet. S'il en reste cinq ou moins, aucun bouton n'est
+  affiché ; l'état vide habituel est conservé si aucune étape n'est
+  visible.
+- **« Voir plus »** ouvre la **vue de détail** du bon projet (la même
+  route `#/sujet/<id>` que « Ouvrir le projet »), avec le même retour,
+  le même historique et le même focus. Le détail n'applique **aucune
+  limite de cinq** : toutes les tâches autorisées par le filtre y sont
+  accessibles, y compris celles masquées dans l'aperçu.
+- Les tâches au-delà du quota ne sont pas présentes dans l'aperçu,
+  ne peuvent pas y recevoir le focus et ne sont ni sources ni cibles
+  d'un déplacement par glisser-déposer dans cette vue. Le bouton
+  « Ouvrir le projet » reste dans l'en-tête de la carte.
+
 ## Changer la priorité depuis son badge (TS-015)
 
 Le badge **Urgent**, **Normal** ou **Plus tard** de chaque action
@@ -224,6 +253,14 @@ vous souhaitez reprendre. Une carte « Je reprends ici » permet
 de la retrouver ou de ne plus la suivre. Le suivi est stocké
 localement séparément des données exportées ; il est effacé
 si son action disparaît ou est terminée.
+
+Les raccourcis **« Voir dans la liste »** de la suggestion et du suivi
+atteignent toujours l'action visée, même lorsqu'elle se trouve
+**au-delà des cinq entrées** de l'aperçu d'une carte : dans ce cas,
+ils ouvrent la **vue de détail du bon projet** et y révèlent l'action
+en respectant le filtre courant, sans cibler un élément absent de
+l'aperçu. Aucune de ces actions d'affichage ne modifie le document,
+le stockage local ni l'export JSON.
 
 ## Enregistrement, export et import
 

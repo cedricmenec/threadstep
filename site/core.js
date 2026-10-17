@@ -2,6 +2,7 @@
 export const STORAGE_KEY = "threadstep.document.v1";
 export const RESUME_KEY = "threadstep.resume.v1";
 export const PRIORITIES = ["urgent", "normal", "later"];
+export const OVERVIEW_TASK_LIMIT = 5;
 const priorityIndex = (priority) => PRIORITIES.indexOf(priority);
 export const emptyDocument = () => ({ version: 1, subjects: [] });
 export const newSubject = (title, id) => ({ id, title: title.trim(), items: [] });
@@ -93,6 +94,15 @@ export function isItemVisible(item, items, hideCompleted) {
 }
 export function visibleItems(items, parentId = null, hideCompleted = false) {
   return sortedItems(items, parentId).filter((item) => isItemVisible(item, items, hideCompleted));
+}
+export function overviewPreview(items, hideCompleted = false, limit = OVERVIEW_TASK_LIMIT) {
+  const visible = visibleItems(items, null, hideCompleted);
+  const safeLimit = Number.isInteger(limit) && limit >= 0 ? limit : OVERVIEW_TASK_LIMIT;
+  const shown = visible.slice(0, safeLimit);
+  return { shown, hasMore: visible.length > shown.length };
+}
+export function isWithinOverviewPreview(items, itemId, hideCompleted = false) {
+  return overviewPreview(items, hideCompleted).shown.some((item) => item.id === itemId);
 }
 export function substepView(items, parentId, hideCompleted, collapsedIds) {
   if (parentId === null || parentId === undefined) {
