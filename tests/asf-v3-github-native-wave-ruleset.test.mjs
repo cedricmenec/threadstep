@@ -106,7 +106,9 @@ test("unknown/missing reader or duplicate IDs cannot prove GitHub wave protectio
  const r=await observeV3GithubWaveRulesetPolicy(null);
  assert.equal(r.status,"uncertain");noRights(r);
  const duplicate={get:async path=>path===BASE+"/rulesets"?
-  {ok:true,data:[{id:8},{id:8}]}:{ok:false,error:{status:404}}};
+  {ok:true,data:[{id:8},{id:8}]}:
+  path===BASE+"/rulesets/8"?{ok:true,data:writer()}:
+  {ok:false,error:{status:404}}};
  const out=await observeV3GithubWaveRulesetPolicy(duplicate);
  assert.equal(out.status,"rejected");noRights(out);
 });
