@@ -23,7 +23,7 @@ const global=()=>rule(2,ADMISSION_REGISTRY_REF,
 const immutable=()=>rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]);
 function fixture({exists=false,registry=createAdmissionRegistry(),
  policyMissing=false,refMoves=false,mainMoves=false,
- fail=null,ref404Status=404}={}) {
+ fail=null,ref404Status=404,normalized404=false,conflicting404=false}={}) {
  const paths=[];
  const get=async path=>{
   paths.push(path);
@@ -42,6 +42,8 @@ function fixture({exists=false,registry=createAdmissionRegistry(),
    return exists || moved ?
     {ok:true,data:{ref:ADMISSION_REGISTRY_REF,
      object:{type:"commit",sha:ROOT}}} :
+    conflicting404 ? {ok:false,status:404,error:{status:403}} :
+    normalized404 ? {ok:false,data:null,error:{code:"transport_error",status:ref404Status}} :
     {ok:false,status:ref404Status};
   }
   if(path===BASE+"/contents/registry.json?ref="+ROOT){
@@ -92,6 +94,15 @@ test("missing global ruleset blocks even a 404 ref from qualifying",async()=>{
 test("a 404 can mask access: never confuse 403 or 503 with missing",async()=>{
  for(const status of [403,503,422]){
   const r=await observeV3GithubBootstrapReadiness(fixture({ref404Status:status}));
+  assert.equal(r.status,"uncertain");noRights(r);
+ }
+});
+test("normalized GitHub client 404 is only nonauthorizing absence; conflicts remain uncertain",async()=>{
+ const good=await observeV3GithubBootstrapReadiness(fixture({normalized404:true}));
+ assert.equal(good.status,"absent_observed_untrusted");noRights(good);
+ for(const options of [{normalized404:true,ref404Status:403},
+  {normalized404:true,ref404Status:503},{conflicting404:true}]){
+  const r=await observeV3GithubBootstrapReadiness(fixture(options));
   assert.equal(r.status,"uncertain");noRights(r);
  }
 });
