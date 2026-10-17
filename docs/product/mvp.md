@@ -117,8 +117,15 @@ planificateurs de mutation différentiels ainsi que le contrat d'adaptateur
 `commit(operations)`, avec confirmation locale indépendante du réseau, erreurs
 locales distinctes des erreurs de synchronisation, propagation multi-onglets
 et garde de compatibilité non destructive du document `threadstep.document.v1`.
-La synchronisation, l'authentification OTP et la conversion explicite du
-`localStorage` restent à livrer (TS-026 à TS-030) ; le document V1 et son
-export sont inchangés.
+
+**Migration du document historique (TS-026), intégrée :** `site/migration.js`
+détecte et valide strictement le document V1, présente la destination et l'effet
+de synchronisation, puis ne convertit les données vers les tables synchronisées
+qu'après un consentement explicite, de façon atomique et idempotente, avec
+détection de collision et de base cible non vide, sans écrasement silencieux,
+sans transfert implicite entre URLs et sans jamais purger la source locale.
+La synchronisation opérationnelle, l'authentification OTP, l'indicateur de
+synchronisation et la purge restent à livrer (TS-027 à TS-030) ; le document V1
+et son export sont inchangés.
 
 Source de périmètre : [TS-022](../../backlog/tasks/TS-022.md) et [TS-023](../../backlog/tasks/TS-023.md), désormais livrées.
