@@ -70,7 +70,7 @@ export function inspectV3GithubRulesets({ main, global } = {}) {
     "github_app_identity_and_scope_not_yet_attested");
 }
 
-async function observeRulesets(readClient) {
+export async function observeV3GithubRulesetPolicy(readClient) {
   let collection;
   try { collection = await readClient.get(BASE + "/rulesets"); }
   catch { return uncertain("rulesets_unavailable"); }
@@ -146,7 +146,7 @@ export async function observeV3GithubNativeControl({
   if (owner.status !== "consistent_not_authorized")
     return status(owner.status === "rejected" ? "rejected" : "uncertain",
       "owner_run_not_reconciled");
-  const rules = await observeRulesets(readClient);
+  const rules = await observeV3GithubRulesetPolicy(readClient);
   if (rules.status !== "structurally_consistent") return rules;
   const snapshot = await readRegistry(readClient);
   if (snapshot.status !== "replayed") return snapshot;
