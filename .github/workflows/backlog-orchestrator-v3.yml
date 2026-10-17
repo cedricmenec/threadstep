@@ -47,6 +47,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # C. Fail-closed: production root remains null and no paid dispatcher exists.
+      # C. Read-only verification of exactly six owner workflow_dispatch inputs
+      #    from GitHub's event file, not from an agent/feature branch. Recompute
+      #    the ordered candidates from the protected checked-out backlog.
+      #    Neither this step nor this job receives any controller App key.
+      - name: Verify owner run, six frozen inputs and protected rulesets (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm run backlog:check
+          node scripts/asf/v3/owner-run-capture.mjs verify
+      # D. Fail-closed: no global write, no job dispatch and no paid model.
       - name: Deny until owner-pinned trust root and global registry are approved
         run: node scripts/asf/v3/workflow-runtime-preflight.mjs controller

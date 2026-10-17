@@ -48,8 +48,8 @@ function fixture({lostPatch=false,concurrent=false,malformed=false}={}){
   if(path===BASE+"/rulesets/1")return {ok:true,data:rule(1,"refs/heads/main",
    ["pull_request","required_status_checks","deletion","non_fast_forward"])};
   if(path===BASE+"/rulesets/2")return {ok:true,data:rule(2,ADMISSION_REGISTRY_REF,
-   ["update"],
-   [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}])};
+   ["creation","update"],
+   [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}])};
   if(path===BASE+"/rulesets/3")return {ok:true,data:rule(3,ADMISSION_REGISTRY_REF,
    ["deletion","non_fast_forward"])};
   if(path===REF)return {ok:true,data:{ref:ADMISSION_REGISTRY_REF,

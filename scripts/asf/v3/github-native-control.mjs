@@ -15,6 +15,10 @@ import { replayAdmissionRegistry, createAdmissionRegistry,
 import { canonicalize, contentSha256 } from "../waves/hash.mjs";
 
 const REPO = "cedricmenec/threadstep";
+// Owner-pinned GitHub App ID, distinct from the V1 executor App 5321746.
+// Matching a ruleset actor ID is only a structural check; effective scopes and
+// permissions still require independent live tests and protected workflow.
+export const V3_CONTROLLER_APP_ID = 5361227;
 const BASE = "repos/" + REPO;
 const REF = BASE + "/git/ref/heads/asf/control/active-wave-v3";
 const SHA = /^[a-f0-9]{40}$/;
@@ -64,12 +68,13 @@ export function inspectV3GithubRulesets({ main, global, immutable } = {}) {
         ?.parameters?.required_status_checks?.some(x => x.context === "check"))
     return refuse("main_protection_not_verified");
   if (!matchingRuleset(global, ADMISSION_REGISTRY_REF) ||
-      global.rules.length !== 1 || global.rules[0].type !== "update")
+      global.rules.length !== 2 ||
+      !rulesPresent(global, ["creation", "update"]))
     return refuse("global_ref_writer_protection_not_verified");
   if (global.bypass_actors.length !== 1 ||
       global.bypass_actors[0]?.actor_type !== "Integration" ||
       !Number.isSafeInteger(global.bypass_actors[0]?.actor_id) ||
-      global.bypass_actors[0].actor_id <= 0 ||
+      global.bypass_actors[0].actor_id !== V3_CONTROLLER_APP_ID ||
       global.bypass_actors[0].bypass_mode !== "always")
     return refuse("global_writer_identity_not_constrained");
   if (!matchingRuleset(immutable, ADMISSION_REGISTRY_REF) ||

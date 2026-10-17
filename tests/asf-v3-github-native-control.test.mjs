@@ -44,8 +44,8 @@ const rule = (id,name,types,bypass=[])=>({
 const mainRule = ()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
 const globalRule = ()=>rule(2,ADMISSION_REGISTRY_REF,
- ["update"],
- [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]);
+ ["creation","update"],
+ [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
 const immutableRule = ()=>rule(3,ADMISSION_REGISTRY_REF,
  ["deletion","non_fast_forward"]);
 function fixture({registry=createAdmissionRegistry(),global=globalRule(),
@@ -135,7 +135,7 @@ test("missing/bypassed/unprotected global writer rule cannot act as trust anchor
 test("bypass of combined non-FF/deletion and update ruleset must NEVER qualify",async()=>{
  const bad=rule(2,ADMISSION_REGISTRY_REF,
   ["update","deletion","non_fast_forward"],
-  [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]);
+  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
  const inspected=inspectV3GithubRulesets({
   main:mainRule(),global:bad,immutable:immutableRule()
  });
@@ -149,7 +149,7 @@ test("bypass of combined non-FF/deletion and update ruleset must NEVER qualify",
 test("global history safety must be unbypassable even for the controller App",()=>{
  for(const bad of [
   {...immutableRule(),bypass_actors:[{
-   actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]},
+   actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]},
   rule(3,ADMISSION_REGISTRY_REF,["deletion"]),
   rule(3,ADMISSION_REGISTRY_REF,["non_fast_forward"]),
   {...immutableRule(),enforcement:"evaluate"},
@@ -165,9 +165,9 @@ test("global history safety must be unbypassable even for the controller App",()
 });
 test("controller bypass must explicitly be always and for exactly one Integration",()=>{
  for(const bypass of [
-  [{actor_type:"Integration",actor_id:12345,bypass_mode:"pull_request"}],
-  [{actor_type:"Integration",actor_id:12345}],
-  [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"},
+  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"pull_request"}],
+  [{actor_type:"Integration",actor_id:5361227}],
+  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"},
    {actor_type:"RepositoryRole",actor_id:5,bypass_mode:"always"}]
  ]){
   const r=inspectV3GithubRulesets({
