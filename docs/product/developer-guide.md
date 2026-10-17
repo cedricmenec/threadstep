@@ -54,9 +54,36 @@ restent hors des tables synchronisées et hors de l'export.
 Une **garde de compatibilité** non destructive lit le document historique
 `threadstep.document.v1` sans jamais le supprimer ni le réécrire de façon
 destructive, et sans le transférer à Dexie Cloud sans consentement explicite :
-`site/app.js` conserve l'écriture locale V1 tant que la conversion explicite
-(TS-026) n'est pas livrée. La recette navigateur, hors ligne, multi-onglets et
-IndexedDB réel reste une validation manuelle.
+`site/app.js` conserve l'écriture locale V1 et propose désormais la conversion
+explicite (TS-026) sous consentement, sans purger la source. La recette
+navigateur, hors ligne, multi-onglets et IndexedDB réel reste une validation
+manuelle.
+
+## Migration du document historique (TS-026)
+
+`site/migration.js` est le module pur de conversion du document
+`threadstep.document.v1` vers les tables synchronisées. `detectHistoricalDocument`
+lit la clé historique et n'accepte le document que si `parseDocument` le valide :
+une valeur absente, illisible ou invalide ne déclenche aucune migration et laisse
+la source intacte. `describeMigration` présente la destination Dexie Cloud, le
+nombre de sujets et d'étapes transférés et l'effet de synchronisation à venir
+**avant** toute demande de consentement.
+
+`planMigration` projette le document via `documentToRecords`, remappe les
+identifiants historiques de façon déterministe, stable et injective
+(`mapLegacyId`, préfixe documenté) en suivant les `parentId` et `subjectId`, puis
+ne produit que les opérations `put` des enregistrements manquants : un
+enregistrement déjà identique n'est jamais réécrit, une base déjà migrée ne
+produit aucune opération (**idempotent**), un identifiant présent avec un contenu
+différent est signalé comme collision et une base cible non vide est signalée
+sans écrasement. `runMigration` n'appelle `commit(operations)` qu'après un
+consentement explicite (`{ confirmed: true }`), en une seule opération atomique,
+et abandonne si la destination a changé entre la divulgation et l'écriture : le
+changement d'URL n'importe jamais implicitement une base dans une autre. Aucun
+chemin n'appelle `removeItem(STORAGE_KEY)` ni ne réécrit la valeur historique de
+façon destructive, donc après un refus, une exception ou une interruption, la
+source reste lisible, exportable et **non destructive** pour la cible. La
+préférence locale de reprise reste hors des tables synchronisées.
 
 ## Modèle de données
 

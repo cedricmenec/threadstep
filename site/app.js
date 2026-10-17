@@ -1,6 +1,7 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
 import { documentToRecords, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
+import { detectHistoricalDocument, describeMigration, planMigration, runMigration } from "./migration.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -1129,6 +1130,7 @@ if (cloudConfigFormEl) {
     businessStore = createBusinessStore(syncedDatabase);
     renderCloudConfig();
     notify("Instance Dexie Cloud enregistrée");
+    offerHistoricalMigration();
   });
 }
 function createBusinessStore(db) {
@@ -1185,9 +1187,105 @@ function subscribeToChanges() {
     syncedDatabase.on("changes", () => { load(); });
   }
 }
+let migrationPanelEl = null;
+function migrationPanel() {
+  if (!migrationPanelEl) {
+    migrationPanelEl = el("section", "migration-panel");
+    migrationPanelEl.id = "migration-panel";
+    migrationPanelEl.setAttribute("aria-labelledby", "migration-title");
+    migrationPanelEl.hidden = true;
+    const container = document.querySelector("main.shell");
+    if (container) container.append(migrationPanelEl);
+  }
+  return migrationPanelEl;
+}
+function migrationDestination() {
+  const config = readCloudConfig();
+  return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
+}
+async function readTargetRecords() {
+  if (!syncedDatabase) return emptyRecords();
+  try {
+    const subjects = await syncedDatabase.subjects.toArray();
+    const items = await syncedDatabase.items.toArray();
+    return { subjects, items };
+  } catch {
+    return emptyRecords();
+  }
+}
+function hideMigrationPanel() {
+  if (!migrationPanelEl) return;
+  migrationPanelEl.hidden = true;
+  migrationPanelEl.replaceChildren();
+}
+async function offerHistoricalMigration() {
+  const detected = detectHistoricalDocument(localStorage);
+  const destination = migrationDestination();
+  if (detected.status !== "present" || !destination || !businessStore) {
+    hideMigrationPanel();
+    return;
+  }
+  const target = await readTargetRecords();
+  const disclosure = describeMigration(detected.document, destination);
+  const plan = planMigration(target, detected.document, { destination, currentDestination: destination });
+  renderMigrationPanel(disclosure, plan, destination);
+}
+function renderMigrationPanel(disclosure, plan, destination) {
+  const panel = migrationPanel();
+  if (!panel) return;
+  panel.replaceChildren();
+  const title = el("h2", "migration-title", "Importer mes données existantes");
+  title.id = "migration-title";
+  const body = el("p", "migration-disclosure", disclosure.message);
+  if (plan.populated) {
+    body.textContent += " La base cible contient déjà des données : elles ne seront pas écrasées.";
+  }
+  if (plan.status === "collision") {
+    body.textContent += " Un identifiant existe déjà avec un contenu différent : la migration est bloquée.";
+  }
+  const actions = el("div", "migration-actions");
+  const accept = el("button", "primary migration-accept", "Migrer vers le cloud");
+  accept.type = "button";
+  accept.disabled = plan.status === "collision";
+  accept.addEventListener("click", () => confirmHistoricalMigration(plan, destination));
+  const refuse = el("button", "secondary migration-refuse", "Conserver localement");
+  refuse.type = "button";
+  refuse.addEventListener("click", () => {
+    hideMigrationPanel();
+    notify("Migration refusée : vos données locales restent inchangées.");
+  });
+  actions.append(accept, refuse);
+  panel.append(title, body, actions);
+  panel.hidden = false;
+}
+async function confirmHistoricalMigration(plan, destination) {
+  const outcome = await runMigration(
+    businessStore,
+    plan,
+    { confirmed: true, destination },
+    () => migrationDestination()
+  );
+  if (outcome.status === "migrated") {
+    hideMigrationPanel();
+    notify("Migration terminée : vos données seront synchronisées.");
+  } else if (outcome.status === "already-migrated") {
+    hideMigrationPanel();
+    notify("Ce document a déjà été migré.");
+  } else if (outcome.status === "destination-changed") {
+    notify("Destination modifiée : migration annulée.");
+  } else if (outcome.status === "collision") {
+    notify("Conflit d'identifiant : migration bloquée.");
+  } else if (outcome.status === "refused") {
+    notify("Migration refusée.");
+  } else if (outcome.status === "failed") {
+    notify("Migration interrompue : vos données locales restent disponibles.");
+  }
+}
 syncedDatabase = bootstrapSyncedDatabase();
 businessStore = createBusinessStore(syncedDatabase);
 historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
 subscribeToChanges();
 load();
+offerHistoricalMigration();
+

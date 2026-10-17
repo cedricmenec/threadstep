@@ -9,7 +9,7 @@
     "backlog:index": "node scripts/asf/backlog-cli.mjs generate",
     "backlog:check": "node scripts/asf/backlog-cli.mjs check",
     "vendor:build": "node tools/build-vendor.mjs",
-    "check": "npm test && npm run backlog:check && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/persistence.js && node --check site/app.js"
+    "check": "npm test && npm run backlog:check && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/persistence.js && node --check site/migration.js && node --check site/app.js"
   },
   "engines": {
     "node": ">=22"
