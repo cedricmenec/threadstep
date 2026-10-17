@@ -43,12 +43,19 @@ function rulesPresent(rule, names) {
   return names.every(x => kinds.has(x));
 }
 /**
- * A main or control ruleset is ONLY structural evidence of GitHub protection.
- * In particular, GitHub App permissions and actual job identity still need
- * independent approval and qualification. Owner-only repositories can have
- * required_approving_review_count=0; that does not grant an agent authority.
+ * A GitHub ruleset bypass is identity-wide, NOT specific to one operation.
+ * If the controller App bypasses a combined update/non_fast_forward/deletion
+ * ruleset, that same token can bypass force-push and deletion protection.
+ *
+ * Require TWO SEPARATE rulesets on the exact global ref:
+ *   - writer: "update", ONLY one controller Integration with bypass=always
+ *   - immutable: "deletion" + "non_fast_forward", NO bypass whatsoever
+ *
+ * These observations only prove STRUCTURE. A trusted owner must separately
+ * compare App ID, actual App installation, token permissions and effective
+ * GitHub denial tests, before any real global ref write.
  */
-export function inspectV3GithubRulesets({ main, global } = {}) {
+export function inspectV3GithubRulesets({ main, global, immutable } = {}) {
   if (!matchingRuleset(main, "refs/heads/main") ||
       !rulesPresent(main, ["pull_request", "required_status_checks",
         "deletion", "non_fast_forward"]) ||
@@ -57,17 +64,28 @@ export function inspectV3GithubRulesets({ main, global } = {}) {
         ?.parameters?.required_status_checks?.some(x => x.context === "check"))
     return refuse("main_protection_not_verified");
   if (!matchingRuleset(global, ADMISSION_REGISTRY_REF) ||
-      !rulesPresent(global, ["deletion", "non_fast_forward", "update"]))
+      global.rules.length !== 1 || global.rules[0].type !== "update")
     return refuse("global_ref_writer_protection_not_verified");
-  // A ruleset update restriction normally needs an explicit bypass for the
-  // owner-controlled writer. NEVER treat the bypass actor as a paid authority.
   if (global.bypass_actors.length !== 1 ||
       global.bypass_actors[0]?.actor_type !== "Integration" ||
       !Number.isSafeInteger(global.bypass_actors[0]?.actor_id) ||
-      global.bypass_actors[0].actor_id <= 0)
+      global.bypass_actors[0].actor_id <= 0 ||
+      global.bypass_actors[0].bypass_mode !== "always")
     return refuse("global_writer_identity_not_constrained");
+  if (!matchingRuleset(immutable, ADMISSION_REGISTRY_REF) ||
+      immutable.rules.length !== 2 ||
+      !rulesPresent(immutable, ["deletion", "non_fast_forward"]) ||
+      immutable.bypass_actors.length !== 0 ||
+      immutable.id === global.id)
+    return refuse("global_immutable_history_not_verified");
+
   return status("structurally_consistent",
-    "github_app_identity_and_scope_not_yet_attested");
+    "requires_owner_pinned_app_id_real_scopes_and_deny_tests", {
+      observedControllerAppId: global.bypass_actors[0].actor_id,
+      // A numeric actor from GitHub ruleset metadata isn't an OWNER APPROVAL.
+      globalWriterRulesetId: global.id,
+      immutableRulesetId: immutable.id
+    });
 }
 
 export async function observeV3GithubRulesetPolicy(readClient) {
@@ -91,9 +109,17 @@ export async function observeV3GithubRulesetPolicy(readClient) {
   }
   const mains = full.filter(r => matchingRuleset(r, "refs/heads/main"));
   const globals = full.filter(r => matchingRuleset(r, ADMISSION_REGISTRY_REF));
-  if (mains.length !== 1 || globals.length !== 1)
+  if (mains.length !== 1 || globals.length !== 2)
     return refuse("missing_or_ambiguous_repository_rulesets");
-  return inspectV3GithubRulesets({main:mains[0],global:globals[0]});
+  const writers = globals.filter(r => r.rules.some(x => x.type === "update"));
+  const immutables = globals.filter(r => r.rules.some(x =>
+    x.type === "deletion" || x.type === "non_fast_forward"));
+  if (writers.length !== 1 || immutables.length !== 1 ||
+      writers[0].id === immutables[0].id)
+    return refuse("insecure_combined_bypass_or_ambiguous_global_rules");
+  return inspectV3GithubRulesets({
+    main:mains[0],global:writers[0],immutable:immutables[0]
+  });
 }
 
 async function readRegistry(readClient) {
