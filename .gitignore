@@ -5,3 +5,15 @@ node_modules/
 .DS_Store
 coverage/
 *.log
+
+# Non-versioned credentials and local execution artefacts (hygiene only).
+# The trusted ASF checkpoint guard also blocks protected TRACKED files.
+.npmrc
+.netrc
+.envrc
+*.pem
+*.p12
+*.pfx
+*.key
+dexie-cloud.json
+.cache/
