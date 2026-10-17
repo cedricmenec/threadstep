@@ -41,8 +41,8 @@ test("durable plan and apply checkpoints precede paid sync and survive later fai
   const sync=workflow.indexOf("- name: Verify, semantic sync and archive OpenSpec");
   const publish=workflow.indexOf("- name: Guard scope, commit and publish PR");
   assert.ok(plan>0 && apply>plan && sync>apply && publish>sync);
-  assert.match(workflow,/Checkpoint validated OpenSpec plan[\s\S]*?agent-openspec-checkpoint\.mjs plan "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
-  assert.match(workflow,/Checkpoint verified implementation before OPSX sync[\s\S]*?npm run check[\s\S]*?openspec validate "[\$]CHANGE_ID" --strict --no-interactive[\s\S]*?agent-openspec-checkpoint\.mjs apply "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
+  assert.match(workflow,/Checkpoint validated OpenSpec plan[\s\S]*?agent-openspec-checkpoint\.mjs" plan "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
+  assert.match(workflow,/Checkpoint verified implementation before OPSX sync[\s\S]*?npm run check[\s\S]*?openspec validate "[\$]CHANGE_ID" --strict --no-interactive[\s\S]*?agent-openspec-checkpoint\.mjs" apply "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
   assert.ok(workflow.includes("Existing OpenSpec plan on $AGENT_BRANCH; use phase=apply"));
   // A persistent branch created before a factory fix must not supply the
   // executable scope policy during the resume run.
