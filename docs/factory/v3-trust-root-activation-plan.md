@@ -50,7 +50,7 @@ La configuration statique \`null\` est volontaire. Une future PR owner-approved 
 
 | Porte | Travail concret | État au 17/10 |
 |---|---|---|
-| G1 — consolidation | Revoir #66–#81, choisir l'ordre, éviter les fichiers dupliqués de #73, constituer une branche d'intégration cohérente et revalider CI | **Ouvert** : 11 PR V3 en brouillon |
+| G1 — consolidation | Revoir #66–#81, choisir l'ordre, éviter les fichiers dupliqués de #73, constituer une branche d'intégration cohérente et revalider CI | **Ouvert** : 12 PR V3 en brouillon |
 | G2 — confiance | Issueur owner autorisé, capture des inputs #79, clé publique épinglée, genèse/checkpoint #81, protection des refs et anti-rollback | **Bloquant**, contrat prêt, ancre réelle absente |
 | G3 — protocole global | Writer CAS global + bootstrap Git, preuves pour \`RELEASE/QUARANTINE\` et incidents, une seule vague à la fois | **Bloquant**, seul \`ADMIT\` simulé |
 | G4 — contrôleur/exécuteur | Workflows V3 autorisés, enfant compatible bot App, owner inputs réels, \`CLAIM_CHILD\` avant paiements, groupe \`threadstep-paid-development-v1\` | **Bloquant**, aucun workflow V3 actif |
