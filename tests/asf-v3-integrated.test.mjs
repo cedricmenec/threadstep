@@ -9,7 +9,7 @@ const repo = "cedricmenec/threadstep";
 const waveId = "wave-int-001";
 const owner = "cedricmenec", bot = "threadstep-software-factory[bot]";
 const ctrl = ".github/workflows/backlog-orchestrator-v3.yml";
-const child = ".github/workflows/agent-openspec.yml";
+const child = ".github/workflows/agent-openspec-v3.yml";
 const H = c => c.repeat(40);
 const manifest = () => createV3Manifest({
   waveId, repository: repo, backlogCommit: H("a"),
