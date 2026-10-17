@@ -162,7 +162,9 @@ export async function observeV3GithubChildAckReadiness({
  let after;
  try{
   after=await Promise.all([
-   readClient.get(G_REF),readClient.get(waveRef),readClient.get(MAIN)
+   readClient.get(G_REF),
+   readClient.get(BASE+"/git/ref/heads/asf/waves/"+inputs.wave_id),
+   readClient.get(MAIN)
   ]);
  }catch{return unknown("child_refs_unavailable_after_read");}
  if(refSha(after[0],ADMISSION_REGISTRY_REF)!==globalSha||
