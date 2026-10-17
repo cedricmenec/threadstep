@@ -68,7 +68,8 @@ export function inspectV3GithubRulesets({ main, global, immutable } = {}) {
         ?.parameters?.required_status_checks?.some(x => x.context === "check"))
     return refuse("main_protection_not_verified");
   if (!matchingRuleset(global, ADMISSION_REGISTRY_REF) ||
-      global.rules.length !== 1 || global.rules[0].type !== "update")
+      global.rules.length !== 2 ||
+      !rulesPresent(global, ["creation", "update"]))
     return refuse("global_ref_writer_protection_not_verified");
   if (global.bypass_actors.length !== 1 ||
       global.bypass_actors[0]?.actor_type !== "Integration" ||
