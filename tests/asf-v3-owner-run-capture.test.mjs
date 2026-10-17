@@ -45,7 +45,7 @@ function rule(id,ref,types,bypass=[]){
 const fullMain=()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
 const writer=(id=5361227,ref=ADMISSION_REGISTRY_REF)=>rule(
- 2,ref,["update"],[{actor_type:"Integration",actor_id:id,bypass_mode:"always"}]);
+ 2,ref,["creation","update"],[{actor_type:"Integration",actor_id:id,bypass_mode:"always"}]);
 const immutable=(ref=ADMISSION_REGISTRY_REF)=>rule(
  3,ref,["deletion","non_fast_forward"]);
 function mockReader({appId=5361227,fail=null,customRules=null}={}){
@@ -175,6 +175,17 @@ test("controller ruleset must pin to 5361227, never V1 executor 5321746",async()
   assert.equal(r.reason,"effective_ruleset_structure_missing");
   noRights(r);
  }
+});
+test("writer-only update rule cannot protect genesis against unauthorized creation",async()=>{
+ const f=fixture({reader:{customRules:[
+  fullMain(),rule(2,ADMISSION_REGISTRY_REF,["update"],
+   [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]),
+  immutable()
+ ]}});
+ const r=await inspectV3RunnerOwnerCapture(f);
+ assert.equal(r.status,"rejected");
+ assert.equal(r.reason,"effective_ruleset_structure_missing");
+ noRights(r);
 });
 test("misconfigured rulesets from live observations fail closed",async()=>{
  for(const customRules of [
