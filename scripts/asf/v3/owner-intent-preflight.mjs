@@ -1,5 +1,5 @@
 /**
- * ASF-V3-009: read-only owner intent reconciliation, prior to ANY issuer.
+ * ASF-V3-009: GitHub-native owner dispatch intent reconciliation.
  *
  * This module NEVER signs, dispatches, writes Git or authorizes OpenRouter.
  * It checks data consistency, NOT origin authentication of ownerContext.
@@ -111,10 +111,10 @@ function matchesGitHubRun(m, run) {
  * GitHub runner event, not from API caller JSON or repo content.
  *
  * The GitHub Actions run API is independently consulted at EXACT run ID.
- * It does not prove the inputs or a signed owner mandate on its own.
+ * It does not prove captured event inputs or Git branch writer permissions.
  *
  * On a complete match the result is STILL non-authorizing, with a
- * non-sensitive hash that a future externally pinned issuer can inspect.
+ * non-sensitive hash usable by an owner-controlled GitHub registry writer.
  */
 export async function inspectV3OwnerIntent({
   manifest, ownerContext, readClient
@@ -135,7 +135,7 @@ export async function inspectV3OwnerIntent({
   if (!matchesGitHubRun(manifest, response.data))
     return refuse("owner_run_metadata_mismatch");
   return outcome("consistent_not_authorized",
-    "requires_independent_owner_issuer_and_pinned_key", {
+    "requires_protected_github_owner_writer_and_global_cas", {
       repository: V3_OWNER_REPOSITORY,
       waveId: manifest.waveId,
       ownerRunId: manifest.authorization.runId,
