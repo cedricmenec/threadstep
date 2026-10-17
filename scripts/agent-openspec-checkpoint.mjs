@@ -37,9 +37,9 @@ function git(...args) {
 
 export function changedCheckpointPaths() {
   return [
-    git("diff", "--name-only", "origin/main...HEAD"),
-    git("diff", "--name-only"),
-    git("diff", "--cached", "--name-only"),
+    git("diff", "--no-renames", "--name-only", "origin/main...HEAD"),
+    git("diff", "--no-renames", "--name-only"),
+    git("diff", "--cached", "--no-renames", "--name-only"),
     git("ls-files", "--others", "--exclude-standard"),
   ].flatMap(output => output ? output.split("\n") : []);
 }
