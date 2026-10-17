@@ -279,26 +279,29 @@ Lorsqu'une action principale possède au moins une sous-étape
 visible, un bouton de repli apparaît à côté de ses commandes. Son
 libellé indique combien de sous-étapes sont concernées.
 
-- **Par défaut, les sous-tâches sont affichées** : le bouton indique
-  **« Masquer les sous-tâches »**.
-- Un clic masque temporairement uniquement les sous-tâches de cette
-  action : son titre, sa priorité, son état et ses boutons restent
-  affichés et utilisables, comme les actions voisines. Le bouton
-  devient alors **« Voir 1 sous-tâche »** lorsqu'une seule sous-tâche
-  est visible sous les filtres courants, ou **« Voir N sous-tâches »**
-  lorsqu'il y en a plusieurs. Un nouveau clic les réaffiche dans
-  le même ordre et avec les mêmes états, avec
-  **« Masquer les sous-tâches »**.
+- **Par défaut, les sous-tâches sont repliées** : le bouton indique
+  **« Voir 1 sous-tâche »** ou **« Voir N sous-tâches »** selon le
+  nombre de sous-étapes visibles sous les filtres courants.
+- Un clic masque ou réaffiche uniquement les sous-tâches de cette
+  action : son titre, son éventuelle note, sa priorité, son état et
+  ses boutons restent affichés et utilisables, comme les actions
+  voisines. Dépliée, le bouton indique **« Masquer les sous-tâches »** ;
+  un nouveau clic les réaffiche ou les replie dans le même ordre et
+  avec les mêmes états.
 - Le décompte suit le filtre **« Masquer les étapes terminées »** :
   une sous-étape terminée et masquée par ce filtre n'est pas comptée,
   même si l'action parente est repliée.
 - Chaque action se replie indépendamment : plusieurs actions peuvent
-  être repliées en même temps, dans un même sujet ou dans des sujets
+  être dépliées en même temps, dans un même sujet ou dans des sujets
   différents.
 - Le repli est **temporaire et propre à l'onglet** : il survit aux
-  opérations ordinaires, mais un rechargement, un nouvel onglet ou un
-  import repartent avec toutes les actions dépliées. Aucun réglage
-  n'est enregistré et le fichier exporté reste identique.
+  opérations ordinaires d'une même vue (édition, priorité, terminer,
+  filtre, réordonnancement), mais **chaque entrée dans une vue**
+  (overview vers détail, détail vers overview, autre projet, ou
+  Précédent/Suivant du navigateur) repart avec toutes les actions
+  **repliées**, tout comme un rechargement, un nouvel onglet ou un
+  import. Aucun réglage n'est enregistré et le fichier exporté reste
+  identique.
 - Le bouton est utilisable à la souris, au doigt et au clavier
   (Tab, Entrée, Espace). Si **« Masquer les étapes terminées »** est
   actif, déplier ne révèle jamais une étape terminée masquée ; une

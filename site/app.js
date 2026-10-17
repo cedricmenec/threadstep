@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleCollapsedParent, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -22,7 +22,7 @@ let documentLoaded = false;
 let pendingMoveFocus = null;
 let pendingCollapseFocus = null;
 let pendingPriorityFocus = null;
-let collapsedParents = new Set();
+let expandedParents = new Set();
 let dragState = null;
 let route = parseRoute(location.hash);
 let renamingSubject = false;
@@ -54,6 +54,7 @@ function persist() {
   render();
 }
 function load() {
+  expandedParents = new Set();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -96,8 +97,18 @@ function reconcileResume() {
   }
   return null;
 }
+function expandAncestorForFocus() {
+  if (!focusItemId) return;
+  for (const subject of documentState.subjects) {
+    const ancestorId = substepAncestorId(subject.items, focusItemId);
+    if (ancestorId && !expandedParents.has(ancestorId)) {
+      expandedParents = toggleExpandedParent(expandedParents, ancestorId);
+    }
+  }
+}
 function render() {
   subjectsEl.replaceChildren();
+  expandAncestorForFocus();
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
@@ -596,7 +607,7 @@ function renderItem(subject, item) {
   const level = item.parentId === null ? "task-parent" : "task-substep";
   const li = el("li", "task " + level + (item.done ? " done" : "") + (revealItemId === item.id ? " reveal" : ""));
   li.dataset.item = item.id;
-  const view = substepView(subject.items, item.id, hideCompleted, collapsedParents);
+  const view = substepView(subject.items, item.id, hideCompleted, expandedParents);
   if (editingItemId === item.id) {
     li.append(renderEditor(subject, item));
   } else {
@@ -781,7 +792,7 @@ function renderSubstepToggle(item, view) {
   toggle.setAttribute("aria-label", label + " de « " + item.title + " »");
   if (view.renderChildren) toggle.setAttribute("aria-controls", substepListId(item.id));
   toggle.addEventListener("click", () => {
-    collapsedParents = toggleCollapsedParent(collapsedParents, item.id);
+    expandedParents = toggleExpandedParent(expandedParents, item.id);
     pendingCollapseFocus = item.id;
     render();
   });
@@ -950,7 +961,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     const incoming = parseDocument(await file.text());
     if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
     invalidatePendingRemoval();
-    collapsedParents = new Set();
+    expandedParents = new Set();
     pendingCollapseFocus = null;
     documentState = incoming;
     documentLoaded = true;
@@ -968,7 +979,9 @@ window.addEventListener("storage", (event) => {
   load();
 });
 window.addEventListener("hashchange", () => {
-  route = parseRoute(location.hash);
+  const nextRoute = parseRoute(location.hash);
+  if (isViewEntry(route, nextRoute)) expandedParents = new Set();
+  route = nextRoute;
   render();
 });
 snackbarEl.addEventListener("focusin", suspendRemovalTimer);

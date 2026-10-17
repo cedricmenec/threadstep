@@ -116,13 +116,14 @@ export function overviewPreview(items, hideCompleted = false, limit = OVERVIEW_T
 export function isWithinOverviewPreview(items, itemId, hideCompleted = false) {
   return overviewPreview(items, hideCompleted).shown.some((item) => item.id === itemId);
 }
-export function substepView(items, parentId, hideCompleted, collapsedIds) {
+export function substepView(items, parentId, hideCompleted, expandedIds) {
   if (parentId === null || parentId === undefined) {
     return { children: [], hasVisibleSubsteps: false, collapsed: false, renderChildren: false };
   }
   const children = visibleItems(items, parentId, hideCompleted);
   const hasVisibleSubsteps = children.length > 0;
-  const collapsed = hasVisibleSubsteps && collapsedIds instanceof Set && collapsedIds.has(parentId);
+  const expanded = expandedIds instanceof Set && expandedIds.has(parentId);
+  const collapsed = hasVisibleSubsteps && !expanded;
   return { children, hasVisibleSubsteps, collapsed, renderChildren: hasVisibleSubsteps && !collapsed };
 }
 export function substepToggleLabel(visibleCount, collapsed) {
@@ -132,11 +133,28 @@ export function substepToggleLabel(visibleCount, collapsed) {
   if (Number.isFinite(count) && count > 1) return "Voir " + count + " sous-tâches";
   return "Masquer les sous-tâches";
 }
-export function toggleCollapsedParent(collapsedIds, parentId) {
-  const next = collapsedIds instanceof Set ? new Set(collapsedIds) : new Set();
+export function toggleExpandedParent(expandedIds, parentId) {
+  const next = expandedIds instanceof Set ? new Set(expandedIds) : new Set();
   if (next.has(parentId)) next.delete(parentId);
   else next.add(parentId);
   return next;
+}
+export function substepAncestorId(items, itemId) {
+  if (!Array.isArray(items)) return null;
+  const item = items.find((entry) => entry && entry.id === itemId);
+  if (!item || item.parentId === null || item.parentId === undefined) return null;
+  return item.parentId;
+}
+export function isViewEntry(previousRoute, nextRoute) {
+  return viewKey(previousRoute) !== viewKey(nextRoute);
+}
+function viewKey(route) {
+  if (!route || typeof route !== "object") return "";
+  const view = typeof route.view === "string" ? route.view : "";
+  if (view === "subject" && typeof route.subjectId === "string") {
+    return "subject:" + route.subjectId;
+  }
+  return view;
 }
 export function reorderWithinPriority(items, itemId, targetId, position) {
   if (!Array.isArray(items)) return items;

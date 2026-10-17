@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { newItem, visibleItems, overviewPreview, substepView, toggleCollapsedParent } from "../site/core.js";
+import { newItem, visibleItems, overviewPreview, substepView, toggleExpandedParent } from "../site/core.js";
 
 const app = readFileSync(new URL("../site/app.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../site/styles.css", import.meta.url), "utf8");
@@ -29,7 +29,7 @@ test("renderItem keeps the done and reveal class composition", () => {
 });
 
 test("renderItem keeps the semantic child list, substepView call and in-order children iteration", () => {
-  assert.match(renderItemBody, /const view = substepView\(subject\.items, item\.id, hideCompleted, collapsedParents\)/);
+  assert.match(renderItemBody, /const view = substepView\(subject\.items, item\.id, hideCompleted, expandedParents\)/);
   assert.match(renderItemBody, /const list = el\("ul", "tasks children"\)/);
   assert.match(renderItemBody, /for \(const child of view\.children\) list\.append\(renderItem\(subject, child\)\)/);
   assert.doesNotMatch(renderItemBody, /\.sort\(/);
@@ -82,14 +82,14 @@ test("a parent keeps its direct substeps in stored order under the default path"
 test("a parent keeps its direct substeps in stored order under the completed filter", () => {
   const source = items();
   source[2].done = true;
-  const view = substepView(source, "p1", true, new Set());
+  const view = substepView(source, "p1", true, new Set(["p1"]));
   assert.deepEqual(view.children.map((item) => item.id), ["c1", "c3"]);
   assert.equal(view.renderChildren, true);
 });
 
 test("a collapsed parent still lists its visible substeps in stored order but renders none", () => {
   const source = items();
-  const view = substepView(source, "p1", false, new Set(["p1"]));
+  const view = substepView(source, "p1", false, new Set());
   assert.deepEqual(view.children.map((item) => item.id), ["c1", "c2", "c3"]);
   assert.equal(view.collapsed, true);
   assert.equal(view.renderChildren, false);
@@ -102,23 +102,23 @@ test("a completed parent with an unfinished substep stays visible when completed
   assert.deepEqual(overviewPreview(source, true).shown.map((item) => item.id), ["p2", "p1"]);
 });
 
-test("the helpers leave the input item array and the collapse set unmutated", () => {
+test("the helpers leave the input item array and the expanded set unmutated", () => {
   const source = items();
   const before = JSON.stringify(source);
-  const collapsed = new Set(["p1"]);
-  const collapsedBefore = JSON.stringify([...collapsed]);
-  substepView(source, "p1", true, collapsed);
+  const expanded = new Set(["p1"]);
+  const expandedBefore = JSON.stringify([...expanded]);
+  substepView(source, "p1", true, expanded);
   visibleItems(source, "p1", true);
   overviewPreview(source, true);
-  toggleCollapsedParent(collapsed, "p1");
+  toggleExpandedParent(expanded, "p1");
   assert.equal(JSON.stringify(source), before);
-  assert.equal(JSON.stringify([...collapsed]), collapsedBefore);
+  assert.equal(JSON.stringify([...expanded]), expandedBefore);
 });
 
-test("toggleCollapsedParent returns a new set and does not mutate its argument", () => {
-  const collapsed = new Set(["p1"]);
-  const next = toggleCollapsedParent(collapsed, "p2");
-  assert.notEqual(next, collapsed);
-  assert.deepEqual([...collapsed], ["p1"]);
+test("toggleExpandedParent returns a new set and does not mutate its argument", () => {
+  const expanded = new Set(["p1"]);
+  const next = toggleExpandedParent(expanded, "p2");
+  assert.notEqual(next, expanded);
+  assert.deepEqual([...expanded], ["p1"]);
   assert.deepEqual([...next], ["p1", "p2"]);
 });

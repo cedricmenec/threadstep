@@ -16,8 +16,8 @@ Cocher les cases **uniquement après observation réelle** ; noter navigateur, a
 - [ ] Ajouter/modifier une sous-tâche et confirmer qu'elle reste sous son parent après rechargement.
 - [ ] Réordonner deux actions principales de même priorité avec les boutons puis glisser-déposer ; refuser les déplacements inter-priorités ou entre sujets.
 - [ ] Avec trois enfants dont un terminé, masquer puis démasquer les étapes terminées ; les compteurs et résultats filtrés sont cohérents.
-- [ ] **TS-012/013 :** lorsque P est déplié, voir « Masquer les sous-tâches » ; cliquer et obtenir « Voir 3 sous-tâches » quand replié ; cliquer pour réafficher exactement les trois. Avec le filtre, le bouton replié doit indiquer « Voir 2 sous-tâches ». Vérifier le singulier, l'absence du bouton à zéro enfant visible et l'indépendance entre P et Q.
-- [ ] Le clic de repli ne modifie ni l'ordre, ni les états, ni le JSON exporté. Un rechargement réaffiche les enfants (état de repli éphémère).
+- [ ] **TS-012/013/021 :** au chargement et à chaque entrée dans une vue, P est replié et le bouton indique « Voir 3 sous-tâches » (« Voir 2 sous-tâches » avec le filtre) ; cliquer pour déplier affiche exactement les trois et affiche « Masquer les sous-tâches », cliquer replie. Vérifier le singulier, l'absence du bouton à zéro enfant visible et l'indépendance entre P et Q.
+- [ ] Le clic de repli ne modifie ni l'ordre, ni les états, ni le JSON exporté. Un rechargement ou un changement de vue repart avec les parents repliés (état de repli éphémère).
 - [ ] **TS-014 :** réordonner au doigt puis via « Monter/Descendre » deux enfants de même parent et priorité ; refuser le drop sur un autre parent/priorité ; contrôler l'absence de changement lors d'un drop invalide.
 - [ ] Vérifier que l'ordre valide des enfants reste après rechargement et un export/import JSON, alors que le repli ne persiste pas. Vérifier que les IDs/états/parents restent identiques.
 - [ ] Activer « Masquer les étapes terminées » : poignées de déplacement absentes, boutons de déplacement désactivés, aucun contrôle enfant visible sous un parent replié.
