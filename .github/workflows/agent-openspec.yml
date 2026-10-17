@@ -188,6 +188,17 @@ jobs:
           echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
           echo "CHANGE_ID=$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
+      # Checkpoint policy belongs to the trusted, current factory on main.
+      # The persistent task branch may be based on an older main; do not execute
+      # its stale scope guard when resuming a paid apply.
+      - name: Load checkpoint verifier from trusted main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/main:scripts/agent-openspec-checkpoint.mjs > "$RUNNER_TEMP/agent-openspec-checkpoint.mjs"
+          test -s "$RUNNER_TEMP/agent-openspec-checkpoint.mjs"
+          node --check "$RUNNER_TEMP/agent-openspec-checkpoint.mjs"
+
       - name: Install pinned OpenSpec
         shell: bash
         run: |
@@ -313,7 +324,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/agent-openspec-checkpoint.mjs plan "$CHANGE_ID"
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" plan "$CHANGE_ID"
           git add -- "openspec/changes/$CHANGE_ID"
           if git diff --cached --quiet; then
             echo "::error::No new validated plan to checkpoint"; exit 1
@@ -388,7 +399,7 @@ jobs:
           fi
           npm run check
           openspec validate "$CHANGE_ID" --strict --no-interactive
-          node scripts/agent-openspec-checkpoint.mjs apply "$CHANGE_ID"
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" apply "$CHANGE_ID"
           git add -A
           if git diff --cached --quiet; then
             echo "::error::No implementation changes to checkpoint"; exit 1

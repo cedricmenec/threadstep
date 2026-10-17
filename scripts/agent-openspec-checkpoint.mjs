@@ -16,7 +16,14 @@ export function allowedCheckpointPath(phase, changeId, path) {
     path.startsWith(plan) ||
     path.startsWith("site/") ||
     path.startsWith("tests/") ||
-    path.startsWith("docs/product/")
+    path.startsWith("docs/product/") ||
+    // Client dependency/build metadata is product code, not factory policy.
+    // Keep individual root files and the vendor tool explicitly allowlisted:
+    // never broaden this to tools/*, scripts/* or arbitrary dotfiles.
+    path === "package.json" ||
+    path === "package-lock.json" ||
+    path === ".gitignore" ||
+    path === "tools/vendor-dexie.mjs"
   );
   return false;
 }
