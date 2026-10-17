@@ -101,7 +101,7 @@ test("actual owner GitHub run, protected rulesets and all inputs are ONLY eviden
 });
 test("all six owner inputs are independently checked, never authorize bad parameters",async()=>{
  const variants=[
-  {wave_id:"different"},{model:"openrouter/model/unknown"},
+  {wave_id:"../unsafe"},{model:"openrouter/model/unknown"},
   {max_task_starts:"11"},{max_task_starts:"01"},
   {auto_merge:"false-ish"},{backlog_commit:"b".repeat(40)},
   {candidate_set_sha256:"f".repeat(64)},
@@ -115,6 +115,18 @@ test("all six owner inputs are independently checked, never authorize bad parame
   assert.deepEqual(f.reader.calls,[],JSON.stringify(input));
   noRights(r);
  }
+});
+test("owner can choose a different VALID wave, approved model, quota and merge boolean",async()=>{
+ const f=fixture();
+ f.event.inputs={
+  ...f.event.inputs,wave_id:"wave-owner-unique-2026",
+  model:"openrouter/z-ai/glm-5.3-flash",
+  max_task_starts:"10",auto_merge:"true"
+ };
+ const r=await inspectV3RunnerOwnerCapture(f);
+ assert.equal(r.status,"owner_intent_observed_no_write",JSON.stringify(r));
+ assert.equal(r.evidence.waveId,"wave-owner-unique-2026");
+ noRights(r);
 });
 test("context must come from owner workflow_dispatch in protected main, first attempt",async()=>{
  const variants=[
