@@ -99,7 +99,13 @@ l'utilisateur, avec l'adresse déjà saisie lors d'un nouvel envoi.
 
 Dans `site/app.js`, l'adaptateur natif appelle `db.cloud.login` avec le grant
 OTP forcé, s'abonne à `db.cloud.currentUser` et `db.cloud.userInteraction`, et
-relaie la saisie email/code aux callbacks natifs. Aucun `fetchTokens`, aucun
+relaie la saisie email/code aux callbacks natifs. **Indispensable :**
+`cloudConfigureOptions()` active `customLoginGui: true` en plus de
+`requireAuth: true`, sinon Dexie Cloud n'utilise pas le contrat
+`userInteraction` de ce formulaire. Cet oubli a été identifié lors d'une
+recette manuelle : clic sur « Recevoir un code », aucun email et aucun retour
+visible. Les tests unitaires anciens validaient le contrôleur simulé, mais
+pas le branchement complet requis par le fournisseur. Aucun `fetchTokens`, aucun
 point d'échange de jetons applicatif, aucun backend et aucun appel `fetch` ne
 sont introduits : l'authentification et la réplication parlent directement à
 Dexie Cloud. Aucun fournisseur alternatif n'est proposé, même si le service en
@@ -127,6 +133,21 @@ valeur privilégiée n'est enregistrée dans le dépôt, le bundle ou la
 documentation publique. La réception réelle d'un OTP, les tests multi-appareils,
 le clavier, le lecteur d'écran et l'isolation entre deux identités restent une
 recette manuelle sur base isolée.
+
+**Protection des données pendant une panne d'authentification :**
+l'interface masque les outils métier avant connexion, sans effacer le
+`localStorage`. Si une sauvegarde historique `threadstep.document.v1`
+est encore lisible dans **cette origine et ce navigateur**, la page de
+connexion affiche le nombre de sujets/étapes retrouvés et permet un
+**export JSON de secours sans session**. Celui-ci télécharge le texte exact
+de la clé historique : il ne déclenche ni import, ni ouverture d'IndexedDB,
+ni migration, ni envoi au Cloud. Conserver tout export externe déjà effectué.
+Si aucune donnée V1 n'est présente sur cette origine, le bouton n'apparaît
+pas : cela ne prouve pas que les données sont supprimées d'une autre origine
+ou d'une IndexedDB. Une absence d'email malgré la configuration correcte
+nécessite ensuite le contrôle opérateur de l'origine autorisée Dexie Cloud,
+la connectivité et la réception email réelle. Ne pas purger le navigateur ni
+importer un backup dans une base potentiellement déjà peuplée avant diagnostic.
 
 ## Modèle de données
 

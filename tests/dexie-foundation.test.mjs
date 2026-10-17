@@ -108,9 +108,9 @@ test("2.2 shouldOpenSyncedDatabase gates on a valid configuration", () => {
   assert.equal(shouldOpenSyncedDatabase({ databaseUrl: "https://demo.dexie.cloud" }), true);
 });
 
-test("2.2 cloudConfigureOptions sets requireAuth and keeps the native nameSuffix", () => {
+test("2.2 cloudConfigureOptions wires Dexie native interaction to custom OTP GUI", () => {
   const options = cloudConfigureOptions("https://demo.dexie.cloud");
-  assert.deepEqual(options, { databaseUrl: "https://demo.dexie.cloud", requireAuth: true });
+  assert.deepEqual(options, { databaseUrl: "https://demo.dexie.cloud", requireAuth: true, customLoginGui: true });
   assert.equal(Object.prototype.hasOwnProperty.call(options, "nameSuffix"), false);
   assert.notEqual(options.nameSuffix, false);
 });
