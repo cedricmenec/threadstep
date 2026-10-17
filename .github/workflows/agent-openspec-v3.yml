@@ -33,7 +33,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      # C. This module always fails until owner issuer + global CAS + child claim
+      # C. Observe native child event, independently verify GitHub run and
+      #    pinned owner-admitted reservation. READ ONLY: no App key or payment.
+      - name: Verify V3 child dispatch and pending reservation (read only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/asf/v3/child-ack-readiness.mjs verify
+      # D. This module always fails until owner issuer + global CAS + child claim
       #    and paid mutex are independently reviewed. No OpenRouter token here.
       - name: Reject paid execution until trusted global and wave claims exist
         run: node scripts/asf/v3/workflow-runtime-preflight.mjs child
