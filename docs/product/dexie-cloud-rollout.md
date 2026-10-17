@@ -8,7 +8,15 @@ La [spécification complète et normative](specs/dexie-cloud-local-first.md) est
 
 Contrairement à l'hypothèse « IndexedDB existante », la version de `main` à la préparation utilise `localStorage` : clé `threadstep.document.v1` dans `site/app.js`. `site/core.js` maintient un document JSON V1 avec sujets et items. Les préférences de reprise sont également locales mais séparées. `site/index.html` impose `connect-src 'none'`.
 
-Les contraintes historiques de `AGENTS.md`, de `docs/product/vision.md` et de `docs/product/mvp.md` proscrivent backend, authentification, service distant et dépendance JS tierce. **La présente demande modifie l'objectif produit futur**, mais **ne modifie pas la politique d'agent** : une PR de politique distincte, revue et autorisée explicitement est requise avant toute exécution de tâches de code qui violerait `AGENTS.md`. Ce blocage explique `status: proposed` et `automation: manual`.
+Les exclusions de cloud, d'authentification et de bibliothèques tierces
+provenaient des non-objectifs du MVP historique, auparavant recopiés
+dans `AGENTS.md`. Le contrat de coding a été recentré sur la méthode,
+la sécurité, les tests et la publication, sans prohibition produit.
+La [spécification normative](specs/dexie-cloud-local-first.md)
+définit le nouveau périmètre ; le MVP reste une baseline historique.
+Les tâches demeurent `status: proposed`, `automation: manual`
+en raison de leur risque et de leur qualification, **pas d'une
+interdiction générale de l'agent**.
 
 ## 2. Architecture cible
 
@@ -51,7 +59,7 @@ La migration de la clé `localStorage` historique vers des tables synchronisées
 
 Ordre conseillé : **TS-024**, puis **TS-025 et TS-027**, puis **TS-026**, **TS-028**, **TS-029** et enfin **TS-030**.
 
-Prérequis au développement : approuver la modification de politique agent/produit, disposer d'une **base Dexie Cloud de test** et d'une origine Pages autorisée, vérifier l'accès sans secret embarqué, choisir le packaging reproductible JS et les règles CSP HTTPS/WSS strictement nécessaires. Les fichiers CLI `dexie-cloud.key` et `dexie-cloud.json` restent hors sources et livrables. Le service Cloud peut impliquer des coûts, sans aucune dépense autorisée par cette PR.
+Prérequis au développement : relire et autoriser le périmètre du task et de sa spécification, disposer d'une **base Dexie Cloud de test** et d'une origine Pages autorisée, vérifier l'accès sans secret embarqué, choisir le packaging reproductible JS et les règles CSP HTTPS/WSS strictement nécessaires. Les fichiers CLI `dexie-cloud.key` et `dexie-cloud.json` restent hors sources et livrables. Le service Cloud peut impliquer des coûts, sans aucune dépense autorisée par cette PR.
 
 **Ne pas publier un état intermédiaire sur main qui rend invisibles les données V1 avant migration ou qui les envoie sans consentement.** Regrouper les changements incompatibles dans une même livraison finale ou prévoir une bascule gardée et testée. La fusion des PR de développement et les appels OpenRouter/OpenSpec exigent des autorisations distinctes ; les risques medium/high bloquent la sélection automatique via le backlog orchestrator.
 

@@ -52,15 +52,24 @@ test("contract separates declarative state from operational GitHub state", () =>
   assert.match(doc, /sans seconde promotion/i);
 });
 
-test("AGENTS.md and ChatGPT.md carry the generation directives", () => {
-  for (const file of ["AGENTS.md", "ChatGPT.md"]) {
-    const text = read(file);
-    for (const directive of ["schema_version: 2", "automation: allowed",
-      "status: ready", "risk: unknown", "type: factory", "Automation: manual",
-      "TS-NNN", "ASF-*"]) {
-      assert.ok(text.includes(directive), file + " missing directive: " + directive);
-    }
+test("ChatGPT.md owns backlog generation directives; AGENTS.md delegates to it", () => {
+  const planning = read("ChatGPT.md");
+  for (const directive of ["schema_version: 2", "automation: allowed",
+    "status: ready", "risk: unknown", "type: factory", "Automation: manual",
+    "TS-NNN", "ASF-*"]) {
+    assert.ok(planning.includes(directive), "ChatGPT.md missing directive: " + directive);
   }
+  const agent = read("AGENTS.md");
+  assert.match(agent, /ChatGPT\.md/);
+  assert.match(agent, /backlog-v2-task-contract\.md/);
+});
+
+test("coding agent instructions must not prohibit approved product architectures", () => {
+  const agent = read("AGENTS.md");
+  assert.match(agent, /docs\/product\//);
+  assert.match(agent, /sécurité/);
+  assert.match(agent, /main/);
+  assert.doesNotMatch(agent, /No backend|No.*authentication|no third-party JS bundles/i);
 });
 
 test("factory V2 task descriptions are explicitly manual", () => {

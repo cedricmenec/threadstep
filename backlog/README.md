@@ -12,7 +12,7 @@
 - **[TS-029](tasks/TS-029.md)** : Séparer changement de base, déconnexion et purge locale. `proposed / manual / high`.
 - **[TS-030](tasks/TS-030.md)** : Durcir, tester et documenter la livraison Dexie Cloud. `proposed / manual / high`.
 
-**Constat réel :** ThreadStep utilise actuellement `localStorage`, et non IndexedDB. La migration est donc une tâche explicite ; aucun état historique ne doit être supprimé ni transféré au cloud sans consentement. `AGENTS.md` interdit actuellement cloud/authentification : la mise à jour de politique exige une PR distincte approuvée avant tout développement incompatible. Ces tâches restent proposées, manuelles et de risque medium/high. Leur ajout ne lance aucun agent payant ni fusion et n'implique pas leur disponibilité en production. Prévoir une livraison cohérente protégeant les données V1.
+**Constat réel :** ThreadStep utilise actuellement `localStorage`, et non IndexedDB. La migration est donc une tâche explicite ; aucun état historique ne doit être supprimé ni transféré au cloud sans consentement. Les anciennes exclusions cloud/authentification étaient propres au MVP ; `AGENTS.md` a été recentré sur les règles du coding agent et ne fixe plus la cible technique du produit. Ces tâches restent proposées, manuelles et de risque medium/high. Leur ajout ne lance aucun agent payant ni fusion et n'implique pas leur disponibilité en production. Prévoir une livraison cohérente protégeant les données V1.
 
 
 ## Évolutions à développer le 17 octobre 2026 (briefs uniquement)

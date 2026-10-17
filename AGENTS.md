@@ -1,74 +1,114 @@
-# ThreadStep agent contract
+# Contrat de l'agent de développement
 
-## Product
-ThreadStep is a tiny, French-language, browser-only next-step dashboard for people juggling parallel subjects. It is NOT a project-management platform.
+## Objet et sources de vérité
 
-## Constraints
-- Public repository and public GitHub Pages deployment. **Never commit secrets or OpenRouter keys.**
-- No backend, database service, account, authentication, telemetry or paid runtime dependencies.
-- Local data in browser localStorage (key: `threadstep.document.v1`), with explicit JSON export and import.
-- Static website in `site/`; keep relative URLs compatible with `/threadstep/` on GitHub Pages.
-- Favor accessible semantic HTML, responsive/mobile UI, no third-party JS bundles.
-- Keep all untrusted user-provided strings as text nodes, not `innerHTML`.
-- Preserve backwards compatibility of exported JSON or write an explicit migration.
-- Treat `docs/product/` as product intent and `backlog/tasks/` as implementation scope.
+`AGENTS.md` définit **les instructions et modes opératoires de l'agent
+de coding** : sécurité, lecture du contexte, périmètre des modifications,
+tests, publication et reprise. **Il ne définit pas les fonctionnalités,
+les non-objectifs ou l'architecture cible du produit.**
 
-## Development
-- Work on the prepared agent branch only; do not push to main.
-- For each task, read its acceptance criteria before editing.
-- For OpenSpec changes, follow [the ASF-OPSX-01 checklist contract](docs/factory/openspec-checklist-contract.md). Every checkbox in `tasks.md` MUST be an implementation or automated verification action that the runner can actually complete and prove during `apply`, before OPSX sync and archive. Cover the product's acceptance criteria with automated checks where possible; do not silently drop requirements that also need human acceptance.
-- Put browser-based visual, keyboard, touch, screen-reader and other human-only acceptance in a plain `Manual acceptance` section **without checkboxes**. Put semantic diff checks after OPSX sync, archive verification, independent PR CI, merge and Pages checks in a separate plain `Post-sync review` section **without checkboxes**. These checks are still required for a truthful acceptance/delivery report, but cannot block the pre-sync implementation checklist. Never check or claim any test that was not actually performed.
-- Run `npm run check` and report exactly what was executed.
-- Do not change GitHub workflows, credentials, `opencode.json`, or this file during routine feature work.
-- Never report an unverified test as passed.
-- Do not merge pull requests directly or bypass status checks. The two owner-dispatched agent workflows may optionally request GitHub native auto-merge after publishing a final PR, if the repository's active main ruleset requires the independent CI `check` job and the matching head SHA is verified. OpenSpec `plan` PRs are never auto-merged. On missing protections, fail closed and leave the PR open.
+- Lire la tâche courante dans `backlog/tasks/`, les exigences applicables
+  sous `docs/product/`, les spécifications canoniques `openspec/specs/`
+  et le code effectif avant de modifier le produit.
+- Distinguer **MVP historique**, **état effectivement livré** et **nouvelles
+  exigences approuvées**. Les anciennes restrictions fonctionnelles
+  ne doivent pas être traitées comme des prohibitions permanentes.
+  Documenter toute transition nécessaire dans le plan OpenSpec.
+- Les technologies de persistance, services cloud, mécanismes de compte
+  et d'authentification, bibliothèques et parcours utilisateurs sont des
+  **choix produit** décrits dans les spécifications et briefs pertinents.
+  Ce contrat d'agent ne les autorise ni ne les interdit par défaut :
+  l'agent implémente exclusivement la tâche expressément confiée.
+- La création et qualification des tâches est régie par
+  [ChatGPT.md](ChatGPT.md) et le
+  [contrat de backlog V2](docs/factory/backlog-v2-task-contract.md),
+  pas par des non-objectifs figés dans ce fichier.
 
-## Mandatory documentation for factory evolution
+## Sécurité et périmètre d'exécution
 
-- Every change to the software factory (GitHub Actions workflows, OpenCode/OpenSpec orchestration, GitHub App authentication, agent policy, CI/security, delivery or cost controls) MUST include a dedicated documentation task/checklist item in the same PR.
-- Update the relevant files under `docs/factory/` to describe the actual behavior, configuration, operational steps, safety limits and validation status. Update the roadmap/decisions when capabilities or trade-offs change.
-- A factory PR is not complete until its documentation task is checked off and the PR description identifies the documentation files changed. If documentation is not needed, document a specific justification in the PR instead of silently omitting it.
-- Do not publish secrets, tokens, private keys or sensitive configuration values in documentation. Distinguish implemented behavior from untested assumptions.
-- Factory changes require an explicitly authorized, separately reviewed PR; routine feature agents must not edit protected factory files.
-- The OpenSpec workflow must initialize OpenCode skills/commands on the ephemeral runner and verify they exist before paid agent calls. Generated instructions must not be committed with a feature PR.
-- Semantic sync must use the OpenCode OPSX command when available and verify the exact contents of non-canonical files before/after sync; compare deltas against canonical specs in human review. This native OPSX command and content-scope guard were tested end-to-end on TS-009 (run 38712079641, merged PR #26). REMOVED and RENAMED operations remain untested.
+- Le dépôt et le site publié sont publics. **Ne jamais committer ni exposer
+  de secrets**, clés OpenRouter, jetons, clés d'administration cloud,
+  fichiers de configuration sensibles ni données personnelles dans
+  les sources, PR, logs ou documentation publique.
+- Ne pas insérer des chaînes utilisateur non fiables comme HTML
+  exécutable ; appliquer les contrôles prévus par les spécifications
+  métier. Vérifier explicitement la sécurité, la confidentialité et
+  les frontières de confiance avant tout échange réseau ou partage.
+- Préserver les données utilisateurs et les anciens exports/imports,
+  ou mettre en place une migration **explicite, non destructive et testée**.
+  Ne pas transférer des données héritées vers un service externe
+  sans respecter les exigences de consentement du contrat produit.
+- Travailler uniquement sur une branche préparée ; **ne jamais pousser
+  directement sur `main`**. Ne modifier que les chemins autorisés et
+  le périmètre de la tâche.
+- Lire tous les critères d'acceptation avant d'éditer. Un brief ou un
+  plan `ready` n'autorise ni l'appel payant d'un LLM, ni un déclenchement
+  automatique, ni une fusion, ni un changement de secrets. Exiger
+  l'autorisation explicite applicable à chaque opération.
 
-## Backlog intake and planning protocol
+## Exécution OpenSpec, contrôles et recette
 
-Current operating guides: `docs/factory/developer-guide.md`, `docs/factory/backlog-orchestrator-manual.md`, `docs/factory/validation-and-recovery.md`. Follow the current workflow YAML and GitHub evidence over stale historical plan notes; never reset an uncertain wave journal to retry a paid task.
-- This file is the durable, repository-wide operating contract. It explains how to work; it is NOT the backlog itself.
-- Before planning a new feature, read `docs/product/vision.md`, `docs/product/mvp.md`, `backlog/README.md`, and the relevant existing tasks. Avoid duplicates.
-- When a user describes a feature in natural language (including a voice request), the planning assistant prepares a focused specification; do not ask the user to write GitHub issues or Markdown files.
-- Use the next free `TS-NNN` ID after inspecting `backlog/tasks/`. Create one Markdown file per small, independently testable change under `backlog/tasks/TS-NNN.md`, following `backlog/tasks/TEMPLATE.md`.
-- Include user value, scope, functional behavior, acceptance criteria, validation/testing, assumptions, and explicit out-of-scope behavior. Include dependencies and priority if relevant. Clarify only decisions that materially alter scope, data safety or security.
-- New task files use the versioned V2 frontmatter defined in `backlog/tasks/TEMPLATE.md` and [`docs/factory/backlog-v2-task-contract.md`](docs/factory/backlog-v2-task-contract.md): `schema_version: 2` plus `id`, `type`, `status`, `priority`, `automation`, `risk`, `depends_on` and `created_at`, with `type`, `status`, `priority`, `automation` and `risk` restricted to their documented enums. The frontmatter is declarative state; GitHub PRs, checks and runs remain the only operational truth.
-- Generation defaults: `automation: allowed` for a complete, well-characterized product task; `status: ready` as soon as the preparation criteria are met (otherwise `proposed`), with no second promotion step; `risk: unknown` whenever the risk is not characterized. `risk: unknown` is never treated as `low` and is never automatically executable, and explicit contraindications (`type: factory`, `risk: medium`/`high`/`unknown`, or a historical task with no `automation` field) take precedence over the `allowed` default and remain ineligible for automatic execution.
-- `TS-NNN` identifiers and their product rules are specific to ThreadStep and are not a generic factory convention. Factory tasks use `ASF-*` identifiers under `docs/factory/tasks/` and MUST declare `Automation: manual`; the preflight policy in `scripts/agent-asf-policy.mjs` enforces this. Creating or marking a task `ready` authorizes neither a paid model call, nor a merge, nor a change to workflows, secrets, permissions or implementation code.
-- Update `backlog/README.md` and the canonical product specifications when requirements change. Separate planning artifacts from code changes, preserving reviewable history.
-- A planned or ready task is NOT permission to run an LLM, incur OpenRouter costs, merge a PR, or modify implementation code. Obtain explicit execution authorization; never assume that backlog order constitutes it.
-- The legacy `Agent (manual, OpenRouter)` workflow implements directly from backlog with `task_id` through `workflow_dispatch`.
-- The separate `Agent OpenSpec (manual, staged or auto)` workflow offers `phase=plan` (draft only), `phase=apply` (reviewed plan) and `phase=auto` (plan, validate, implement, sync and archive in one explicitly authorized run), plus `phase=finalize` (validate, semantically sync and archive already committed work with a paid OpenCode/OpenRouter call). Apply and auto also use an additional paid semantic sync call following the OPSX sync workflow; auto can therefore invoke the model three times in a single authorized run. A bounded, owner-only Backlog Orchestrator V1 is deployed (dry-run or explicitly authorized execute, max_tasks 1|2). Both agents expose `auto_merge=true` by default for final PRs, but native auto-merge requires verified branch protection and independent `check` CI; default is not permission to bypass checks.
-- The OpenSpec workflow_dispatch form preselects `auto` and `openrouter/deepseek/deepseek-v4.1-flash`; these are convenience defaults, not permission to execute. It accepts a 1-3 digit number (e.g. `9`, `009`) or canonical `TS-009` and normalizes to `TS-NNN` before backlog validation, branch naming and model calls. Reject `0`, out-of-range and malformed values. Each canonical OpenSpec task has its own concurrency group, avoiding alias races while allowing independent tasks to run in parallel. The direct legacy workflow is unchanged.
-- The selected task maps to deterministic `openspec/changes/ts-nnn/` and must be checked against the product acceptance criteria. Do not treat a plan approval as consent to launch apply automatically. Bounded automatic selection and sequential waves of 1 or 2 tasks are available with distinct owner authorization; expansion beyond two remains future work.
-- Keep changes to agent policy and backlog conventions in a dedicated reviewed PR. A routine coding task must not edit `AGENTS.md` or workflow/security files.
+- Suivre [ASF-OPSX-01](docs/factory/openspec-checklist-contract.md).
+  Chaque case de `tasks.md` DOIT être une action d'implémentation
+  ou un test que le runner peut effectivement exécuter et démontrer
+  durant `apply`, **avant OPSX sync et archivage**. Couvrir aussi
+  les critères d'acceptation qui nécessitent une recette humaine,
+  sans les transformer en cases impossibles à cocher.
+- Placer la recette manuelle (visuelle, clavier, tactile, mobile,
+  lecteur d'écran et autres tests non automatisables) dans
+  `Manual acceptance` **sans cases à cocher**.
+- Placer la revue après sync (diff sémantique, archivage, CI
+  indépendante, fusion, Pages) dans `Post-sync review` **sans
+  cases à cocher**. Ces validations restent nécessaires au rapport
+  final, mais ne bloquent pas artificiellement `apply`.
+- Exécuter `npm run check` et les tests liés à la tâche ; préciser
+  ce qui a réellement été vérifié. Ne jamais présenter une
+  vérification non effectuée comme réussie.
+- Ne pas fusionner directement de PR ni contourner les contrôles.
+  Les workflows owner-dispatched peuvent demander l'auto-merge
+  **natif GitHub** pour une PR finale si le ruleset de `main`
+  exige effectivement le check indépendant `check` sur son SHA.
+  Ne jamais auto-fusionner une PR OpenSpec `plan`. Sur protection
+  absente ou ambiguë : échec fermé et PR ouverte.
 
-## Dedicated ASF development agent (manual, reviewed)
+## Modifications protégées de la factory
 
-- The `Agent ASF (manual, OpenRouter, reviewed PR)` workflow is a separate **owner-only** path for explicitly selected `docs/factory/tasks/ASF-V2-NNN.md` tasks. It does not weaken the routine ThreadStep product-agent restrictions above.
-- The task-specific, versioned allowlist in `scripts/agent-asf-policy.mjs` is checked before publication. The development job has no GitHub App write token. Privileged publication runs only after a validated patch and produces a PR for human review, never an auto-merge request.
-- Manual dispatch authorizes a **paid** task execution only. Task status/priority does not authorize API costs, changes of secrets or GitHub settings, or PR merge. The model provider key is available only to the paid development step.
-- ASF-V2-008/009 are **not executable by this bootstrap** because they change GitHub Actions workflows. A separately approved, human-gated publication path is required; this bootstrap neither requests `Workflows: write` nor changes App permissions.
-- Factory changes always require independent CI, checked documentation within the same PR, explicit merge authorization, and honest post-merge verification. See `docs/factory/agent-asf-manual.md`.
+- **Un agent de développement produit ordinaire ne change pas**
+  `AGENTS.md`, les workflows, identifiants, secrets,
+  `opencode.json`, scripts de sécurité ou fichiers protégés ASF.
+  Toute évolution de la factory nécessite une **PR distincte,
+  explicitement autorisée et revue**.
+- Toute PR concernant la factory (politique d'agent, GitHub Actions,
+  OpenCode/OpenSpec, sécurité, livraison, coûts ou permissions) DOIT
+  inclure une **tâche ou checklist documentaire dédiée** dans la même PR,
+  avec mise à jour des guides `docs/factory/` concernés ou
+  justification précise du caractère inutile de ces changements.
+  Distinguer état implémenté, tests réalisés et hypothèses.
+- L'agent ASF manuel reste un chemin owner-only distinct : allowlist
+  versionnée, pas de jeton GitHub App en écriture dans l'exécution
+  du modèle, et PR revue humainement sans autorisation de fusion
+  implicite. Voir [agent-asf-manual.md](docs/factory/agent-asf-manual.md).
+- Le workflow OpenSpec initialise et vérifie ses commandes/skills
+  sur le runner éphémère avant les appels payants. La synchronisation
+  doit employer la commande OPSX native et son garde-fou de fichiers ;
+  les opérations REMOVED/RENAMED n'ont pas encore de preuve E2E.
 
-## Durable OpenSpec checkpoints and safe recovery
+## Checkpoints et reprise contrôlée
 
-The OpenSpec workflow checkpoints a validated plan to the task-specific
-remote `agent/openspec/TS-NNN` branch before paid apply, then checkpoints
-verified implementation before paid semantic sync. Both intermediate pushes
-are subject to file-scope and quality gates; they do not authorize merging
-or represent a delivered feature. Strict canonical validation runs before
-archive. On failure, inspect the last confirmed remote checkpoint and request
-new, explicit paid authorization for `apply` (plan checkpoint) or `finalize`
-(apply checkpoint); no paid automatic retry. The two Backlog Orchestrator V1
-slots inherit the same checks through the reusable workflow but still stop
-on failure. See `docs/factory/validation-and-recovery.md`.
+Le workflow OpenSpec pousse sur `agent/openspec/TS-NNN` un checkpoint
+de **plan validé** avant `apply`, puis un checkpoint de
+**code vérifié** avant la synchronisation sémantique. Chaque étape
+respecte les vérifications et la portée permise ; un checkpoint
+ne constitue ni une livraison ni une autorisation de fusion.
+
+En cas d'échec, utiliser le dernier checkpoint distant attesté
+et [la procédure de reprise](docs/factory/validation-and-recovery.md).
+La reprise payante via `apply` (depuis plan) ou `finalize` (depuis
+code) exige une **nouvelle autorisation explicite**. Ne jamais
+réinitialiser un journal incertain ou relancer automatiquement
+des appels payants. Valider les spécifications canoniques avant
+l'archive ; conserver les preuves des contrôles.
+
+Guides : [ASF développeur](docs/factory/developer-guide.md) ·
+[orchestration](docs/factory/backlog-orchestrator-manual.md) ·
+[validation et reprise](docs/factory/validation-and-recovery.md).
