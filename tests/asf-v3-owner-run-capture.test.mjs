@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { contentSha256 } from "../scripts/asf/waves/hash.mjs";
 import {
- deriveV3OwnerCandidateSet,inspectV3RunnerOwnerCapture
+ deriveV3OwnerCandidateSet,inspectV3RunnerOwnerCapture,
+ inspectV3OwnerEnvironmentBinding
 } from "../scripts/asf/v3/owner-run-capture.mjs";
 import { ADMISSION_REGISTRY_REF } from "../scripts/asf/v3/global-admission.mjs";
 
@@ -78,6 +80,24 @@ const noRights=r=>{
  for(const name of ["authorized","canCreate","canWrite","canDispatch",
   "canSpend","canRetry"])assert.equal(r[name],false,name);
 };
+test("protected owner environment must declare the one approved controller App ID",()=>{
+ for(const bad of [undefined,null,"","5321746","5361228"," 5361227 ","05361227",5361227]){
+  const r=inspectV3OwnerEnvironmentBinding(bad);
+  assert.equal(r.status,"rejected",String(bad));noRights(r);
+ }
+ const good=inspectV3OwnerEnvironmentBinding("5361227");
+ assert.equal(good.status,"environment_id_observed_not_authorized");
+ assert.equal(good.evidence.controllerAppId,5361227);
+ noRights(good);
+});
+test("V3 owner job references only nonsecret environment ID and retains permanent DENY",()=>{
+ const yaml=readFileSync(new URL("../.github/workflows/backlog-orchestrator-v3.yml",import.meta.url),"utf8");
+ assert.match(yaml,/environment: asf-v3-controller/);
+ assert.match(yaml,/ASF_V3_CONTROLLER_APP_ID: \$\{\{ vars\.ASF_V3_CONTROLLER_APP_ID \}\}/);
+ assert.match(yaml,/node scripts\/asf\/v3\/owner-run-capture\.mjs verify/);
+ assert.match(yaml,/node scripts\/asf\/v3\/workflow-runtime-preflight\.mjs controller/);
+ assert.doesNotMatch(yaml,/secrets\.|create-github-app-token|permission-contents:\s*write/);
+});
 test("canonical candidate hashes are ordered, independent of backlog index entry order",()=>{
  const c=deriveV3OwnerCandidateSet(exampleIndex());
  assert.deepEqual(c,expected);
