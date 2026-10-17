@@ -95,9 +95,18 @@ function observedRunMatches(runner,run){
  * then the child must independently CLAIM_CHILD via another Git CAS, with
  * the paid mutex held and budget approved. Nothing here advances the wave.
  */
-export async function observeV3GithubChildAckReadiness({
- runner,event,readClient
+export async function observeV3GithubChildAckReadiness(input={}) {
+ return observeV3GithubChildTransitionReadiness({...input,phase:"ACK"});
+}
+/** A CLAIM is only a proposed journal transition, never permission to pay. */
+export async function observeV3GithubChildClaimReadiness(input={}) {
+ return observeV3GithubChildTransitionReadiness({...input,phase:"CLAIM"});
+}
+async function observeV3GithubChildTransitionReadiness({
+ runner,event,readClient,phase
 }={}) {
+ if(!["ACK","CLAIM"].includes(phase))
+  return reject("invalid_child_transition_phase");
  if(!validContext(runner,event))
   return reject("child_native_event_invalid");
  if(typeof readClient?.get!=="function")
@@ -128,8 +137,24 @@ export async function observeV3GithubChildAckReadiness({
  if(!globalSha||mainSha!==runner.sha||
     wave?.status!=="verified_snapshot")
   return unknown("child_pinned_git_snapshot_unavailable");
- if(wave.headSha!==inputs.reservation_sha)
+ if(phase==="ACK"&&wave.headSha!==inputs.reservation_sha)
   return reject("child_reservation_sha_does_not_match_wave_tip");
+ // CLAIM must follow exactly ONE successful ACK commit, whose sole parent is
+ // the ORIGINAL dispatch reservation SHA. A journal-provided ACK alone cannot
+ // prove the original reservation or the Git branch's lineage.
+ if(phase==="CLAIM"){
+  if(wave.headSha===inputs.reservation_sha)
+   return reject("child_ack_commit_not_persisted");
+  let proof;
+  try{
+   proof=await readClient.get(BASE+"/git/commits/"+wave.headSha);
+  }catch{return unknown("child_ack_git_parent_unavailable");}
+  if(proof?.ok!==true||proof.data?.sha!==wave.headSha||
+     !Array.isArray(proof.data.parents)||proof.data.parents.length!==1||
+     proof.data.parents[0]?.sha!==inputs.reservation_sha||
+     !SHA.test(proof.data.tree?.sha??""))
+   return reject("child_ack_git_parent_not_original_reservation");
+ }
 
  let global;
  try{
@@ -145,16 +170,26 @@ export async function observeV3GithubChildAckReadiness({
   return reject("child_wave_not_active_under_owner_admission");
 
  const last=journal.events.at(-1);
- if(journal.status!=="DISPATCH_PENDING"||journal.active===null||
-    journal.active.taskId!==inputs.task_id||
+ const common=journal.active!==null&&
+    journal.active.taskId===inputs.task_id&&
+    journal.reserved>=1&&
+    journal.reserved<=manifest.limits.maxTaskStarts&&
+    journal.delivered<=journal.reserved&&
+    journal.attempted.includes(inputs.task_id)&&
+    manifest.candidateTasks.some(x=>x.id===inputs.task_id);
+ if(!common)return reject("child_task_not_reserved_or_dispatch_intent_missing");
+ if(phase==="ACK"&&(
+    journal.status!=="DISPATCH_PENDING"||
     journal.active.childRunId!==null||
-    journal.reserved<1||
-    journal.reserved>manifest.limits.maxTaskStarts||
-    journal.delivered>journal.reserved||
-    !journal.attempted.includes(inputs.task_id)||
-    !manifest.candidateTasks.some(x=>x.id===inputs.task_id)||
-    last?.type!=="DISPATCH_INTENT"||last.taskId!==inputs.task_id)
+    last?.type!=="DISPATCH_INTENT"||last.taskId!==inputs.task_id))
   return reject("child_task_not_reserved_or_dispatch_intent_missing");
+ if(phase==="CLAIM"&&(
+    journal.status!=="CHILD_ACKNOWLEDGED"||
+    journal.active.childRunId!==runner.runId||
+    last?.type!=="ACK_CHILD"||last.taskId!==inputs.task_id||
+    String(last.childRunId)!==runner.runId||last.runAttempt!==1||
+    last.workflowRef!==WORKFLOW))
+  return reject("child_ack_not_exactly_persisted_for_child_run");
 
  // Re-read all three refs; neither a moved original source nor a sibling
  // dispatcher may be treated as an ACK for the stale reservation.
@@ -172,17 +207,26 @@ export async function observeV3GithubChildAckReadiness({
     refSha(after[2],"refs/heads/main")!==runner.sha)
   return unknown("child_refs_changed_during_ack_observation");
 
- return gate("child_ack_candidate_not_authorized",
-  "requires_controller_persisted_ack_child_claim_and_paid_mutex",{
+ const proposedEvent={
+  type:phase==="ACK"?"ACK_CHILD":"CLAIM_CHILD",
+  taskId:inputs.task_id,childRunId:runner.runId,
+  runAttempt:1,workflowRef:WORKFLOW
+ };
+ return gate(phase==="ACK"?"child_ack_candidate_not_authorized":
+    "child_claim_candidate_not_authorized",
+  phase==="ACK"?
+    "requires_controller_persisted_ack_child_claim_and_paid_mutex":
+    "requires_atomic_claim_journal_cas_and_shared_paid_mutex",{
    waveId:inputs.wave_id,taskId:inputs.task_id,
    reservationSha:inputs.reservation_sha,
+   waveHeadSha:wave.headSha,
    journalHash:contentSha256(journal),
    globalHeadSha:globalSha,globalRegistryHash:contentSha256(global),
    manifestHash,childRunId:runner.runId,
-   proposedAckEvent:{
-    type:"ACK_CHILD",taskId:inputs.task_id,
-    childRunId:runner.runId,runAttempt:1,workflowRef:WORKFLOW
-   }
+   proposedEvent,
+   ...(phase==="ACK"?{proposedAckEvent:proposedEvent}:{
+    proposedClaimEvent:proposedEvent
+   })
   });
 }
 function safeEvent(path) {
