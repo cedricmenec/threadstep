@@ -55,10 +55,10 @@ function registryFromFile(res){
  const d=res?.data;
  if(res?.ok!==true||d?.type!=="file"||d.path!=="registry.json"||
    d.encoding!=="base64"||typeof d.content!=="string"||
-   !Number.isSafeInteger(d.size)||d.size<2||d.size>MAX)
+   !Number.isSafeInteger(d.size)||d.size<2||d.size>MAX_BYTES)
   throw Error("bad_registry_metadata");
  const enc=d.content.replace(/\s/g,"");
- if(enc.length>Math.ceil(MAX*4/3)+4||
+ if(enc.length>Math.ceil(MAX_BYTES*4/3)+4||
   !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(enc))
   throw Error("bad_registry_base64");
  const b=Buffer.from(enc,"base64");
@@ -135,17 +135,7 @@ export async function observeV3GithubChildAckReadiness({
  try{
   global=registryFromFile(await readClient.get(
    BASE+"/contents/registry.json?ref="+globalSha));
- }catch(cause){
-  // DIAGNOSTIC ONLY IN THIS DRAFT BRANCH, remove before qualification.
-  process.stderr.write("ASF V3 test registry cause: "+
-   String(cause?.code??cause?.message??"unknown").replace(/[^a-z0-9_]/gi,"_").slice(0,80)+"\n");
-  const known=new Set(["bad_registry_metadata","bad_registry_base64",
-   "bad_registry_bytes","invalid_fields","invalid_registry",
-   "registry_replay_divergence","event_sequence_corrupted",
-   "invalid_wave_claim"]);
-  return reject(known.has(cause?.message)?
-   "child_global_"+cause.message:"child_global_registry_invalid");
- }
+ }catch{return reject("child_global_registry_invalid");}
  const {manifest,journal}=wave,manifestHash=contentSha256(manifest);
  if(global.state!=="ACTIVE"||global.active?.waveId!==inputs.wave_id||
     global.active.manifestHash!==manifestHash||
