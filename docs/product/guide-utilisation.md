@@ -102,6 +102,30 @@ l'ordre et le filtre existants (priorité puis ordre manuel ; filtre
   d'un déplacement par glisser-déposer dans cette vue. Le bouton
   « Ouvrir le projet » reste dans l'en-tête de la carte.
 
+## Total des tâches principales (TS-018)
+
+Chaque carte projet affiche dans son en-tête, sous le compteur en
+attente, un libellé explicite en français :
+
+- **« 0 tâche au total »**, **« 1 tâche au total »** ou
+  **« N tâches au total »** (pluriel dès deux). Ce total compte toutes
+  les **tâches principales** (`parentId: null`) du projet, terminées ou
+  non, et **exclut les sous-tâches directes**, qui ne l'augmentent pas.
+- Il reste **indépendant** du filtre « Masquer les étapes terminées »,
+  du repli des sous-tâches et de la limite d'affichage à cinq tâches de
+  l'aperçu (TS-017) : il est recalculé sur le document complet à chaque
+  rendu et se met à jour lors d'un ajout, d'un retrait, d'une
+  annulation, d'un import ou d'un réordonnancement.
+- Le compteur existant **« N étape(s) en attente »** conserve exactement
+  son calcul (toutes les étapes non terminées, sous-tâches comprises) et
+  son libellé. Les deux nombres restent distincts et complémentaires.
+- Le même total est aussi affiché dans l'en-tête de la **vue de détail**
+  pour la cohérence, sans changer la navigation ni le compteur en
+  attente.
+
+Le total est purement présentationnel : il ne crée aucun champ, aucune
+clé de stockage ni écriture localStorage et ne modifie pas l'export JSON.
+
 ## Changer la priorité depuis son badge (TS-015)
 
 Le badge **Urgent**, **Normal** ou **Plus tard** de chaque action

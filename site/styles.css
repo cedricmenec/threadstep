@@ -53,6 +53,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .subject-move:disabled{opacity:.35;cursor:not-allowed}
 .subject h3{font-size:1.1rem;margin:0;letter-spacing:-.02em;overflow-wrap:anywhere}
 .subject .small{font-size:.79rem;color:#859087;margin:6px 0 0}
+.subject-total{font-size:.79rem;color:#859087;margin:6px 0 0;overflow-wrap:anywhere}
 .subtle,.danger{background:transparent;border:1px solid transparent;padding:7px 9px;color:#667569;font-size:.75rem}
 .subtle:hover{background:#eef2e8}
 .danger:hover{background:#fff0ed;color:#ad4938}

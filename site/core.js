@@ -178,6 +178,14 @@ export function pendingCount(document) {
   return document.subjects.reduce((count, subject) =>
     count + subject.items.filter((item) => !item.done).length, 0);
 }
+export function totalTaskCount(items) {
+  if (!Array.isArray(items)) return 0;
+  return items.filter((item) => item && item.parentId === null).length;
+}
+export function totalTaskCountLabel(count) {
+  const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  return normalized + " tâche" + (normalized > 1 ? "s" : "") + " au total";
+}
 export function nextActionSuggestion(document) {
   let best = null;
   let bestRank = null;
