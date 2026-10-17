@@ -35,7 +35,7 @@ Les formats et leurs validations se trouvent dans `site/core.js` et `tests/core.
 | Sujets et actions, priorité, terminer, modifier | `site/app.js` appelle les fonctions pures de `site/core.js` ; les données sont sauvegardées automatiquement |
 | Une sous-tâche par parent | `parentId` et `visibleItems` ; filtre de complétion appliqué à l'affichage |
 | Actions principales, ordre manuel | TS-011 : drag/pointer + « Monter / Descendre », même sujet et priorité |
-| Repli des sous-tâches | TS-012 : `collapsedParents` par onglet, `substepView`, `toggleCollapsedParent`, `aria-expanded` |
+| Repli des sous-tâches | TS-012/TS-021 : `expandedParents` par onglet (défaut replié), `substepView`, `toggleExpandedParent`, `isViewEntry`, `substepAncestorId`, `aria-expanded` |
 | Libellé du repli | TS-013 : `substepToggleLabel`, « Voir N sous-tâches » **lorsque replié**, « Masquer les sous-tâches » **lorsque déplié** ; décompte des enfants visibles |
 | Sous-tâches, ordre manuel | TS-014 : `reorderWithinPriority` et `moveWithinPriority` opèrent dans le groupe **même parent + même priorité**, sans déplacer d'autres groupes |
 | Masquer les étapes terminées | Filtre visuel, ne modifie pas les données ; interdit les réordonnancements tant qu'il est actif |
@@ -43,7 +43,7 @@ Les formats et leurs validations se trouvent dans `site/core.js` et `tests/core.
 | Suggestion / reprise | Calcul déterministe de la prochaine action ; suivi « Je reprends ici » distinct, fondé sur des IDs stables |
 | Export/import JSON | Sauvegarde manuelle portable ; import contrôlé et confirmé avant remplacement |
 
-Les sous-tâches masquées par repli **existent toujours** et conservent leur ordre ; une actualisation rouvre les parents mais garde les réordonnancements sauvegardés.
+Les sous-tâches masquées par repli **existent toujours** et conservent leur ordre ; une actualisation ou une entrée dans une vue replie les parents mais garde les réordonnancements sauvegardés.
 
 ## Développer et tester
 

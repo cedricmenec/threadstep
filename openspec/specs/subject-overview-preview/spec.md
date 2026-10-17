@@ -28,8 +28,10 @@ slot. The limit applies independently to each card.
 
 #### Scenario: Substeps do not consume a slot
 
-- **WHEN** a previewed task has many visible direct substeps
-- **THEN** the substeps stay rendered and do not reduce the five top-level entries
+- **WHEN** a previewed task has many visible direct substeps, whether the parent
+  is collapsed or expanded
+- **THEN** it still counts as one preview entry and does not reduce the five
+  top-level entries
 
 #### Scenario: Projects are independent
 

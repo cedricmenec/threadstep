@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { newItem, overviewPreview, substepView } from "../site/core.js";
 
 const app = readFileSync(new URL("../site/app.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../site/styles.css", import.meta.url), "utf8");
@@ -38,4 +39,20 @@ test("the « Voir plus » control offers a 44 × 44 px touch target", () => {
 
 test("the existing focus-visible outline still covers the new control", () => {
   assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:3px solid/);
+});
+
+test("a previewed parent and its substeps count as one entry whether collapsed or expanded", () => {
+  const items = [
+    newItem("Parent", "urgent", "p"),
+    newItem("Child one", "normal", "c1", "p"),
+    newItem("Child two", "normal", "c2", "p"),
+    newItem("Other", "normal", "o"),
+  ];
+  const collapsed = substepView(items, "p", false, new Set());
+  const expanded = substepView(items, "p", false, new Set(["p"]));
+  assert.equal(collapsed.collapsed, true);
+  assert.equal(expanded.collapsed, false);
+  const preview = overviewPreview(items);
+  assert.deepEqual(preview.shown.map((item) => item.id), ["p", "o"]);
+  assert.equal(preview.shown.length, 2);
 });

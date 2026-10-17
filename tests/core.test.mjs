@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -179,7 +179,7 @@ test("visibleItems does not mutate items and disabling restores full order", () 
   assert.deepEqual(visibleItems(items, null, false).map((x) => x.id), sortedItems(items).map((x) => x.id));
 });
 
-test("substepView offers a control only for a parent with visible substeps", () => {
+test("substepView collapses every parent when the expanded set is empty", () => {
   const items = [
     newItem("Parent", "normal", "p"),
     newItem("Enfant 1", "later", "c1", "p"),
@@ -189,11 +189,12 @@ test("substepView offers a control only for a parent with visible substeps", () 
   const withChildren = substepView(items, "p", false, new Set());
   assert.deepEqual(withChildren.children.map((x) => x.id), ["c2", "c1"]);
   assert.equal(withChildren.hasVisibleSubsteps, true);
-  assert.equal(withChildren.collapsed, false);
-  assert.equal(withChildren.renderChildren, true);
+  assert.equal(withChildren.collapsed, true);
+  assert.equal(withChildren.renderChildren, false);
   const withoutChildren = substepView(items, "alone", false, new Set());
   assert.deepEqual(withoutChildren.children, []);
   assert.equal(withoutChildren.hasVisibleSubsteps, false);
+  assert.equal(withoutChildren.collapsed, false);
   assert.equal(withoutChildren.renderChildren, false);
   const substepAsParent = substepView(items, "c1", false, new Set());
   assert.deepEqual(substepAsParent.children, []);
@@ -205,7 +206,7 @@ test("substepView offers a control only for a parent with visible substeps", () 
   assert.equal(noParent.renderChildren, false);
 });
 
-test("substepView collapses only the targeted parent and never mutates inputs", () => {
+test("substepView expands only the parent whose id is in the expanded set and never mutates inputs", () => {
   const items = [
     newItem("A", "normal", "a"),
     newItem("B", "normal", "b"),
@@ -213,25 +214,65 @@ test("substepView collapses only the targeted parent and never mutates inputs", 
     newItem("b1", "normal", "b1", "b"),
   ];
   const snapshot = JSON.parse(JSON.stringify(items));
-  const collapsedIds = new Set(["a"]);
-  const a = substepView(items, "a", false, collapsedIds);
-  assert.equal(a.collapsed, true);
-  assert.equal(a.renderChildren, false);
+  const expandedIds = new Set(["a"]);
+  const a = substepView(items, "a", false, expandedIds);
+  assert.equal(a.collapsed, false);
+  assert.equal(a.renderChildren, true);
   assert.equal(a.hasVisibleSubsteps, true);
-  const b = substepView(items, "b", false, collapsedIds);
-  assert.equal(b.collapsed, false);
-  assert.equal(b.renderChildren, true);
+  const b = substepView(items, "b", false, expandedIds);
+  assert.equal(b.collapsed, true);
+  assert.equal(b.renderChildren, false);
   assert.deepEqual(b.children.map((x) => x.id), ["b1"]);
   assert.deepEqual(items, snapshot);
-  assert.deepEqual([...collapsedIds], ["a"]);
-  const collapsed = toggleCollapsedParent(new Set(), "a");
-  assert.deepEqual([...collapsed], ["a"]);
-  const expanded = toggleCollapsedParent(collapsed, "a");
-  assert.deepEqual([...expanded], []);
-  const both = toggleCollapsedParent(collapsed, "b");
+  assert.deepEqual([...expandedIds], ["a"]);
+  const expanded = toggleExpandedParent(new Set(), "a");
+  assert.deepEqual([...expanded], ["a"]);
+  const collapsed = toggleExpandedParent(expanded, "a");
+  assert.deepEqual([...collapsed], []);
+  const both = toggleExpandedParent(expanded, "b");
   assert.deepEqual([...both].sort(), ["a", "b"]);
-  assert.deepEqual([...collapsed], ["a"]);
-  assert.deepEqual([...toggleCollapsedParent(null, "x")], ["x"]);
+  assert.deepEqual([...expanded], ["a"]);
+  assert.deepEqual([...toggleExpandedParent(null, "x")], ["x"]);
+});
+
+test("a parent that first receives a substep stays collapsed with an empty expanded set", () => {
+  const items = [newItem("Parent", "normal", "p")];
+  assert.equal(substepView(items, "p", false, new Set()).hasVisibleSubsteps, false);
+  items.push(newItem("Nouvelle sous-étape", "normal", "c1", "p"));
+  const afterAdd = substepView(items, "p", false, new Set());
+  assert.equal(afterAdd.hasVisibleSubsteps, true);
+  assert.equal(afterAdd.collapsed, true);
+  assert.equal(afterAdd.renderChildren, false);
+  assert.equal(substepToggleLabel(afterAdd.children.length, afterAdd.collapsed), "Voir 1 sous-tâche");
+});
+
+test("substepAncestorId returns the parent of a direct substep and null otherwise", () => {
+  const items = [
+    newItem("Parent", "normal", "p"),
+    newItem("Enfant", "later", "c1", "p"),
+  ];
+  assert.equal(substepAncestorId(items, "c1"), "p");
+  assert.equal(substepAncestorId(items, "p"), null);
+  assert.equal(substepAncestorId(items, "missing"), null);
+  assert.equal(substepAncestorId(null, "c1"), null);
+  assert.equal(substepAncestorId(undefined, "c1"), null);
+  assert.equal(substepAncestorId([], "c1"), null);
+  const snapshot = JSON.parse(JSON.stringify(items));
+  substepAncestorId(items, "c1");
+  substepAncestorId(items, "missing");
+  assert.deepEqual(items, snapshot);
+});
+
+test("isViewEntry is true only when the parsed view changes", () => {
+  assert.equal(isViewEntry({ view: "overview" }, { view: "overview" }), false);
+  assert.equal(isViewEntry({ view: "subject", subjectId: "a" }, { view: "subject", subjectId: "a" }), false);
+  assert.equal(isViewEntry({ view: "invalid" }, { view: "invalid" }), false);
+  assert.equal(isViewEntry(undefined, undefined), false);
+  assert.equal(isViewEntry({ view: "overview" }, { view: "subject", subjectId: "a" }), true);
+  assert.equal(isViewEntry({ view: "subject", subjectId: "a" }, { view: "overview" }), true);
+  assert.equal(isViewEntry({ view: "subject", subjectId: "a" }, { view: "subject", subjectId: "b" }), true);
+  assert.equal(isViewEntry({ view: "invalid" }, { view: "overview" }), true);
+  assert.equal(isViewEntry(null, { view: "overview" }), true);
 });
 
 test("substepView respects the completion filter without revealing hidden substeps", () => {
@@ -241,10 +282,13 @@ test("substepView respects the completion filter without revealing hidden subste
     newItem("À faire", "normal", "c2", "p"),
   ];
   items[1].done = true;
-  const filtered = substepView(items, "p", true, new Set());
+  const filtered = substepView(items, "p", true, new Set(["p"]));
   assert.deepEqual(filtered.children.map((x) => x.id), ["c2"]);
   assert.equal(filtered.hasVisibleSubsteps, true);
+  assert.equal(filtered.collapsed, false);
   assert.equal(filtered.renderChildren, true);
+  const collapsedFiltered = substepView(items, "p", true, new Set());
+  assert.equal(collapsedFiltered.renderChildren, false);
   const allDone = [
     newItem("Parent", "normal", "p"),
     newItem("Fait 1", "normal", "c1", "p"),
@@ -252,7 +296,7 @@ test("substepView respects the completion filter without revealing hidden subste
   ];
   allDone[1].done = true;
   allDone[2].done = true;
-  const hidden = substepView(allDone, "p", true, new Set(["p"]));
+  const hidden = substepView(allDone, "p", true, new Set());
   assert.deepEqual(hidden.children, []);
   assert.equal(hidden.hasVisibleSubsteps, false);
   assert.equal(hidden.collapsed, false);
@@ -280,10 +324,10 @@ test("substepToggleLabel count follows the completion filter and matches substep
     newItem("Trois", "normal", "c3", "p"),
   ];
   items[3].done = true;
-  const unfiltered = substepView(items, "p", false, new Set(["p"]));
+  const unfiltered = substepView(items, "p", false, new Set());
   assert.equal(unfiltered.children.length, 3);
   assert.equal(substepToggleLabel(unfiltered.children.length, unfiltered.collapsed), "Voir 3 sous-tâches");
-  const filtered = substepView(items, "p", true, new Set(["p"]));
+  const filtered = substepView(items, "p", true, new Set());
   assert.equal(filtered.children.length, 2);
   assert.equal(substepToggleLabel(filtered.children.length, filtered.collapsed), "Voir 2 sous-tâches");
   const allDone = [
@@ -296,19 +340,19 @@ test("substepToggleLabel count follows the completion filter and matches substep
   assert.deepEqual(noneVisible.children, []);
 });
 
-test("substepView and substepToggleLabel never mutate items or the collapsed set", () => {
+test("substepView and substepToggleLabel never mutate items or the expanded set", () => {
   const items = [
     newItem("Parent", "normal", "p"),
     newItem("Enfant", "later", "c1", "p"),
   ];
   const snapshot = JSON.parse(JSON.stringify(items));
-  const collapsedIds = new Set(["p"]);
-  const before = [...collapsedIds];
-  const view = substepView(items, "p", false, collapsedIds);
+  const expandedIds = new Set(["p"]);
+  const before = [...expandedIds];
+  const view = substepView(items, "p", false, expandedIds);
   substepToggleLabel(view.children.length, view.collapsed);
-  assert.equal(view.collapsed, true);
+  assert.equal(view.collapsed, false);
   assert.deepEqual(items, snapshot);
-  assert.deepEqual([...collapsedIds], before);
+  assert.deepEqual([...expandedIds], before);
 });
 
 test("import rejects invalid hierarchy, IDs and versions", () => {

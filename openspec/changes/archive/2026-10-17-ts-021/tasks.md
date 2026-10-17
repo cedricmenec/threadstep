@@ -2,20 +2,20 @@
 
 ## 1. Core collapse model (default collapsed)
 
-- [ ] 1.1 Change `site/core.js` so `substepView(items, parentId, hideCompleted, expandedIds)` treats a parent as collapsed unless its id is in the expanded set, replacing `toggleCollapsedParent` with `toggleExpandedParent`, and add `substepAncestorId(items, itemId)` plus `isViewEntry(previousRoute, nextRoute)`; verify with deterministic Node unit tests in `tests/core.test.mjs`.
-- [ ] 1.2 Add deterministic Node tests to `tests/core.test.mjs` covering the empty expanded set rendering all parents collapsed, per-parent toggle independence, completion-filter counts, `substepAncestorId` for a substep/top-level/missing id, `isViewEntry` for same-view and changed-view routes, and non-mutation of `items` and the expanded set; run `node --test tests/core.test.mjs` and report the result.
+- [x] 1.1 Change `site/core.js` so `substepView(items, parentId, hideCompleted, expandedIds)` treats a parent as collapsed unless its id is in the expanded set, replacing `toggleCollapsedParent` with `toggleExpandedParent`, and add `substepAncestorId(items, itemId)` plus `isViewEntry(previousRoute, nextRoute)`; verify with deterministic Node unit tests in `tests/core.test.mjs`.
+- [x] 1.2 Add deterministic Node tests to `tests/core.test.mjs` covering the empty expanded set rendering all parents collapsed, per-parent toggle independence, completion-filter counts, `substepAncestorId` for a substep/top-level/missing id, `isViewEntry` for same-view and changed-view routes, and non-mutation of `items` and the expanded set; run `node --test tests/core.test.mjs` and report the result.
 
 ## 2. App state and view transitions
 
-- [ ] 2.1 Replace `collapsedParents` with an empty `expandedParents` set in `site/app.js` and update `renderItem`/`renderSubstepToggle` to the expanded-set API; verify with a Node static-assertion test that reads `site/app.js` and with `node --check site/app.js`.
-- [ ] 2.2 Reset `expandedParents` only when the parsed route changes in the `hashchange` handler, and also on `load()` and successful import, while leaving same-route `navigate()` and ordinary re-renders untouched; verify with deterministic Node assertions over the route-transition helper logic and static assertions on `site/app.js`.
-- [ ] 2.3 Ensure a parent that first receives a substep stays collapsed and that an explicit reveal of a hidden substep temporarily adds its ancestor to `expandedParents` before render; verify with Node unit/static tests over `substepAncestorId` usage and the reveal path.
-- [ ] 2.4 Add the deterministic app-wiring test to the `tests/` suite (default `expandedParents`, route-change reset, reveal ancestor call, no `.innerHTML`) and run `node --test tests/*.test.mjs`; report the result.
+- [x] 2.1 Replace `collapsedParents` with an empty `expandedParents` set in `site/app.js` and update `renderItem`/`renderSubstepToggle` to the expanded-set API; verify with a Node static-assertion test that reads `site/app.js` and with `node --check site/app.js`.
+- [x] 2.2 Reset `expandedParents` only when the parsed route changes in the `hashchange` handler, and also on `load()` and successful import, while leaving same-route `navigate()` and ordinary re-renders untouched; verify with deterministic Node assertions over the route-transition helper logic and static assertions on `site/app.js`.
+- [x] 2.3 Ensure a parent that first receives a substep stays collapsed and that an explicit reveal of a hidden substep temporarily adds its ancestor to `expandedParents` before render; verify with Node unit/static tests over `substepAncestorId` usage and the reveal path.
+- [x] 2.4 Add the deterministic app-wiring test to the `tests/` suite (default `expandedParents`, route-change reset, reveal ancestor call, no `.innerHTML`) and run `node --test tests/*.test.mjs`; report the result.
 
 ## 3. Documentation and final gate
 
-- [ ] 3.1 Update `docs/product/mvp.md` FR-16 and `docs/product/guide-utilisation.md` to state that substeps start collapsed and reset on each view entry; verify with a deterministic test or grep assertion that the old "start expanded" default is no longer documented.
-- [ ] 3.2 Run `npm run check` and `openspec validate ts-021 --strict --no-interactive`, report the exact commands and their real output, and do not mark any earlier task complete if either fails.
+- [x] 3.1 Update `docs/product/mvp.md` FR-16 and `docs/product/guide-utilisation.md` to state that substeps start collapsed and reset on each view entry; verify with a deterministic test or grep assertion that the old "start expanded" default is no longer documented.
+- [x] 3.2 Run `npm run check` and `openspec validate ts-021 --strict --no-interactive`, report the exact commands and their real output, and do not mark any earlier task complete if either fails.
 
 ## Manual acceptance
 
