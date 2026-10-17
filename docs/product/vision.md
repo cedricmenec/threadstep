@@ -6,7 +6,7 @@ ThreadStep helps one person keep track of their **next concrete action** across 
 A conventional task manager often demands too much ceremony. A Markdown document works, but requires manual restructuring to make next steps visible.
 
 ## Users
-Initially a single user on desktop or mobile, without an account.
+Initially one person on desktop or mobile, without an account in the original MVP. The Dexie Cloud target stays individual-first but introduces native email OTP for synchronization.
 
 ## Core value
 Open the page and immediately know what to resume next for each active subject.
@@ -16,14 +16,25 @@ Open the page and immediately know what to resume next for each active subject.
 - One subject can contain several next actions and one level of substeps.
 - Priorities: urgent, normal, later. Unfinished actions first through visual distinction.
 - No mandatory due date, status workflow, sprint, team or notifications.
-- Private user data stays inside local browser storage.
-- Explicit JSON export/import for portable backups; no cross-device sync in MVP.
+- Local-first storage remains central. The future Dexie Cloud synchronization is configured explicitly, with authentication and consent before transmitting historical local data.
+- Explicit JSON export/import for portable backups. Cross-device sync was outside the original MVP, but is in scope for the separately specified evolution.
 
 ## Non-goals
-Collaboration, authentication, remote synchronization, hosted database, project accounting, AI in the browser.
+Collaboration, project accounting and AI in the browser. Authentication, synchronization and hosted storage were excluded from the historical MVP only and are now in scope for the Dexie Cloud evolution.
 
 ## Success criterion for experiment
 A publicly hosted static app usable from a phone, with creation, completion and deletion of subjects/actions, priorities, substeps, persistence, backup/restore, tests and automated deployment.
+
+## Évolution cible local-first (cadrée le 17 octobre 2026)
+
+La [spécification normative Dexie Cloud](specs/dexie-cloud-local-first.md)
+et [son plan de livraison](dexie-cloud-rollout.md) définissent désormais
+l'évolution future : IndexedDB/Dexie.js, synchronisation cloud,
+authentification email OTP native et migration non destructive des
+données localStorage, avec consentement explicite avant leur transfert.
+Les tâches TS-024 à TS-030 restent **proposées, non livrées**.
+Ces exigences prévalent sur les anciens non-objectifs du MVP pour
+ce périmètre seulement, sans fixer de règles générales à la factory.
 
 ## État du pilote (16 octobre 2026)
 

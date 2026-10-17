@@ -7,6 +7,7 @@
 | Besoin | Guide |
 | --- | --- |
 | Comprendre les composants, le code et les contrôles | [Guide développeur ASF](developer-guide.md) |
+| Séparer instructions d'agent et exigences produit | [Périmètre du contrat AGENTS.md](agent-contract-scope.md) |
 | Vérifier l'état, les SHAs, PR et runs de référence | [État courant](current-state.md) |
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
 | Consulter la décision formelle de clôture | [Rapport ASF V2 du 16 octobre 2026](closeout-2026-10-16.md) |

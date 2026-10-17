@@ -1,5 +1,14 @@
 # MVP specification
 
+**Ce document décrit le MVP et ses extensions historiques, pas une
+interdiction pour les fonctionnalités futures.** Ses règles de
+persistance `localStorage` restent le contrat du code actuel.
+La [spécification Dexie Cloud](specs/dexie-cloud-local-first.md)
+et le [plan de migration](dexie-cloud-rollout.md) définissent
+l'évolution TS-024 à TS-030 (IndexedDB, OTP, synchronisation),
+**non encore implémentée**. Ne pas lire les non-objectifs du MVP
+comme une politique d'agent ou comme un veto technologique.
+
 **État : 16 octobre 2026.** Les fonctions FR-02/15 sont livrées par
 les PR #32/#34. FR-16 (repli et nombre de sous-tâches, TS-012/TS-013)
 et FR-17 (réordonnancement des sous-tâches TS-014) sont livrées par

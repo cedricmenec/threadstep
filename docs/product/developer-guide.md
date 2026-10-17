@@ -59,10 +59,25 @@ La suite est basée sur `node --test tests/*.test.mjs`. Ne pas modifier `backlog
 
 Toutes les modifications passent par une branche et PR ; les workflows CI et Pages fournissent une preuve indépendante après fusion. Les tâches produit `TS-NNN` sont spécifiées sous `backlog/tasks/` ; les spécifications canoniques OpenSpec vivent sous `openspec/specs/`, leur historique sous `openspec/changes/archive/`.
 
-## Frontières de sécurité
+## Frontières de sécurité et évolution
 
-Pas de compte, de synchronisation cloud, de télémétrie, de dépendance serveur, d'IA front-end ou de nouvelle version JSON sans migration approuvée. Les clés OpenRouter sont uniquement utilisées par la **factory**, dans GitHub Actions. L'application finale ne les reçoit jamais.
+**État courant du pilote :** pas de compte ni de synchronisation ;
+la CSP bloque les connexions sortantes et les données demeurent
+dans le navigateur. C'est une **observation historique du code**,
+pas une contrainte permanente pour toutes les fonctionnalités.
+
+**Cible Dexie Cloud, non déployée :** la
+[spécification normative](specs/dexie-cloud-local-first.md)
+autorise et exige dans son périmètre IndexedDB/Dexie.js,
+authentification OTP email native et synchronisation.
+Le [plan de livraison](dexie-cloud-rollout.md) demande des origines
+et URL contrôlées, une CSP adaptée sans ouverture superflue,
+aucun secret côté client, une migration non destructive et
+le consentement avant transfert des anciennes données.
+Les clés OpenRouter restent réservées à la **factory** sur GitHub
+Actions. Aucun format JSON incompatible ne doit être livré
+sans migration et vérification explicites.
 
 ## Documentation liée
 
-[Guide utilisateur](guide-utilisation.md) · [Exigences MVP](mvp.md) · [Recette fonctionnelle](acceptance-checklist.md) · [Vision](vision.md) · [Architecture générale](../architecture.md) · [ASF développeur](../factory/developer-guide.md).
+[Guide utilisateur](guide-utilisation.md) · [Exigences MVP historiques](mvp.md) · [Cible Dexie Cloud](specs/dexie-cloud-local-first.md) · [Recette fonctionnelle](acceptance-checklist.md) · [Vision](vision.md) · [Architecture générale](../architecture.md) · [ASF développeur](../factory/developer-guide.md).

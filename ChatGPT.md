@@ -9,15 +9,19 @@
 ## 1. Identifier le projet et les règles
 
 - Dépôt pilote : [`cedricmenec/threadstep`](https://github.com/cedricmenec/threadstep).
-  **ThreadStep** est une application Web statique, locale au navigateur.
+  **ThreadStep** est actuellement une application statique avec
+  persistance locale dans le navigateur. La cible Dexie Cloud est décrite
+  dans [sa spécification](docs/product/specs/dexie-cloud-local-first.md)
+  et [son plan de migration](docs/product/dexie-cloud-rollout.md).
+  Ne pas confondre état livré, ancien MVP et évolution non implémentée.
   L'**Autonomous Software Factory (ASF)** est la méthode et
   l'infrastructure de développement pilotées par GitHub Actions,
   OpenCode, OpenRouter et, pour les changements fonctionnels, OpenSpec.
   La factory est destinée à être **réutilisable avec d'autres produits** :
   ne pas généraliser les règles métiers de ThreadStep à la factory.
 - **Lire impérativement [`AGENTS.md`](AGENTS.md) avant tout changement.**
-  C'est le contrat du dépôt : sécurité, protection des fichiers, tests,
-  consignes des agents et protocole de préparation des tâches.
+  C'est le contrat d'exécution de l'agent : sécurité, protection des
+  fichiers, tests et modes opératoires, **pas une politique produit**.
   En cas de divergence, vérifier le code et le workflow en vigueur ;
   ne pas inventer une permission à partir de ce document.
 - La demande de l'utilisateur détermine le **périmètre autorisé**.
