@@ -7,7 +7,7 @@ import { attemptV3ChildClaim, attemptV3ControllerAttach }
 const REPO = "cedricmenec/threadstep";
 const WAVE = "wave-123";
 const OWNER_REF = REPO + "/.github/workflows/backlog-orchestrator-v3.yml@refs/heads/main";
-const CHILD_REF = REPO + "/.github/workflows/agent-openspec.yml@refs/heads/main";
+const CHILD_REF = REPO + "/.github/workflows/agent-openspec-v3.yml@refs/heads/main";
 const OWNER = "cedricmenec";
 const BOT = "threadstep-software-factory[bot]";
 const S = ch => ch.repeat(40);
@@ -82,7 +82,7 @@ function createPorts({ initial, proof = "ok", commitResult = "ok",
         verifiedHeadSha: EXECUTION_SHA,
         workflowEvent: input.kind === "child" ? "workflow_dispatch" : "repository_dispatch",
         workflowPath: input.kind === "child" ?
-          ".github/workflows/agent-openspec.yml" :
+          ".github/workflows/agent-openspec-v3.yml" :
           ".github/workflows/backlog-orchestrator-v3.yml",
         observationHash: "e".repeat(64)
       };
