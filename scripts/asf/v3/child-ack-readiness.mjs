@@ -135,7 +135,14 @@ export async function observeV3GithubChildAckReadiness({
  try{
   global=registryFromFile(await readClient.get(
    BASE+"/contents/registry.json?ref="+globalSha));
- }catch{return reject("child_global_registry_invalid");}
+ }catch(cause){
+  const known=new Set(["bad_registry_metadata","bad_registry_base64",
+   "bad_registry_bytes","invalid_fields","invalid_registry",
+   "registry_replay_divergence","event_sequence_corrupted",
+   "invalid_wave_claim"]);
+  return reject(known.has(cause?.message)?
+   "child_global_"+cause.message:"child_global_registry_invalid");
+ }
  const {manifest,journal}=wave,manifestHash=contentSha256(manifest);
  if(global.state!=="ACTIVE"||global.active?.waveId!==inputs.wave_id||
     global.active.manifestHash!==manifestHash||
