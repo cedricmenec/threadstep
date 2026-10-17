@@ -19,7 +19,7 @@ const main=()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
 const global=()=>rule(2,ADMISSION_REGISTRY_REF,
  ["update"],
- [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}]);
+ [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
 const immutable=()=>rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]);
 function fixture({exists=false,registry=createAdmissionRegistry(),
  policyMissing=false,refMoves=false,mainMoves=false,
