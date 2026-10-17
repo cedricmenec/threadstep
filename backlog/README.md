@@ -20,6 +20,18 @@
   indentation et espacement, sur mobile et desktop, sans changement
   des règles métier.
 
+
+**Préparation OpenSpec (17 octobre 2026)** : les quatre briefs TS-017 à
+TS-020 distinguent désormais critères fonctionnels, sous-tâches
+automatisables avant finalisation et recette manuelle post-publication
+non cochable. La recette humaine et les checks CI/Pages restent requis
+pour la validation réelle, mais ne sont **pas** des cases d'implémentation
+qu'un agent devrait prétendre avoir exécutées. Le plan durable de
+correction de la factory est consigné dans
+[Notion DEV / Projets / ASF](https://app.notion.com/p/3fc12ac9163681e0ba61ca7e6a93a767).
+Les briefs seuls ne garantissent pas la qualité d'un futur plan auto :
+relire `tasks.md` avant toute phase payante d'implémentation.
+
 Ces quatre fiches sont `product / ready / allowed / low` avec
 périmètres bornés et critères de non-régression. Les tâches sont
 indépendantes à ce stade et ne créent **aucun agent payant**.
