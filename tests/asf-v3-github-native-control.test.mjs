@@ -44,7 +44,7 @@ const rule = (id,name,types,bypass=[])=>({
 const mainRule = ()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
 const globalRule = ()=>rule(2,ADMISSION_REGISTRY_REF,
- ["update"],
+ ["creation","update"],
  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
 const immutableRule = ()=>rule(3,ADMISSION_REGISTRY_REF,
  ["deletion","non_fast_forward"]);
