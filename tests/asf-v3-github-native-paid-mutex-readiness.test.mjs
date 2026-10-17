@@ -64,7 +64,7 @@ test("any V1 job dropping/changing the paid mutex prevents a V3 readiness claim"
  for(const path of files){
   for(const [from,to] of [
    ["threadstep-paid-development-v1","other-paid-lock"],
-   ["cancel-in-progress: false","cancel-in-progress: true"],
+   ["      cancel-in-progress: false","      cancel-in-progress: true"],
    ["      group: threadstep-paid-development-v1",""],
    ["    concurrency:","    locks:"]
   ]){
