@@ -2,6 +2,8 @@
 
 **Statut : fixtures inertes stockées dans la documentation, pas dans `.github/workflows/` de `threadstep`. Aucun run réel n'est déclenché ni prouvé par cette PR.**
 
+**Qualification CI :** le test Node des fixtures appelle explicitement `actionlint` sur chacun des trois YAML depuis `stdin`, avec le binaire installé par la CI existante. L'absence d'`actionlint` est bloquante dans GitHub Actions ; seul un environnement local sans l'outil peut ignorer ce test. Le laboratoire réel M01–M07 reste un travail distinct.
+
 Ce jeu de trois fichiers est destiné **uniquement** à un futur dépôt de laboratoire distinct, nommé exactement `asf-v3-mutex-lab`, après autorisation du propriétaire. Il met en pratique le protocole [ASF-V3-027](../../v3-paid-mutex-concurrency-validation.md) issu de [#120](https://github.com/cedricmenec/threadstep/pull/120). La PR [#112](https://github.com/cedricmenec/threadstep/pull/112) contrôle le contrat statique du verrou en production. La présente PR ne déploie aucun code ni workflow réel.
 
 ## Fichiers
