@@ -15,7 +15,7 @@ const TASK = /^TS-[0-9]{3}$/;
 const RUN = /^[1-9][0-9]{0,17}$/;
 const SHA = /^[a-f0-9]{40}$/;
 const BOT = "threadstep-software-factory[bot]";
-const CHILD_REF = ".github/workflows/agent-openspec.yml@refs/heads/main";
+const CHILD_REF = ".github/workflows/agent-openspec-v3.yml@refs/heads/main";
 const CONTROLLER_REF = ".github/workflows/backlog-orchestrator-v3.yml@refs/heads/main";
 const gate = (status, code, info = {}) =>
   Object.freeze({ ok: status === "checkpoint_committed", status, code, ...info });
