@@ -1,5 +1,15 @@
 # Backlog ThreadStep
 
+## Évolutions à développer le 17 octobre 2026 (briefs uniquement)
+
+- **[TS-021](tasks/TS-021.md) : repli initial des sous-tâches.** Chaque ouverture de l'overview ou d'une vue détail présente les enfants repliés ; une expansion volontaire reste valable jusqu'à la prochaine navigation, sans modifier le stockage.
+- **[TS-022](tasks/TS-022.md) : promotion d'une sous-tâche en tâche principale.** Changer uniquement sa parenté, préserver identité, contenu, priorité et état, garder les autres enfants liés à leur parent. **Risque modéré / exécution manuelle** en raison de l'impact sur les données.
+- **[TS-023](tasks/TS-023.md) : lignes compactes et menu d'actions ⋮.** Réduire la hauteur des commandes, regrouper les opérations, retirer les boutons haut/bas visibles tout en **conservant leur alternative clavier** ; dépend de TS-022. **Risque modéré / exécution manuelle** en raison des enjeux d'accessibilité.
+
+**Note facultative sur une sous-tâche : déjà livrée dans [TS-019](tasks/TS-019.md) via la [PR #89](https://github.com/cedricmenec/threadstep/pull/89).** Le champ `note` et son édition existent pour les deux niveaux, sans nouvelle tâche à créer. TS-017 à TS-020 ont aussi été livrées par les PR #84, #88, #89 et #90 ; leurs textes de préparation ci-dessous reflètent l'état documentaire au moment de leur rédaction, non un état actuel non livré.
+
+Ces trois nouveaux briefs sont **documentaires uniquement** : aucun code produit n'est changé, aucun appel OpenRouter/OpenSpec payant n'est déclenché par leur création. La livraison effective dépend de futurs runs autorisés et de PR distinctes.
+
 ## Nouvelles évolutions proposées le 17 octobre 2026 (non implémentées)
 
 - **[TS-017](tasks/TS-017.md) : aperçu de cinq tâches par projet.**
