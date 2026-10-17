@@ -20,7 +20,7 @@ function prepared(){
  return s;
 }
 const begin=s=>add(s,{type:"BEGIN_CREATE_ATTEMPT",
- commitSha:COMMIT,globalRef:ADMISSION_REGISTRY_REF});
+ commitSha:COMMIT,globalRef:ADMISSION_REGISTRY_REF,ownerRunId:"88312"});
 const ack=s=>add(s,{type:"CREATE_ACK",commitSha:COMMIT,
  globalRef:ADMISSION_REGISTRY_REF});
 const match=s=>add(s,{type:"READBACK_MATCH",commitSha:COMMIT,
@@ -118,6 +118,18 @@ test("commit must bind exact first staged tree and source parent",()=>{
   assert.throws(()=>add(s,e),{code:"commit_stage_refused"});
  }
 });
+test("genesis attempt must pin its owner run to the exact replayed plan",()=>{
+ const base=prepared();
+ assert.throws(()=>add(base,{type:"BEGIN_CREATE_ATTEMPT",
+  commitSha:COMMIT,globalRef:ADMISSION_REGISTRY_REF,ownerRunId:"88313"}),{
+  code:"one_shot_create_guard_refused"
+ });
+ const persisted=begin(base);
+ assert.throws(()=>replayV3GenesisAttempt({...persisted,ownerRunId:"88313"}),{
+  code:"one_shot_create_guard_refused"
+ });
+ noRights(inspectV3GenesisAttempt(persisted));
+});
 test("readback cannot claim another registry, global ref, origin or commit",()=>{
  for(const patch of [
   {registryHash:"f".repeat(64)},
@@ -168,9 +180,9 @@ test("unknown event, invalid secret fields and extra event keys are always refus
  for(const event of [
   {type:"CREATE_REF_AGAIN"},
   {type:"BEGIN_CREATE_ATTEMPT",commitSha:COMMIT,
-   globalRef:ADMISSION_REGISTRY_REF,token:"github_pat_should_not_be_here"},
+   globalRef:ADMISSION_REGISTRY_REF,ownerRunId:"88312",token:"github_pat_should_not_be_here"},
   {type:"BEGIN_CREATE_ATTEMPT",commitSha:COMMIT,
-   globalRef:ADMISSION_REGISTRY_REF,unauthorized:true},
+   globalRef:ADMISSION_REGISTRY_REF,ownerRunId:"88312",unauthorized:true},
   {type:"MARK_UNKNOWN",reason:"timeout"},
   {type:"READBACK_MATCH",commitSha:COMMIT}
  ]){
