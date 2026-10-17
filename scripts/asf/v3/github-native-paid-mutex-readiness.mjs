@@ -92,7 +92,11 @@ export function inspectV3SharedPaidMutexLayout({v1,v3}={}){
    typeof v3!=="string")
   return deny("mutex_workflow_sources_missing");
  for(const path of names){
-  if(!paidJobLock(v1[path],"develop"))
+  // OpenSpec's paid job is named staged-development; the other two use
+  // develop. Compare the actual charged job, not a guessed common label.
+  const jobId=path.endsWith("/agent-openspec.yml")?
+    "staged-development":"develop";
+  if(!paidJobLock(v1[path],jobId))
    return deny("v1_paid_job_lock_mismatched_or_missing");
  }
  if(jobBlock(v3,"child-preflight")===null)
