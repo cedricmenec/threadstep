@@ -25,6 +25,39 @@ CSP `connect-src https://*.dexie.cloud wss://*.dexie.cloud` : seuls les hôtes D
 
 Le socle local-first est amorcé par `site/dexie-foundation.js` : `validateCloudUrl` n'accepte qu'une URL HTTPS sous `dexie.cloud` (validation purement syntaxique, sans réseau), `shouldOpenSyncedDatabase` et `cloudConfigureOptions` produisent `{ databaseUrl, requireAuth: true }` sans désactiver `nameSuffix`, et `dexieSchema` déclare une version entière explicite avec des magasins synchronisés à identifiants uniques `@id` (jamais `++id`). L'URL est conservée en local sous la clé non synchronisée `threadstep.cloud.config.v1`, distincte de `threadstep.document.v1` et absente de l'export JSON. `site/app.js` ne construit et ne configure la base synchronisée que derrière `shouldOpenSyncedDatabase` ; sans URL valide, un formulaire de configuration accessible est présenté et aucune opération métier Dexie n'est exécutée. Les dépendances `dexie` et `dexie-cloud-addon` sont épinglées dans `package.json`/`package-lock.json` et livrées en ESM local `site/vendor/dexie-cloud.mjs` (`npm run vendor:build`), sans CDN tiers à l'exécution. Aucun secret, fichier `dexie-cloud.key`/`dexie-cloud.json`, jeton d'administration ni URL d'instance imposée ne doit être livré.
 
+## Persistance métier local-first (TS-025)
+
+`site/persistence.js` est le module pur de persistance métier. Il projette le
+document V1 en **entités fines** : un enregistrement `subjects` par sujet et un
+enregistrement `items` par étape, avec identifiants stables globalement uniques,
+`subjectId`, `parentId`, `order`, `priority`, `done`, `title` et `note`
+facultative. `documentToRecords` et `recordsToDocument` reproduisent exactement
+la forme JSON V1, donc l'export/import et les références `parentId` restent
+inchangés. Les planificateurs de mutation (`planAddStep`, `planRenameSubject`,
+`planPromoteStep`, `planReorderStep`, `planRemoveStep`, `planRestoreRemoval`,
+`planImport`, etc.) réutilisent les fonctions pures de `site/core.js` puis
+calculent un diff : ils ne produisent que les opérations `put`/`delete` des
+enregistrements réellement modifiés, jamais un remplacement du document entier.
+C'est ce qui évite qu'un appareil écrase l'édition indépendante d'un autre.
+
+L'adaptateur de stockage est un contrat injectable `commit(operations)`.
+`createMemoryStore` en fournit une implémentation en mémoire déterministe pour
+les tests ; `site/app.js` l'implémente au-dessus de Dexie dans une transaction
+`rw`. Une écriture est confirmée localement dès la validation de la transaction,
+sans attendre d'accusé Dexie Cloud. Un échec IndexedDB est rejeté avec le type
+d'erreur `local`, distinct du type `sync` : il n'est jamais présenté comme un
+succès. La propagation multi-onglets passe par le canal de changement
+(`BroadcastChannel` et l'abonnement aux changements Dexie), et non uniquement
+par l'événement `storage`. Les préférences purement locales (`threadstep.resume.v1`)
+restent hors des tables synchronisées et hors de l'export.
+
+Une **garde de compatibilité** non destructive lit le document historique
+`threadstep.document.v1` sans jamais le supprimer ni le réécrire de façon
+destructive, et sans le transférer à Dexie Cloud sans consentement explicite :
+`site/app.js` conserve l'écriture locale V1 tant que la conversion explicite
+(TS-026) n'est pas livrée. La recette navigateur, hors ligne, multi-onglets et
+IndexedDB réel reste une validation manuelle.
+
 ## Modèle de données
 
 - Document versionné `threadstep.document.v1` dans le `localStorage`.
