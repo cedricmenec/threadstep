@@ -175,6 +175,16 @@ jobs:
             fi
             git checkout -b "$branch"
           fi
+          # Recognize a checkpoint saved by a PREVIOUS workflow invocation.
+          # finalize/apply resumes must report the remote SHA even on early failure.
+          last_message="$(git log -1 --format=%s)"
+          if [[ "$last_message" == "agent($TASK_ID): verified implementation checkpoint" ]]; then
+            echo "LAST_DURABLE_PHASE=apply" >> "$GITHUB_ENV"
+            echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          elif [[ "$last_message" == "agent($TASK_ID): validated OpenSpec plan checkpoint" ]]; then
+            echo "LAST_DURABLE_PHASE=plan" >> "$GITHUB_ENV"
+            echo "CHECKPOINT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          fi
           echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
           echo "CHANGE_ID=$(printf '%s' "$TASK_ID" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
 
@@ -454,7 +464,7 @@ jobs:
           test "$(git branch --show-current)" = "$AGENT_BRANCH" || {
             echo "::error::Work branch changed"; exit 1;
           }
-          changed="$( (git diff --name-only origin/main...HEAD; git diff --name-only; git ls-files --others --exclude-standard) | sort -u )"
+          changed="$( (git diff --no-renames --name-only origin/main...HEAD; git diff --no-renames --name-only; git ls-files --others --exclude-standard) | sort -u )"
           while IFS= read -r path; do
             [[ -z "$path" ]] && continue
             if [[ "$PHASE" == plan ]]; then
