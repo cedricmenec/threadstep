@@ -145,10 +145,12 @@ any substep.
 
 ### Requirement: Accessible move controls
 
-Every top-level action SHALL expose keyboard- and touch-operable French « Monter »
-and « Descendre » controls that move it exactly one rank inside its priority
-group, with accessible names naming the action and its priority, disabled at the
-group boundaries, never changing priority, and announcing success.
+Every top-level action SHALL expose, through its per-item actions menu,
+keyboard- and touch-operable French « Monter » and « Descendre » controls that
+move it exactly one rank inside its priority group, with accessible names naming
+the action and its priority, disabled at the group boundaries, never changing
+priority, and announcing success. The drag handle SHALL stay directly visible on
+the row.
 
 #### Scenario: Move one rank inside the group
 

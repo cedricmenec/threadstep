@@ -9,29 +9,29 @@ it after an interruption, reveal it accessibly and clear it safely.
 
 ### Requirement: Pin control on eligible actions
 
-Every unfinished top-level action SHALL expose a visible French control that
-defines it as the tracked action. The control MUST be operable by keyboard and
-by touch and MUST expose an accessible name naming the action. Completed
-top-level actions and substeps MUST NOT expose this control.
+Every unfinished top-level action SHALL expose, through its per-item actions
+menu, a French control that defines it as the tracked action. The command MUST be
+operable by keyboard and by touch and MUST expose an accessible name naming the
+action. Completed top-level actions and substeps MUST NOT expose this command.
 
 #### Scenario: Unfinished top-level action offers the control
 
 - **GIVEN** a subject displays an unfinished top-level action
 - **WHEN** the list is rendered
-- **THEN** that action shows a « Garder le fil » control with an accessible name
+- **THEN** that action offers a « Garder le fil » command in its actions menu with an accessible name
   naming the action
 
 #### Scenario: Substeps are not eligible
 
 - **GIVEN** a subject displays a substep
 - **WHEN** the list is rendered
-- **THEN** the substep shows no « Garder le fil » control
+- **THEN** the substep offers no « Garder le fil » command
 
 #### Scenario: Completed top-level actions are not eligible
 
 - **GIVEN** a top-level action is done
 - **WHEN** the list is rendered
-- **THEN** that completed action shows no « Garder le fil » control
+- **THEN** that completed action offers no « Garder le fil » command
 
 #### Scenario: Keyboard activation
 

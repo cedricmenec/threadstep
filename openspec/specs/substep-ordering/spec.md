@@ -10,11 +10,12 @@ hierarchy, priorities and stored data stay untouched.
 
 ### Requirement: Handle and move controls on one-level substeps
 
-Every one-level substep SHALL render a visible French drag handle and accessible
-« Monter » / « Descendre » controls. The handle MUST be at least 44 × 44 px and
-MUST begin a pointer drag without triggering editing, removal or completion.
-Controls MUST NOT be offered on an item without a parent. A handle MUST move its
-substep only inside its own parent and priority group.
+Every one-level substep SHALL render a visible French drag handle on its row and
+SHALL expose accessible « Monter » / « Descendre » commands through its per-item
+actions menu. The handle MUST be at least 44 × 44 px and MUST begin a pointer
+drag without triggering editing, removal or completion. Controls MUST NOT be
+offered on an item without a parent. A handle MUST move its substep only inside
+its own parent and priority group.
 
 #### Scenario: Substeps show a handle
 
@@ -31,8 +32,8 @@ substep only inside its own parent and priority group.
 #### Scenario: Top-level actions keep their own controls
 
 - **WHEN** a top-level action is rendered
-- **THEN** it shows the top-level handle and move controls as before, not the
-  substep controls
+- **THEN** it shows the top-level handle and offers the top-level move commands
+  through its menu, not the substep controls
 
 #### Scenario: Handle does not trigger other controls
 
@@ -189,11 +190,11 @@ or its accessible names.
 
 ### Requirement: Accessible move controls
 
-Every substep SHALL expose keyboard- and touch-operable French « Monter » and
-« Descendre » controls that move it exactly one rank inside its parent and
-priority group, with accessible names naming the substep, its priority and its
-parent, disabled at the group boundaries, never changing priority, and announcing
-success.
+Every substep SHALL expose, through its per-item actions menu, keyboard- and
+touch-operable French « Monter » and « Descendre » controls that move it exactly
+one rank inside its parent and priority group, with accessible names naming the
+substep, its priority and its parent, disabled at the group boundaries, never
+changing priority, and announcing success.
 
 #### Scenario: Move one rank inside the group
 

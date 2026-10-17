@@ -83,16 +83,17 @@ preserved, and no element is promoted, hidden or re-parented for presentation.
 
 ### Requirement: Controls, focus and touch targets preserved
 
-Edit, add, reorder, collapse and undo controls SHALL remain findable and
-operable in both views, with a visible focus state and touch targets of at
-least 44 × 44 px. The visual change MUST NOT remove, hide or reorder a control,
-change its accessible name, or make a hierarchy cue start a drag, an edit or a
-completion toggle.
+The completion, priority, drag handle, disclosure and per-item actions menu
+controls SHALL remain directly visible and operable in both views, and the edit,
+add, reorder and remove commands SHALL remain findable and operable through the
+per-item actions menu, with a visible focus state and touch targets of at least
+44 × 44 px. The visual change MUST NOT remove a control, change its accessible
+name, or make a hierarchy cue start a drag, an edit or a completion toggle.
 
 #### Scenario: Controls stay findable
 
 - **WHEN** the hierarchy presentation is applied
-- **THEN** every add, edit, reorder, collapse and remove/undo control is still present and reachable
+- **THEN** every completion, priority, handle, disclosure and menu control is directly present, and every edit, add, reorder and remove command is reachable through the item menu
 
 #### Scenario: Visible focus
 
@@ -184,3 +185,36 @@ MUST render user titles as text nodes, never as HTML.
 
 - **WHEN** a title contains markup such as `<img src=x onerror=alert(1)>`
 - **THEN** it is displayed literally and creates no element
+
+### Requirement: Compact row presentation
+
+Rows SHALL use a tighter vertical rhythm than before in both the overview and the
+detail view while preserving the hierarchy cues, multiline notes with their line
+breaks, and touch targets of at least 44 × 44 px; long titles and narrow
+viewports MUST NOT overlap or overflow horizontally.
+
+#### Scenario: Rows are denser
+
+- **WHEN** a subject with several tasks and substeps is rendered
+- **THEN** its rows use less vertical space than before the change
+
+#### Scenario: Notes are preserved
+
+- **GIVEN** a task carries a multiline note
+- **WHEN** its row is rendered compactly
+- **THEN** the note is shown as plain text with its line breaks preserved
+
+#### Scenario: Hierarchy cues are preserved
+
+- **WHEN** a top-level task and its direct substeps are rendered compactly
+- **THEN** indentation, the nesting guide and the typographic scale still distinguish them
+
+#### Scenario: Long titles do not overlap
+
+- **WHEN** a task has a long title
+- **THEN** the row wraps without overlapping another control or the menu button
+
+#### Scenario: Touch targets are preserved
+
+- **WHEN** a control is rendered in a compact row
+- **THEN** its touch target stays at least 44 × 44 px
