@@ -63,3 +63,7 @@ Le ruleset main actuel est actif et exige PR+CI mais **n'a pas de reviewer oblig
 | 7. Pilote | Accord propriétaire pour **1 tâche** payante, puis extension progressive au plafond 1–10 | Non autorisé |
 
 **Le travail logiciel peut continuer dès maintenant. Une exécution V3 autonome et payante est encore bloquée.**
+
+## Qualification de la PR canonique
+
+La PR #87 cible directement main pour la CI de l'ensemble V3. Les PR #83 et #85 restent consultables mais ne doivent pas être fusionnées en double ; leur code est inclus dans #87. Les workflows V3 ne sont pas exécutés pendant cette qualification : seul le workflow CI historique check est déclenché sur la PR.
