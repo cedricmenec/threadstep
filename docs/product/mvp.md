@@ -84,3 +84,13 @@ canoniques sont dans `openspec/specs/action-removal/` et
 - [Post-merge CI on main](https://github.com/cedricmenec/threadstep/actions/runs/38912890270): success on TS-014 merge commit `97d326c5b262622f8146348f385eb1e0d838829c`.
 - [GitHub Pages deployment](https://github.com/cedricmenec/threadstep/actions/runs/38912890267): successful on the same merge commit.
 - These automated checks do **not** establish a complete manual touch-device, focus/keyboard or screen-reader acceptance campaign. That remains a user validation activity, not a reason to describe TS-010/011 as unimplemented.
+
+## Évolutions proposées non implémentées (17 octobre 2026)
+
+Les exigences FR-16 à FR-23 ci-dessus décrivent le comportement livré, et non la future expérience. Les nouvelles tâches de backlog ci-dessous en proposent des évolutions **non encore intégrées** ; lors de leur implémentation, mettre à jour les exigences et les spécifications OpenSpec canoniques correspondantes :
+
+- **TS-021** : les sous-tâches démarrent **repliées** à chaque ouverture de l'overview et de la vue détail, au lieu de commencer dépliées (évolution de FR-16).
+- **TS-022** : promouvoir une sous-tâche directe en tâche principale dans le même projet, avec conservation des champs, de l'identifiant et de l'intégrité des autres enfants (évolution de la règle de parenté FR-17).
+- **TS-023** : densifier les lignes et transférer les commandes secondaires dans un menu « ⋮ », y compris le déplacement clavier « Monter/Descendre » qui ne doit pas disparaître. Aucun nouveau statut métier n'est ajouté.
+
+Source de périmètre : [TS-021](../../backlog/tasks/TS-021.md), [TS-022](../../backlog/tasks/TS-022.md) et [TS-023](../../backlog/tasks/TS-023.md). Ces propositions **ne sont pas des fonctionnalités livrées par la PR de backlog**.
