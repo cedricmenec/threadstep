@@ -1,5 +1,33 @@
 # Backlog ThreadStep
 
+## Nouvelles évolutions proposées le 17 octobre 2026 (non implémentées)
+
+- **[TS-017](tasks/TS-017.md) : aperçu de cinq tâches par projet.**
+  Limiter chaque carte à cinq tâches principales visibles, sans
+  limiter leurs sous-tâches, et ouvrir la page de détail complète
+  par « Voir plus ». Préserver les filtres, le tri et les raccourcis
+  vers les tâches masquées par cette limite.
+- **[TS-018](tasks/TS-018.md) : compteur total en en-tête.**
+  Afficher le nombre de tâches **principales**, terminées ou non,
+  distinct du compteur existant des étapes en attente et indépendant
+  de la limite de cinq.
+- **[TS-019](tasks/TS-019.md) : note facultative par tâche.**
+  Texte brut multiligne (2 000 caractères maximum) sur une tâche
+  ou sous-tâche, avec compatibilité des imports JSON V1 historiques,
+  validation et absence de sauvegarde sur annulation.
+- **[TS-020](tasks/TS-020.md) : hiérarchie visuelle des tâches.**
+  Distinguer clairement tâches et sous-tâches par structure,
+  indentation et espacement, sur mobile et desktop, sans changement
+  des règles métier.
+
+Ces quatre fiches sont `product / ready / allowed / low` avec
+périmètres bornés et critères de non-régression. Les tâches sont
+indépendantes à ce stade et ne créent **aucun agent payant**.
+La création/fusion documentaire ne vaut pas autorisation d'exécution
+OpenSpec/OpenRouter. Les fonctionnalités ci-dessus ne sont pas encore
+implémentées par cette PR.
+
+
 ## Nouvelles tâches proposées le 17 octobre 2026 (non implémentées)
 
 - **[TS-015](tasks/TS-015.md) : modifier la priorité depuis son badge.**

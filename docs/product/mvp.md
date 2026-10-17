@@ -70,3 +70,29 @@ canoniques sont dans `openspec/specs/action-removal/` et
 - [Post-merge CI on main](https://github.com/cedricmenec/threadstep/actions/runs/38912890270): success on TS-014 merge commit `97d326c5b262622f8146348f385eb1e0d838829c`.
 - [GitHub Pages deployment](https://github.com/cedricmenec/threadstep/actions/runs/38912890267): successful on the same merge commit.
 - These automated checks do **not** establish a complete manual touch-device, focus/keyboard or screen-reader acceptance campaign. That remains a user validation activity, not a reason to describe TS-010/011 as unimplemented.
+
+## Évolutions prévues au backlog (17 octobre 2026, non implémentées)
+
+- **FR-20, TS-017** : les cartes projets de l'overview affichent au plus
+  cinq tâches principales après tri et filtre existants, sans compter leurs
+  sous-tâches dans ce quota. « Voir plus » n'apparaît que s'il existe des
+  tâches supplémentaires visibles, et ouvre la vue de détail existante,
+  qui présente toutes les tâches. Les raccourcis de suivi/suggestion
+  atteignent aussi les tâches hors des cinq entrées de l'overview.
+- **FR-21, TS-018** : l'en-tête d'une carte de projet affiche son nombre
+  total de tâches **principales** (sous-tâches exclues), comprenant les
+  tâches terminées et indépendant des filtres et de la limite d'aperçu.
+  Le compteur « étapes en attente » conserve son sens existant.
+- **FR-22, TS-019** : chaque tâche ou sous-tâche peut porter une note
+  textuelle multiligne facultative (2 000 caractères maximum), affichée
+  comme texte brut, stockée dans un champ facultatif `note` du document
+  V1. Les imports historiques sans note restent valides ; un champ note
+  invalide est refusé sans écraser les données locales.
+- **FR-23, TS-020** : la présentation différencie clairement tâches
+  principales et sous-tâches avec repères non exclusivement chromatiques
+  dans les deux vues, en préservant accessibilité, gestes, focus et règles
+  existantes.
+
+Ces exigences décrivent une intention produit, **pas une livraison**.
+Les fiches du backlog définissent les cas limites, tests, exclusions
+et conditions d'acceptation nécessaires à leur implémentation.
