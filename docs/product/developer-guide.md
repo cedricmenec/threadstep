@@ -85,6 +85,49 @@ façon destructive, donc après un refus, une exception ou une interruption, la
 source reste lisible, exportable et **non destructive** pour la cible. La
 préférence locale de reprise reste hors des tables synchronisées.
 
+## Authentification OTP email native (TS-027)
+
+`site/authentication.js` est le module pur de la connexion : `signInMethods`
+n'expose que la méthode email/OTP native, `deriveAuthState` déduit l'état
+(chargement, authentifié, déconnecté, expiré, première connexion hors ligne,
+refusé), `canAccessBusiness` conditionne tout accès métier, et
+`classifyAuthFailure`/`classifyPermissionFailure` traduisent les codes natifs
+en messages français fixes, sans jamais rendre le corps brut d'un fournisseur.
+`createAuthController` orchestre ces états au-dessus d'un adaptateur injecté et
+n'appelle `login({ grant_type: "otp" })` qu'après une action explicite de
+l'utilisateur, avec l'adresse déjà saisie lors d'un nouvel envoi.
+
+Dans `site/app.js`, l'adaptateur natif appelle `db.cloud.login` avec le grant
+OTP forcé, s'abonne à `db.cloud.currentUser` et `db.cloud.userInteraction`, et
+relaie la saisie email/code aux callbacks natifs. Aucun `fetchTokens`, aucun
+point d'échange de jetons applicatif, aucun backend et aucun appel `fetch` ne
+sont introduits : l'authentification et la réplication parlent directement à
+Dexie Cloud. Aucun fournisseur alternatif n'est proposé, même si le service en
+expose.
+
+Une base configurée avec `requireAuth: true` n'affiche les outils métier, ne
+charge le document, ne s'abonne aux changements, ne propose la migration TS-026
+et n'écrit qu'après un état authentifié. Une session valide est réutilisée au
+rechargement sans nouveau code ; une session expirée réaffiche la connexion avec
+un message dédié. La clé locale non secrète `threadstep.auth.seen.v1` sert
+uniquement à distinguer « session expirée » de « première connexion » et ne
+contient ni identité, ni code, ni jeton. Sans session, hors ligne, aucun échange
+OTP n'est lancé et la première connexion est refusée avec un message explicite ;
+la connectivité n'est jamais une preuve d'authentification. Un refus de droits,
+d'origine ou d'identité est présenté tel quel, sans nouvelle tentative avec une
+autre identité, sans contournement et sans suppression des données locales.
+
+Les permissions `owner`/`realmId`, l'origine autorisée et la configuration de la
+base restent des décisions du service Dexie Cloud : l'application ne fabrique ni
+n'écrase ces champs et n'ajoute aucune règle d'accès de secours. **Procédure
+opérateur hors build :** ajouter l'origine GitHub Pages du site à la liste des
+origines autorisées de l'instance isolée dans la console Dexie Cloud, puis
+vérifier la connexion sur cette base de test. Aucune URL d'instance, clé CLI ou
+valeur privilégiée n'est enregistrée dans le dépôt, le bundle ou la
+documentation publique. La réception réelle d'un OTP, les tests multi-appareils,
+le clavier, le lecteur d'écran et l'isolation entre deux identités restent une
+recette manuelle sur base isolée.
+
 ## Modèle de données
 
 - Document versionné `threadstep.document.v1` dans le `localStorage`.
@@ -129,7 +172,7 @@ Toutes les modifications passent par une branche et PR ; les workflows CI et Pag
 
 ## Frontières de sécurité et évolution
 
-**État courant du pilote :** le socle de configuration Dexie Cloud (TS-024) est intégré, mais aucune synchronisation opérationnelle ni authentification OTP n'est encore livrée (TS-025 à TS-030). Tant qu'aucune URL valide n'est enregistrée, aucune base synchronisée n'est ouverte et les données restent dans le navigateur. La CSP n'autorise que les hôtes Dexie Cloud. Cette progression est **additive** : le document `threadstep.document.v1` et ses exports restent inchangés.
+**État courant du pilote :** le socle de configuration Dexie Cloud (TS-024), la persistance local-first (TS-025), la migration historique (TS-026) et l'authentification OTP email native (TS-027) sont intégrés ; l'indicateur de synchronisation, la purge locale et la consolidation de la recette restent à livrer (TS-028 à TS-030). Tant qu'aucune URL valide n'est enregistrée, aucune base synchronisée n'est ouverte et les données restent dans le navigateur. La CSP n'autorise que les hôtes Dexie Cloud. Cette progression est **additive** : le document `threadstep.document.v1` et ses exports restent inchangés.
 
 **Cible Dexie Cloud, non déployée :** la
 [spécification normative](specs/dexie-cloud-local-first.md)

@@ -150,3 +150,20 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .cloud-config-form input{min-height:44px;border:1px solid #d4dbcf;background:white;border-radius:9px;padding:10px 12px;color:#24382f}
 .cloud-config-error{margin:0;color:#ad4938;font-size:.82rem;font-weight:600}
 .cloud-config-form button{align-self:flex-start;min-height:44px}
+.auth-panel{margin-top:32px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:20px 22px;max-width:560px}
+.auth-panel[hidden]{display:none}
+.auth-panel h2{font-size:1.3rem;letter-spacing:-.03em}
+.auth-help{margin:6px 0 0;color:#657366;font-size:.9rem}
+.auth-status{margin:12px 0 0;color:#415748;font-size:.88rem;min-height:1.2em}
+.auth-form{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.auth-field{display:flex;flex-direction:column;gap:6px}
+.auth-field[hidden]{display:none}
+.auth-field label{font-size:.8rem;font-weight:700;color:#30473a}
+.auth-field input{min-height:44px;border:1px solid #d4dbcf;background:white;border-radius:9px;padding:10px 12px;color:#24382f;font-size:1rem}
+.auth-error{margin:0;color:#ad4938;font-size:.85rem;font-weight:600}
+.auth-error[hidden]{display:none}
+.auth-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.auth-actions button{min-height:44px;min-width:44px}
+.auth-actions button[hidden]{display:none}
+.auth-offline{margin:14px 0 0;color:#8a5a2b;background:#fff4e8;border:1px solid #eed3b3;border-radius:9px;padding:10px 12px;font-size:.85rem}
+.auth-offline[hidden]{display:none}

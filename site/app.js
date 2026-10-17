@@ -2,6 +2,7 @@ import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
 import { documentToRecords, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
 import { detectHistoricalDocument, describeMigration, planMigration, runMigration } from "./migration.js";
+import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -18,7 +19,27 @@ const cloudConfigEl = document.querySelector("#cloud-config");
 const cloudConfigFormEl = document.querySelector("#cloud-config-form");
 const cloudUrlEl = document.querySelector("#cloud-url");
 const cloudConfigErrorEl = document.querySelector("#cloud-config-error");
+const businessToolsEl = document.querySelector("#business-tools");
+const dashboardEl = document.querySelector("#dashboard");
+const authPanelEl = document.querySelector("#auth-panel");
+const authFormEl = document.querySelector("#auth-form");
+const authStatusEl = document.querySelector("#auth-status");
+const authErrorEl = document.querySelector("#auth-error");
+const authEmailFieldEl = document.querySelector("#auth-email-field");
+const authOtpFieldEl = document.querySelector("#auth-otp-field");
+const authEmailEl = document.querySelector("#auth-email");
+const authOtpEl = document.querySelector("#auth-otp");
+const authSubmitEl = document.querySelector("#auth-submit");
+const authResendEl = document.querySelector("#auth-resend");
+const authCancelEl = document.querySelector("#auth-cancel");
+const authOfflineEl = document.querySelector("#auth-offline");
 let syncedDatabase = null;
+let authController = null;
+let authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
+let authInteraction = null;
+let authSubmitting = false;
+let businessStarted = false;
+let changesSubscribed = false;
 let documentState = emptyDocument();
 let editingItemId = null;
 let focusItemId = null;
@@ -54,6 +75,12 @@ let removalDeadline = 0;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 function notify(message) { statusEl.textContent = message; }
+function requiresAuthentication() {
+  return !!syncedDatabase;
+}
+function businessAllowed() {
+  return !requiresAuthentication() || canAccessBusiness(authState);
+}
 function bootstrapSyncedDatabase() {
   const config = readCloudConfig();
   if (!shouldOpenSyncedDatabase(config)) return null;
@@ -81,6 +108,183 @@ function renderCloudConfig() {
   if (open && cloudUrlEl) cloudUrlEl.value = config.databaseUrl;
   return open;
 }
+function createCloudAuthAdapter(db) {
+  return {
+    login(options) {
+      return db.cloud.login({ ...options, grant_type: "otp" });
+    },
+    subscribeUser(listener) {
+      return db.cloud.currentUser.subscribe(listener);
+    },
+    subscribeInteraction(listener) {
+      return db.cloud.userInteraction.subscribe(listener);
+    },
+    getProviders() {
+      return { providers: [], otpEnabled: true };
+    }
+  };
+}
+function applyBusinessVisibility() {
+  const configured = requiresAuthentication();
+  const authenticated = canAccessBusiness(authState);
+  if (businessToolsEl) businessToolsEl.hidden = configured && !authenticated;
+  if (dashboardEl) dashboardEl.hidden = configured && !authenticated;
+}
+function setAuthStatus(message) {
+  if (authStatusEl) authStatusEl.textContent = typeof message === "string" ? message : "";
+}
+function setAuthError(message) {
+  if (!authErrorEl) return;
+  authErrorEl.textContent = typeof message === "string" ? message : "";
+  authErrorEl.hidden = !authErrorEl.textContent;
+}
+function renderAuthPanel() {
+  if (!authPanelEl) return;
+  const authenticated = canAccessBusiness(authState);
+  authPanelEl.hidden = !requiresAuthentication() || authenticated;
+  applyBusinessVisibility();
+  if (authPanelEl.hidden) return;
+  const interaction = authInteraction;
+  const codePhase = !!(interaction && interaction.kind === "otp");
+  const errorAlerts = interaction ? interaction.alerts.filter((alert) => alert.type === "error") : [];
+  const infoAlerts = interaction ? interaction.alerts.filter((alert) => alert.type !== "error") : [];
+  if (authEmailFieldEl) authEmailFieldEl.hidden = codePhase;
+  if (authOtpFieldEl) authOtpFieldEl.hidden = !codePhase;
+  if (authEmailEl) authEmailEl.required = !codePhase;
+  if (authOtpEl) authOtpEl.required = codePhase;
+  if (authSubmitEl) {
+    authSubmitEl.textContent = codePhase ? "Valider le code" : signInMethods()[0].label;
+    authSubmitEl.disabled = authSubmitting || authState.status === AUTH_STATUS.LOADING;
+  }
+  if (authResendEl) authResendEl.hidden = !codePhase;
+  if (authCancelEl) authCancelEl.hidden = !codePhase;
+  if (authOfflineEl) {
+    authOfflineEl.hidden = authState.status !== AUTH_STATUS.OFFLINE_REQUIRED;
+    authOfflineEl.textContent = authMessage("offline-first");
+  }
+  setAuthStatus(infoAlerts.length ? infoAlerts[0].message : authState.message);
+  if (errorAlerts.length) setAuthError(errorAlerts[0].message);
+  else if (authState.kind && authState.kind !== "sign-in") setAuthError(authState.message);
+  else setAuthError("");
+}
+function handleAuthState(next) {
+  authState = next && typeof next === "object" ? next : { status: AUTH_STATUS.SIGNED_OUT, kind: null, message: "" };
+  authSubmitting = false;
+  if (canAccessBusiness(authState)) {
+    authInteraction = null;
+    renderAuthPanel();
+    startBusiness();
+    return;
+  }
+  renderAuthPanel();
+}
+function handleAuthInteraction(interaction) {
+  authInteraction = interaction;
+  authSubmitting = false;
+  if (!interaction) {
+    setAuthStatus("Envoi du code en cours…");
+  }
+  renderAuthPanel();
+}
+function startBusiness() {
+  if (businessStarted) return;
+  businessStarted = true;
+  if (!changesSubscribed) {
+    subscribeToChanges();
+    changesSubscribed = true;
+  }
+  load();
+  offerHistoricalMigration();
+}
+function setupAuthentication() {
+  if (!syncedDatabase) return;
+  if (authController) return;
+  const adapter = createCloudAuthAdapter(syncedDatabase);
+  authController = createAuthController({
+    adapter,
+    storage: localStorage,
+    getOnline: () => typeof navigator === "undefined" || navigator.onLine !== false,
+    onStateChange: handleAuthState,
+    onInteraction: handleAuthInteraction
+  });
+  adapter.subscribeUser((user) => authController.applyUser(user));
+  adapter.subscribeInteraction((payload) => authController.handleInteraction(payload));
+  renderAuthPanel();
+}
+function showAuthFieldError(message) {
+  setAuthError(message);
+  if (authState.status === AUTH_STATUS.SIGNED_OUT) setAuthStatus("");
+}
+function submitAuthForm(event) {
+  if (event && typeof event.preventDefault === "function") event.preventDefault();
+  if (!authController) return;
+  const interaction = authController.currentInteraction() || authInteraction;
+  if (interaction && interaction.kind === "otp") {
+    const otp = authOtpEl ? authOtpEl.value.trim() : "";
+    if (!otp) {
+      showAuthFieldError("Saisissez le code reçu par email.");
+      if (authOtpEl) authOtpEl.focus();
+      return;
+    }
+    authSubmitting = true;
+    setAuthError("");
+    authController.submitInteraction({ otp });
+    if (authOtpEl) authOtpEl.value = "";
+    renderAuthPanel();
+    return;
+  }
+  if (interaction && interaction.kind === "email") {
+    const email = authEmailEl ? authEmailEl.value.trim() : "";
+    if (!email) {
+      showAuthFieldError("Saisissez une adresse email valide.");
+      if (authEmailEl) authEmailEl.focus();
+      return;
+    }
+    authSubmitting = true;
+    setAuthError("");
+    authController.submitInteraction({ email });
+    renderAuthPanel();
+    return;
+  }
+  const email = authEmailEl ? authEmailEl.value.trim() : "";
+  if (!email || !email.includes("@")) {
+    showAuthFieldError("Saisissez une adresse email valide.");
+    if (authEmailEl) authEmailEl.focus();
+    return;
+  }
+  authSubmitting = true;
+  setAuthError("");
+  const outcome = authController.startSignIn(email);
+  if (outcome && typeof outcome.then === "function") {
+    outcome.then(() => {
+      authSubmitting = false;
+      renderAuthPanel();
+    });
+  }
+  renderAuthPanel();
+}
+function resendOtp() {
+  if (!authController) return;
+  authSubmitting = true;
+  setAuthError("");
+  const outcome = authController.resend();
+  if (outcome && typeof outcome.then === "function") {
+    outcome.then(() => {
+      authSubmitting = false;
+      renderAuthPanel();
+    });
+  }
+  renderAuthPanel();
+}
+function cancelOtp() {
+  if (!authController) return;
+  authController.cancelInteraction();
+  authInteraction = null;
+  authSubmitting = false;
+  setAuthError("");
+  setAuthStatus(authState.message);
+  renderAuthPanel();
+}
 function el(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -88,6 +292,7 @@ function el(tag, cls, text) {
   return node;
 }
 function persist() {
+  if (!businessAllowed()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
     notify("Sauvegardé localement");
@@ -101,6 +306,7 @@ function persist() {
 function load() {
   expandedParents = new Set();
   openMenuId = null;
+  if (!businessAllowed()) return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -154,6 +360,7 @@ function expandAncestorForFocus() {
   }
 }
 function render() {
+  if (!businessAllowed()) return;
   subjectsEl.replaceChildren();
   expandAncestorForFocus();
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
@@ -1112,6 +1319,11 @@ snackbarEl.addEventListener("focusout", (event) => {
   if (event.relatedTarget && snackbarEl.contains(event.relatedTarget)) return;
   resumeRemovalTimer();
 });
+if (authFormEl) authFormEl.addEventListener("submit", submitAuthForm);
+if (authResendEl) authResendEl.addEventListener("click", resendOtp);
+if (authCancelEl) authCancelEl.addEventListener("click", cancelOtp);
+window.addEventListener("online", () => { if (authController) authController.refresh(); });
+window.addEventListener("offline", () => { if (authController) authController.refresh(); });
 if (cloudConfigFormEl) {
   cloudConfigFormEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1128,9 +1340,20 @@ if (cloudConfigFormEl) {
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase();
     businessStore = createBusinessStore(syncedDatabase);
+    authController = null;
+    authInteraction = null;
+    authSubmitting = false;
+    businessStarted = false;
+    changesSubscribed = false;
+    authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
     renderCloudConfig();
+    if (syncedDatabase) {
+      setupAuthentication();
+    } else {
+      load();
+      offerHistoricalMigration();
+    }
     notify("Instance Dexie Cloud enregistrée");
-    offerHistoricalMigration();
   });
 }
 function createBusinessStore(db) {
@@ -1156,6 +1379,7 @@ function createBusinessStore(db) {
   };
 }
 function commitOperations() {
+  if (!businessAllowed()) return;
   const records = documentToRecords(documentState);
   const operations = diffRecords(lastRecords, records);
   lastRecords = records;
@@ -1164,7 +1388,11 @@ function commitOperations() {
     () => { broadcastChange(); },
     (error) => {
       if (isLocalError(error)) notify("Stockage indisponible : exportez vos données.");
-      else notify("Synchronisation en attente.");
+      else {
+        const refusal = classifyPermissionFailure(error);
+        if (refusal) notify(authMessage(refusal));
+        else notify("Synchronisation en attente.");
+      }
     }
   );
 }
@@ -1219,6 +1447,7 @@ function hideMigrationPanel() {
   migrationPanelEl.replaceChildren();
 }
 async function offerHistoricalMigration() {
+  if (!businessAllowed()) return;
   const detected = detectHistoricalDocument(localStorage);
   const destination = migrationDestination();
   if (detected.status !== "present" || !destination || !businessStore) {
@@ -1285,7 +1514,12 @@ syncedDatabase = bootstrapSyncedDatabase();
 businessStore = createBusinessStore(syncedDatabase);
 historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
-subscribeToChanges();
-load();
-offerHistoricalMigration();
+if (syncedDatabase) {
+  setupAuthentication();
+} else {
+  subscribeToChanges();
+  changesSubscribed = true;
+  load();
+  offerHistoricalMigration();
+}
 

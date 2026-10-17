@@ -18,14 +18,36 @@
       <div class="eyebrow"><span class="dot"></span> MON ESPACE DE TRAVAIL</div>
       <h1>Thread<span>Step</span></h1>
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
-      <div class="toolbar">
+      <div class="toolbar" id="business-tools">
         <button type="button" id="export" class="secondary">Exporter mes données</button>
         <label class="secondary file-action" for="import">Importer JSON</label>
         <input id="import" type="file" accept=".json,application/json" aria-label="Importer un fichier JSON">
       </div>
-      <p class="privacy">Les données restent dans ce navigateur. Aucun compte et aucun serveur.</p>
+      <p class="privacy">Les données restent dans ce navigateur et se synchronisent avec votre instance Dexie Cloud après connexion.</p>
     </header>
-    <section class="dashboard" aria-labelledby="dashboard-title">
+    <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
+      <h2 id="auth-title">Connexion par code email</h2>
+      <p id="auth-help" class="auth-help">Un code à usage unique est envoyé par Dexie Cloud à votre adresse email. Aucun mot de passe n'est demandé.</p>
+      <p id="auth-status" class="auth-status" role="status" aria-live="polite"></p>
+      <form id="auth-form" class="auth-form">
+        <div id="auth-email-field" class="auth-field">
+          <label for="auth-email">Adresse email</label>
+          <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" spellcheck="false" required>
+        </div>
+        <div id="auth-otp-field" class="auth-field" hidden>
+          <label for="auth-otp">Code reçu par email</label>
+          <input id="auth-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" maxlength="8" aria-describedby="auth-status auth-error">
+        </div>
+        <p id="auth-error" class="auth-error" role="alert" hidden></p>
+        <div class="auth-actions">
+          <button type="submit" id="auth-submit" class="primary">Recevoir un code par email</button>
+          <button type="button" id="auth-resend" class="secondary" hidden>Envoyer un nouveau code</button>
+          <button type="button" id="auth-cancel" class="subtle" hidden>Annuler</button>
+        </div>
+      </form>
+      <p id="auth-offline" class="auth-offline" role="status" hidden></p>
+    </section>
+    <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
       <div id="resume-card" class="resume-card" aria-live="polite" hidden></div>
       <div class="section-top">
         <div>
