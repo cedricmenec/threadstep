@@ -53,6 +53,36 @@ vue de détail, sans se fier à la couleur ni au badge de priorité :
   complétion. La présentation s'adapte aux petits écrans sans
   débordement horizontal et n'écrit rien dans les données.
 
+## Promouvoir une sous-tâche en tâche principale (TS-022)
+
+Une sous-tâche devenue autonome n'a pas besoin d'être recréée. Chaque
+**sous-tâche directe** affiche, dans la vue d'ensemble comme dans la vue
+de détail, un bouton **« Promouvoir en tâche principale »** :
+
+- L'opération est immédiate, sans fenêtre de confirmation, car aucune
+  donnée n'est détruite. La sous-tâche garde son identifiant, son titre,
+  sa priorité, son état terminé et sa note éventuelle : seul son
+  `parentId` devient `null`.
+- La tâche promue rejoint le même projet comme tâche principale. Elle
+  est placée juste après son ancien parent, sans modifier l'ordre des
+  autres éléments ni les priorités ; les autres sous-tâches restent
+  attachées à leur parent.
+- Les listes, le total de tâches principales et l'aperçu se mettent à
+  jour ; le compteur d'étapes en attente ne change pas. La tâche promue
+  reçoit le focus, ou son détail s'ouvre si elle se trouve au-delà des
+  cinq tâches visibles de l'aperçu. Si l'ancien parent n'a plus aucune
+  sous-tâche visible, son bouton de repli disparaît.
+- Une promotion valide n'enregistre qu'une fois. Une action invalide
+  (identifiant inconnu, élément déjà principal, parent absent ou
+  incohérent) n'écrit rien, et une promotion déjà effectuée ne se
+  rejoue pas.
+- Il n'existe pas de bouton inverse « rétrograder ». Le bouton est
+  utilisable au clavier, à la souris et au toucher, avec un libellé
+  explicite, une cible d'au moins 44 × 44 px et un focus visible.
+- Le format JSON V1, la clé `threadstep.document.v1` et les règles
+  existantes d'édition, de note, de retrait/annulation et de
+  réordonnancement restent inchangés.
+
 ## Ajouter une note facultative à une action (TS-019)
 
 Chaque action principale et chaque sous-étape peut porter une **note

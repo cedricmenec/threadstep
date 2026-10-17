@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -801,6 +801,19 @@ function renderSubstepToggle(item, view) {
 function renderActions(subject, item, view) {
   const actions = el("div", "task-actions");
   actions.append(renderReorderControls(subject, item));
+  if (item.parentId !== null) {
+    const promote = el("button", "subtle task-promote", "Promouvoir en tâche principale");
+    promote.type = "button";
+    promote.setAttribute("aria-label", "Promouvoir en tâche principale : " + item.title);
+    promote.addEventListener("click", () => {
+      const next = promoteItemToTopLevel(documentState, subject.id, item.id);
+      if (next === documentState) return;
+      documentState = next;
+      persist();
+      revealAction(subject.id, item.id);
+    });
+    actions.append(promote);
+  }
   if (item.parentId === null && view && view.hasVisibleSubsteps) actions.append(renderSubstepToggle(item, view));
   const edit = el("button", "subtle task-edit", "Modifier");
   edit.type = "button";

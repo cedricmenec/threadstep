@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, promoteItemToTopLevel, canPromoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1812,4 +1812,120 @@ test("an item note survives priority change, reorder, removal undo and completio
   completed[0].done = true;
   assert.deepEqual(parseDocument(JSON.stringify({ version: 1, subjects: [{ ...subject, items: completed }] }))
     .subjects[0].items[0].note, "Note de la première\nligne deux");
+});
+
+function promotionDocument() {
+  const doc = emptyDocument();
+  const subject = newSubject("Projet", "s1");
+  subject.items.push(
+    newItem("Parent", "normal", "p1"),
+    newItem("Premier", "urgent", "c1", "p1"),
+    newItem("Deuxième", "normal", "c2", "p1"),
+    newItem("Troisième", "later", "c3", "p1"),
+    newItem("Autre", "normal", "t1"),
+  );
+  subject.items[1].note = "Note du premier\nligne deux";
+  subject.items[2].done = true;
+  doc.subjects.push(subject);
+  return doc;
+}
+
+test("promoteItemToTopLevel preserves identity, fields and note of the promoted substep", () => {
+  const doc = promotionDocument();
+  const promoted = promoteItemToTopLevel(doc, "s1", "c1");
+  const item = promoted.subjects[0].items.find((entry) => entry.id === "c1");
+  assert.equal(item.parentId, null);
+  assert.equal(item.id, "c1");
+  assert.equal(item.title, "Premier");
+  assert.equal(item.priority, "urgent");
+  assert.equal(item.done, false);
+  assert.equal(item.note, "Note du premier\nligne deux");
+  assert.equal(promoted.subjects[0].items.filter((entry) => entry.id === "c1").length, 1);
+});
+
+test("promoteItemToTopLevel keeps a completed substep done and its priority", () => {
+  const doc = promotionDocument();
+  const promoted = promoteItemToTopLevel(doc, "s1", "c2");
+  const item = promoted.subjects[0].items.find((entry) => entry.id === "c2");
+  assert.equal(item.done, true);
+  assert.equal(item.priority, "normal");
+  assert.equal(item.parentId, null);
+});
+
+test("promoteItemToTopLevel inserts the promoted item immediately after its former parent", () => {
+  const doc = promotionDocument();
+  const promoted = promoteItemToTopLevel(doc, "s1", "c1");
+  assert.deepEqual(promoted.subjects[0].items.map((entry) => entry.id),
+    ["p1", "c1", "c2", "c3", "t1"]);
+});
+
+test("promoteItemToTopLevel keeps every other item's relative order and priorities", () => {
+  const doc = promotionDocument();
+  const before = doc.subjects[0].items.map((entry) => [entry.id, entry.priority]);
+  const promoted = promoteItemToTopLevel(doc, "s1", "c3");
+  const after = promoted.subjects[0].items.map((entry) => [entry.id, entry.priority]);
+  assert.deepEqual(after, [["p1", "normal"], ["c3", "later"], ["c1", "urgent"], ["c2", "normal"], ["t1", "normal"]]);
+  assert.deepEqual(before.find(([id]) => id === "p1")[1], "normal");
+  assert.deepEqual(
+    promoted.subjects[0].items.filter((entry) => entry.id !== "c3").map((entry) => entry.id),
+    ["p1", "c1", "c2", "t1"]);
+});
+
+test("promoteItemToTopLevel keeps siblings attached to the former parent", () => {
+  const doc = promotionDocument();
+  const promoted = promoteItemToTopLevel(doc, "s1", "c1");
+  const siblings = promoted.subjects[0].items.filter((entry) => entry.id !== "c1" && entry.id !== "p1" && entry.id !== "t1");
+  assert.deepEqual(siblings.map((entry) => [entry.id, entry.parentId]),
+    [["c2", "p1"], ["c3", "p1"]]);
+});
+
+test("promoteItemToTopLevel does not mutate the input document, subject or arrays", () => {
+  const doc = promotionDocument();
+  const snapshot = JSON.stringify(doc);
+  const itemsRef = doc.subjects[0].items;
+  const itemRef = itemsRef.find((entry) => entry.id === "c1");
+  const promoted = promoteItemToTopLevel(doc, "s1", "c1");
+  assert.notEqual(promoted, doc);
+  assert.notEqual(promoted.subjects[0], doc.subjects[0]);
+  assert.notEqual(promoted.subjects[0].items, itemsRef);
+  assert.equal(doc.subjects[0].items, itemsRef);
+  assert.equal(itemsRef.find((entry) => entry.id === "c1"), itemRef);
+  assert.equal(JSON.stringify(doc), snapshot);
+});
+
+test("canPromoteItemToTopLevel matches the promotion result", () => {
+  const doc = promotionDocument();
+  assert.equal(canPromoteItemToTopLevel(doc, "s1", "c1"), true);
+  assert.equal(canPromoteItemToTopLevel(doc, "s1", "p1"), false);
+  assert.equal(canPromoteItemToTopLevel(doc, "missing", "c1"), false);
+  assert.equal(canPromoteItemToTopLevel(doc, "s1", "missing"), false);
+});
+
+test("promoteItemToTopLevel refuses unknown subject or item ids without writing", () => {
+  const doc = promotionDocument();
+  assert.equal(promoteItemToTopLevel(doc, "missing", "c1"), doc);
+  assert.equal(promoteItemToTopLevel(doc, "s1", "missing"), doc);
+  assert.equal(promoteItemToTopLevel(doc, "s1", "p1"), doc);
+});
+
+test("promoteItemToTopLevel refuses a missing or incoherent parent without writing", () => {
+  const doc = promotionDocument();
+  const orphan = JSON.parse(JSON.stringify(doc));
+  orphan.subjects[0].items[1].parentId = "ghost";
+  assert.equal(promoteItemToTopLevel(orphan, "s1", "c1"), orphan);
+
+  const nested = JSON.parse(JSON.stringify(doc));
+  nested.subjects[0].items[1].parentId = "c2";
+  assert.equal(promoteItemToTopLevel(nested, "s1", "c1"), nested);
+
+  const selfParent = JSON.parse(JSON.stringify(doc));
+  selfParent.subjects[0].items[1].parentId = "c1";
+  assert.equal(promoteItemToTopLevel(selfParent, "s1", "c1"), selfParent);
+});
+
+test("promoteItemToTopLevel replaying an already promoted item returns the same reference", () => {
+  const doc = promotionDocument();
+  const promoted = promoteItemToTopLevel(doc, "s1", "c1");
+  assert.equal(promoteItemToTopLevel(promoted, "s1", "c1"), promoted);
+  assert.equal(canPromoteItemToTopLevel(promoted, "s1", "c1"), false);
 });
