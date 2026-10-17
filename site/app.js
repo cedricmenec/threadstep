@@ -593,7 +593,8 @@ function substepListId(itemId) {
   return "substeps-" + encodeURIComponent(String(itemId));
 }
 function renderItem(subject, item) {
-  const li = el("li", "task" + (item.done ? " done" : "") + (revealItemId === item.id ? " reveal" : ""));
+  const level = item.parentId === null ? "task-parent" : "task-substep";
+  const li = el("li", "task " + level + (item.done ? " done" : "") + (revealItemId === item.id ? " reveal" : ""));
   li.dataset.item = item.id;
   const view = substepView(subject.items, item.id, hideCompleted, collapsedParents);
   if (editingItemId === item.id) {

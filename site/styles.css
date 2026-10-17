@@ -97,8 +97,12 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .children .task-note{margin-left:0}
 .task-edit-form button{padding:9px 13px}
 .edit-error{flex-basis:100%;margin:0;color:#ad4938;font-size:.78rem}
-.children{padding-left:26px;margin:0}
+.task-parent{margin-top:16px}
+.task-parent>.task-row .task-title{font-size:1.06rem;font-weight:700;line-height:1.5}
+.children{padding-left:26px;margin:6px 0 0;border-left:2px solid #d9ddd4}
 .children .task{margin-top:5px;padding-top:9px}
+.task-substep{padding-left:12px}
+.task-substep>.task-row .task-title{font-size:.9rem;line-height:1.4}
 .empty{padding:24px 8px;text-align:center;color:#819083;font-size:.91rem}
 .snackbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:14px;background:#263d31;color:#f3f6ec;border-radius:12px;padding:12px 14px 12px 18px;box-shadow:0 12px 30px #24382f33;max-width:min(480px,calc(100vw - 32px));z-index:20}
 .snackbar[hidden]{display:none}
@@ -110,7 +114,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 #status{margin-left:8px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
-@media(max-width:620px){.shell{padding:22px 15px}.hero{padding:25px 0}.section-top{align-items:start;flex-direction:column}.subject{padding:17px}.add-subject{padding:10px}.add-subject .primary{padding:11px}.task-row{flex-wrap:wrap}.priority{margin-left:auto}.task-form{flex-wrap:wrap}.task-form input{flex-basis:100%}.task-form select{flex:1}.task-form button{flex:1}}
+@media(max-width:620px){.shell{padding:22px 15px}.hero{padding:25px 0}.section-top{align-items:start;flex-direction:column}.subject{padding:17px}.add-subject{padding:10px}.add-subject .primary{padding:11px}.task-row{flex-wrap:wrap}.priority{margin-left:auto}.task-form{flex-wrap:wrap}.task-form input{flex-basis:100%}.task-form select{flex:1}.task-form button{flex:1}.children{padding-left:16px}.task-substep{padding-left:8px}.task-parent>.task-row .task-title{font-size:1rem}.task-substep>.task-row .task-title{font-size:.88rem}}
 
 .subject-open{min-height:44px;min-width:44px;padding:10px 14px;font-size:.82rem;white-space:nowrap}
 .overview-see-more{min-height:44px;min-width:44px;margin-top:12px;padding:10px 14px;font-size:.82rem}

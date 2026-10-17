@@ -26,6 +26,33 @@ serveur applicatif ni intelligence artificielle dans le navigateur.
    descendre ce sujet. « Supprimer » un sujet demande une confirmation
    et retire aussi ses actions.
 
+## Distinguer une tâche et ses sous-tâches (TS-020)
+
+Une **tâche principale** et ses **sous-tâches directes** se
+reconnaissent au premier regard, dans la vue d'ensemble comme dans la
+vue de détail, sans se fier à la couleur ni au badge de priorité :
+
+- Une tâche principale ouvre une ligne plus marquée : titre un peu plus
+  grand et plus espacé au-dessus, note et commandes regroupées sous elle.
+- Les sous-tâches sont **indentées** sous leur parent, reliées par un
+  **guide vertical** à gauche de la liste et affichées dans une
+  typographie légèrement plus petite et plus dense. L'indentation, le
+  guide et l'échelle typographique restent visibles même si la couleur
+  est ignorée ; au moins deux de ces indices ne dépendent pas de la
+  couleur.
+- La même hiérarchie s'applique quand une étape est **terminée**, quand
+  le filtre **« Masquer les étapes terminées »** réduit la liste et
+  quand une action parente est **repliée**. Les tâches restent des
+  éléments de liste et les sous-tâches un groupe imbriqué du bon parent :
+  l'ordre de lecture, les noms accessibles et le clavier sont
+  préservés.
+- Les couleurs de priorité et de complétion, le focus visible, les
+  cibles tactiles d'au moins 44 × 44 px et les préférences de mouvement
+  réduit sont inchangés. Le guide et l'indentation ne déclenchent ni
+  glisser-déposer, ni édition, ni changement de priorité ou de
+  complétion. La présentation s'adapte aux petits écrans sans
+  débordement horizontal et n'écrit rien dans les données.
+
 ## Ajouter une note facultative à une action (TS-019)
 
 Chaque action principale et chaque sous-étape peut porter une **note
