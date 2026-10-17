@@ -31,9 +31,10 @@ const plain = x => !!x && typeof x === "object" && !Array.isArray(x);
 
 function matchingRuleset(rule, name) {
   const refs = rule?.conditions?.ref_name;
-  return rule.source === REPO && rule.target === "branch" &&
+  return !!rule && rule.source === REPO && rule.target === "branch" &&
     rule.enforcement === "active" &&
-    Array.isArray(refs?.include) && refs.include.includes(name) &&
+    Array.isArray(refs?.include) && refs.include.length === 1 &&
+    refs.include[0] === name &&
     Array.isArray(refs.exclude) && refs.exclude.length === 0 &&
     Array.isArray(rule.rules) && Array.isArray(rule.bypass_actors);
 }
