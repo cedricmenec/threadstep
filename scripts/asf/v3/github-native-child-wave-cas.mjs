@@ -12,6 +12,8 @@ import { assertV3Manifest,reconstructV3Journal,advanceV3 }
 import { commitV3JournalCAS } from "./git-cas.mjs";
 import { contentSha256,canonicalize } from "../waves/hash.mjs";
 import { ADMISSION_REGISTRY_REF } from "./global-admission.mjs";
+import { observeV3GithubWaveRulesetPolicy }
+ from "./github-native-wave-ruleset.mjs";
 const REPO="cedricmenec/threadstep",BASE="repos/"+REPO;
 const SHA=/^[0-9a-f]{40}$/,WAVE=/^[a-z0-9][a-z0-9._-]{2,63}$/;
 const no=(status,code,evidence=null)=>Object.freeze({status,code,
@@ -53,6 +55,12 @@ export async function attemptV3GithubChildWaveCAS({
   return no("rejected","invalid_child_wave_transition");
  if(typeof readClient?.get!=="function"||!validPort(gitPort))
   return no("rejected","trusted_ports_missing");
+ let wavePolicy;
+ try{wavePolicy=await observeV3GithubWaveRulesetPolicy(readClient);}
+ catch{return no("uncertain","wave_protection_observation_failed");}
+ if(wavePolicy.status!=="wave_rule_structure_observed_not_authorized")
+  return no(wavePolicy.status==="rejected"?"rejected":"uncertain",
+    "wave_creation_update_or_immutability_not_verified");
  const waveId=event.inputs.wave_id,input={runner,event,readClient};
  let first;
  try{first=await observe(phase,input);}
@@ -84,6 +92,16 @@ export async function attemptV3GithubChildWaveCAS({
   return no("uncertain","child_evidence_changed_before_write");
  if(!compare(e,second.evidence))
   return no("conflict","child_evidence_diverged");
+ // The wave rules must still exist after the second independent journal
+ // observation. Never authorize a stale-protection write after a race.
+ let wavePolicyAfter;
+ try{wavePolicyAfter=await observeV3GithubWaveRulesetPolicy(readClient);}
+ catch{return no("uncertain","wave_protection_recheck_failed");}
+ if(wavePolicyAfter.status!=="wave_rule_structure_observed_not_authorized")
+  return no("uncertain","wave_protection_changed_before_write");
+ if(wavePolicyAfter.evidence.writerId!==wavePolicy.evidence.writerId||
+    wavePolicyAfter.evidence.immutableId!==wavePolicy.evidence.immutableId)
+  return no("conflict","wave_ruleset_identity_changed");
  let written;
  try{written=await commitV3JournalCAS(gitPort,{
    waveId,expectedHeadSha:e.waveHeadSha,journal:next,

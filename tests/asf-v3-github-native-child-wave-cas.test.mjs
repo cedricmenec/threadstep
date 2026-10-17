@@ -36,7 +36,9 @@ const rule=(id,ref,types,bypass=[])=>({
 function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
  patchLost=false,patchConflict=false,spoofPatch=false,
  driftAfterSecond=false,corruptReadback=false,
- wrongAckParent=false,wrongGitCommit=false}={}){
+ wrongAckParent=false,wrongGitCommit=false,
+ missingWaveRules=false,wrongWaveApp=false,immutableWaveBypass=false,
+ waveRulesChangeDuringCheck=false}={}){
  const manifest=createV3Manifest({
   waveId:WAVE,repository:REPO,backlogCommit:ORIGIN,
   model:"openrouter/deepseek/deepseek-v4.1-flash",
@@ -59,14 +61,24 @@ function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
   rule(2,ADMISSION_REGISTRY_REF,["creation","update"],[{
    actor_type:"Integration",actor_id:wrongApp?5321746:5361227,
    bypass_mode:"always"}]),
-  rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"])
+  rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]),
+  ...(!missingWaveRules?[
+   rule(4,"refs/heads/asf/waves/*",["creation","update"],[{
+    actor_type:"Integration",actor_id:wrongWaveApp?5321746:5361227,
+    bypass_mode:"always"
+   }]),
+   rule(5,"refs/heads/asf/waves/*",["deletion","non_fast_forward"],
+    immutableWaveBypass?[{actor_type:"Integration",actor_id:5361227,
+     bypass_mode:"always"}]:[])
+  ]:[])
  ];
  const state={tip:RESERVATION,manifest,
   journals:new Map([[RESERVATION,j]]),
   commits:new Map([[RESERVATION,{sha:RESERVATION,
    tree:{sha:S("5")},parents:[{sha:ORIGIN}]}]]),
   pending:null,writes:[],patches:0,paths:[],stage:0,
-  missingReadback:false,global:GLOBAL,waveGetCount:0};
+  missingReadback:false,global:GLOBAL,waveGetCount:0,
+  rulesetListReads:0};
  const file=(path,obj)=>{
   const bytes=Buffer.from(JSON.stringify(obj));
   return {ok:true,data:{type:"file",path,encoding:"base64",
@@ -82,9 +94,16 @@ function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
    event:"workflow_dispatch",head_branch:"main",head_sha:ORIGIN,
    run_attempt:1,status:"in_progress"
   }};
-  if(path===BASE+"/rulesets")return {ok:true,data:policies.map(p=>({id:p.id}))};
+  if(path===BASE+"/rulesets"){
+   state.rulesetListReads++;
+   return {ok:true,data:policies.map(p=>({id:p.id}))};
+  }
   for(const p of policies)if(path===BASE+"/rulesets/"+p.id)
-   return {ok:true,data:p};
+   return {ok:true,data:
+    waveRulesChangeDuringCheck&&p.id===4&&state.rulesetListReads>=4?
+    {...p,bypass_actors:[{
+     actor_type:"Integration",actor_id:5321746,bypass_mode:"always"
+    }]}:p};
   if(path===REST_W)return {ok:true,data:{
    ref:REF,object:{type:"commit",sha:state.tip}}};
   if(path===G)return {ok:true,data:{ref:ADMISSION_REGISTRY_REF,
@@ -258,6 +277,25 @@ test("malicious rulesets, corrupted global registry, forged child run stop befor
   assert.notEqual(r.status,"persisted_simulation");
   assert.equal(f.state.writes.length,0);noRights(r);
  }
+});
+test("wave ref must have TWO separate controller-only, immutable GitHub rulesets",async()=>{
+ for(const opts of [{missingWaveRules:true},{wrongWaveApp:true},
+  {immutableWaveBypass:true}]){
+  const f=fixture(opts);
+  const r=await attemptV3GithubChildWaveCAS({phase:"ACK",...f});
+  assert.equal(r.status,"rejected",JSON.stringify(opts));
+  assert.equal(r.code,"wave_creation_update_or_immutability_not_verified");
+  assert.equal(f.state.writes.length,0);
+  noRights(r);
+ }
+});
+test("wave ruleset changed after proofs: fail closed before first git write",async()=>{
+ const f=fixture({waveRulesChangeDuringCheck:true});
+ const r=await attemptV3GithubChildWaveCAS({phase:"ACK",...f});
+ assert.equal(r.status,"uncertain");
+ assert.equal(r.code,"wave_protection_changed_before_write");
+ assert.equal(f.state.writes.length,0);
+ noRights(r);
 });
 test("unsafe phase, missing ports and forged reservation stop before any writer",async()=>{
  const f=fixture();
