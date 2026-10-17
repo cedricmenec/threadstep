@@ -96,7 +96,9 @@ test("durable plan and apply checkpoints precede paid sync and survive later fai
   assert.match(workflow,/node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" "\$guard_phase" "\$CHANGE_ID"/);
   assert.match(workflow,/git add -A[\s\S]*?node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" apply "\$CHANGE_ID"/);
   assert.match(workflow,/git add -A[\s\S]*?node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" "\$guard_phase" "\$CHANGE_ID"/);
-  assert.doesNotMatch(workflow,/case "\$path" in/);
+  // finalize still has its deliberately narrow post-sync uncommitted
+  // change gate; only the former publication-wide product allowlist goes away.
+  assert.match(workflow,/if \[\[ "\$PHASE" == finalize \]\]; then/);
   assert.ok(workflow.includes("No automatic paid retry was started"));
   assert.ok(workflow.includes('if: failure()'));
 });
