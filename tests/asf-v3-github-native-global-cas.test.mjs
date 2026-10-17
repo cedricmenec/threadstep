@@ -44,12 +44,14 @@ function fixture({lostPatch=false,concurrent=false,malformed=false}={}){
    id:70001,repository:{full_name:REPO},actor:{login:"cedricmenec"},
    event:"workflow_dispatch",path:".github/workflows/backlog-orchestrator-v3.yml",
    head_branch:"main",head_sha:SHA("a"),run_attempt:1,status:"in_progress"}};
-  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2}]};
+  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2},{id:3}]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:rule(1,"refs/heads/main",
    ["pull_request","required_status_checks","deletion","non_fast_forward"])};
   if(path===BASE+"/rulesets/2")return {ok:true,data:rule(2,ADMISSION_REGISTRY_REF,
-   ["deletion","non_fast_forward","update"],
-   [{actor_type:"Integration",actor_id:42}])};
+   ["update"],
+   [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}])};
+  if(path===BASE+"/rulesets/3")return {ok:true,data:rule(3,ADMISSION_REGISTRY_REF,
+   ["deletion","non_fast_forward"])};
   if(path===REF)return {ok:true,data:{ref:ADMISSION_REGISTRY_REF,
    object:{type:"commit",sha:state.head}}};
   if(path===BASE+"/git/commits/"+ROOT)return {ok:true,data:{
