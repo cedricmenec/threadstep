@@ -23,7 +23,7 @@ const policyMain=()=>rules(1,"refs/heads/main",
  ["pull_request","required_status_checks","deletion","non_fast_forward"]);
 const policyGlobal=()=>rules(2,ADMISSION_REGISTRY_REF,
  ["update"],
- [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}]);
+ [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
 const policyImmutable=()=>rules(3,ADMISSION_REGISTRY_REF,
  ["deletion","non_fast_forward"]);
 function fixture({kind="RELEASE",moved=false,invalidRegistry=false,
