@@ -600,6 +600,7 @@ function renderItem(subject, item) {
     li.append(renderEditor(subject, item));
   } else {
     li.append(renderRow(subject, item));
+    if (typeof item.note === "string" && item.note.trim().length > 0) li.append(renderNote(item));
     li.append(renderActions(subject, item, view));
   }
   if (view.renderChildren) {
@@ -639,6 +640,9 @@ function renderRow(subject, item) {
   });
   row.append(check, title, control);
   return row;
+}
+function renderNote(item) {
+  return el("p", "task-note", item.note);
 }
 function moveItem(subject, item, direction) {
   const reordered = moveWithinPriority(subject.items, item.id, direction);
@@ -849,6 +853,13 @@ function renderEditor(subject, item) {
     if (priority === item.priority) option.selected = true;
     select.append(option);
   }
+  const noteLabel = el("label", "task-edit-note-label", "Note (facultative)");
+  const noteInput = el("textarea", "task-edit-note");
+  noteInput.rows = 3;
+  noteInput.maxLength = 2000;
+  noteInput.value = typeof item.note === "string" ? item.note : "";
+  noteInput.setAttribute("aria-label", "Note (facultative) de l'étape " + item.title);
+  noteLabel.append(noteInput);
   const save = el("button", "primary", "Enregistrer");
   save.type = "submit";
   const cancel = el("button", "subtle", "Annuler");
@@ -856,9 +867,15 @@ function renderEditor(subject, item) {
   const error = el("p", "edit-error");
   error.hidden = true;
   error.setAttribute("role", "alert");
-  form.append(titleInput, select, save, cancel, error);
+  form.append(titleInput, select, noteLabel, save, cancel, error);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (noteInput.value.length > 2000) {
+      error.textContent = "La note doit contenir au plus 2000 caractères.";
+      error.hidden = false;
+      noteInput.focus();
+      return;
+    }
     const trimmed = titleInput.value.trim();
     if (!trimmed || trimmed.length > 300) {
       error.textContent = "Le titre doit contenir entre 1 et 300 caractères.";
@@ -866,7 +883,7 @@ function renderEditor(subject, item) {
       titleInput.focus();
       return;
     }
-    const next = updateItem(documentState, subject.id, item.id, { title: titleInput.value, priority: select.value });
+    const next = updateItem(documentState, subject.id, item.id, { title: titleInput.value, priority: select.value, note: noteInput.value });
     editingItemId = null;
     focusItemId = item.id;
     if (next === documentState) { render(); return; }

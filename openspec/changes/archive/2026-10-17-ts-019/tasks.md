@@ -2,7 +2,7 @@
 
 ## 1. Domain: optional note field and validation in `site/core.js`
 
-- [ ] 1.1 Add `NOTE_MAX_LENGTH = 2000` and extend `updateItem(document,
+- [x] 1.1 Add `NOTE_MAX_LENGTH = 2000` and extend `updateItem(document,
   subjectId, itemId, patch)` so an optional `patch.note` is applied atomically
   with `title` and `priority`: when the `note` property is absent the current
   note is preserved; when present it must be a string of at most
@@ -12,12 +12,12 @@
   includes `note` only when it is non-empty; and the no-op comparison includes
   the normalized note so an identical edit returns the same reference; verify
   with `node --check site/core.js`.
-- [ ] 1.2 Extend `parseDocument` to validate an item's `note` only when the
+- [x] 1.2 Extend `parseDocument` to validate an item's `note` only when the
   property is present: require `typeof note === "string"` and
   `note.length <= NOTE_MAX_LENGTH`, otherwise throw the existing « Étape invalide
   dans le fichier. » error, leaving a document without `note` and `newItem`
   output unchanged; verify with `node --check site/core.js`.
-- [ ] 1.3 Add deterministic cases to `tests/core.test.mjs` for the optional
+- [x] 1.3 Add deterministic cases to `tests/core.test.mjs` for the optional
   field: an old V1 document and a `newItem` without `note` are valid, the rebuilt
   item keeps the exact key set `["done","id","parentId","priority","title"]` when
   no note is entered, a note of exactly 2 000 characters is accepted and a
@@ -26,7 +26,7 @@
   and an `<img src=x onerror=alert(1)>`-like string) is stored verbatim, an
   unchanged `title`/`priority`/`note` returns the same reference, and no input
   array or item is mutated; verify with `npm test`.
-- [ ] 1.4 Add deterministic cases to `tests/core.test.mjs` for the import and
+- [x] 1.4 Add deterministic cases to `tests/core.test.mjs` for the import and
   preservation contract: a historic export without `note` round-trips through
   `parseDocument`, a multiline note survives `parseDocument(JSON.stringify(doc))`
   with its line breaks, an import whose `note` is `null`, a number or longer than
@@ -38,39 +38,39 @@
 
 ## 2. Inline editor: multiline note control in `site/app.js`
 
-- [ ] 2.1 In `renderEditor`, add a `<textarea class="task-edit-note">` with
+- [x] 2.1 In `renderEditor`, add a `<textarea class="task-edit-note">` with
   `maxLength = 2000`, a few `rows`, an associated visible label « Note
   (facultative) » and an accessible name naming the edited item, prefilled with
   `typeof item.note === "string" ? item.note : ""`, placed beside the existing
   title and priority controls without changing the existing « Enregistrer »,
   « Annuler » or error elements; verify with `node --check site/app.js`.
-- [ ] 2.2 In the editor submit handler, validate the note length before saving:
+- [x] 2.2 In the editor submit handler, validate the note length before saving:
   a note longer than 2 000 characters fills the existing
   `<p class="edit-error" role="alert">`, focuses the note control and returns
   without calling `updateItem` or `persist`; otherwise pass
   `{ title, priority, note }` to `updateItem` so a blank note removes the field
   and an unchanged edit skips `persist`; verify with `node --check site/app.js`.
-- [ ] 2.3 Create `tests/action-note.test.mjs` reading `site/app.js` as text and
+- [x] 2.3 Create `tests/action-note.test.mjs` reading `site/app.js` as text and
   asserting the `task-edit-note` textarea, the « Note (facultative) » label, the
   `maxLength = 2000`, the `{ title, priority, note }` patch and the reuse of the
   `edit-error` alert; verify with `npm test`.
 
 ## 3. Display: plain-text note in the task body
 
-- [ ] 3.1 In `site/app.js`, add a `renderNote(item)` helper building a
+- [x] 3.1 In `site/app.js`, add a `renderNote(item)` helper building a
   `<p class="task-note">` with the existing `el()` text-node helper and call it
   from `renderItem` between `renderRow` and `renderActions`, only when
   `typeof item.note === "string" && item.note.trim().length > 0`, so the note
   appears in both the overview and the detail view and no `innerHTML` is used;
   verify with `node --check site/app.js`.
-- [ ] 3.2 Add a `.task-note` rule in `site/styles.css` with
+- [x] 3.2 Add a `.task-note` rule in `site/styles.css` with
   `white-space: pre-wrap` and a wrap rule for narrow viewports, no colour-only
   signalling and no animation; verify at a mobile width with no new dependency.
-- [ ] 3.3 Extend `tests/action-note.test.mjs` with static assertions that
+- [x] 3.3 Extend `tests/action-note.test.mjs` with static assertions that
   `renderNote` is called in `renderItem`, that `.task-note` uses
   `white-space:pre-wrap`, and that neither `renderNote` nor the note path uses
   `innerHTML`; verify with `npm test`.
-- [ ] 3.4 Extend `tests/action-note.test.mjs` to assert the editor still routes
+- [x] 3.4 Extend `tests/action-note.test.mjs` to assert the editor still routes
   through `updateItem` and keeps the unchanged-reference short circuit
   (`if (next === documentState) { render(); return; }`), so cancelling, an invalid
   note or an identical re-save writes nothing, and that the note is carried in
@@ -78,13 +78,13 @@
 
 ## 4. Product documentation
 
-- [ ] 4.1 Update `docs/product/guide-utilisation.md` with a short section
+- [x] 4.1 Update `docs/product/guide-utilisation.md` with a short section
   describing the optional « Note (facultative) » field, its 2 000-character
   limit, the preserved line breaks, the plain-text (non-Markdown, non-HTML)
   rendering in both views, the blank-note removal and the export/import
   compatibility; verify the text matches the shipped behavior and that
   `npm run check` still passes.
-- [ ] 4.2 Update `docs/product/mvp.md` to add FR-22 and its matching acceptance
+- [x] 4.2 Update `docs/product/mvp.md` to add FR-22 and its matching acceptance
   test (optional bounded note, plain-text display with line breaks preserved,
   preserved across the existing operations, atomic rejection of an invalid note,
   historical V1 documents without `note` still importable, no new version, key or
@@ -93,8 +93,8 @@
 
 ## 5. Integration verification
 
-- [ ] 5.1 Run `npm run check` and report the exact command and its output.
-- [ ] 5.2 Run `openspec validate ts-019 --strict --no-interactive` and report the
+- [x] 5.1 Run `npm run check` and report the exact command and its output.
+- [x] 5.2 Run `openspec validate ts-019 --strict --no-interactive` and report the
   exact command and its output.
 
 ## Post-sync review

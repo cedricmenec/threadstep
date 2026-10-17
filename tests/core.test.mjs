@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleCollapsedParent, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1626,4 +1626,146 @@ test("totalTaskCount matches imported top-level tasks", () => {
   doc.subjects.push(subject);
   const imported = parseDocument(JSON.stringify(doc));
   assert.equal(totalTaskCount(imported.subjects[0].items), 2);
+});
+
+test("the note limit is 2000 characters and legacy documents without a note stay valid", () => {
+  assert.equal(NOTE_MAX_LENGTH, 2000);
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  doc.subjects.push(subject);
+  assert.equal(Object.prototype.hasOwnProperty.call(doc.subjects[0].items[0], "note"), false);
+  assert.deepEqual(parseDocument(JSON.stringify(doc)), JSON.parse(JSON.stringify(doc)));
+});
+
+test("updateItem stores an optional note verbatim and keeps the legacy key set otherwise", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  doc.subjects.push(subject);
+  const withNote = updateItem(doc, "a", "t1", {
+    title: "Titre",
+    priority: "normal",
+    note: "Ligne 1\nLigne 2 accents éàç <img src=x onerror=alert(1)>"
+  });
+  assert.notEqual(withNote, doc);
+  assert.equal(withNote.subjects[0].items[0].note,
+    "Ligne 1\nLigne 2 accents éàç <img src=x onerror=alert(1)>");
+  assert.deepEqual(Object.keys(withNote.subjects[0].items[0]).sort(),
+    ["done", "id", "note", "parentId", "priority", "title"]);
+
+  const withoutNote = updateItem(doc, "a", "t1", { title: "Autre", priority: "normal" });
+  assert.equal(Object.prototype.hasOwnProperty.call(withoutNote.subjects[0].items[0], "note"), false);
+  assert.deepEqual(Object.keys(withoutNote.subjects[0].items[0]).sort(),
+    ["done", "id", "parentId", "priority", "title"]);
+});
+
+test("updateItem accepts a note of exactly 2000 characters and refuses longer or non-textual notes", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  doc.subjects.push(subject);
+  const maxNote = "x".repeat(NOTE_MAX_LENGTH);
+  const accepted = updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: maxNote });
+  assert.equal(accepted.subjects[0].items[0].note, maxNote);
+  assert.equal(accepted.subjects[0].items[0].note.length, 2000);
+  assert.equal(updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "y".repeat(2001) }), doc);
+  assert.equal(updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: 5 }), doc);
+  assert.equal(updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: null }), doc);
+  assert.equal(doc.subjects[0].items[0].note, undefined);
+});
+
+test("updateItem removes a blank or whitespace-only note and returns the same reference on an identical edit", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  doc.subjects.push(subject);
+  const withNote = updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "À faire" });
+  const same = updateItem(withNote, "a", "t1", { title: "Titre", priority: "normal", note: "À faire" });
+  assert.equal(same, withNote);
+  const blanked = updateItem(withNote, "a", "t1", { title: "Titre", priority: "normal", note: "   \n  " });
+  assert.notEqual(blanked, withNote);
+  assert.equal(Object.prototype.hasOwnProperty.call(blanked.subjects[0].items[0], "note"), false);
+  assert.equal(updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "  " }), doc);
+});
+
+test("updateItem never mutates its inputs when handling a note", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  doc.subjects.push(subject);
+  const before = JSON.parse(JSON.stringify(doc));
+  const next = updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "Note\nmultiligne" });
+  assert.notEqual(next, doc);
+  assert.deepEqual(doc, before);
+  updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "z".repeat(2001) });
+  assert.deepEqual(doc, before);
+  updateItem(doc, "a", "t1", { title: "Titre", priority: "normal", note: "  " });
+  assert.deepEqual(doc, before);
+});
+
+test("parseDocument accepts a historic export without note and preserves a multiline note on round-trip", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  subject.items[0].note = "Première ligne\nDeuxième ligne";
+  doc.subjects.push(subject);
+  const raw = JSON.stringify(doc);
+  const parsed = parseDocument(raw);
+  assert.equal(parsed.subjects[0].items[0].note, "Première ligne\nDeuxième ligne");
+  assert.deepEqual(parseDocument(JSON.stringify(parsed)), JSON.parse(JSON.stringify(parsed)));
+
+  const legacy = emptyDocument();
+  const legacySubject = newSubject("B", "b");
+  legacySubject.items.push(newItem("Sans note", "urgent", "t2"));
+  legacy.subjects.push(legacySubject);
+  assert.deepEqual(parseDocument(JSON.stringify(legacy)), JSON.parse(JSON.stringify(legacy)));
+});
+
+test("parseDocument rejects an invalid note atomically without altering a local document", () => {
+  const base = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(newItem("Titre", "normal", "t1"));
+  base.subjects.push(subject);
+  for (const invalid of [null, 42, "x".repeat(2001)]) {
+    const bad = JSON.parse(JSON.stringify(base));
+    bad.subjects[0].items[0].note = invalid;
+    const before = JSON.parse(JSON.stringify(base));
+    assert.throws(() => parseDocument(JSON.stringify(bad)), /Étape invalide/);
+    assert.deepEqual(base, before);
+  }
+});
+
+test("an item note survives priority change, reorder, removal undo and completion", () => {
+  const doc = emptyDocument();
+  const subject = newSubject("A", "a");
+  subject.items.push(
+    newItem("Un", "normal", "t1"),
+    newItem("Deux", "normal", "t2"),
+    newItem("Enfant", "later", "c1", "t1"),
+  );
+  subject.items[0].note = "Note de la première\nligne deux";
+  subject.items[2].note = "Note de l'enfant";
+  doc.subjects.push(subject);
+
+  const reprioritized = setItemPriority(doc, "a", "t1", "urgent");
+  assert.equal(reprioritized.subjects[0].items.find((i) => i.id === "t1").note, "Note de la première\nligne deux");
+
+  const reordered = reorderWithinPriority(doc.subjects[0].items, "t2", "t1", "before");
+  assert.equal(reordered.find((i) => i.id === "t1").note, "Note de la première\nligne deux");
+
+  const moved = moveWithinPriority(doc.subjects[0].items, "t2", "up");
+  assert.equal(moved.find((i) => i.id === "t2").note, undefined);
+
+  const removed = planRemoval(doc, "a", "t1");
+  assert.equal(removed.removal.entries.find((e) => e.item.id === "t1").item.note, "Note de la première\nligne deux");
+  assert.equal(removed.removal.entries.find((e) => e.item.id === "c1").item.note, "Note de l'enfant");
+  const restored = restoreRemoval(removed.document, removed.removal);
+  assert.equal(restored.subjects[0].items.find((i) => i.id === "t1").note, "Note de la première\nligne deux");
+  assert.equal(restored.subjects[0].items.find((i) => i.id === "c1").note, "Note de l'enfant");
+
+  const completed = doc.subjects[0].items.slice();
+  completed[0].done = true;
+  assert.deepEqual(parseDocument(JSON.stringify({ version: 1, subjects: [{ ...subject, items: completed }] }))
+    .subjects[0].items[0].note, "Note de la première\nligne deux");
 });

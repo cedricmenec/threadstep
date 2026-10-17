@@ -26,6 +26,37 @@ serveur applicatif ni intelligence artificielle dans le navigateur.
    descendre ce sujet. « Supprimer » un sujet demande une confirmation
    et retire aussi ses actions.
 
+## Ajouter une note facultative à une action (TS-019)
+
+Chaque action principale et chaque sous-étape peut porter une **note
+en texte libre**, utile pour un contexte trop long pour le titre
+(numéro de téléphone, raison d'attente, lien à suivre) :
+
+- Dans le formulaire **« Modifier »**, la zone multiligne
+  **« Note (facultative) »** est préremplie avec la note existante.
+  « Enregistrer » valide le titre, la priorité et la note ensemble ;
+  la note accepte jusqu'à **2 000 caractères**, retours à la ligne
+  compris, et les conserve tels quels.
+- Une note **vide ou uniquement composée d'espaces** supprime le champ
+  `note` de l'action. Une saisie de plus de 2 000 caractères affiche
+  un message d'erreur accessible et n'enregistre rien. « Annuler », ou
+  « Enregistrer » sans rien changer, n'écrit rien. L'identifiant,
+  l'état terminé, la priorité, le parent et l'ordre ne sont jamais
+  modifiés par l'enregistrement de la note.
+- Une note non vide s'affiche dans le corps de l'action, sous son
+  titre et au-dessus des sous-étapes, **en texte brut** : le contenu
+  n'est jamais interprété comme du HTML, du Markdown ou un lien actif,
+  même s'il ressemble à du balisage. Le rendu est identique dans la
+  vue d'ensemble et dans la vue de détail.
+- Les notes survivent aux opérations habituelles (terminer, changer la
+  priorité, réordonner, replier, retirer puis annuler) et au
+  rechargement. L'**export JSON** les inclut ; un **import** reste
+  compatible avec les anciennes sauvegardes sans note et refuse
+  entièrement un fichier dont une note n'est pas du texte ou dépasse
+  2 000 caractères, sans écraser les données locales.
+- Aucune migration, nouvelle clé de stockage ni nouvelle version du
+  document : `note` est un champ **facultatif** du document V1.
+
 ## Ouvrir un projet dans une vue dédiée (TS-016)
 
 Chaque carte de la vue d'ensemble propose un bouton **« Ouvrir le projet »**
