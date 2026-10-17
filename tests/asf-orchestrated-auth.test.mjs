@@ -92,5 +92,9 @@ test("one shared JOB mutex is used across all paid agent workflows",()=>{
  assert.match(openSpec,/node scripts\/asf\/waves\/authenticate-executor.mjs/);
  assert.match(openSpec,/if: github.actor == github.repository_owner/);
  assert.match(openSpec,/gh pr create --draft/);
- assert.match(openSpec,/Apply changed a protected path/);
+ const checkpoint=readFileSync(new URL("../scripts/agent-openspec-checkpoint.mjs",import.meta.url),"utf8");
+ assert.match(openSpec,/node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" "\$guard_phase" "\$CHANGE_ID"/);
+ assert.match(checkpoint,/PROTECTED_PREFIXES/);
+ assert.match(checkpoint,/PROTECTED_FILES/);
+ assert.match(checkpoint,/sensitiveFile\(path\)/);
 });

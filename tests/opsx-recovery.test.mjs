@@ -12,6 +12,8 @@ test("plan checkpoint is restricted to the specific change", () => {
     assert.equal(allowedCheckpointPath("plan", "ts-023", path), false, path);
   }
   assert.equal(checkCheckpointPaths("plan","ts-023",["openspec/changes/ts-023/tasks.md"]), 1);
+  assert.equal(allowedCheckpointPath("plan","ts-023","openspec/changes/ts-023/private.key"),false);
+  assert.equal(allowedCheckpointPath("apply","ts-023","site/.env.example"),true);
 });
 
 test("apply checkpoint uses protected-path denylist, not a product allowlist", () => {
@@ -42,7 +44,8 @@ test("apply checkpoint uses protected-path denylist, not a product allowlist", (
     "node_modules/dependency/index.js", "site/node_modules/evil.js",
     "coverage/report.html", "build/cache/.cache/data",
     "../outside", "docs/../AGENTS.md", "site//index.html",
-    "site\\\\other.js", "/etc/passwd", "site/evil\\nname",
+    "site\\\\other.js", "/etc/passwd", "site/evil\\nname", "tools/local/.npmrc", "site/.envrc",
+    "openspec/changes/ts-024/credentials.pem",
   ];
   for (const path of forbidden) {
     assert.equal(allowedCheckpointPath("apply", "ts-024", path), false, path);

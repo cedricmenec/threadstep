@@ -36,7 +36,9 @@ function safePath(path) {
 
 function sensitiveFile(path) {
   const basename = path.split("/").at(-1).toLowerCase();
-  return basename === ".env" || basename.startsWith(".env.") ||
+  return basename === ".env" || basename === ".envrc" ||
+    (basename.startsWith(".env.") && basename !== ".env.example") ||
+    basename === ".npmrc" || basename === ".netrc" ||
     basename === "dexie-cloud.json" || basename === "dexie-cloud.key" ||
     /\.(?:pem|p12|pfx|key|log)$/.test(basename) ||
     /^(?:id_rsa|id_ed25519)(?:\.pub)?$/.test(basename);
@@ -45,16 +47,20 @@ function sensitiveFile(path) {
 export function allowedCheckpointPath(phase, changeId, path) {
   if (!/^ts-[0-9]{3}$/.test(changeId) || !safePath(path)) return false;
   const plan = `openspec/changes/${changeId}/`;
+  if (phase !== "plan" && phase !== "apply" && phase !== "publish") return false;
+
+  // Sensitive files are always forbidden, including when hidden inside
+  // an otherwise legitimate OpenSpec plan directory.
+  if (path.split("/").some(part => UNTRACKED_OUTPUT_PARTS.has(part)) ||
+      sensitiveFile(path)) return false;
   if (phase === "plan") return path.startsWith(plan);
-  if (phase !== "apply" && phase !== "publish") return false;
 
   // Entries are checked *before* git add -A and again after staging.
   // The tree may include arbitrary new product code, build tools and
   // dependency metadata, but not protected factory inputs or secrets.
   if (PROTECTED_FILES.has(path) ||
       PROTECTED_PREFIXES.some(prefix => path.startsWith(prefix)) ||
-      path.split("/").some(part => UNTRACKED_OUTPUT_PARTS.has(part)) ||
-      sensitiveFile(path)) return false;
+      path.split("/").some(part => UNTRACKED_OUTPUT_PARTS.has(part))) return false;
 
   if (path.startsWith("openspec/")) {
     // During paid implementation neither canonical specs nor other
