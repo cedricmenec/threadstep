@@ -204,6 +204,33 @@ export function canReorderWithinPriority(items, itemId, targetId, position) {
 export function canMoveWithinPriority(items, itemId, direction) {
   return moveWithinPriority(items, itemId, direction) !== items;
 }
+function promotionTarget(document, subjectId, itemId) {
+  if (!document || !Array.isArray(document.subjects)) return null;
+  const subject = document.subjects.find((entry) => entry && entry.id === subjectId);
+  if (!subject || !Array.isArray(subject.items)) return null;
+  const item = subject.items.find((entry) => entry && entry.id === itemId);
+  if (!item || item.parentId === null || item.parentId === undefined) return null;
+  const parent = subject.items.find((entry) => entry && entry.id === item.parentId);
+  if (!parent || parent.parentId !== null || parent.id === item.id) return null;
+  return { subject, item, parent };
+}
+export function canPromoteItemToTopLevel(document, subjectId, itemId) {
+  return promotionTarget(document, subjectId, itemId) !== null;
+}
+export function promoteItemToTopLevel(document, subjectId, itemId) {
+  const target = promotionTarget(document, subjectId, itemId);
+  if (!target) return document;
+  const { subject, item, parent } = target;
+  const promoted = { ...item, parentId: null };
+  const remaining = subject.items.filter((entry) => entry.id !== itemId);
+  const parentIndex = remaining.findIndex((entry) => entry.id === parent.id);
+  if (parentIndex === -1) return document;
+  const items = remaining.slice();
+  items.splice(parentIndex + 1, 0, promoted);
+  const subjects = document.subjects.map((entry) =>
+    entry.id === subjectId ? { ...entry, items } : entry);
+  return { ...document, subjects };
+}
 export function pendingCount(document) {
   return document.subjects.reduce((count, subject) =>
     count + subject.items.filter((item) => !item.done).length, 0);

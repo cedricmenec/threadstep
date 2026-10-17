@@ -137,7 +137,10 @@ survive a reload and a JSON export/import round-trip.
 
 Reordering a substep MUST NOT change its `parentId`, MUST NOT move it to another
 parent or subject, MUST NOT change its priority, and MUST NOT turn it into a
-top-level action. A top-level action MUST NOT become a substep.
+top-level action. A top-level action MUST NOT become a substep. The only
+sanctioned level change is the explicit « Promouvoir en tâche principale »
+operation owned by the `substep-promotion` capability; a reorder never performs
+it.
 
 #### Scenario: Parent stays the same
 
@@ -156,6 +159,13 @@ top-level action. A top-level action MUST NOT become a substep.
 
 - **WHEN** a substep is reordered
 - **THEN** its priority and every other item's priority are unchanged
+
+#### Scenario: Promotion is not a reorder
+
+- **GIVEN** a one-level substep
+- **WHEN** any supported reorder gesture or move control is used
+- **THEN** it stays a substep with an unchanged `parentId`, and only the
+  explicit « Promouvoir en tâche principale » command can change its level
 
 ### Requirement: Top-level ordering unchanged
 
