@@ -1,5 +1,50 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-024 bis (17 octobre 2026) : denylist plutôt que whitelist de fichiers produit
+
+Le [nouveau run #39073690462](https://github.com/cedricmenec/threadstep/actions/runs/39073690462),
+en `phase=apply`, a de nouveau réussi l'étape OpenCode et ses tests,
+puis échoué au même checkpoint avant OPSX sync. Cette fois le vérificateur
+refusait `tools/build-vendor.mjs`,
+`tools/vendor/entry-dexie-cloud-addon.mjs` et
+`tools/vendor/entry-dexie.mjs`. Il s'agit du même défaut de conception :
+une whitelist de fichiers produit ne peut anticiper les chemins nécessaires
+aux futurs travaux. Le SHA distant est toujours le **plan**
+`d49452ed1750f36cb9e3b309dee5f527763fbe7d`.
+Ni le nouvel apply ni le sync ne sont sauvegardés.
+
+**Décision factory ASF-OPSX-06 :** conserver une whitelist **exclusivement
+pour `plan`**, où tout chemin hors du change est illégitime ;
+utiliser pour `apply` et `publish` une **denylist ciblée** des
+chemins sensibles (workflows, agents, scripts de factory,
+`backlog/`, `docs/factory/`, `AGENTS.md`, `ChatGPT.md`,
+config OpenSpec, configuration Git/npm, secrets, caches et fichiers de
+clé). Les chemins de code, tooling `tools/`, assets, dépendances et
+fichiers produit sont permis par défaut. Avant OPSX sync, les
+`openspec/specs/`, les autres changes et les archives demeurent
+protégés ; à publication, les specs canoniques et l'archive de la
+tâche sont permises.
+
+Le vérificateur est chargé depuis `origin/main` et exécuté **avant
+et après `git add -A`**, ainsi qu'avant la PR finale ; l'ancien
+garde-fou incomplet de publication est remplacé par la même politique.
+`.gitignore` n'est **pas** un contrôle de sécurité : il n'arrête pas
+les modifications de fichiers déjà suivis, ni `git add -f`, ni
+l'édition de workflows ou des prompts de l'agent. Il exclut seulement
+par défaut les artefacts locaux et secrets connus *non suivis*.
+Le contrôle de portée reste fail-closed sur les fichiers sensibles ;
+le `check` CI, les spécifications, la recette et l'examen humain
+de la PR restent complémentaires.
+
+**Reprise :** fusionner la PR factory, vérifier CI/Pages, rapprocher
+sans force-push `agent/openspec/TS-024` du nouveau `main` en
+préservant les sept artefacts OpenSpec et le marqueur de plan,
+puis déclencher **un nouveau run autorisé**
+`task_id=TS-024`, `phase=apply`, `auto_merge=false`.
+Ne pas utiliser le bouton « Re-run jobs » ni `phase=auto`.
+Les opérations payantes du précédent runner ne sont pas récupérables
+sans checkpoint d'implémentation ; ce correctif ne les relance pas.
+
 ## Incident TS-024 (17 octobre 2026) : bootstrap Dexie bloqué au checkpoint d'apply
 
 Le [run TS-024 #39070773239](https://github.com/cedricmenec/threadstep/actions/runs/39070773239)

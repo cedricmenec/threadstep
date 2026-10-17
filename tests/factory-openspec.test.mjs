@@ -36,8 +36,11 @@ test('Short task IDs normalize before paths, branches and model calls', () => {
 });
 
 test('Plan is isolated and apply checks task completion and tests', () => {
-  assert.match(agent, /Plan changed a forbidden path/);
-  assert.match(agent, /Apply changed a protected path/);
+  // The trusted verifier, rather than duplicated Bash cases, now enforces
+  // plan confinement and product-path denylist for both checkpoints and PRs.
+  assert.match(agent, /node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" plan "\$CHANGE_ID"/);
+  assert.match(agent, /node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" apply "\$CHANGE_ID"/);
+  assert.match(agent, /guard_phase=publish/);
   assert.match(agent, /Unchecked tasks remain; refusing archive/);
   assert.match(agent, /Apply rewrote a reviewed OpenSpec artifact/);
   assert.match(agent, /npm run check/);

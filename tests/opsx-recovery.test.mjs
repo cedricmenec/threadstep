@@ -12,29 +12,66 @@ test("plan checkpoint is restricted to the specific change", () => {
     assert.equal(allowedCheckpointPath("plan", "ts-023", path), false, path);
   }
   assert.equal(checkCheckpointPaths("plan","ts-023",["openspec/changes/ts-023/tasks.md"]), 1);
+  assert.equal(allowedCheckpointPath("plan","ts-023","openspec/changes/ts-023/private.key"),false);
+  assert.equal(allowedCheckpointPath("apply","ts-023","site/.env.example"),true);
 });
 
-test("apply checkpoint permits product changes but not factory files or canonical specs", () => {
-  for (const path of ["site/core.js","site/app.js","tests/core.test.mjs","docs/product/mvp.md","openspec/changes/ts-023/tasks.md"]) {
-    assert.equal(allowedCheckpointPath("apply","ts-023",path),true,path);
+test("apply checkpoint uses protected-path denylist, not a product allowlist", () => {
+  const productPaths = [
+    "site/core.js", "tests/core.test.mjs", "docs/product/mvp.md",
+    "openspec/changes/ts-024/tasks.md", "package.json", "package-lock.json",
+    ".gitignore", "tools/build-vendor.mjs",
+    "tools/vendor/entry-dexie-cloud-addon.mjs", "tools/vendor/entry-dexie.mjs",
+    "assets/new-image.svg", "docs/research/notes.md",
+  ];
+  for (const path of productPaths) {
+    assert.equal(allowedCheckpointPath("apply", "ts-024", path), true, path);
+    assert.equal(allowedCheckpointPath("plan", "ts-024", path),
+      path.startsWith("openspec/changes/ts-024/"), path);
   }
-  for (const path of ["openspec/specs/action-editing/spec.md","openspec/changes/ts-022/specs/x/spec.md","scripts/agent-openspec-checkpoint.mjs","AGENTS.md",".github/workflows/ci.yml",".agents/skills/x","opencode.json","package.json.backup",".env",".npmrc","tools/unsafe.mjs","tools/vendor-dexie.mjs.old","tools/vendor-dexie.js","openspec/config.yaml","dexie-cloud.key"]) {
-    assert.equal(allowedCheckpointPath("apply","ts-023",path),false,path);
+  assert.equal(checkCheckpointPaths("apply", "ts-024", productPaths), productPaths.length);
+
+  const forbidden = [
+    "AGENTS.md", "ChatGPT.md", "opencode.json", "openspec/config.yaml",
+    ".github/workflows/ci.yml", ".agents/skills/x", ".opencode/run.md",
+    "backlog/tasks/TS-024.md", "scripts/agent-openspec-checkpoint.mjs",
+    "docs/factory/tasks/ASF-OPSX-06.md", "openspec/specs/example/spec.md",
+    "openspec/changes/ts-023/tasks.md",
+    "openspec/changes/archive/2026-10-17-ts-024/tasks.md",
+    ".npmrc", ".netrc", ".gitattributes", ".gitmodules",
+    ".env", ".env.production", "site/.env.local", "site/secrets.pem",
+    "tools/signing.key", "site/dexie-cloud.json", "site/dexie-cloud.key",
+    "node_modules/dependency/index.js", "site/node_modules/evil.js",
+    "coverage/report.html", "build/cache/.cache/data",
+    "../outside", "docs/../AGENTS.md", "site//index.html",
+    "site\\\\other.js", "/etc/passwd", "site/evil\\nname", "tools/local/.npmrc", "site/.envrc",
+    "openspec/changes/ts-024/credentials.pem",
+  ];
+  for (const path of forbidden) {
+    assert.equal(allowedCheckpointPath("apply", "ts-024", path), false, path);
   }
-  for (const path of ["package.json","package-lock.json",".gitignore","tools/vendor-dexie.mjs"]) {
-    assert.equal(allowedCheckpointPath("apply","ts-024",path),true,path);
-    assert.equal(allowedCheckpointPath("plan","ts-024",path),false,path);
-  }
-  assert.equal(checkCheckpointPaths("apply","ts-024",[
-    "site/app.js", ".gitignore", "package.json", "package-lock.json", "tools/vendor-dexie.mjs"
-  ]),5);
-  assert.throws(()=>checkCheckpointPaths("apply","ts-023",["site/app.js","scripts/rogue.mjs"]),/forbidden paths/);
-  assert.throws(()=>checkCheckpointPaths("apply","ts-024",["site/app.js","tools/rogue.mjs"]),/forbidden paths/);
-  assert.throws(()=>checkCheckpointPaths("apply","ts-023",[]),/Empty checkpoint/);
-  assert.throws(()=>checkCheckpointPaths("finalize","ts-023",["site/app.js"]),/Unknown checkpoint/);
-  assert.throws(()=>checkCheckpointPaths("plan","TS-023",["site/app.js"]),/Invalid OpenSpec/);
+  assert.throws(() => checkCheckpointPaths("apply", "ts-024", [
+    "site/app.js", "tools/build-vendor.mjs", "scripts/rogue.mjs",
+  ]), /forbidden paths: scripts\/rogue\.mjs/);
+  assert.throws(() => checkCheckpointPaths("apply", "ts-024", []), /Empty checkpoint/);
+  assert.throws(() => checkCheckpointPaths("finalize", "ts-024", ["site/app.js"]), /Unknown checkpoint/);
+  assert.throws(() => checkCheckpointPaths("plan", "TS-024", ["site/app.js"]), /Invalid OpenSpec/);
 });
 
+test("publication blocks protected paths but permits only the task archive and synced specs", () => {
+  for (const path of [
+    "site/app.js", "tools/vendor/entry-dexie.mjs",
+    "openspec/specs/dexie-cloud-configuration/spec.md",
+    "openspec/changes/archive/2026-10-17-ts-024/tasks.md",
+    "openspec/changes/ts-024/tasks.md",
+  ]) assert.equal(allowedCheckpointPath("publish","ts-024",path),true,path);
+  for (const path of [
+    ".github/workflows/agent-openspec.yml", "docs/factory/README.md",
+    "openspec/config.yaml", "openspec/changes/ts-025/tasks.md",
+    "openspec/changes/archive/2026-10-17-ts-023/tasks.md",
+    "tools/vendor/.env", "secrets/private.pem",
+  ]) assert.equal(allowedCheckpointPath("publish","ts-024",path),false,path);
+});
 test("durable plan and apply checkpoints precede paid sync and survive later failures", () => {
   const plan=workflow.indexOf("- name: Checkpoint validated OpenSpec plan");
   const apply=workflow.indexOf("- name: Checkpoint verified implementation before OPSX sync");
@@ -55,7 +92,13 @@ test("durable plan and apply checkpoints precede paid sync and survive later fai
   assert.ok(workflow.includes('last_message="$(git log -1 --format=%s)"'));
   assert.ok(workflow.includes('LAST_DURABLE_PHASE=apply'));
   assert.ok(workflow.includes('CHECKPOINT_SHA=$(git rev-parse HEAD)'));
-  assert.ok(workflow.includes('git diff --no-renames --name-only origin/main...HEAD'));
+  assert.match(workflow,/guard_phase=publish[\s\S]*?if \[\[ "\$PHASE" == plan \]\]; then guard_phase=plan/);
+  assert.match(workflow,/node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" "\$guard_phase" "\$CHANGE_ID"/);
+  assert.match(workflow,/git add -A[\s\S]*?node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" apply "\$CHANGE_ID"/);
+  assert.match(workflow,/git add -A[\s\S]*?node "\$RUNNER_TEMP\/agent-openspec-checkpoint\.mjs" "\$guard_phase" "\$CHANGE_ID"/);
+  // finalize still has its deliberately narrow post-sync uncommitted
+  // change gate; only the former publication-wide product allowlist goes away.
+  assert.match(workflow,/if \[\[ "\$PHASE" == finalize \]\]; then/);
   assert.ok(workflow.includes("No automatic paid retry was started"));
   assert.ok(workflow.includes('if: failure()'));
 });
