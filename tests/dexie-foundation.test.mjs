@@ -155,12 +155,14 @@ test("3.1 schema has an explicit integer version and no ++id store", () => {
   assert.ok(definitions.length > 0);
   for (const definition of definitions) {
     assert.doesNotMatch(definition, /\+\+id/);
-    assert.match(definition, /@id/);
+    assert.equal(definition, "id");
   }
 });
 
-test("3.2 validateSynchronizedStores rejects ++id and accepts @id", () => {
+test("3.2 validateSynchronizedStores rejects ++id and accepts explicit id or @id", () => {
   assert.equal(validateSynchronizedStores({ subjects: "@id" }), true);
+  assert.equal(validateSynchronizedStores({ subjects: "id" }), true);
+  assert.equal(SCHEMA_VERSION, 2);
   assert.equal(validateSynchronizedStores({ subjects: "++id, title" }), false);
   assert.equal(validateSynchronizedStores({ subjects: "id" }), false);
   assert.equal(validateSynchronizedStores({}), false);

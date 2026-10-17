@@ -225,3 +225,40 @@ sans migration et vérification explicites.
 ## Documentation liée
 
 [Guide utilisateur](guide-utilisation.md) · [Exigences MVP historiques](mvp.md) · [Cible Dexie Cloud](specs/dexie-cloud-local-first.md) · [Recette fonctionnelle](acceptance-checklist.md) · [Vision](vision.md) · [Architecture générale](../architecture.md) · [ASF développeur](../factory/developer-guide.md).
+
+
+## Correctif de persistance et reprise TS-025 à TS-027 (18/10/2026)
+
+La source de vérité d'une instance Dexie Cloud **authentifiée** est désormais
+`IndexedDB` (tables `subjects` et `items`) ; l'ancienne clé
+`threadstep.document.v1` est préservée comme historique **non modifié**, sans
+transfert automatique. Après un OTP ou un rechargement, `db.open()` déclenche la
+restauration native de session, puis l'interface lit les tables dans une
+transaction cohérente. Les évènements `db.cloud.events.syncComplete` déclenchent
+une nouvelle lecture, tout comme les messages multi-onglets.
+
+Le modèle historique produit des IDs UUID stables et `legacy:<id>` lors de la
+migration. Dexie Cloud refuse ces identifiants sur des stores `@id` (réservés
+aux IDs générés de trois lettres). La version locale passe à **2** avec des
+clés primaires explicites `id` : elle conserve les mêmes keyPaths IndexedDB,
+les anciens IDs et les relations ; aucune purge ni copie cross-instance.
+Une base Cloud dont le schéma serait *scellé* peut nécessiter une modification
+**opérateur** du schéma de service avant le premier push : ne jamais contourner
+une erreur d'autorisation en reconfigurant silencieusement l'instance.
+
+Une mutation n'est annoncée comme « enregistrée dans IndexedDB » **qu'après
+validation de la transaction** ; un échec bloque les écritures suivantes et
+restitue la dernière vue confirmée. Les états Cloud ne sont pas inventés :
+une transaction locale ne prouve jamais un push distant.
+L'import JSON dans une base synchronisée exige une confirmation explicite
+indiquant l'URL du Cloud, ne vise qu'une base cible vide, utilise le plan de
+migration idempotent et ne modifie pas l'export source. La migration historique
+réévalue la cible avant le commit. Un échec de lecture IndexedDB bloque
+l'import et la migration : il n'est plus interprété comme une base vide.
+
+**Recette manuelle indispensable :** sur une base Cloud isolée et une origine
+Pages autorisée, vérifier l'OTP sur Chrome mobile, le reload sans nouveau code,
+l'import consenti puis la réapparition des sujets, le push/pull sur un deuxième
+appareil, l'absence de collisions et le comportement d'une base Cloud scellée.
+Les tests Node et CI ne vérifient pas le réseau distant ; conserver les exports
+originaux jusqu'à confirmation du round-trip inter-appareils.

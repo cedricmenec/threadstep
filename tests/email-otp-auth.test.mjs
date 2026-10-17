@@ -314,7 +314,7 @@ test("2.3 the authenticated gate protects loads, writes, subscriptions and migra
   assert.ok((app.match(/if \(!businessAllowed\(\)\) return;/g) || []).length >= 4);
   assert.match(app, /function businessAllowed\(\)/);
   assert.match(app, /if \(canAccessBusiness\(authState\)\) \{[\s\S]*?startBusiness\(\)/);
-  assert.match(app, /function startBusiness\(\) \{[\s\S]*?load\(\);[\s\S]*?offerHistoricalMigration\(\);/);
+  assert.match(app, /function startBusiness\(\) \{[\s\S]*?refreshSyncedDocument\(\)[\s\S]*?offerHistoricalMigration\(\)/);
   assert.match(app, /requiresAuthentication\(\)/);
   assert.equal(cloudConfigureOptions("https://demo.dexie.cloud").requireAuth, true);
 });

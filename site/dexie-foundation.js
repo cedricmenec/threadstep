@@ -1,10 +1,12 @@
 export const CLOUD_CONFIG_KEY = "threadstep.cloud.config.v1";
 export const DATABASE_NAME = "threadstep";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const CLOUD_HOST_SUFFIX = "dexie.cloud";
 export const SYNCHRONIZED_STORES = Object.freeze({
-  subjects: "@id",
-  items: "@id"
+  // Ordinary string primary keys accept current UUIDs and legacy: IDs.
+  // Dexie Cloud @id tables reject explicit IDs without their table prefix.
+  subjects: "id",
+  items: "id"
 });
 
 function rejection(reason, message) {
@@ -73,7 +75,8 @@ export function validateSynchronizedStores(stores) {
   return entries.every(([, definition]) => {
     if (typeof definition !== "string") return false;
     const keys = definition.split(",").map((part) => part.trim());
-    return keys.includes("@id") && !keys.some((key) => key.startsWith("++id"));
+    return (keys.includes("@id") || keys.includes("id")) &&
+      !keys.some((key) => key.startsWith("++id"));
   });
 }
 

@@ -191,7 +191,10 @@ export function planMigration(records, document, options = {}) {
     if (!current) {
       operations.push({ type: "put", store, value: { ...record } });
       missing += 1;
-    } else if (!recordEquals(current, record)) {
+    } else if (!Object.keys(record).every((key) =>
+      recordEquals(current[key], record[key]))) {
+      // Cloud adds owner/realmId/$ts metadata after synchronization. Compare
+      // only the user's projected properties to preserve idempotence.
       collisions.push(record.id);
     }
   };
