@@ -1,0 +1,39 @@
+name: ASF V3 OpenSpec Child (inert guard; no paid job)
+on:
+  workflow_dispatch:
+    inputs:
+      wave_id:
+        description: Wave identity, resolved from a trusted manifest (not authorized by input)
+        required: true
+        type: string
+      task_id:
+        description: Candidate task identity, not a payment authorization
+        required: true
+        type: string
+      reservation_sha:
+        description: Expected wave journal SHA, not a trusted attestation
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  child-preflight:
+    if: ${{ github.actor == 'threadstep-software-factory[bot]' && github.ref == 'refs/heads/main' && github.run_attempt == 1 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # A. Read the source; no persisted checkout token or contents write access.
+      - name: Check out V3 source without retaining credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # B. Do not copy a V1 development paid step here.
+      - name: Set up Node.js runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # C. This module always fails until owner issuer + global CAS + child claim
+      #    and paid mutex are independently reviewed. No OpenRouter token here.
+      - name: Reject paid execution until trusted global and wave claims exist
+        run: node scripts/asf/v3/workflow-runtime-preflight.mjs child
