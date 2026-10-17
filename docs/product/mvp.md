@@ -124,8 +124,22 @@ de synchronisation, puis ne convertit les données vers les tables synchronisée
 qu'après un consentement explicite, de façon atomique et idempotente, avec
 détection de collision et de base cible non vide, sans écrasement silencieux,
 sans transfert implicite entre URLs et sans jamais purger la source locale.
-La synchronisation opérationnelle, l'authentification OTP, l'indicateur de
-synchronisation et la purge restent à livrer (TS-027 à TS-030) ; le document V1
-et son export sont inchangés.
+**Authentification OTP email native (TS-027), intégrée :** `site/authentication.js`
+fournit l'inventaire exclusif de la méthode email/OTP, la dérivation des états de
+session (authentifié, expiré, déconnecté, première connexion hors ligne, refus),
+les messages français sans secret, la classification des erreurs natives et un
+contrôleur injectable. `site/app.js` branche l'adaptateur natif
+`db.cloud.login({ grant_type: "otp" })`, réutilise une session valide sans
+nouveau code, conserve la clé non secrète `threadstep.auth.seen.v1` pour le
+libellé de réexpiration et ne libère les lectures, écritures, abonnements et la
+migration historique qu'après authentification. Hors ligne sans session,
+aucun échange OTP n'est lancé et la première connexion est refusée. Les
+permissions `owner`/`realmId` et l'autorisation de l'origine GitHub Pages
+restent configurées côté service Dexie Cloud par procédure opérateur, hors
+build, sans URL d'instance ni secret livré. La réception réelle d'un code, la
+recette mobile et l'isolation entre deux identités demeurent manuelles.
+La synchronisation opérationnelle vérifiée, l'indicateur de synchronisation et
+la purge restent à livrer (TS-028 à TS-030) ; le document V1 et son export sont
+inchangés.
 
 Source de périmètre : [TS-022](../../backlog/tasks/TS-022.md) et [TS-023](../../backlog/tasks/TS-023.md), désormais livrées.
