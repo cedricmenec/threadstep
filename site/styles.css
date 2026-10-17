@@ -46,7 +46,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .subjects{display:grid;gap:15px;margin-top:22px}
 .filter-toggle{display:inline-flex;align-items:center;gap:9px;margin-top:16px;font-size:.85rem;font-weight:600;color:#415748;cursor:pointer;user-select:none;padding:9px 13px;background:#eef2e8;border:1px solid #dde4d6;border-radius:10px}
 .filter-toggle input{accent-color:#466e4d;width:17px;height:17px;flex-shrink:0}
-.subject{background:white;border:1px solid #e1e5de;border-radius:16px;padding:22px;box-shadow:0 6px 18px #24382f08}
+.subject{background:white;border:1px solid #e1e5de;border-radius:16px;padding:18px;box-shadow:0 6px 18px #24382f08}
 .subject-head{display:flex;align-items:start;justify-content:space-between;gap:14px}
 .subject-controls{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .subject-move{padding:7px 11px;font-size:.95rem;line-height:1;color:#415748}
@@ -57,11 +57,11 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .subtle,.danger{background:transparent;border:1px solid transparent;padding:7px 9px;color:#667569;font-size:.75rem}
 .subtle:hover{background:#eef2e8}
 .danger:hover{background:#fff0ed;color:#ad4938}
-.task-form{margin-top:18px}
+.task-form{margin-top:12px}
 .task-form select{max-width:126px;border-radius:10px;border:1px solid #d4dbcf;background:white;padding:0 7px;font-size:.79rem;color:#415748}
 .task-form button{padding:10px 13px}
-.tasks{list-style:none;padding:0;margin:14px 0 0}
-.task{border-top:1px solid #ecf0ea;padding:12px 0 0;margin-top:12px}
+.tasks{list-style:none;padding:0;margin:10px 0 0}
+.task{border-top:1px solid #ecf0ea;padding:7px 0 0;margin-top:7px}
 .task.reveal{background:#f3f6ec;border-radius:10px;box-shadow:0 0 0 2px #a9ba69;scroll-margin:16px}
 .task-row{display:flex;gap:9px;align-items:flex-start}
 .task-check{margin-top:4px;accent-color:#466e4d;width:17px;height:17px;flex-shrink:0}
@@ -74,15 +74,19 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .priority-control{min-height:44px;min-width:44px;padding:4px 24px 4px 10px;border:1px solid transparent;border-radius:8px;appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23667569' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:9px 6px}
 .priority-control:hover{filter:brightness(.97)}
 @media(prefers-reduced-motion:no-preference){.priority-control{transition:filter .12s ease}}
-.task-actions{display:flex;gap:2px;margin-left:21px;margin-top:3px;flex-wrap:wrap;align-items:center}
-.task-reorder{display:flex;gap:2px;align-items:center}
-.task-promote{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:7px 12px;overflow-wrap:anywhere}
+.task-actions{display:flex;gap:2px;margin-left:21px;margin-top:2px;flex-wrap:wrap;align-items:flex-start}
+.task-menu-wrap{display:flex;flex-direction:column;align-items:flex-start;position:relative}
+.task-menu-button{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:6px;background:transparent;border:1px solid transparent;border-radius:10px;color:#667569;font-size:1.15rem;font-weight:800;line-height:1}
+.task-menu-button:hover{background:#eef2e8;color:#30473a}
+.task-menu{display:flex;flex-direction:column;gap:2px;margin-top:2px;padding:4px;background:#fff;border:1px solid #dde4d6;border-radius:10px;box-shadow:0 8px 20px #24382f14;max-width:min(260px,calc(100vw - 32px))}
+.task-menu-command{display:inline-flex;align-items:center;min-width:44px;min-height:44px;padding:8px 12px;text-align:left;white-space:normal;overflow-wrap:anywhere;color:#415748}
+.task-menu-command:disabled{opacity:.35;cursor:not-allowed}
+@media(prefers-reduced-motion:no-preference){.task-menu{transition:box-shadow .12s ease}}
 .task-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:7px 12px;overflow-wrap:anywhere}
 @media(prefers-reduced-motion:no-preference){.task-toggle{transition:background .12s ease}}
 .task-handle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:6px;background:transparent;border:1px solid transparent;border-radius:10px;color:#859087;font-size:1.05rem;line-height:1;cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
 .task-handle:hover{background:#eef2e8;color:#415748}
 .task-handle:active,.task-handle.dragging-handle{cursor:grabbing;color:#263d31;background:#eef2e8}
-.task-move-up:disabled,.task-move-down:disabled{opacity:.35;cursor:not-allowed}
 .task.dragging{opacity:.55;pointer-events:none}
 .task.drop-before{box-shadow:inset 0 3px 0 #a9ba69}
 .task.drop-after{box-shadow:inset 0 -3px 0 #a9ba69}
@@ -98,10 +102,10 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .children .task-note{margin-left:0}
 .task-edit-form button{padding:9px 13px}
 .edit-error{flex-basis:100%;margin:0;color:#ad4938;font-size:.78rem}
-.task-parent{margin-top:16px}
+.task-parent{margin-top:10px}
 .task-parent>.task-row .task-title{font-size:1.06rem;font-weight:700;line-height:1.5}
-.children{padding-left:26px;margin:6px 0 0;border-left:2px solid #d9ddd4}
-.children .task{margin-top:5px;padding-top:9px}
+.children{padding-left:26px;margin:4px 0 0;border-left:2px solid #d9ddd4}
+.children .task{margin-top:3px;padding-top:6px}
 .task-substep{padding-left:12px}
 .task-substep>.task-row .task-title{font-size:.9rem;line-height:1.4}
 .empty{padding:24px 8px;text-align:center;color:#819083;font-size:.91rem}
@@ -126,10 +130,10 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .detail-title{font-size:1.5rem;margin:0;letter-spacing:-.03em;overflow-wrap:anywhere}
 .detail-title:focus-visible{outline:3px solid #a9ba69;outline-offset:2px;border-radius:6px}
 .detail-message{margin:0;color:#657366;font-size:.95rem;max-width:520px}
-.detail .task-form{margin-top:22px}
-.detail .task{padding:16px 0 0;margin-top:14px}
-.detail .task-actions{margin-top:8px}
-.detail .task-title{font-size:1.02rem;line-height:1.55}
+.detail .task-form{margin-top:14px}
+.detail .task{padding:9px 0 0;margin-top:9px}
+.detail .task-actions{margin-top:4px}
+.detail .task-title{font-size:1.02rem;line-height:1.45}
 .detail.fallback{gap:12px;align-items:flex-start}
 .subject-rename{min-height:44px;padding:9px 13px}
 .subject-rename-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-basis:100%}

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, promoteItemToTopLevel, canPromoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
+import { RESUME_KEY, STORAGE_KEY, PRIORITIES, OVERVIEW_TASK_LIMIT, NOTE_MAX_LENGTH, emptyDocument, newSubject, newItem, sortedItems, visibleItems, overviewPreview, isWithinOverviewPreview, isItemVisible, pendingCount, parseDocument, subjectRoute, parseRoute, findSubject, renameSubject, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canReorderWithinPriority, canMoveWithinPriority, promoteItemToTopLevel, canPromoteItemToTopLevel, itemMenuCommands, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, totalTaskCount, totalTaskCountLabel } from "../site/core.js";
 
 test("new document is empty and versioned", () => {
   assert.deepEqual(emptyDocument(), { version: 1, subjects: [] });
@@ -1928,4 +1928,70 @@ test("promoteItemToTopLevel replaying an already promoted item returns the same 
   const promoted = promoteItemToTopLevel(doc, "s1", "c1");
   assert.equal(promoteItemToTopLevel(promoted, "s1", "c1"), promoted);
   assert.equal(canPromoteItemToTopLevel(promoted, "s1", "c1"), false);
+});
+
+test("itemMenuCommands returns the ordered commands for an unfinished top-level task", () => {
+  const item = newItem("Parent", "normal", "p1");
+  const commands = itemMenuCommands(item);
+  assert.deepEqual(commands.map((command) => command.id), ["edit", "remove", "add-substep", "keep-track", "move-up", "move-down"]);
+  assert.deepEqual(commands.map((command) => command.label), ["Modifier", "Retirer", "Ajouter une sous-tâche", "Garder le fil", "Monter", "Descendre"]);
+  assert.equal(commands.every((command) => command.disabled === false), false);
+  assert.equal(commands.find((command) => command.id === "keep-track").disabled, false);
+  assert.equal(commands.find((command) => command.id === "move-up").disabled, true);
+  assert.equal(commands.find((command) => command.id === "move-down").disabled, true);
+  assert.equal(commands.some((command) => command.id === "promote"), false);
+});
+
+test("itemMenuCommands exposes the move commands enabled up to the group boundaries", () => {
+  const item = newItem("Parent", "normal", "p1");
+  const commands = itemMenuCommands(item, { canMoveUp: true, canMoveDown: false });
+  assert.equal(commands.find((command) => command.id === "move-up").disabled, false);
+  assert.equal(commands.find((command) => command.id === "move-down").disabled, true);
+});
+
+test("itemMenuCommands returns the substep commands without parent-only commands", () => {
+  const item = newItem("Enfant", "normal", "c1", "p1");
+  const commands = itemMenuCommands(item, { canMoveUp: true, canMoveDown: true });
+  assert.deepEqual(commands.map((command) => command.id), ["edit", "remove", "promote", "move-up", "move-down"]);
+  assert.equal(commands.find((command) => command.id === "promote").label, "Promouvoir en tâche principale");
+  assert.equal(commands.some((command) => command.id === "add-substep"), false);
+  assert.equal(commands.some((command) => command.id === "keep-track"), false);
+});
+
+test("itemMenuCommands drops keep-track for a completed top-level task and keeps add-substep", () => {
+  const item = newItem("Parent", "normal", "p1");
+  item.done = true;
+  const commands = itemMenuCommands(item);
+  assert.deepEqual(commands.map((command) => command.id), ["edit", "remove", "add-substep", "move-up", "move-down"]);
+});
+
+test("itemMenuCommands shows the tracked state as a disabled action without keeping the pin", () => {
+  const item = newItem("Parent", "normal", "p1");
+  const commands = itemMenuCommands(item, { tracked: true });
+  const keepTrack = commands.find((command) => command.id === "keep-track");
+  assert.equal(keepTrack.label, "Action suivie");
+  assert.equal(keepTrack.disabled, true);
+});
+
+test("itemMenuCommands treats null and undefined parentId as a top-level task", () => {
+  assert.equal(itemMenuCommands({ id: "a", title: "A", priority: "normal", done: false, parentId: null }).some((command) => command.id === "add-substep"), true);
+  assert.equal(itemMenuCommands({ id: "a", title: "A", priority: "normal", done: false }).some((command) => command.id === "add-substep"), true);
+});
+
+test("itemMenuCommands is pure and never mutates its item, options or returned descriptors", () => {
+  const item = newItem("Parent", "normal", "p1");
+  const options = { tracked: true, canMoveUp: true, canMoveDown: false };
+  const itemSnapshot = JSON.stringify(item);
+  const optionsSnapshot = JSON.stringify(options);
+  const commands = itemMenuCommands(item, options);
+  assert.equal(JSON.stringify(item), itemSnapshot);
+  assert.equal(JSON.stringify(options), optionsSnapshot);
+  assert.notEqual(commands, itemMenuCommands(item, options));
+  commands[0].disabled = true;
+  assert.equal(itemMenuCommands(item, options)[0].disabled, false);
+});
+
+test("itemMenuCommands returns an empty list for a missing item without throwing", () => {
+  assert.deepEqual(itemMenuCommands(null), []);
+  assert.deepEqual(itemMenuCommands(undefined), []);
 });

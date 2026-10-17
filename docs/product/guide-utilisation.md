@@ -20,8 +20,9 @@ serveur applicatif ni intelligence artificielle dans le navigateur.
    **Urgent**, **Normal** ou **Plus tard**, puis « + Étape ».
 3. Cocher une action pour la marquer terminée. Les priorités déterminent
    toujours l'ordre des groupes affichés : Urgent, Normal, Plus tard.
-4. « + Sous-étape » ajoute une étape d'un seul niveau sous une action.
-   « Modifier » permet de changer le titre et la priorité.
+4. Le menu « ⋮ » d'une action regroupe ses commandes : « Ajouter une
+   sous-tâche » (tâche principale), « Modifier », « Garder le fil » et
+   le déplacement clavier « Monter » / « Descendre ».
 5. Les boutons fléchés de chaque **sujet** permettent de monter ou
    descendre ce sujet. « Supprimer » un sujet demande une confirmation
    et retire aussi ses actions.
@@ -53,11 +54,50 @@ vue de détail, sans se fier à la couleur ni au badge de priorité :
   complétion. La présentation s'adapte aux petits écrans sans
   débordement horizontal et n'écrit rien dans les données.
 
+## Lignes compactes et menu d'actions « ⋮ » (TS-023)
+
+Pour parcourir une liste plus dense sur ordinateur comme sur mobile,
+chaque tâche et chaque sous-tâche garde directement visibles ses
+commandes principales — case de complétion, titre, badge de priorité
+interactif, poignée de glisser-déposer et bouton de repli — et
+regroupe ses commandes secondaires dans un menu **« ⋮ »** :
+
+- Le bouton **« ⋮ »** porte le nom accessible **« Actions pour
+  [titre] »** et une cible d'au moins 44 × 44 px. Son état
+  (`aria-expanded`) indique si le menu est ouvert.
+- Le menu contient uniquement les commandes applicables :
+  **« Modifier »** et **« Retirer »** partout, **« Ajouter une
+  sous-tâche »** sur une tâche principale, **« Promouvoir en tâche
+  principale »** sur une sous-tâche directe, **« Garder le fil »**
+  (ou l'état suivi) sur une tâche principale non terminée, et
+  **« Monter »** / **« Descendre »** quand le déplacement est
+  possible. Aucune commande n'est dupliquée sur la ligne.
+- Le déplacement clavier **« Monter »** / **« Descendre »** quitte la
+  ligne visible mais reste disponible dans le menu, sans geste de
+  glisser-déposer, avec les mêmes règles de groupe (même sujet, même
+  parent, même priorité) et les mêmes directions impossibles
+  désactivées. Les flèches de réordonnancement des **projets**
+  restent inchangées.
+- Le menu s'ouvre et se ferme à la souris, au toucher, avec **Entrée**
+  ou **Espace**, et **Échap** le referme ; **Tab** parcourt ses
+  commandes dans l'ordre affiché. Un clic ou un appui à l'extérieur,
+  un changement de vue ou l'activation d'une commande le referment, et
+  le focus revient au bouton après la fermeture. Un seul menu est
+  ouvert à la fois.
+- L'ouverture et la fermeture d'un menu n'écrivent rien dans le
+  stockage local, ne modifient pas le document et ne déclenchent aucun
+  glisser-déposer. Les commandes déplacées conservent leurs
+  validations, notifications, enregistrements et annulations
+  habituels ; le badge de priorité garde ses trois valeurs, sa zone
+  interactive d'au moins 44 × 44 px et ne déclenche ni le menu ni le
+  glisser-déposer.
+
 ## Promouvoir une sous-tâche en tâche principale (TS-022)
 
 Une sous-tâche devenue autonome n'a pas besoin d'être recréée. Chaque
-**sous-tâche directe** affiche, dans la vue d'ensemble comme dans la vue
-de détail, un bouton **« Promouvoir en tâche principale »** :
+**sous-tâche directe** propose, dans son menu **« ⋮ »** et dans la vue
+d'ensemble comme dans la vue de détail, la commande
+**« Promouvoir en tâche principale »** :
 
 - L'opération est immédiate, sans fenêtre de confirmation, car aucune
   donnée n'est détruite. La sous-tâche garde son identifiant, son titre,
@@ -254,10 +294,10 @@ du même sujet uniquement** :
   d'un stylet. Les dépôts sur une autre priorité, un autre sujet,
   une sous-étape ou une zone vide sont refusés.
 - Pour utiliser le clavier, ou si le glisser-déposer est peu pratique
-  sur téléphone, activer **« Monter »** ou **« Descendre »**
-  à côté de l'action ; chaque activation la déplace d'une place
-  dans son groupe de priorité. Les directions impossibles sont
-  désactivées.
+  sur téléphone, ouvrir le menu **« ⋮ »** de l'action puis activer
+  **« Monter »** ou **« Descendre »** ; chaque activation la déplace
+  d'une place dans son groupe de priorité. Les directions impossibles
+  sont désactivées.
 - Si **« Masquer les étapes terminées »** est coché, le réordonnancement
   est temporairement désactivé. Afficher de nouveau toutes les étapes
   pour les déplacer.
@@ -281,10 +321,10 @@ personnalisable **à l'intérieur d'un groupe de priorité** :
   souris, au doigt ou au stylet. Les dépôts sur une action
   principale, un autre parent, un autre sujet, une autre priorité
   ou une zone vide sont refusés : rien n'est déplacé ni enregistré.
-- Pour utiliser le clavier, ou si le glisser-déposer est peu
-  pratique sur téléphone, activer **« Monter »** ou **« Descendre »**
-  à côté de la sous-étape ; chaque activation la déplace d'une
-  place dans son groupe. Les directions impossibles sont
+- Pour utiliser le clavier, ou si le glisser-déposer est peu pratique
+  sur téléphone, ouvrir le menu **« ⋮ »** de la sous-étape puis
+  activer **« Monter »** ou **« Descendre »** ; chaque activation la
+  déplace d'une place dans son groupe. Les directions impossibles sont
   désactivées. Le nom accessible indique la sous-étape, sa
   priorité et son action parente.
 - Le déplacement ne change jamais le parent, la priorité, le titre,
