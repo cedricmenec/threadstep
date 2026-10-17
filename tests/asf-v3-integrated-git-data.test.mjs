@@ -14,7 +14,7 @@ const ref = "refs/heads/asf/waves/" + waveId;
 const prefix = "repos/" + repo;
 const H = x => x.repeat(40);
 const WORKFLOW_OWNER = ".github/workflows/backlog-orchestrator-v3.yml";
-const WORKFLOW_CHILD = ".github/workflows/agent-openspec.yml";
+const WORKFLOW_CHILD = ".github/workflows/agent-openspec-v3.yml";
 const owner = "cedricmenec";
 const bot = "threadstep-software-factory[bot]";
 
