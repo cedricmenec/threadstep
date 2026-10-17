@@ -15,7 +15,8 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createV3Manifest, parseV3MaxTasks } from "./lifecycle.mjs";
 import { inspectV3OwnerIntent } from "./owner-intent-preflight.mjs";
-import { observeV3GithubRulesetPolicy } from "./github-native-control.mjs";
+import { observeV3GithubRulesetPolicy, V3_CONTROLLER_APP_ID }
+ from "./github-native-control.mjs";
 import { contentSha256 } from "../waves/hash.mjs";
 import { checkBacklogIndex } from "../backlog-index.mjs";
 import { createGithubClient } from "../github/client.mjs";
@@ -137,6 +138,17 @@ export async function inspectV3RunnerOwnerCapture({
    controllerAppId:policy.evidence?.observedControllerAppId
   });
 }
+/** A workflow environment variable is NOT App authentication; it merely
+ * confirms the pinned public App ID was configured in the intended GitHub
+ * environment. No secret, App token or privilege is read here. */
+export function inspectV3OwnerEnvironmentBinding(rawAppId) {
+ if(typeof rawAppId!=="string"||rawAppId!==String(V3_CONTROLLER_APP_ID))
+  return deny("missing_or_unexpected_controller_environment_app_id");
+ return result("environment_id_observed_not_authorized",
+  "requires_real_environment_rules_and_trusted_owner_writer",{
+   controllerAppId:V3_CONTROLLER_APP_ID
+  });
+}
 const staticFailure=code=>{
  process.stderr.write("ASF V3 owner capture: rejected/"+code+"\n");
  return 1;
@@ -180,6 +192,10 @@ export async function main(argv=process.argv.slice(2),env=process.env){
   }
   if(!env.GITHUB_EVENT_PATH||!env.GH_TOKEN)
    return staticFailure("trusted_runner_or_read_token_missing");
+  const envBinding=inspectV3OwnerEnvironmentBinding(
+   env.ASF_V3_CONTROLLER_APP_ID);
+  if(envBinding.status!=="environment_id_observed_not_authorized")
+   return staticFailure(envBinding.reason);
   const event=safeJson(env.GITHUB_EVENT_PATH,128*1024);
   const runner={
    repository:env.GITHUB_REPOSITORY,actor:env.GITHUB_ACTOR,
