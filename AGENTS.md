@@ -16,7 +16,8 @@ ThreadStep is a tiny, French-language, browser-only next-step dashboard for peop
 ## Development
 - Work on the prepared agent branch only; do not push to main.
 - For each task, read its acceptance criteria before editing.
-- For OpenSpec changes, ensure every checkbox in tasks.md can be completed during apply before OPSX sync and archive. Specify post-sync semantic diffs, archive checks and independent CI review in a separate non-checkbox review section. Never mark a post-sync check complete before it has run.
+- For OpenSpec changes, follow [the ASF-OPSX-01 checklist contract](docs/factory/openspec-checklist-contract.md). Every checkbox in `tasks.md` MUST be an implementation or automated verification action that the runner can actually complete and prove during `apply`, before OPSX sync and archive. Cover the product's acceptance criteria with automated checks where possible; do not silently drop requirements that also need human acceptance.
+- Put browser-based visual, keyboard, touch, screen-reader and other human-only acceptance in a plain `Manual acceptance` section **without checkboxes**. Put semantic diff checks after OPSX sync, archive verification, independent PR CI, merge and Pages checks in a separate plain `Post-sync review` section **without checkboxes**. These checks are still required for a truthful acceptance/delivery report, but cannot block the pre-sync implementation checklist. Never check or claim any test that was not actually performed.
 - Run `npm run check` and report exactly what was executed.
 - Do not change GitHub workflows, credentials, `opencode.json`, or this file during routine feature work.
 - Never report an unverified test as passed.

@@ -1,5 +1,20 @@
 # Journal des décisions de conception
 
+## Décision ASF-OPSX-01 (17 octobre 2026)
+
+- **Contrat renforcé de planification OpenSpec** : les cases de `tasks.md`
+  ne couvrent que l'implémentation et les tests objectivement réalisables
+  sur runner **avant** OPSX sync/archive. La recette humaine est
+  documentée sous `Manual acceptance`, et les contrôles après sync/PR
+  sous `Post-sync review`, toujours sans cases. Les critères métier
+  restent applicables et les actions non vérifiées ne sont jamais
+  revendiquées comme passées. Voir [contrat](openspec-checklist-contract.md).
+- **Limite assumée** : ASF-OPSX-01 renforce `AGENTS.md`, la
+  configuration OpenSpec et les prompts, mais le validateur actuel
+  ne détecte pas encore exhaustivement les contrôles humains
+  impossibles. Cette évolution est distincte d'ASF-OPSX-02
+  (fail-closed précoce) et d'ASF-OPSX-03/04 (checkpoint/reprise).
+
 ## Décisions opérationnelles confirmées — 16 octobre 2026
 
 - **ASF-ADR-V2-EXEC-01 — Acceptée et prouvée :** owner-only, quota 1 ou 2 réservations avant exécution ; OpenSpec authentifié, journal append-only, une tâche à la fois ; requérir PR/SHAs/required `check`/CI/Pages après chaque fusion avant le départ suivant. Preuves [run 38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) et [38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187).
