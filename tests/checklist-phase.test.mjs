@@ -132,6 +132,8 @@ test("ASF-OPSX-02 avoids false positives for automated UI checks and regression/
     "- [ ] Test a simulated screen reader label in Node tests",
     "- [ ] Validate the proposal before OPSX sync",
     "- [ ] Inspect the delta before the workflow gate",
+    "- [ ] Implement manual priority selection and validate through unit tests",
+    "- [ ] Add a manual-sort toggle with deterministic DOM assertions",
   ];
   for (const sample of samples) {
     assert.deepEqual(forbiddenImplementationTasks(sample + "\n"), [], sample);
