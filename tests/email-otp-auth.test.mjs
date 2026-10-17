@@ -311,10 +311,12 @@ test("2.2 the sign-in surface declares only email, OTP, resend and live regions"
 
 test("2.3 the authenticated gate protects loads, writes, subscriptions and migration", () => {
   const app = read("site/app.js");
-  assert.ok((app.match(/if \(!businessAllowed\(\)\) return;/g) || []).length >= 4);
+  assert.ok((app.match(/if \(!businessAllowed\(\)\)/g) || []).length >= 3);
+  assert.match(app, /syncedDatabase && \(!documentLoaded \|\| cloudWriteBlocked\)/);
+  assert.match(app, /if \(syncedDatabase\) \{[\s\S]*?refreshSyncedDocument\(\)/);
   assert.match(app, /function businessAllowed\(\)/);
   assert.match(app, /if \(canAccessBusiness\(authState\)\) \{[\s\S]*?startBusiness\(\)/);
-  assert.match(app, /function startBusiness\(\) \{[\s\S]*?load\(\);[\s\S]*?offerHistoricalMigration\(\);/);
+  assert.match(app, /function startBusiness\(\) \{[\s\S]*?refreshSyncedDocument\(\)[\s\S]*?offerHistoricalMigration\(\)/);
   assert.match(app, /requiresAuthentication\(\)/);
   assert.equal(cloudConfigureOptions("https://demo.dexie.cloud").requireAuth, true);
 });

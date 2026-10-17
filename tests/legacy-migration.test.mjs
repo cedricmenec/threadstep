@@ -350,7 +350,8 @@ test("6.1 app wiring keeps the consent gate before the commit and core.js pure",
   assert.match(app, /describeMigration\(/);
   assert.match(app, /planMigration\(/);
   assert.match(app, /runMigration\(/);
-  assert.match(app, /businessStore,/);
+  assert.match(app, /nonOverwritingMigrationAdapter\(\)/);
+  assert.match(app, /operation\.type === "add"/);
   assert.match(app, /confirmed: true/);
   assert.match(app, /migration-refuse/);
   assert.ok(

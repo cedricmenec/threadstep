@@ -290,7 +290,7 @@ test("5.2 app subscribes through a broadcast channel, not only the storage event
   const app = read("site/app.js");
   assert.match(app, /new BroadcastChannel\(/);
   assert.match(app, /function subscribeToChanges\(/);
-  assert.match(app, /syncedDatabase\.on\("changes"/);
+  assert.match(app, /syncedDatabase\.cloud\.events\.syncComplete\.subscribe/);
   assert.match(app, /window\.addEventListener\("storage"/);
   assert.match(app, /subscribeToChanges\(\);/);
 });

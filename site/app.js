@@ -1,9 +1,10 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
-import { documentToRecords, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
+import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
 import { detectHistoricalDocument, describeMigration, planMigration, runMigration } from "./migration.js";
 import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { availableLocalBackup } from "./local-recovery.js";
+import { readSyncedRecords } from "./synced-records.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -69,6 +70,9 @@ const CHANGE_CHANNEL = "threadstep.changes.v1";
 let businessStore = null;
 let changeChannel = null;
 let lastRecords = emptyRecords();
+let pendingCloudWrites = Promise.resolve();
+let cloudWriteBlocked = false;
+let cloudReadPending = null;
 let historicalGuard = null;
 
 const UNDO_WINDOW_MS = 10000;
@@ -131,7 +135,8 @@ function applyBusinessVisibility() {
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
   if (businessToolsEl) businessToolsEl.hidden = configured && !authenticated;
-  if (dashboardEl) dashboardEl.hidden = configured && !authenticated;
+  // Do not display an empty dashboard while IndexedDB is still loading.
+  if (dashboardEl) dashboardEl.hidden = configured && (!authenticated || !documentLoaded);
 }
 function setAuthStatus(message) {
   if (authStatusEl) authStatusEl.textContent = typeof message === "string" ? message : "";
@@ -232,12 +237,15 @@ function handleAuthInteraction(interaction) {
 function startBusiness() {
   if (businessStarted) return;
   businessStarted = true;
+  documentLoaded = false;
+  applyBusinessVisibility();
+  notify("Chargement des données enregistrées dans IndexedDB…");
   if (!changesSubscribed) {
     subscribeToChanges();
     changesSubscribed = true;
   }
-  load();
-  offerHistoricalMigration();
+  // Cloud is the single source of truth after authentication, not localStorage.
+  void refreshSyncedDocument().then(() => offerHistoricalMigration());
 }
 function setupAuthentication() {
   if (!syncedDatabase) return;
@@ -253,6 +261,14 @@ function setupAuthentication() {
   adapter.subscribeUser((user) => authController.applyUser(user));
   adapter.subscribeInteraction((payload) => authController.handleInteraction(payload));
   renderAuthPanel();
+  // Opening IndexedDB starts restoration of the persisted native login.
+  // A reloaded page must not require a new OTP when the session is valid.
+  void syncedDatabase.open().catch(() => {
+    notify("Impossible d'ouvrir IndexedDB ou de restaurer la session Dexie Cloud. Vos données locales restent intactes.");
+    if (authState.status === AUTH_STATUS.AUTHENTICATED) {
+      if (dashboardEl) dashboardEl.hidden = true;
+    }
+  });
 }
 function showAuthFieldError(message) {
   setAuthError(message);
@@ -348,14 +364,23 @@ function el(tag, cls, text) {
   return node;
 }
 function persist() {
-  if (!businessAllowed()) return;
+  if (!businessAllowed() || (syncedDatabase && (!documentLoaded || cloudWriteBlocked))) {
+    notify("Enregistrement indisponible : gardez votre export JSON, ne supprimez pas les données locales.");
+    return;
+  }
+  if (syncedDatabase) {
+    // Mutations are serialized and lastRecords advances only AFTER Dexie
+    // commits the local transaction. No more false 'saved' on write failure.
+    commitOperations(documentToRecords(documentState));
+    render();
+    return;
+  }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
     notify("Sauvegardé localement");
   } catch {
     notify("Stockage indisponible : exportez vos données.");
   }
-  commitOperations();
   documentLoaded = true;
   render();
 }
@@ -363,6 +388,10 @@ function load() {
   expandedParents = new Set();
   openMenuId = null;
   if (!businessAllowed()) return;
+  if (syncedDatabase) {
+    void refreshSyncedDocument();
+    return;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -1336,6 +1365,31 @@ document.querySelector("#import").addEventListener("change", async (event) => {
   try {
     if (file.size > 1024 * 1024) throw new Error("Fichier trop volumineux (maximum 1 Mo).");
     const incoming = parseDocument(await file.text());
+    if (syncedDatabase) {
+      if (!businessAllowed() || !documentLoaded) {
+        notify("Connectez-vous et attendez la lecture IndexedDB avant tout import.");
+        return;
+      }
+      await pendingCloudWrites;
+      const destination = migrationDestination();
+      const target = await readTargetRecords();
+      const plan = planMigration(target, incoming, { destination, currentDestination: destination });
+      if (plan.populated || plan.status === "collision") {
+        notify("Import Cloud bloqué : base cible déjà peuplée. Aucun enregistrement écrasé. Conservez votre export JSON.");
+        return;
+      }
+      if (!confirm(describeMigration(incoming, destination).message +
+        " La base cible doit être vide. Confirmez-vous cet import vers le Cloud ?")) return;
+      const outcome = await runMigration(nonOverwritingMigrationAdapter(), plan,
+        { confirmed: true, destination }, () => migrationDestination());
+      if (outcome.status !== "migrated" && outcome.status !== "already-migrated" && outcome.status !== "up-to-date") {
+        notify("Import Cloud interrompu ou refusé. Aucun succès annoncé, conservez votre export.");
+        return;
+      }
+      await refreshSyncedDocument();
+      notify("Import enregistré dans IndexedDB ; synchronisation Cloud non encore confirmée.");
+      return;
+    }
     if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
     invalidatePendingRemoval();
     expandedParents = new Set();
@@ -1344,9 +1398,9 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     documentState = incoming;
     documentLoaded = true;
     persist();
-    notify("Import terminé");
-  } catch (error) {
-    notify("Import impossible : " + error.message);
+    notify("Import terminé localement");
+  } catch {
+    notify("Import impossible : lecture ou enregistrement refusé. Conservez votre export JSON.");
   } finally {
     event.target.value = "";
   }
@@ -1393,6 +1447,11 @@ if (cloudConfigFormEl) {
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase();
     businessStore = createBusinessStore(syncedDatabase);
+    documentState = emptyDocument();
+    documentLoaded = false;
+    lastRecords = emptyRecords();
+    cloudWriteBlocked = false;
+    pendingCloudWrites = Promise.resolve();
     authController = null;
     authInteraction = null;
     authSubmitting = false;
@@ -1421,6 +1480,7 @@ function createBusinessStore(db) {
           for (const operation of operations) {
             const table = operation.store === "subjects" ? db.subjects : db.items;
             if (operation.type === "put") await table.put(operation.value);
+            else if (operation.type === "add") await table.add(operation.value);
             else if (operation.type === "delete") await table.delete(operation.key);
           }
         });
@@ -1431,23 +1491,67 @@ function createBusinessStore(db) {
     }
   };
 }
-function commitOperations() {
-  if (!businessAllowed()) return;
-  const records = documentToRecords(documentState);
-  const operations = diffRecords(lastRecords, records);
-  lastRecords = records;
-  if (!operations.length || !businessStore) return;
-  businessStore.commit(operations).then(
-    () => { broadcastChange(); },
-    (error) => {
-      if (isLocalError(error)) notify("Stockage indisponible : exportez vos données.");
-      else {
-        const refusal = classifyPermissionFailure(error);
-        if (refusal) notify(authMessage(refusal));
-        else notify("Synchronisation en attente.");
-      }
+// Inserts during migration must use add (never put) even if another browser
+// inserts a colliding ID between the final read and the local transaction.
+function nonOverwritingMigrationAdapter() {
+  return {
+    commit(operations) {
+      return businessStore.commit(operations.map((operation) =>
+        operation.type === "put" ? { ...operation, type: "add" } : operation));
     }
-  );
+  };
+}
+function commitOperations(records) {
+  if (!businessAllowed() || !businessStore || cloudWriteBlocked) return;
+  pendingCloudWrites = pendingCloudWrites.then(async () => {
+    if (cloudWriteBlocked) return;
+    const operations = diffRecords(lastRecords, records);
+    if (!operations.length) return;
+    try {
+      await businessStore.commit(operations);
+      lastRecords = records;
+      broadcastChange();
+      notify("Enregistré dans IndexedDB ; synchronisation Cloud à confirmer.");
+    } catch (error) {
+      cloudWriteBlocked = true;
+      documentState = recordsToDocument(lastRecords);
+      render();
+      const refusal = classifyPermissionFailure(error && error.cause ? error.cause : error);
+      notify(refusal ? authMessage(refusal) :
+        "Échec d'écriture IndexedDB : données non enregistrées. Conservez votre export JSON.");
+    }
+  });
+  return pendingCloudWrites;
+}
+async function refreshSyncedDocument() {
+  if (!syncedDatabase || !businessAllowed()) return;
+  // Await previously submitted writes before replacing the DOM from IndexedDB.
+  if (cloudReadPending) return cloudReadPending;
+  cloudReadPending = (async () => {
+    let writesSnapshot;
+    let records;
+    // Mutations may arrive while a reactive refresh reads IndexedDB. Never
+    // replace a freshly edited UI with a stale snapshot.
+    do {
+      writesSnapshot = pendingCloudWrites;
+      await writesSnapshot;
+      records = await readTargetRecords();
+    } while (writesSnapshot !== pendingCloudWrites);
+    const nextDocument = recordsToDocument(records);
+    documentState = nextDocument;
+    lastRecords = records;
+    documentLoaded = true;
+    cloudWriteBlocked = false;
+    resumeRef = readResumePreference();
+    render();
+    applyBusinessVisibility();
+    notify("Données chargées depuis IndexedDB ; synchronisation Cloud à confirmer.");
+  })().catch(() => {
+    documentLoaded = false;
+    applyBusinessVisibility();
+    notify("Lecture IndexedDB impossible : affichage bloqué pour protéger les données. Ne réimportez pas.");
+  }).finally(() => { cloudReadPending = null; });
+  return cloudReadPending;
 }
 function ensureChangeChannel() {
   if (!changeChannel && typeof BroadcastChannel === "function") {
@@ -1464,8 +1568,10 @@ function subscribeToChanges() {
   if (channel && typeof channel.addEventListener === "function") {
     channel.addEventListener("message", () => { load(); });
   }
-  if (syncedDatabase && typeof syncedDatabase.on === "function") {
-    syncedDatabase.on("changes", () => { load(); });
+  // Dexie Cloud emits a sync completion when remote records have arrived.
+  // The Dexie 'changes' event requires an addon absent from this bundle.
+  if (syncedDatabase && syncedDatabase.cloud.events.syncComplete) {
+    syncedDatabase.cloud.events.syncComplete.subscribe(() => { load(); });
   }
 }
 let migrationPanelEl = null;
@@ -1485,14 +1591,7 @@ function migrationDestination() {
   return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
 }
 async function readTargetRecords() {
-  if (!syncedDatabase) return emptyRecords();
-  try {
-    const subjects = await syncedDatabase.subjects.toArray();
-    const items = await syncedDatabase.items.toArray();
-    return { subjects, items };
-  } catch {
-    return emptyRecords();
-  }
+  return readSyncedRecords(syncedDatabase);
 }
 function hideMigrationPanel() {
   if (!migrationPanelEl) return;
@@ -1507,10 +1606,15 @@ async function offerHistoricalMigration() {
     hideMigrationPanel();
     return;
   }
-  const target = await readTargetRecords();
-  const disclosure = describeMigration(detected.document, destination);
-  const plan = planMigration(target, detected.document, { destination, currentDestination: destination });
-  renderMigrationPanel(disclosure, plan, destination);
+  try {
+    const target = await readTargetRecords();
+    const disclosure = describeMigration(detected.document, destination);
+    const plan = planMigration(target, detected.document, { destination, currentDestination: destination });
+    renderMigrationPanel(disclosure, plan, destination);
+  } catch {
+    hideMigrationPanel();
+    notify("Migration indisponible : impossible de vérifier la base cible. Votre sauvegarde V1 est intacte.");
+  }
 }
 function renderMigrationPanel(disclosure, plan, destination) {
   const panel = migrationPanel();
@@ -1528,7 +1632,7 @@ function renderMigrationPanel(disclosure, plan, destination) {
   const actions = el("div", "migration-actions");
   const accept = el("button", "primary migration-accept", "Migrer vers le cloud");
   accept.type = "button";
-  accept.disabled = plan.status === "collision";
+  accept.disabled = plan.status === "collision" || plan.status === "populated" || plan.status === "destination-changed";
   accept.addEventListener("click", () => confirmHistoricalMigration(plan, destination));
   const refuse = el("button", "secondary migration-refuse", "Conserver localement");
   refuse.type = "button";
@@ -1541,17 +1645,39 @@ function renderMigrationPanel(disclosure, plan, destination) {
   panel.hidden = false;
 }
 async function confirmHistoricalMigration(plan, destination) {
+  // Never apply a stale plan if another device populated the target.
+  let current;
+  try {
+    await pendingCloudWrites;
+    current = await readTargetRecords();
+  } catch {
+    notify("Migration interrompue : vérification IndexedDB impossible.");
+    return;
+  }
+  const historical = detectHistoricalDocument(localStorage);
+  if (historical.status !== "present") {
+    notify("Migration interrompue : sauvegarde source non disponible.");
+    return;
+  }
+  const updatedPlan = planMigration(current, historical.document,
+    { destination, currentDestination: migrationDestination() });
+  if (updatedPlan.status !== "ready" && updatedPlan.status !== "already-migrated") {
+    notify("Migration bloquée : destination modifiée, peuplée ou en conflit.");
+    return;
+  }
   const outcome = await runMigration(
-    businessStore,
-    plan,
+    nonOverwritingMigrationAdapter(),
+    updatedPlan,
     { confirmed: true, destination },
     () => migrationDestination()
   );
   if (outcome.status === "migrated") {
     hideMigrationPanel();
-    notify("Migration terminée : vos données seront synchronisées.");
+    await refreshSyncedDocument();
+    notify("Migration enregistrée dans IndexedDB ; synchronisation Cloud à confirmer.");
   } else if (outcome.status === "already-migrated") {
     hideMigrationPanel();
+    await refreshSyncedDocument();
     notify("Ce document a déjà été migré.");
   } else if (outcome.status === "destination-changed") {
     notify("Destination modifiée : migration annulée.");
