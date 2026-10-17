@@ -35,6 +35,9 @@ jobs:
   owner-preflight:
     if: ${{ github.actor == github.repository_owner && github.ref == 'refs/heads/main' && github.run_attempt == 1 }}
     runs-on: ubuntu-latest
+    # This environment was created by the owner. No secret is referenced by
+    # this read-only job: environment protection still requires owner audit.
+    environment: asf-v3-controller
     timeout-minutes: 5
     steps:
       # A. Checkout only the protected source revision of the owner run.
@@ -54,6 +57,7 @@ jobs:
       - name: Verify owner run, six frozen inputs and protected rulesets (read only)
         env:
           GH_TOKEN: ${{ github.token }}
+          ASF_V3_CONTROLLER_APP_ID: ${{ vars.ASF_V3_CONTROLLER_APP_ID }}
         run: |
           npm run backlog:check
           node scripts/asf/v3/owner-run-capture.mjs verify
