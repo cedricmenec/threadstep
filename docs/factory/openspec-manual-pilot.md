@@ -90,6 +90,27 @@ Références :
 [OpenCode CLI](https://opencode.ai/docs/cli/),
 [OpenCode skills](https://opencode.ai/docs/skills/).
 
+## Contrat ASF-OPSX-01 : séparer checklist et recette humaine (17 octobre 2026)
+
+Le [contrat normatif](openspec-checklist-contract.md) distingue désormais :
+la checklist `tasks.md`, limitée au travail prouvable sur runner pendant
+`apply` **avant** sync/archive ; les vérifications `Manual acceptance`
+(navigateur réel, focus, toucher, mobile, visuel, lecteur d'écran) sans
+cases ; et `Post-sync review` (diff sémantique après sync, archive,
+CI indépendante sur PR, fusion, Pages) sans cases. L'exemple
+[OpenSpec tasks.md](examples/openspec-tasks-example.md) matérialise
+ce découpage. Les critères humains restent indispensables pour
+l'acceptation utilisateur ; l'agent ne doit pas les déclarer exécutés.
+
+Ce contrat est répété dans `AGENTS.md`, `openspec/config.yaml`,
+les prompts `plan` et `apply`, avec tests statiques de cohérence.
+Le rejet mécanique étendu des demandes manuelles en checklist est
+**réservé à ASF-OPSX-02** et n'est pas prouvé par ce changement.
+Avant un nouveau run TS-017, relire `tasks.md` en mode `plan`
+et ne pas relancer aveuglément un `auto` coûteux. Le run
+[#39019660492](https://github.com/cedricmenec/threadstep/actions/runs/39019660492)
+n'a pas publié de branche distante ; le code non poussé y est perdu.
+
 ## Contrôles avant publication
 
 - Validation du plan (plan/auto) ; en auto, commit local du plan avant apply.

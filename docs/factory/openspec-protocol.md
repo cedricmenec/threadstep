@@ -32,7 +32,7 @@ La documentation actuelle d'OpenSpec expose notamment :
 
 - Un `TS-NNN` peut référencer un ou plusieurs changes **déterministes**, versionnés, en fonction de la taille réelle du besoin.
 - Les spécifications canoniques sont les exigences de produit ; la proposition est le delta en cours.
-- Les critères d'acceptation backlog alimentent `tasks.md` et les tests, sans constituer un duplicata contradictoire.
+- Les critères d'acceptation backlog alimentent les deltas OpenSpec et les tests. La checklist `tasks.md` contient uniquement les tâches techniques vérifiables **avant** sync sur le runner, sans recopier mécaniquement les critères nécessitant une recette humaine. Cette dernière reste narrative sous `Manual acceptance` sans checkbox, tout comme `Post-sync review`. Voir [ASF-OPSX-01](openspec-checklist-contract.md).
 - Une reprise lit les changes, leurs checkboxes, les commits distants et les statuts ; aucune recréation systématique d'artefacts.
 - Synchroniser puis archiver **après** validation de comportement ; une erreur de sync/archive doit bloquer la livraison au lieu d'être absorbée.
 - Documenter les exceptions (simple README/formatage sans modification comportementale) dans le rapport de livraison et ne pas créer de faux changes.

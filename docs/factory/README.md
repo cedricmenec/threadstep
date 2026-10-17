@@ -17,7 +17,7 @@
 | Spécifications de Backlog V2, Scheduler V1, Orchestrator V1 | [Spécifications](specs/README.md) |
 | Schémas d'architecture et contrats | [Architecture technique](technical-architecture.md) |
 | Autorisations et sécurité GitHub | [GitHub et règles de fusion](github-autonomy-and-security.md) |
-| OpenSpec manuel et protocole OPSX | [Agent OpenSpec](openspec-manual-pilot.md) et [protocole](openspec-protocol.md) |
+| OpenSpec manuel et protocole OPSX | [Agent OpenSpec](openspec-manual-pilot.md), [contrat de checklist ASF-OPSX-01](openspec-checklist-contract.md) et [protocole](openspec-protocol.md) |
 | Historique des choix et feuille de route | [Décisions](decisions.md) et [roadmap](roadmap.md) |
 | Application pilote ThreadStep | [Guide utilisateur](../product/guide-utilisation.md), [guide développeur](../product/developer-guide.md) et [recette](../product/acceptance-checklist.md) |
 

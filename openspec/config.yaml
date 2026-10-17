@@ -13,4 +13,7 @@ rules:
   specs:
     - Describe observable behaviors with WHEN/THEN scenarios.
   tasks:
-    - Include a validation item for each relevant acceptance criterion.
+    - The checkbox checklist is exclusively for implementation and automated tests executable and verifiable in the runner during apply BEFORE OPSX sync and archive.
+    - Cover relevant acceptance criteria with deterministic pre-sync tests when feasible; preserve human-only criteria as plain text in a Manual acceptance section WITHOUT checkboxes.
+    - Put post-sync semantic comparison, archive, independent PR CI, merge and Pages verification in a Post-sync review section WITHOUT checkboxes.
+    - Do not include manual browser, touch, keyboard, visual or screen-reader acceptance as checkbox tasks, and never report unperformed checks as passed.
