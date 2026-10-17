@@ -44,10 +44,12 @@ const rule = (id,name,types,bypass=[])=>({
 const mainRule = ()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
 const globalRule = ()=>rule(2,ADMISSION_REGISTRY_REF,
- ["deletion","non_fast_forward","update"],
- [{actor_type:"Integration",actor_id:12345}]);
+ ["update"],
+ [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]);
+const immutableRule = ()=>rule(3,ADMISSION_REGISTRY_REF,
+ ["deletion","non_fast_forward"]);
 function fixture({registry=createAdmissionRegistry(),global=globalRule(),
- main=mainRule(),ownerRun={},fail=null,changeRef=false}={}) {
+ main=mainRule(),immutable=immutableRule(),ownerRun={},fail=null,changeRef=false}={}) {
  const source=claim(),calls=[];
  const data=Buffer.from(JSON.stringify(registry),"utf8");
  const response = async path=>{
@@ -59,9 +61,10 @@ function fixture({registry=createAdmissionRegistry(),global=globalRule(),
    event:"workflow_dispatch",head_branch:"main",head_sha:SHA("a"),
    run_attempt:1,status:"in_progress",conclusion:null,...ownerRun
   }};
-  if(path===BASE+"/rulesets") return {ok:true,data:[{id:1},{id:2}]};
+  if(path===BASE+"/rulesets") return {ok:true,data:[{id:1},{id:2},{id:3}]};
   if(path===BASE+"/rulesets/1") return {ok:true,data:main};
   if(path===BASE+"/rulesets/2") return {ok:true,data:global};
+  if(path===BASE+"/rulesets/3") return {ok:true,data:immutable};
   if(path===BASE+"/git/ref/heads/asf/control/active-wave-v3") return {
    ok:true,data:{ref:ADMISSION_REGISTRY_REF,object:{type:"commit",sha:
     changeRef && calls.filter(x=>x===path).length>1?SHA("4"):REGHEAD}}
@@ -87,7 +90,7 @@ test("GitHub owner workflow and protected global ref can only produce non-author
  noPay(r);
  assert.equal(s.calls.filter(x=>x.includes("/actions/runs/")).length,1);
  assert.equal(s.calls.filter(x=>x.includes("/git/ref/")).length,2);
- assert.equal(s.calls.filter(x=>x.includes("/rulesets/")).length,2);
+ assert.equal(s.calls.filter(x=>x.includes("/rulesets/")).length,3);
 });
 test("repository with only real main protection does NOT qualify for live global registry",async()=>{
  const s=fixture({global:undefined});
@@ -96,7 +99,7 @@ test("repository with only real main protection does NOT qualify for live global
   global:rule(2,ADMISSION_REGISTRY_REF,["non_fast_forward","deletion"])
  }));
  assert.equal(out.status,"rejected");
- assert.equal(out.reason,"global_ref_writer_protection_not_verified");
+ assert.equal(out.reason,"insecure_combined_bypass_or_ambiguous_global_rules");
  noPay(out);
 });
 test("wrong-owner rerun, different branch SHA or missing owner input prevents control observation",async()=>{
@@ -124,9 +127,54 @@ test("missing/bypassed/unprotected global writer rule cannot act as trust anchor
   {...globalRule(),enforcement:"evaluate"},
   {...globalRule(),conditions:{ref_name:{include:["refs/heads/main"],exclude:[]}}}
  ]){
-  const r=inspectV3GithubRulesets({main:mainRule(),global:bad});
+  const r=inspectV3GithubRulesets({main:mainRule(),global:bad,immutable:immutableRule()});
   assert.equal(r.status,"rejected");
   noPay(r);
+ }
+});
+test("bypass of combined non-FF/deletion and update ruleset must NEVER qualify",async()=>{
+ const bad=rule(2,ADMISSION_REGISTRY_REF,
+  ["update","deletion","non_fast_forward"],
+  [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]);
+ const inspected=inspectV3GithubRulesets({
+  main:mainRule(),global:bad,immutable:immutableRule()
+ });
+ assert.equal(inspected.status,"rejected");
+ noPay(inspected);
+ const observed=await observeV3GithubNativeControl(fixture({global:bad}));
+ assert.equal(observed.status,"rejected");
+ assert.equal(observed.reason,"insecure_combined_bypass_or_ambiguous_global_rules");
+ noPay(observed);
+});
+test("global history safety must be unbypassable even for the controller App",()=>{
+ for(const bad of [
+  {...immutableRule(),bypass_actors:[{
+   actor_type:"Integration",actor_id:12345,bypass_mode:"always"}]},
+  rule(3,ADMISSION_REGISTRY_REF,["deletion"]),
+  rule(3,ADMISSION_REGISTRY_REF,["non_fast_forward"]),
+  {...immutableRule(),enforcement:"evaluate"},
+  {...immutableRule(),conditions:{ref_name:{include:["refs/heads/main"],exclude:[]}}},
+  {...immutableRule(),id:2}
+ ]){
+  const r=inspectV3GithubRulesets({
+   main:mainRule(),global:globalRule(),immutable:bad
+  });
+  assert.equal(r.status,"rejected");
+  noPay(r);
+ }
+});
+test("controller bypass must explicitly be always and for exactly one Integration",()=>{
+ for(const bypass of [
+  [{actor_type:"Integration",actor_id:12345,bypass_mode:"pull_request"}],
+  [{actor_type:"Integration",actor_id:12345}],
+  [{actor_type:"Integration",actor_id:12345,bypass_mode:"always"},
+   {actor_type:"RepositoryRole",actor_id:5,bypass_mode:"always"}]
+ ]){
+  const r=inspectV3GithubRulesets({
+   main:mainRule(),global:{...globalRule(),bypass_actors:bypass},
+   immutable:immutableRule()
+  });
+  assert.equal(r.status,"rejected");noPay(r);
  }
 });
 test("main required CI, pull request and non-force-push rules cannot be silently weakened",()=>{
@@ -137,7 +185,7 @@ test("main required CI, pull request and non-force-push rules cannot be silently
   ["pull_request","required_status_checks","non_fast_forward"]
  ]){
   const r=inspectV3GithubRulesets({main:rule(1,"refs/heads/main",types),
-   global:globalRule()});
+   global:globalRule(),immutable:immutableRule()});
   assert.equal(r.status,"rejected");
   noPay(r);
  }

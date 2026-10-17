@@ -13,8 +13,11 @@ const mainRule={id:1,source:REPO,target:"branch",enforcement:"active",
  ]};
 const globalRule={id:2,source:REPO,target:"branch",enforcement:"active",
  conditions:{ref_name:{include:["refs/heads/asf/control/active-wave-v3"],exclude:[]}},
- bypass_actors:[{actor_type:"Integration",actor_id:42}],
- rules:[{type:"deletion"},{type:"non_fast_forward"},{type:"update"}]};
+ bypass_actors:[{actor_type:"Integration",actor_id:42,bypass_mode:"always"}],
+ rules:[{type:"update"}]};
+const immutableRule={id:3,source:REPO,target:"branch",enforcement:"active",
+ conditions:{ref_name:{include:["refs/heads/asf/control/active-wave-v3"],exclude:[]}},
+ bypass_actors:[],rules:[{type:"deletion"},{type:"non_fast_forward"}]};
 function f({wrongMain=false,alter={},errorPath=null,fullList=false}={}){
  const calls=[],p={
   number:123,state:"closed",merged:true,merged_at:"2026-10-17T13:00:00Z",
@@ -27,9 +30,10 @@ function f({wrongMain=false,alter={},errorPath=null,fullList=false}={}){
   status:"completed",conclusion:"success"
  }]});
  const data={
-  [BASE+"/rulesets"]:[{id:1},{id:2}],
+  [BASE+"/rulesets"]:[{id:1},{id:2},{id:3}],
   [BASE+"/rulesets/1"]:mainRule,
   [BASE+"/rulesets/2"]:globalRule,
+  [BASE+"/rulesets/3"]:immutableRule,
   [BASE+"/pulls/123"]:p,
   [BASE+"/compare/"+MERGE+"..."+MAIN]:{
    base_commit:{sha:MERGE},status:"ahead",behind_by:0,ahead_by:2

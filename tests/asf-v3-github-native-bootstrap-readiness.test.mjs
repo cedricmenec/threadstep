@@ -17,9 +17,10 @@ const rule=(id,ref,types,bypass=[])=>({
 });
 const main=()=>rule(1,"refs/heads/main",[
  "pull_request","required_status_checks","deletion","non_fast_forward"]);
-const global=()=>rule(2,ADMISSION_REGISTRY_REF,[
- "deletion","non_fast_forward","update"],
- [{actor_type:"Integration",actor_id:42}]);
+const global=()=>rule(2,ADMISSION_REGISTRY_REF,
+ ["update"],
+ [{actor_type:"Integration",actor_id:42,bypass_mode:"always"}]);
+const immutable=()=>rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]);
 function fixture({exists=false,registry=createAdmissionRegistry(),
  policyMissing=false,refMoves=false,mainMoves=false,
  fail=null,ref404Status=404}={}) {
@@ -28,9 +29,10 @@ function fixture({exists=false,registry=createAdmissionRegistry(),
   paths.push(path);
   if(path===fail)return {ok:false,status:503};
   if(path===BASE+"/rulesets")
-   return {ok:true,data:policyMissing?[{id:1}]:[{id:1},{id:2}]};
+   return {ok:true,data:policyMissing?[{id:1}]:[{id:1},{id:2},{id:3}]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:main()};
   if(path===BASE+"/rulesets/2")return {ok:true,data:global()};
+  if(path===BASE+"/rulesets/3")return {ok:true,data:immutable()};
   if(path===MAIN)return {ok:true,data:{
    ref:"refs/heads/main",object:{type:"commit",sha:
     mainMoves && paths.filter(x=>x===MAIN).length>1?SHA("f"):MAIN_SHA}
