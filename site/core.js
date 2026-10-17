@@ -3,6 +3,7 @@ export const STORAGE_KEY = "threadstep.document.v1";
 export const RESUME_KEY = "threadstep.resume.v1";
 export const PRIORITIES = ["urgent", "normal", "later"];
 export const OVERVIEW_TASK_LIMIT = 5;
+export const NOTE_MAX_LENGTH = 2000;
 const priorityIndex = (priority) => PRIORITIES.indexOf(priority);
 export const emptyDocument = () => ({ version: 1, subjects: [] });
 export const newSubject = (title, id) => ({ id, title: title.trim(), items: [] });
@@ -51,9 +52,20 @@ export function updateItem(document, subjectId, itemId, patch) {
   const title = patch.title.trim();
   if (title.length === 0 || title.length > 300) return document;
   if (!PRIORITIES.includes(patch.priority)) return document;
-  if (title === item.title && patch.priority === item.priority) return document;
+  const hasNote = Object.prototype.hasOwnProperty.call(patch, "note");
+  if (hasNote && (typeof patch.note !== "string" || patch.note.length > NOTE_MAX_LENGTH)) {
+    return document;
+  }
+  const currentNote = normalizeNote(item.note);
+  const nextNote = hasNote ? normalizeNote(patch.note) : currentNote;
+  if (title === item.title && patch.priority === item.priority && nextNote === currentNote) {
+    return document;
+  }
+  const rebuilt = { ...item, title, priority: patch.priority };
+  if (nextNote === null) delete rebuilt.note;
+  else rebuilt.note = nextNote;
   const items = subject.items.map((entry) =>
-    entry.id === itemId ? { ...entry, title, priority: patch.priority } : entry);
+    entry.id === itemId ? rebuilt : entry);
   const subjects = document.subjects.map((entry) =>
     entry.id === subjectId ? { ...entry, items } : entry);
   return { ...document, subjects };
@@ -317,7 +329,9 @@ export function parseDocument(source) {
       if (!validId(item.id) || ids.has(item.id) ||
           !validTitle(item.title, 300) || !PRIORITIES.includes(item.priority) ||
           typeof item.done !== "boolean" ||
-          !(item.parentId === null || validId(item.parentId))) {
+          !(item.parentId === null || validId(item.parentId)) ||
+          (item.note !== undefined &&
+            (typeof item.note !== "string" || item.note.length > NOTE_MAX_LENGTH))) {
         throw new Error("Étape invalide dans le fichier.");
       }
       ids.add(item.id);
@@ -332,6 +346,10 @@ export function parseDocument(source) {
     }
   }
   return doc;
+}
+function normalizeNote(value) {
+  if (typeof value !== "string") return null;
+  return value.trim().length > 0 ? value : null;
 }
 function validId(value) { return typeof value === "string" && value.length > 0 && value.length <= 100; }
 function validTitle(value, length) { return typeof value === "string" && value.trim().length > 0 && value.length <= length; }
