@@ -120,7 +120,7 @@ const denied=r=>{
 test("child App run and globally admitted exact DISPATCH_PENDING wave => ACK proposal only",async()=>{
  const f=fixture();
  const r=await observeV3GithubChildAckReadiness(f);
- assert.equal(r.status,"child_ack_candidate_not_authorized",JSON.stringify(r));
+ assert.equal(r.status,"child_ack_candidate_not_authorized",JSON.stringify({result:r,calls:f.calls,registry:f.registry}));
  assert.deepEqual(r.evidence.proposedAckEvent,{
   type:"ACK_CHILD",taskId:TASK,childRunId:RUN,runAttempt:1,
   workflowRef:WORKFLOW
