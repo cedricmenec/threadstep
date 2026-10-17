@@ -1,5 +1,6 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
+import { documentToRecords, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -38,6 +39,12 @@ let focusOpenSubjectId = null;
 let focusRenameControl = false;
 let openMenuId = null;
 let pendingMenuFocus = null;
+
+const CHANGE_CHANNEL = "threadstep.changes.v1";
+let businessStore = null;
+let changeChannel = null;
+let lastRecords = emptyRecords();
+let historicalGuard = null;
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -86,6 +93,7 @@ function persist() {
   } catch {
     notify("Stockage indisponible : exportez vos données.");
   }
+  commitOperations();
   documentLoaded = true;
   render();
 }
@@ -102,6 +110,7 @@ function load() {
   } catch {
     notify("Données locales illisibles. Une importation reste possible.");
   }
+  lastRecords = documentToRecords(documentState);
   render();
 }
 function readResumePreference() {
@@ -1117,10 +1126,68 @@ if (cloudConfigFormEl) {
     if (cloudUrlEl) cloudUrlEl.value = result.url;
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase();
+    businessStore = createBusinessStore(syncedDatabase);
     renderCloudConfig();
     notify("Instance Dexie Cloud enregistrée");
   });
 }
+function createBusinessStore(db) {
+  if (!db) return null;
+  return {
+    async commit(operations) {
+      if (!Array.isArray(operations) || operations.length === 0) {
+        return { status: "recorded", operations: [] };
+      }
+      try {
+        await db.transaction("rw", db.subjects, db.items, async () => {
+          for (const operation of operations) {
+            const table = operation.store === "subjects" ? db.subjects : db.items;
+            if (operation.type === "put") await table.put(operation.value);
+            else if (operation.type === "delete") await table.delete(operation.key);
+          }
+        });
+        return { status: "recorded", operations };
+      } catch (error) {
+        throw localError("Échec de l'enregistrement local.", error);
+      }
+    }
+  };
+}
+function commitOperations() {
+  const records = documentToRecords(documentState);
+  const operations = diffRecords(lastRecords, records);
+  lastRecords = records;
+  if (!operations.length || !businessStore) return;
+  businessStore.commit(operations).then(
+    () => { broadcastChange(); },
+    (error) => {
+      if (isLocalError(error)) notify("Stockage indisponible : exportez vos données.");
+      else notify("Synchronisation en attente.");
+    }
+  );
+}
+function ensureChangeChannel() {
+  if (!changeChannel && typeof BroadcastChannel === "function") {
+    changeChannel = new BroadcastChannel(CHANGE_CHANNEL);
+  }
+  return changeChannel;
+}
+function broadcastChange() {
+  const channel = ensureChangeChannel();
+  if (channel) channel.postMessage({ type: "records-changed" });
+}
+function subscribeToChanges() {
+  const channel = ensureChangeChannel();
+  if (channel && typeof channel.addEventListener === "function") {
+    channel.addEventListener("message", () => { load(); });
+  }
+  if (syncedDatabase && typeof syncedDatabase.on === "function") {
+    syncedDatabase.on("changes", () => { load(); });
+  }
+}
 syncedDatabase = bootstrapSyncedDatabase();
+businessStore = createBusinessStore(syncedDatabase);
+historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
+subscribeToChanges();
 load();
