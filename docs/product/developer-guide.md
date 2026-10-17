@@ -262,3 +262,13 @@ l'import consenti puis la réapparition des sujets, le push/pull sur un deuxièm
 appareil, l'absence de collisions et le comportement d'une base Cloud scellée.
 Les tests Node et CI ne vérifient pas le réseau distant ; conserver les exports
 originaux jusqu'à confirmation du round-trip inter-appareils.
+
+
+**Limites de recette automatisée pour le correctif de persistance :**
+`site/synced-records.js` fournit une lecture atomique vérifiable avec un
+adaptateur Dexie simulé et refuse erreurs et références orphelines. Les
+métadonnées natives `owner`, `realmId` sont écartées **uniquement de la vue
+métier** ; aucune permission n'est modifiée. Un import/migration est effectué
+avec `add` transactionnel (jamais `put`) afin de refuser une collision
+intervenue après la relecture du plan. Il faut encore effectuer la recette
+sur Dexie Cloud réel avec un schéma de serveur autorisant les clés `id`.

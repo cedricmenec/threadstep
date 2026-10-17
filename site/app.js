@@ -4,6 +4,7 @@ import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compat
 import { detectHistoricalDocument, describeMigration, planMigration, runMigration } from "./migration.js";
 import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { availableLocalBackup } from "./local-recovery.js";
+import { readSyncedRecords } from "./synced-records.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -1379,7 +1380,7 @@ document.querySelector("#import").addEventListener("change", async (event) => {
       }
       if (!confirm(describeMigration(incoming, destination).message +
         " La base cible doit être vide. Confirmez-vous cet import vers le Cloud ?")) return;
-      const outcome = await runMigration(businessStore, plan,
+      const outcome = await runMigration(nonOverwritingMigrationAdapter(), plan,
         { confirmed: true, destination }, () => migrationDestination());
       if (outcome.status !== "migrated" && outcome.status !== "already-migrated" && outcome.status !== "up-to-date") {
         notify("Import Cloud interrompu ou refusé. Aucun succès annoncé, conservez votre export.");
@@ -1479,6 +1480,7 @@ function createBusinessStore(db) {
           for (const operation of operations) {
             const table = operation.store === "subjects" ? db.subjects : db.items;
             if (operation.type === "put") await table.put(operation.value);
+            else if (operation.type === "add") await table.add(operation.value);
             else if (operation.type === "delete") await table.delete(operation.key);
           }
         });
@@ -1486,6 +1488,16 @@ function createBusinessStore(db) {
       } catch (error) {
         throw localError("Échec de l'enregistrement local.", error);
       }
+    }
+  };
+}
+// Inserts during migration must use add (never put) even if another browser
+// inserts a colliding ID between the final read and the local transaction.
+function nonOverwritingMigrationAdapter() {
+  return {
+    commit(operations) {
+      return businessStore.commit(operations.map((operation) =>
+        operation.type === "put" ? { ...operation, type: "add" } : operation));
     }
   };
 }
@@ -1516,8 +1528,15 @@ async function refreshSyncedDocument() {
   // Await previously submitted writes before replacing the DOM from IndexedDB.
   if (cloudReadPending) return cloudReadPending;
   cloudReadPending = (async () => {
-    await pendingCloudWrites;
-    const records = await readTargetRecords();
+    let writesSnapshot;
+    let records;
+    // Mutations may arrive while a reactive refresh reads IndexedDB. Never
+    // replace a freshly edited UI with a stale snapshot.
+    do {
+      writesSnapshot = pendingCloudWrites;
+      await writesSnapshot;
+      records = await readTargetRecords();
+    } while (writesSnapshot !== pendingCloudWrites);
     const nextDocument = recordsToDocument(records);
     documentState = nextDocument;
     lastRecords = records;
@@ -1572,21 +1591,7 @@ function migrationDestination() {
   return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
 }
 async function readTargetRecords() {
-  if (!syncedDatabase) throw new Error("Instance Dexie Cloud absente");
-  const raw = await syncedDatabase.transaction("r",
-    syncedDatabase.subjects, syncedDatabase.items, async () => ({
-      subjects: await syncedDatabase.subjects.toArray(),
-      items: await syncedDatabase.items.toArray()
-    }));
-  // Remove native owner/realm metadata in the UI projection without writing
-  // it back or creating spurious updates on every sync.
-  const document = recordsToDocument(raw);
-  const records = documentToRecords(document);
-  if (records.subjects.length !== raw.subjects.length ||
-      records.items.length !== raw.items.length) {
-    throw new Error("Références locales incohérentes");
-  }
-  return records;
+  return readSyncedRecords(syncedDatabase);
 }
 function hideMigrationPanel() {
   if (!migrationPanelEl) return;
@@ -1661,7 +1666,7 @@ async function confirmHistoricalMigration(plan, destination) {
     return;
   }
   const outcome = await runMigration(
-    businessStore,
+    nonOverwritingMigrationAdapter(),
     updatedPlan,
     { confirmed: true, destination },
     () => migrationDestination()

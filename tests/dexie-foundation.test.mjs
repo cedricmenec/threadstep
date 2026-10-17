@@ -164,7 +164,7 @@ test("3.2 validateSynchronizedStores rejects ++id and accepts explicit id or @id
   assert.equal(validateSynchronizedStores({ subjects: "id" }), true);
   assert.equal(SCHEMA_VERSION, 2);
   assert.equal(validateSynchronizedStores({ subjects: "++id, title" }), false);
-  assert.equal(validateSynchronizedStores({ subjects: "id" }), false);
+  assert.equal(validateSynchronizedStores({ subjects: "title" }), false);
   assert.equal(validateSynchronizedStores({}), false);
   assert.equal(validateSynchronizedStores(null), false);
   assert.equal(validateSynchronizedStores({ subjects: "@id", items: "++id" }), false);
