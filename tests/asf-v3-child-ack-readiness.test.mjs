@@ -90,7 +90,7 @@ function fixture({
     sha:movedGlobal&&calls.filter(x=>x===G_REF).length>1?DIFFERENT:G}
   }};
   if(path===W_REF)return {ok:true,data:{
-   ref:"refs/heads/asf/waves/"+W,object:{type:"commit",
+   ref:"refs/heads/asf/waves/"+WAVE,object:{type:"commit",
     sha:movedWave&&calls.filter(x=>x===W_REF).length>1?DIFFERENT:W}
   }};
   if(path===M_REF)return {ok:true,data:{
