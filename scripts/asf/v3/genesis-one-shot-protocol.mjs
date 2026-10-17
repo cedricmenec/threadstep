@@ -84,8 +84,9 @@ function apply(current,event){
    next.commitSha=event.commitSha;
    next.stage=GENESIS_STAGE.COMMIT_STAGED;break;
   case "BEGIN_CREATE_ATTEMPT":
-   insist(exact(event,["type","commitSha","globalRef"])&&
+   insist(exact(event,["type","commitSha","globalRef","ownerRunId"])&&
     current.stage===GENESIS_STAGE.COMMIT_STAGED&&
+    event.ownerRunId===current.ownerRunId&&
     current.createAttemptCount===0&&
     event.commitSha===current.commitSha&&
     event.globalRef===ADMISSION_REGISTRY_REF,
