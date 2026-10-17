@@ -64,3 +64,14 @@ Lire \`docs/factory/v3-trust-root-activation-plan.md\`. Restent :
 - [ ] CI indépendante sur le SHA final : actionlint, \`npm run check\`, OpenSpec.
 - [ ] Revue code/source-diffs des PR originelles.
 - [ ] Revue humaine spécifique avant chaque fusion ou activation, y compris changements de workflow.
+
+
+## Bilan de consolidation, 17 octobre 2026
+
+Les neuf PR d'implémentation anciennes **#69, #70, #71, #73, #74, #75, #77, #79 et #81** ont été **fermées sans fusion**, avec lien vers la source unique #83. Leur historique reste visible. Les documents d'origine manquants (contrôleur, provenance/CAS, transaction bridge, cross-PR security, intégration et GitData) ont été recopiés dans #83, afin de préserver à la fois les spécifications et les tests.
+
+La file de revue V3 ne conserve volontairement que **six PR ouvertes** : #66, #67, #68 (documents distincts), **#83** (code consolidé), **#85** (proof of RELEASE/QUARANTINE uniquement) et **#87** (workflows V3 non payants, inertes). Le choix de fusion de chacun de ces trois derniers lots et toute décision de permissions restent soumis à une revue propriétaire séparée.
+
+**Tests :** intégration source #83 initialement verte (427/427) ; pile incluant #85 et #87 verte (458/458) via GitHub Actions. Le résultat ne valide PAS le mandat de signature réel, un writer RELEASE/QUARANTINE ni le dispatch payé.
+
+**Autorité d'approbation :** issue [#86](https://github.com/cedricmenec/threadstep/issues/86) ouverte. La racine Ed25519 production reste inactive, sans clé ni genèse réelle.
