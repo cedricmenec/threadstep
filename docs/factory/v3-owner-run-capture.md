@@ -61,11 +61,13 @@ Les deux rulesets réels existent mais **ne ciblent pas la référence V3** à l
 - [Writer 25316890](https://github.com/cedricmenec/threadstep/rules/25316890) : `refs/heads/refs/heads/asf/control/active-wave-v3` (préfixe dupliqué).
 - [Immutable 25316926](https://github.com/cedricmenec/threadstep/rules/25316926) : `refs/heads/refs/heads/asf/control/active-wave-v3,` (préfixe dupliqué + virgule finale).
 
+La règle writer doit cumuler **`creation` (`Restrict creations`) et `update` (`Restrict updates`)**, avec un bypass unique de l'App `5361227`. **Le seul `update` ne suffit pas à empêcher l'App V1 de créer la branche avant le bootstrap**, selon les règles GitHub. La règle d'intégrité reste `deletion` + `non_fast_forward` sans bypass.
+
 La cible attendue dans le JSON des deux rulesets est **exactement** `refs/heads/asf/control/active-wave-v3`, sans virgule. Dans l'interface `Include by pattern`, saisir **`asf/control/active-wave-v3`** si GitHub ajoute automatiquement le préfixe ; vérifier les JSON GET après Save. Ne pas créer la référence globale avant cette correction.
 
 ## Reste à faire avec décision indépendante
 
-- Corriger réellement les deux rulesets ; faire des tests de permissions **sans écriture sur le ref opérationnel**.
+- Corriger réellement les deux rulesets (cibles et `creation` + `update` côté writer) ; faire des tests de permissions **sans écriture sur le ref opérationnel**.
 - Configurer l'environnement protégé `asf-v3-controller` sur `main` et la variable d'environnement `ASF_V3_CONTROLLER_APP_ID=5361227` ; garder la clé PEM hors des secrets GitHub tant que le job privilégié n'a pas été revu.
 - Implanter la connexion environnement + jeton App contrôleur restreint **dans une PR séparée** après revue, sans V1 ni agent enfant.
 - Concevoir bootstrap unique avec CAS/erreurs 403/409/422/quarantaine (AUCUNE reprise d'écriture automatique), puis writer terminal release/quarantine ; intégration dispatcheur/child ACK/CLAIM_CHILD/mutex V1/V3 ; tests E2E GitHub non payants.
