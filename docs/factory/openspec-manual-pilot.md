@@ -104,8 +104,14 @@ l'acceptation utilisateur ; l'agent ne doit pas les déclarer exécutés.
 
 Ce contrat est répété dans `AGENTS.md`, `openspec/config.yaml`,
 les prompts `plan` et `apply`, avec tests statiques de cohérence.
-Le rejet mécanique étendu des demandes manuelles en checklist est
-**réservé à ASF-OPSX-02** et n'est pas prouvé par ce changement.
+ASF-OPSX-02 ajoute désormais un rejet mécanique avant `apply` :
+les cases de recette humaine explicite, de vérification UI sans moyen
+automatisé, d'archive/publication ou logées dans les sections narratives
+font échouer `scripts/check-openspec-task-phases.mjs` avec ligne et motif.
+Le workflow lance ce garde-fou sur le plan nouvellement créé et sur
+les plans persistants avant tout appel d'implémentation OpenRouter.
+Ce contrôle est **heuristique**, pas une analyse sémantique exhaustive ;
+`plan` puis `apply` avec revue reste préférable à `auto`.
 Avant un nouveau run TS-017, relire `tasks.md` en mode `plan`
 et ne pas relancer aveuglément un `auto` coûteux. Le run
 [#39019660492](https://github.com/cedricmenec/threadstep/actions/runs/39019660492)

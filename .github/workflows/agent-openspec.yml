@@ -308,6 +308,15 @@ jobs:
           git commit -m "agent($TASK_ID): OpenSpec auto plan"
           echo "AUTO_PLAN_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
+      # ASF-OPSX-02: deterministic fail-closed gate before the first paid apply call.
+      # Also recheck a plan already published on a persistent branch.
+      - name: Gate implementation checklist before paid apply
+        if: inputs.phase == 'apply' || inputs.phase == 'auto'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-openspec-task-phases.mjs "openspec/changes/$CHANGE_ID/tasks.md"
+
       - name: Apply the reviewed plan with OpenCode
         if: inputs.phase == 'apply' || inputs.phase == 'auto'
         env:

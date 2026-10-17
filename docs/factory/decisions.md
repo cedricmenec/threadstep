@@ -1,5 +1,23 @@
 # Journal des décisions de conception
 
+## Décision ASF-OPSX-02 (17 octobre 2026)
+
+- **Précontrôle statique avant appel payant `apply` :** la génération
+  d'OpenSpec reste payante lorsque demandée, mais les cases
+  manifestement impossibles sur runner bloquent `apply` en modes
+  `auto` et `apply`, avec nom du fichier, numéro de ligne et motif.
+  Une section `Manual acceptance` ou `Post-sync review` avec cases
+  est rejetée. Les contre-exemples automatisables sont admis pour
+  éviter des faux positifs fréquents.
+- **Limite acceptée :** détection heuristique de formulations
+  statiques, non une preuve exhaustive. Pas de suppression du gate
+  de cases inachevées, aucune modification de sync/archive,
+  secrets, permissions ou auto-merge. Voir
+  [contrat et tests ASF-OPSX-02](openspec-checklist-contract.md)
+  et [tâche de livraison](tasks/ASF-OPSX-02.md).
+- **Hors périmètre :** sauvegarde/reprise de travail non publié,
+  réservées à ASF-OPSX-03 et ASF-OPSX-04.
+
 ## Décision ASF-OPSX-01 (17 octobre 2026)
 
 - **Contrat renforcé de planification OpenSpec** : les cases de `tasks.md`
