@@ -170,7 +170,7 @@ test("completed no-work RELEASE uses one Git fast-forward and two independent te
  assert.equal(f.state.next.active,null);
  assert.equal(f.state.next.events.at(-1).type,"RELEASE");
  assert.equal(f.state.reads.filter(p=>p===BASE+"/rulesets").length,2);
- assert.equal(f.state.reads.filter(p=>p===G_GET).length,7);
+ assert.equal(f.state.reads.filter(p=>p===G_GET).length,6);
  onlyOnePatch(f);noAuthority(r);
 });
 test("STOP_UNCERTAIN allows QUARANTINE only, never RELEASING the active wave",async()=>{
