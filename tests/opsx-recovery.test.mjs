@@ -36,6 +36,10 @@ test("durable plan and apply checkpoints precede paid sync and survive later fai
   assert.match(workflow,/Checkpoint validated OpenSpec plan[\s\S]*?agent-openspec-checkpoint\.mjs plan "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
   assert.match(workflow,/Checkpoint verified implementation before OPSX sync[\s\S]*?npm run check[\s\S]*?openspec validate "[\$]CHANGE_ID" --strict --no-interactive[\s\S]*?agent-openspec-checkpoint\.mjs apply "[\$]CHANGE_ID"[\s\S]*?git commit[\s\S]*?push -u origin "HEAD:[\$]AGENT_BRANCH"/);
   assert.ok(workflow.includes("Existing OpenSpec plan on $AGENT_BRANCH; use phase=apply"));
+  assert.ok(workflow.includes('last_message="$(git log -1 --format=%s)"'));
+  assert.ok(workflow.includes('LAST_DURABLE_PHASE=apply'));
+  assert.ok(workflow.includes('CHECKPOINT_SHA=$(git rev-parse HEAD)'));
+  assert.ok(workflow.includes('git diff --no-renames --name-only origin/main...HEAD'));
   assert.ok(workflow.includes("No automatic paid retry was started"));
   assert.ok(workflow.includes('if: failure()'));
 });
