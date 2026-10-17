@@ -14,9 +14,10 @@ et tactile. La publication de PR n'a jamais commencé, donc aucun code
 de ce run n'a été poussé sous `agent/openspec/TS-017`.
 
 **ASF-OPSX-01** corrige le **contrat donné au planificateur et à
-l'implémenteur**, pas encore la détection mécanique complète des
-checklists impossibles (**ASF-OPSX-02**) ni la sauvegarde d'un travail
-non publié (**ASF-OPSX-03**).
+l'implémenteur**. **ASF-OPSX-02** ajoute un contrôle statique précoce
+des cases non exécutables avant tout appel payant `apply`.
+La sauvegarde du travail non publié reste hors périmètre
+(**ASF-OPSX-03**).
 
 ## Structure normative de tasks.md
 
@@ -72,8 +73,14 @@ avec checklist vérifiable et deux rubriques narratives.
   lors de la génération du change.
 - `.github/workflows/agent-openspec.yml` : prompt `plan`
   renforcé et instruction `apply` ne cochant que le travail prouvé.
-- `scripts/check-openspec-task-phases.mjs` : détecteur existant
-  des cas post-sync dans les cases ; **inchangé dans cette tâche**.
+- `scripts/check-openspec-task-phases.mjs` : validateur étendu
+  par ASF-OPSX-02 aux recettes humaines, actions de publication
+  et cases insérées dans `Manual acceptance` ou `Post-sync review`.
+  Il rend un diagnostic avec chemin, ligne et motif.
+- `agent-openspec.yml` : vérifie le plan immédiatement après
+  sa génération (`plan` et `auto`) et au démarrage de `apply` ;
+  une étape dédiée effectue un dernier contrôle **avant** l'appel
+  OpenRouter d'implémentation, dans les modes `apply` et `auto`.
 - Les tests statiques protègent les formulations du contrat dans
   ces entrées, sans facturer de modèle.
 
@@ -85,11 +92,15 @@ avec checklist vérifiable et deux rubriques narratives.
   tests statiques, **pas la conformité d'un plan produit généré
   avec un modèle payant**. Aucune exécution OpenRouter n'est
   nécessaire ni autorisée pour tester ASF-OPSX-01.
-- Le validateur existant refuse des références post-sync
-  détectables dans des cases, mais ne sait pas rejeter de manière
-  générale toutes les tâches UI manuelles. Un plan `auto`
-  inadéquat peut encore atteindre `apply`. **ASF-OPSX-02** devra
-  étendre le fail-closed de plan avant la première phase apply payante.
+- Le validateur ASF-OPSX-02 refuse désormais plusieurs formes reconnues
+  de tâches manuelles et postérieures dans des cases, y compris celles
+  déjà cochées, et refuse un plan sans checklist. Ses détections sont
+  **heuristiques** : un texte ambigu ou une paraphrase inédite peut
+  encore passer ; il n'est pas une preuve générale de faisabilité et
+  peut exiger de reformuler une opération automatisable comme
+  test déterministe explicite. La revue humaine d'un plan `auto`
+  ne peut pas intervenir entre le plan et l'appel payant `apply` ;
+  préférer `plan` puis `apply` quand le risque est sensible.
 - Pour TS-017 à TS-020, privilégier un premier lancement
   **`phase=plan` autorisé explicitement**, relire les cases
   de `tasks.md` puis autoriser `apply` séparément. Aucun
