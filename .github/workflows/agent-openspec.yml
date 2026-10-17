@@ -326,6 +326,7 @@ jobs:
           set -euo pipefail
           node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" plan "$CHANGE_ID"
           git add -- "openspec/changes/$CHANGE_ID"
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" plan "$CHANGE_ID"
           if git diff --cached --quiet; then
             echo "::error::No new validated plan to checkpoint"; exit 1
           fi
@@ -401,6 +402,7 @@ jobs:
           openspec validate "$CHANGE_ID" --strict --no-interactive
           node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" apply "$CHANGE_ID"
           git add -A
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" apply "$CHANGE_ID"
           if git diff --cached --quiet; then
             echo "::error::No implementation changes to checkpoint"; exit 1
           fi
@@ -475,21 +477,11 @@ jobs:
           test "$(git branch --show-current)" = "$AGENT_BRANCH" || {
             echo "::error::Work branch changed"; exit 1;
           }
-          changed="$( (git diff --no-renames --name-only origin/main...HEAD; git diff --no-renames --name-only; git ls-files --others --exclude-standard) | sort -u )"
-          while IFS= read -r path; do
-            [[ -z "$path" ]] && continue
-            if [[ "$PHASE" == plan ]]; then
-              case "$path" in
-                "openspec/changes/$CHANGE_ID/"*) ;;
-                *) echo "::error::Plan changed a forbidden path: $path"; exit 1 ;;
-              esac
-            else
-              case "$path" in
-                .github/*|AGENTS.md|opencode.json|openspec/config.yaml|.opencode/*|.agents/*|backlog/*|scripts/*|docs/factory/*|.env|.env.*)
-                  echo "::error::Apply changed a protected path: $path"; exit 1 ;;
-              esac
-            fi
-          done <<< "$changed"
+          # The same trusted guard covers checkpoints and final PR scope.
+          # Unlike .gitignore it rejects tracked files and staged changes.
+          guard_phase=publish
+          if [[ "$PHASE" == plan ]]; then guard_phase=plan; fi
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" "$guard_phase" "$CHANGE_ID"
           if [[ "$PHASE" == finalize ]]; then
             # Do not publish any uncommitted changes except the archive/sync output.
             # Existing feature commits are allowed on the task branch.
@@ -501,8 +493,10 @@ jobs:
               esac
             done
           fi
-          test -n "$changed" || { echo "::error::No changes to publish"; exit 1; }
           git add -A
+          # Re-evaluate the actual index: even forced/staged tracked paths
+          # must never bypass the protected-path denylist.
+          node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" "$guard_phase" "$CHANGE_ID"
           if ! git diff --cached --quiet; then
             git commit -m "agent($TASK_ID): OpenSpec $PHASE"
           fi
