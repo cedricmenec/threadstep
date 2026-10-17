@@ -4,11 +4,10 @@
  *
  * Never reads a GitHub write token or model key, dispatches a workflow,
  * claims a wave, merges a PR or makes a network request.
- * The only production trust root is disabled until separately approved.
+ * GitHub owner-run provenance and a protected Git control ref replace Ed25519.
  * A "green" local observation MUST NOT turn into paid authorization.
  */
 import { pathToFileURL } from "node:url";
-import { auditConfiguredV3ProductionTrustRoot } from "./production-trust-root.mjs";
 
 const REPO = "cedricmenec/threadstep";
 const CONTROLLER = REPO + "/.github/workflows/backlog-orchestrator-v3.yml@refs/heads/main";
@@ -44,17 +43,18 @@ export function inspectV3WorkflowRuntimeContext({ mode, context } = {}) {
 }
 
 /**
- * No success path until a separate signed and reviewed runtime integration.
- * A root configured and checked in another PR would STILL not prove a trusted
- * manifest, bound dispatch ACK, global lease, paid mutex or independent checks.
+ * No success path until a separately reviewed GitHub-native integration.
+ * A real controller must independently verify the owner's run, the protected
+ * global registry, the wave CAS claim and the shared paid mutex. Tests cannot
+ * substitute those permissions or GitHub observations.
  */
 export async function inspectV3PaidPreflight({ mode, context } = {}) {
   const ctx = inspectV3WorkflowRuntimeContext({ mode, context });
   if (ctx.status !== "context_only") return ctx;
-  const root = await auditConfiguredV3ProductionTrustRoot({});
-  if (root.status !== "consistent_untrusted_anchor")
-    return outcome("disabled", "owner_pinned_root_not_active");
-  return outcome("disabled", "global_admission_child_claim_and_delivery_not_wired");
+  // No unverified context, manifest, token or injected signing key can grant
+  // a paid start. GitHub-native observation is read-only and non-authorizing.
+  // This CLI deliberately has NO privileged client or live writer yet.
+  return outcome("disabled", "github_global_registry_protection_and_paid_claim_not_wired");
 }
 
 export async function main(args = process.argv.slice(2), env = process.env) {
