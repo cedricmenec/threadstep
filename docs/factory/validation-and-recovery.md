@@ -1,5 +1,81 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-024 (17 octobre 2026) : bootstrap Dexie bloqué au checkpoint d'apply
+
+Le [run TS-024 #39070773239](https://github.com/cedricmenec/threadstep/actions/runs/39070773239)
+(`phase=auto`) a réussi le plan, la validation stricte et **476/476 tests**
+après apply, puis a été refusé au checkpoint d'implémentation :
+`Checkpoint has forbidden paths: .gitignore, package.json,
+package-lock.json, tools/vendor-dexie.mjs`.
+Le garde-fou `scripts/agent-openspec-checkpoint.mjs` n'autorisait que
+`site/`, `tests/`, `docs/product/` et `openspec/changes/ts-024/`.
+Pourtant TS-024 doit pinner Dexie dans `package.json`, mettre à jour le
+lockfile et produire localement les assets ; le plan approuvé prévoit
+également `.gitignore` et le helper `tools/vendor-dexie.mjs`.
+
+**Diagnostic vérifié :** la branche
+`agent/openspec/TS-024` contient le seul checkpoint de **plan**
+`b9a2edc2d5d1b8b1ee17bc14079fa22028aa9e00`, sans checkpoint
+d'implémentation ni PR de livraison. Les modifications du runner après
+apply, bien que testées, n'ont pas été poussées et ne sont pas
+récupérables depuis cette branche. Aucun appel OPSX sync n'a commencé.
+
+**Deuxième prérequis découvert :** le contexte `openspec/config.yaml`
+interdisait encore sans condition authentification et dépendances,
+alors que la PR de politique [#107](https://github.com/cedricmenec/threadstep/pull/107)
+a transféré ces choix vers les spécifications produit. Cette consigne
+obsolète contredit la proposition TS-024, qui signale explicitement
+son retrait comme précondition à apply.
+
+### Correction contrôlée
+
+- Étendre **seulement pour `apply`** la portée des checkpoints aux
+  quatre chemins explicitement requis : `.gitignore`,
+  `package.json`, `package-lock.json`, `tools/vendor-dexie.mjs`.
+  L'accès demeure refusé à `scripts/*`, `tools/*` autres,
+  `.github/*`, `AGENTS.md`, `openspec/config.yaml`, secrets,
+  spécifications canoniques avant OPSX sync et backlog.
+- Charger le vérificateur de checkpoint **depuis `origin/main`**
+  avant les phases payantes. Une branche de tâche issue d'un ancien
+  `main` ne doit pas réintroduire silencieusement un ancien
+  vérificateur après une correction de la factory. Les opérations
+  de plan et apply utilisent ce même fichier de confiance.
+- Rendre `openspec/config.yaml` neutre quant aux choix technologiques
+  hors périmètre, tout en préservant migration, confidentialité,
+  checklist, validation stricte et livraison via PR.
+- Adapter les tests de non-régression, sans autoriser un répertoire
+  exécutable générique ni désactiver les contrôles.
+
+### Reprise sans régénérer le plan
+
+1. **Après fusion du correctif factory et CI/Pages de main,** rapprocher
+   sans perte la branche `agent/openspec/TS-024` du nouveau `main`.
+   Confirmer que le plan et les deltas restent identiques et que
+   `git diff origin/main...agent/openspec/TS-024` ne contient que
+   `openspec/changes/ts-024/**`. Éviter un force-push.
+2. Confirmer un HEAD distant qui conserve le marqueur de checkpoint
+   `agent(TS-024): validated OpenSpec plan checkpoint` et l'absence
+   d'un checkpoint `verified implementation`.
+3. [Relire le plan](https://github.com/cedricmenec/threadstep/tree/agent/openspec/TS-024/openspec/changes/ts-024).
+   Vérifier notamment les hypothèses `dexie.cloud` et packaging
+   local, la coexistence `localStorage` et l'absence de secrets.
+4. Sur [Agent OpenSpec](https://github.com/cedricmenec/threadstep/actions/workflows/agent-openspec.yml),
+   lancer **un nouveau `workflow_dispatch`** avec
+   `task_id=TS-024`, `phase=apply`, `auto_merge=false`
+   et le modèle explicitement choisi. Ne pas utiliser
+   `Re-run jobs`, `phase=auto`, ni `phase=plan`.
+   **Ce nouvel apply est payant** et exige une autorisation
+   distincte du run échoué ; la planification ne sera pas refacturée.
+5. Vérifier le checkpoint d'implémentation poussé, puis OPSX sync,
+   les validations strictes, l'archive, la PR finale, le check sur
+   son SHA et la recette manuelle. Si OPSX échoue après checkpoint
+   d'apply, repartir en `phase=finalize`, pas en `apply`.
+
+**Limites :** corriger la factory ne récupère pas le contenu
+d'apply perdu ni ne prouve que le prochain apply ou le sync payera
+ou réussira. Aucune dépense supplémentaire, exécution OpenRouter,
+modification de secret ou bypass GitHub n'est autorisé par le correctif.
+
 ## Incident TS-023 (17 octobre 2026) : checkpoints et reprise sans régénérer
 
 Le [run #39047805814](https://github.com/cedricmenec/threadstep/actions/runs/39047805814)
