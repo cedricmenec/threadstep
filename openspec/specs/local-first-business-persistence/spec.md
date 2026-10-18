@@ -15,11 +15,20 @@ preferences and a non-destructive guard preserving historical V1 data.
 Every business mutation SHALL be applied through a Dexie/IndexedDB transaction,
 and a write SHALL be considered recorded locally as soon as that transaction
 commits, without waiting for a Dexie Cloud acknowledgement. The interface SHALL
-distinguish local recording from remote synchronization.
+distinguish local recording from remote synchronization and MUST NOT imply a
+pending remote synchronization when Cloud is not activated.
+
+#### Scenario: A local-only write is confirmed on commit
+
+- **GIVEN** l'espace local autonome est ouvert sans Cloud
+- **WHEN** l'utilisateur enregistre une mutation métier hors ligne
+- **THEN** la transaction IndexedDB est validée sans accès réseau
+- **AND** l'interface confirme l'enregistrement sur cet appareil après le commit
+- **AND** elle n'annonce ni synchronisation en attente ni transfert distant
 
 #### Scenario: An offline write is confirmed on commit
 
-- **GIVEN** the local store was initialized and a session allows local access
+- **GIVEN** the synchronized store was initialized and a session allows local access
 - **WHEN** the device is offline and the user saves a business mutation
 - **THEN** the transaction commits without network access
 - **AND** the interface confirms the write as recorded on this device
@@ -156,15 +165,38 @@ synchronized tables and MUST NOT appear in the JSON export.
 ### Requirement: All current business operations over the store
 
 Create/edit, completion, substep creation, promotion, ordering, removal and
-undo, filters, the pending counter, the suggestion, tracking and routes SHALL be
-served by the transactional store, while `site/core.js` stays pure and the
-current UI rules and observable behavior stay unchanged.
+undo, filters, the pending counter, the suggestion, tracking, routes, JSON
+import and JSON export SHALL be served by the transactional store in every
+persistence mode, including when no Cloud configuration exists. `site/core.js`
+SHALL stay pure and the current UI rules and observable behavior SHALL stay
+unchanged.
 
 #### Scenario: Each operation persists through the store
 
-- **WHEN** any of create, edit, complete, add substep, promote, reorder, remove, restore, import, filter, count, suggest, track or route operations is performed
-- **THEN** it is applied through the transactional store
+- **WHEN** any of create, edit, complete, add substep, promote, reorder, remove, restore, filter, count, suggest, track or route operations is performed without Cloud
+- **THEN** it is applied through the local transactional store
 - **AND** its result survives a reload
+
+#### Scenario: Create, edit, delete and reload keep the same records
+
+- **GIVEN** an empty autonomous local workspace
+- **WHEN** a subject and steps are created, edited and deleted, then the application is reloaded
+- **THEN** the reloaded view reflects the same committed records and relations
+- **AND** no record was read from or written to the historical `localStorage` document
+
+#### Scenario: Local JSON import is atomic
+
+- **GIVEN** local records already exist
+- **WHEN** a valid V1 document is imported and confirmed
+- **THEN** the local records are replaced by one committed operation set
+- **AND** an invalid import leaves every local record unchanged
+
+#### Scenario: Export reads committed IndexedDB records
+
+- **GIVEN** local records were committed without Cloud
+- **WHEN** the user exports a backup
+- **THEN** the JSON is built from the committed local records in the V1 shape
+- **AND** the source is not the historical `localStorage` key
 
 #### Scenario: The domain core stays pure
 
@@ -178,26 +210,38 @@ current UI rules and observable behavior stay unchanged.
 
 ### Requirement: Non-destructive compatibility guard for V1 data
 
-Until the localStorage V1 conversion (TS-026) and the OTP journey (TS-027) are
-delivered, the change MUST NOT make existing V1 data invisible or erase it, and
-MUST NOT transfer it to Dexie Cloud without explicit consent; a non-destructive
-compatibility guard SHALL keep the historical document available.
+Until the explicit local conversion (TS-033) and the explicit Cloud transfer
+consent (TS-037), the change MUST NOT make existing V1 data invisible or erase
+it, and MUST NOT transfer it to Dexie Cloud without explicit consent. The
+historical `threadstep.document.v1` key MUST NOT be purged, renamed, overwritten
+or hidden; a non-destructive compatibility guard SHALL keep the historical
+document readable and exportable.
 
 #### Scenario: Historical V1 data stays visible
 
-- **GIVEN** a stored or imported V1 document exists
-- **WHEN** the transitional change is active
-- **THEN** the historical subjects and steps remain readable and usable
-- **AND** they are not hidden by the new store
+- **GIVEN** a stored V1 document exists
+- **WHEN** the local-only application starts
+- **THEN** the historical subjects and steps remain readable through the compatibility guard
+- **AND** a byte-for-byte V1 export remains available
+- **AND** the new local workspace does not hide the historical key
 
 #### Scenario: Historical data is never erased
 
-- **WHEN** the new store is initialized or opened
+- **WHEN** the local store is initialized, opened or modified
 - **THEN** no historical V1 record is deleted
+- **AND** the historical key is not renamed, cleared or overwritten
 - **AND** no destructive migration runs
+
+#### Scenario: No automatic conversion
+
+- **GIVEN** a valid historical V1 document exists
+- **WHEN** the local workspace starts empty
+- **THEN** no automatic conversion into IndexedDB is performed
+- **AND** the user is informed that the historical document remains preserved and exportable
+- **AND** conversion is a separate explicit operation
 
 #### Scenario: No consent-less transfer
 
-- **WHEN** historical local data exists and no explicit consent was given
+- **WHEN** historical local data exists and no explicit Cloud consent was given
 - **THEN** it is not sent to Dexie Cloud
-- **AND** the compatibility guard prevents an intermediate state that would expose it
+- **AND** no synchronized workspace is configured on its behalf

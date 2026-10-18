@@ -4,7 +4,7 @@
 Garantir une persistance métier IndexedDB/Dexie autonome, durable, réactive et testable, que Dexie Cloud soit absent, désactivé, inaccessible ou non authentifié. Contrat générique, sans schéma métier imposé.
 ## Requirements
 ### Requirement: Autonomous local bootstrap
-L'application SHALL initialiser son espace local IndexedDB avec Dexie.js sans URL distante ni connexion réseau. Elle MUST NOT bloquer l'accès métier local au motif qu'aucun compte Dexie Cloud n'existe.
+The application SHALL initialize its autonomous local IndexedDB workspace before and independently of any optional Cloud configuration. It MUST NOT gate local business access on a Cloud URL, account, OTP or network. A local-only launch MUST NOT construct or configure a synchronized Dexie Cloud instance.
 #### Scenario: First visit without Cloud
 - **GIVEN** aucune configuration Cloud sur le navigateur
 - **WHEN** l'utilisateur ouvre l'application
@@ -15,6 +15,17 @@ L'application SHALL initialiser son espace local IndexedDB avec Dexie.js sans UR
 - **WHEN** l'appareil est hors ligne
 - **THEN** les opérations locales restent utilisables après ouverture d'IndexedDB
 - **AND** aucune erreur d'authentification Cloud n'est présentée
+#### Scenario: No Cloud configuration prerequisite
+- **GIVEN** aucune URL Dexie Cloud valide n'est enregistrée
+- **WHEN** l'application démarre
+- **THEN** la vue métier locale est disponible sans identité Cloud
+- **AND** aucun formulaire de configuration ou code OTP ne bloque les opérations métier
+- **AND** l'absence ou l'invalidité de l'URL ne remplace pas IndexedDB par un autre stockage métier
+#### Scenario: Local mode opens no synchronized instance
+- **GIVEN** aucune configuration Cloud active
+- **WHEN** l'espace local est ouvert
+- **THEN** aucun addon de synchronisation Dexie Cloud n'est construit ou configuré
+- **AND** les enregistrements locaux ne sont pas placés dans une table éligible à une réplication distante
 ### Requirement: Durable transactional business writes
 Toute mutation métier SHALL être écrite dans une transaction IndexedDB. La confirmation locale MUST être émise après son succès, jamais avant. Une erreur de stockage SHALL laisser l'interface dans un état réconciliable avec la base.
 #### Scenario: Commit followed by reload
@@ -59,5 +70,17 @@ L'application SHALL proposer un export lisible de l'espace local et MUST préser
 - **WHEN** l'utilisateur exporte son espace local sans compte Cloud
 - **THEN** il obtient les données métier et relations selon le format versionné du projet
 - **AND** aucune configuration ou credential Cloud n'est incluse
+### Requirement: No Cloud activity in local-only mode
+When no Cloud activation exists, the application MUST NOT configure Dexie Cloud, request or verify an OTP, open a Cloud connection or create a remote transfer queue for local business content.
+#### Scenario: Local write makes no network call
+- **GIVEN** l'espace local autonome est ouvert
+- **WHEN** une mutation métier locale réussit
+- **THEN** aucune requête d'authentification ou de synchronisation Cloud n'est émise
+- **AND** la confirmation locale ne mentionne pas une synchronisation distante en attente
+#### Scenario: No remote transfer queue
+- **GIVEN** des données locales ont été créées sans Cloud
+- **WHEN** l'application est rechargée
+- **THEN** les données sont relues depuis IndexedDB
+- **AND** aucune file de transfert vers une destination Cloud n'a été créée pour ce contenu
 ## Notes d'intégration
 Le nom IndexedDB, la version, les stores et la validation de domaine appartiennent au profil de l'application. Les migrations de *tables déjà synchronisées* relèvent de règles Dexie Cloud plus restrictives et ne sont pas couvertes par la seule upgrade Dexie locale.

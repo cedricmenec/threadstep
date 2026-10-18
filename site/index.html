@@ -23,8 +23,15 @@
         <label class="secondary file-action" for="import">Importer JSON</label>
         <input id="import" type="file" accept=".json,application/json" aria-label="Importer un fichier JSON">
       </div>
-      <p class="privacy">Les données restent dans ce navigateur et se synchronisent avec votre instance Dexie Cloud après connexion.</p>
+      <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>
     </header>
+    <section id="local-panel" class="local-panel" aria-labelledby="local-panel-title" hidden>
+      <h2 id="local-panel-title">Espace local IndexedDB</h2>
+      <p id="local-status" class="local-status" role="status" aria-live="polite">Vos données sont lues et enregistrées dans IndexedDB sur cet appareil, sans compte Cloud.</p>
+      <p id="local-legacy-notice" class="local-legacy" role="status" aria-live="polite" hidden></p>
+      <button id="local-export-legacy" type="button" class="secondary" hidden>Exporter ma sauvegarde locale historique (JSON)</button>
+      <p id="local-storage-error" class="local-error" role="alert" hidden></p>
+    </section>
     <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
       <h2 id="auth-title">Connexion par code email</h2>
       <p id="auth-help" class="auth-help">Un code à usage unique est envoyé par Dexie Cloud à votre adresse email. Aucun mot de passe n'est demandé.</p>
@@ -77,7 +84,7 @@
     <section id="cloud-config" class="cloud-config" aria-labelledby="cloud-config-title" hidden>
       <form id="cloud-config-form" class="cloud-config-form">
         <h2 id="cloud-config-title">Configurer la synchronisation Dexie Cloud</h2>
-        <p id="cloud-config-help">Saisissez l'URL HTTPS de votre instance Dexie Cloud. Elle reste dans ce navigateur et n'est jamais envoyée au build.</p>
+        <p id="cloud-config-help">Saisissez l'URL HTTPS de votre instance Dexie Cloud. Elle reste dans ce navigateur et n'est jamais envoyée au build. La base synchronisée est distincte de l'espace local IndexedDB : aucun enregistrement local n'est copié ni envoyé par cette configuration seule.</p>
         <label for="cloud-url">URL de l'instance Dexie Cloud</label>
         <input id="cloud-url" name="cloudUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" required aria-describedby="cloud-config-help cloud-config-error">
         <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
