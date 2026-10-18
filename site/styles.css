@@ -202,3 +202,19 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .local-conversion-consent input{width:20px;height:20px;margin-top:2px;flex:none}
 .local-conversion-actions{display:flex;flex-wrap:wrap;gap:10px}
 .local-conversion-actions button{min-height:44px}
+
+.sync-diagnostic{margin-top:32px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:20px 22px;max-width:720px}
+.sync-diagnostic[hidden]{display:none}
+.sync-diagnostic h2{font-size:1.3rem;letter-spacing:-.03em}
+.sync-diagnostic-readonly{margin:8px 0 0;color:#657366;font-size:.86rem}
+.sync-diagnostic-list{display:grid;grid-template-columns:minmax(140px,auto) 1fr;gap:8px 16px;margin:16px 0 0;font-size:.88rem}
+.sync-diagnostic-list dt{font-weight:700;color:#30473a}
+.sync-diagnostic-list dd{margin:0;color:#415748;overflow-wrap:anywhere}
+.sync-diagnostic-errors{margin:10px 0 0;padding-left:20px;color:#6d4a3f;font-size:.86rem}
+.sync-diagnostic-errors li{margin:4px 0}
+.sync-diagnostic-retry{min-height:44px;min-width:44px;margin-top:16px}
+.sync-diagnostic-retry:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
+.sync-diagnostic-retry:disabled{opacity:.6;cursor:not-allowed}
+.sync-diagnostic-reason{margin:8px 0 0;color:#657366;font-size:.84rem}
+.sync-diagnostic-status{margin:8px 0 0;color:#415748;font-size:.88rem;min-height:1.2em}
+@media(max-width:620px){.sync-diagnostic{padding:16px}.sync-diagnostic-list{grid-template-columns:1fr;gap:2px 0}.sync-diagnostic-list dd{margin-bottom:8px}}

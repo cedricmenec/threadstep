@@ -210,6 +210,54 @@ synchronisation, propagation réseau et copies sur une instance Dexie Cloud
 **isolée** reste manuelle : les tests Node ne prouvent pas le comportement
 distant.
 
+## Diagnostic de synchronisation et relance native (TS-034)
+
+`site/sync-diagnostics.js` est le cœur pur et injectable du diagnostic Dexie
+Cloud. Il expose séparément la session, la connexion, la phase native, le pull
+initial, la base configurée (URL normalisée et `remoteDbId` disponible), les
+erreurs classées et le statut des écritures locales, ainsi qu'une preuve
+distante calculée avec l'attestation existante. Cette vue est strictement en
+**lecture seule** : elle ne lit aucun enregistrement métier, ne modifie rien et
+ne construit aucun état `connected` simulé.
+
+Les valeurs transitoires `connecting`, `pulling` et `pushing` ne deviennent
+jamais des erreurs permanentes ; les statuts absents, inconnus ou contradictoires
+restent `indeterminate`. Un pull initial n'est `complete` qu'avec
+`initiallySynced === true` et une révision serveur connue. Un échec, une lecture
+impossible ou un état indéterminé n'est jamais interprété comme une base
+distante vide : le message l'affirme explicitement et aucune migration ni import
+n'est déclenché.
+
+`classifySyncError` n'inspecte que des champs stables (`name`, `code`,
+`messageCode`, `httpStatus`, `status`, `license.status`) et projette une
+catégorie et un code issus d'une liste fermée. Les messages d'erreur bruts, les
+emails, OTP, jetons, titres et notes ne sont jamais rendus, journalisés ni
+sérialisés. La vue n'affiche qu'une catégorie de session, jamais l'email ni
+l'identifiant utilisateur brut.
+
+`reduceLocalWriteStatus` distingue une écriture locale confirmée (IndexedDB),
+une synchronisation en attente, une synchronisation prouvée par un état natif
+`in-sync` avec pull initial terminé, et une erreur. Un commit local n'est jamais
+présenté comme `synced` ; une erreur de synchronisation ultérieure conserve la
+preuve locale et affiche l'erreur séparément. Le diagnostic suit
+`currentUser`, `syncState` et `persistedSyncState`, y compris après rechargement
+ou reprise de session.
+
+La relance contrôlée du pull initial appelle uniquement
+`db.cloud.sync({ purpose: "pull", wait: true })`, une seule fois, après avoir
+vérifié que la base est configurée, la session authentifiée, le réseau
+disponible et qu'aucun échange n'est en cours. Elle ne se connecte pas, n'importe
+rien et n'écrit aucune donnée produit ; un échec reste `failed` ou
+`indeterminate` et ne conclut jamais à un Cloud vide. Le panneau mobile utilise
+un `<dl>` accessible, une zone `aria-live` et un bouton de relance d'au moins
+44 px, opérable au clavier. Sans Cloud configuré, il indique que la
+synchronisation n'est pas activée sans construire d'instance synchronisée.
+
+Les tests Node couvrent tous les statuts et phases natifs, les sessions, les
+erreurs, la rédaction, les transitions local/pending/synced, la relance et le
+rendu statique. La recette réelle OTP, Chrome mobile, coupure réseau, droits,
+origine et premier pull sur une instance Dexie Cloud **isolée** reste manuelle.
+
 ## Authentification OTP email native (TS-027)
 
 `site/authentication.js` est le module pur de la connexion : `signInMethods`

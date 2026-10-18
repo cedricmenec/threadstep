@@ -137,3 +137,31 @@ ne prouve pas la propagation réseau réelle. La recette sur une instance Dexie
 Cloud **isolée**, avec exports préalables, Chrome mobile et second navigateur,
 tactile/clavier/lecteur d'écran, premier sync non terminé, conflits, copies,
 reconnexion et offline, reste obligatoire et à effectuer hors CI.
+
+## Diagnostic et relance du pull initial TS-034
+
+TS-034 rend observables les signaux natifs de synchronisation sans exposer de
+données métier. Le module pur `site/sync-diagnostics.js` distingue la session,
+la connexion, la phase native, le pull initial, l'URL normalisée et le
+`remoteDbId` disponible, les erreurs classées et le statut des écritures
+locales. `connecting`, `pulling`, `pushing`, `offline` et `indeterminate`
+restent distincts ; un état transitoire n'est jamais promu en erreur permanente
+et une information absente n'est jamais interprétée comme une base distante
+vide.
+
+Le diagnostic est en **lecture seule** et applique une règle de rédaction par
+liste blanche : catégories et messages fixes, jamais de message d'erreur brut,
+d'email, d'OTP, de jeton, de titre ou de note. Les états local, pending et synced
+ne sont pas confondus : `synced` exige un état natif `in-sync` avec pull
+initial terminé après une écriture locale, sinon le statut reste local, en
+attente ou indéterminé.
+
+La relance du pull initial est native et contrôlée : elle appelle uniquement
+`db.cloud.sync({ purpose: "pull", wait: true })` lorsque la base est configurée,
+la session authentifiée, le réseau disponible et qu'aucune synchronisation n'est
+en cours. Elle ne simule pas de connexion, n'importe rien et n'écrit aucune
+donnée produit. Un échec est expliqué sans jamais conclure que le Cloud est vide.
+Un changement de session ou d'URL actualise le diagnostic et signale une
+incohérence de base persistée sans copier de données entre espaces. La recette
+réelle sur instance Cloud isolée, Chrome mobile, OTP, coupure réseau, droits et
+premier pull reste manuelle et hors CI.
