@@ -18,7 +18,30 @@ import {
 import { AUTH_MESSAGE_KINDS, AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { availableLocalBackup } from "./local-recovery.js";
 import { LOCAL_MIGRATION_STATUS, detectLocalSource, isLocalCompletion, planLocalConversion, readLocalProvenance, runLocalConversion, writeLocalProvenance } from "./local-migration.js";
-import { readSyncedRecords } from "./synced-records.js";
+import { readSyncedRaw, readSyncedRecords, readSyncedWorkspace } from "./synced-records.js";
+import {
+  ANOMALY,
+  READ_FAILURE,
+  REPAIR_OUTCOME,
+  REPAIR_STATE,
+  buildBusinessExport,
+  buildDegradedView,
+  buildIntegrityInventory,
+  buildRawRecoveryExport,
+  buildRepairPlan,
+  buildRestorePlan,
+  buildRepairRecoverySnapshot,
+  evaluateV1Export,
+  hasBlockingAnomaly,
+  initialRepairStatus,
+  readWorkspaceResult,
+  reduceRepairConvergence,
+  runRepair,
+  repairEvent,
+  sanitizeInstanceContext,
+  summarizeIntegrityInventory,
+  verifyRecoverySnapshot
+} from "./data-integrity-recovery.js";
 import {
   LOCAL_WRITE_STATE,
   buildDiagnosticView,
@@ -71,12 +94,41 @@ const localConversionTargetEl = document.querySelector("#local-conversion-target
 const localConversionPlanEl = document.querySelector("#local-conversion-plan");
 const localConversionFingerprintEl = document.querySelector("#local-conversion-fingerprint");
 const localConversionStateEl = document.querySelector("#local-conversion-state");
+const localProvenanceEl = document.querySelector("#local-provenance");
 const localConversionConsentEl = document.querySelector("#local-conversion-consent");
 const localConversionConfirmEl = document.querySelector("#local-conversion-confirm");
 const localConversionRefuseEl = document.querySelector("#local-conversion-refuse");
 const localConversionStatusEl = document.querySelector("#local-conversion-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
+const recoveryPanelEl = document.querySelector("#recovery-panel");
+const recoveryInstanceEl = document.querySelector("#recovery-instance");
+const recoveryReadCodeEl = document.querySelector("#recovery-read-code");
+const recoveryDegradedEl = document.querySelector("#recovery-degraded");
+const recoveryAnomaliesEl = document.querySelector("#recovery-anomalies");
+const recoveryV1StatusEl = document.querySelector("#recovery-v1-status");
+const recoveryRawExportEl = document.querySelector("#recovery-raw-export");
+const recoveryRepairPreviewEl = document.querySelector("#recovery-repair-preview");
+const repairPreviewEl = document.querySelector("#repair-preview");
+const repairPreviewSummaryEl = document.querySelector("#repair-preview-summary");
+const repairSourceEl = document.querySelector("#repair-source");
+const repairProvenanceEl = document.querySelector("#repair-provenance");
+const repairGroupsEl = document.querySelector("#repair-groups");
+const repairBackupStatusEl = document.querySelector("#repair-backup-status");
+const repairConsentEl = document.querySelector("#repair-consent");
+const repairConfirmEl = document.querySelector("#repair-confirm");
+const repairCancelEl = document.querySelector("#repair-cancel");
+const repairStatusEl = document.querySelector("#repair-status");
+const restorePanelEl = document.querySelector("#restore-panel");
+const restoreScopeEl = document.querySelector("#restore-scope");
+const restoreProvenanceEl = document.querySelector("#restore-provenance");
+const restoreBackupStatusEl = document.querySelector("#restore-backup-status");
+const restoreDownloadBackupEl = document.querySelector("#restore-download-backup");
+const restoreConfirmationEl = document.querySelector("#restore-confirmation");
+const restoreConfirmEl = document.querySelector("#restore-confirm");
+const restoreCancelEl = document.querySelector("#restore-cancel");
+const restoreStatusEl = document.querySelector("#restore-status");
+const restoreInputEl = document.querySelector("#restore");
 let syncedDatabase = null;
 let localDatabase = null;
 let authController = null;
@@ -119,12 +171,20 @@ let localReadFailed = false;
 let localWriteBlocked = false;
 let historicalGuard = null;
 let localConversionContext = null;
+let localImportContext = null;
 let syncDiagnosticsController = null;
 let syncDiagnosticsSubscribedFor = null;
 let syncReadError = null;
 let localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
 let syncRetryBusy = false;
 let syncDiagnosticAnnouncement = "";
+let recoveryContext = null;
+let repairContext = null;
+let repairStatus = initialRepairStatus();
+let restoreContext = null;
+// Historical destructive label kept only as a documented non-goal: the import
+// action no longer performs "Remplacer toutes les données locales par cet import ?".
+const DESTRUCTIVE_RESTORE_LABEL = "Remplacer toutes les données locales par cet import ?";
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -188,6 +248,557 @@ function createCloudAuthAdapter(db) {
     }
   };
 }
+function hideRestorePanel() {
+  restoreContext = null;
+  if (restorePanelEl) restorePanelEl.hidden = true;
+  if (restoreInputEl) restoreInputEl.value = "";
+  if (restoreConfirmationEl) restoreConfirmationEl.value = "";
+  if (restoreConfirmEl) restoreConfirmEl.disabled = true;
+}
+async function currentRawRecords() {
+  if (syncedDatabase) {
+    const result = await readSyncedWorkspace(syncedDatabase);
+    return result.raw;
+  }
+  if (businessStore && typeof businessStore.readRaw === "function") {
+    return businessStore.readRaw();
+  }
+  return null;
+}
+function currentInstanceContext() {
+  return recoveryInstanceContext();
+}
+async function openRestorePreview(text) {
+  let incoming;
+  try {
+    incoming = parseDocument(text);
+  } catch {
+    notify("Restauration impossible : fichier illisible ou incompatible. Aucune écriture.");
+    return;
+  }
+  const raw = await currentRawRecords();
+  if (!raw) {
+    notify("Restauration impossible : l'état actuel n'est pas lisible, aucune sauvegarde sûre ne peut être produite.");
+    return;
+  }
+  const context = currentInstanceContext();
+  const snapshot = buildRawRecoveryExport(raw, context);
+  restoreContext = {
+    document: incoming,
+    text,
+    raw,
+    provenance: incoming.provenance || null,
+    snapshot,
+    backupDownloaded: false,
+    plan: null
+  };
+  rebuildRestorePlan();
+  renderRestorePanel();
+  notify("Restauration en prévisualisation : aucune écriture avant sauvegarde et confirmation renforcée.");
+}
+function rebuildRestorePlan() {
+  if (!restoreContext) return null;
+  restoreContext.plan = buildRestorePlan({
+    document: restoreContext.document,
+    incoming: documentToRecords(restoreContext.document),
+    current: restoreContext.raw,
+    provenance: restoreContext.provenance || undefined,
+    backup: restoreContext.backupDownloaded ? restoreContext.snapshot : null,
+    backupExpected: {
+      counts: {
+        subjects: restoreContext.raw.subjects.length,
+        items: restoreContext.raw.items.length
+      }
+    }
+  });
+  return restoreContext.plan;
+}
+function renderRestorePanel() {
+  if (!restorePanelEl || !restoreContext) return;
+  const plan = restoreContext.plan;
+  restorePanelEl.hidden = false;
+  if (restoreScopeEl) {
+    restoreScopeEl.textContent = plan.allowed || plan.code !== "ambiguous-provenance"
+      ? "Portée : " + (plan.counts ? plan.counts.incoming.subjects + " sujet(s), " +
+        plan.counts.incoming.items + " tâche(s) restaurés ; " +
+        plan.counts.removed + " enregistrement(s) supprimé(s), " +
+        plan.counts.added + " ajouté(s)." : "Portée indisponible.")
+      : "Provenance ambiguë : restauration bloquée tant que la provenance n'est pas explicitement choisie.";
+  }
+  if (restoreProvenanceEl) {
+    restoreProvenanceEl.replaceChildren();
+    if (plan.code === "ambiguous-provenance") {
+      const fieldset = el("fieldset");
+      fieldset.append(el("legend", null, "Provenance du fichier de restauration"));
+      for (const [value, labelText] of [
+        ["v1-raw", "Document V1 brut"],
+        ["indexeddb-export", "Export IndexedDB déjà projeté"],
+        ["legacy-double", "Export historique legacy:legacy:"]
+      ]) {
+        const id = "restore-provenance-" + value;
+        const input = el("input");
+        input.type = "radio";
+        input.name = "restore-provenance-choice";
+        input.value = value;
+        input.id = id;
+        input.addEventListener("change", () => {
+          restoreContext.provenance = { exportKind: value };
+          rebuildRestorePlan();
+          renderRestorePanel();
+        });
+        const label = el("label");
+        label.htmlFor = id;
+        label.append(input, el("span", null, " " + labelText));
+        fieldset.append(label);
+      }
+      restoreProvenanceEl.append(fieldset);
+      restoreProvenanceEl.hidden = false;
+    } else {
+      restoreProvenanceEl.hidden = true;
+    }
+  }
+  if (restoreBackupStatusEl) {
+    restoreBackupStatusEl.textContent = restoreContext.snapshot && restoreContext.snapshot.status === "ready"
+      ? (restoreContext.backupDownloaded
+        ? "Sauvegarde de l'état actuel téléchargée et vérifiable ; la restauration reste soumise à confirmation renforcée."
+        : "Une sauvegarde de l'état actuel doit être téléchargée avant toute restauration.")
+      : "Sauvegarde de l'état actuel impossible : restauration interdite.";
+  }
+  if (restoreDownloadBackupEl) {
+    restoreDownloadBackupEl.disabled = !restoreContext.snapshot || restoreContext.snapshot.status !== "ready";
+  }
+  updateRestoreConfirmState();
+}
+function updateRestoreConfirmState() {
+  if (!restoreConfirmEl) return;
+  const plan = restoreContext ? restoreContext.plan : null;
+  restoreConfirmEl.disabled = !(plan && plan.allowed) || !restoreContext.backupDownloaded ||
+    !restoreConfirmationEl || restoreConfirmationEl.value !== "RESTAURER";
+}
+function downloadRestoreBackup() {
+  if (!restoreContext || !restoreContext.snapshot || restoreContext.snapshot.status !== "ready") {
+    notify("Sauvegarde de l'état actuel impossible : restauration interdite.");
+    return;
+  }
+  downloadJsonText(JSON.stringify(restoreContext.snapshot, null, 2), "threadstep-avant-restauration.json");
+  restoreContext.backupDownloaded = true;
+  rebuildRestorePlan();
+  renderRestorePanel();
+  notify("Sauvegarde de l'état actuel téléchargée. Vérifiez-la avant de restaurer.");
+}
+async function confirmRestore() {
+  if (!restoreContext || !restoreContext.backupDownloaded ||
+      !restoreConfirmationEl || restoreConfirmationEl.value !== "RESTAURER") {
+    notify("Restauration refusée : sauvegarde et confirmation renforcée requises.");
+    return;
+  }
+  const plan = restoreContext.plan;
+  if (!plan || !plan.allowed) {
+    notify("Restauration bloquée (" + (plan ? plan.code : "indeterminate") + "). Aucune écriture.");
+    return;
+  }
+  const incoming = documentToRecords(restoreContext.document);
+  const operations = diffRecords(restoreContext.raw, incoming);
+  try {
+    await businessStore.commit(operations);
+  } catch {
+    notify("Échec de la transaction de restauration : aucune écriture partielle confirmée.");
+    return;
+  }
+  if (restoreStatusEl) restoreStatusEl.textContent = "Restauration explicitement confirmée et enregistrée localement. Vérifiez la synchronisation séparément.";
+  notify("Restauration enregistrée localement ; aucune convergence distante n'est affirmée.");
+  hideRestorePanel();
+  if (syncedDatabase) await refreshSyncedDocument();
+  else await refreshLocalDocument();
+}
+
+function recoveryInstanceContext() {
+  const config = readCloudConfig();
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  return sanitizeInstanceContext({
+    workspace: syncedDatabase ? "synced" : "local",
+    url: config && config.databaseUrl ? config.databaseUrl : null,
+    remoteDbId: persisted && typeof persisted.remoteDbId === "string" ? persisted.remoteDbId : null,
+    sessionCategory: authState && authState.status ? authState.status : "unauthenticated",
+    rightsAvailable: !!authState && canAccessBusiness(authState),
+    realmsAvailable: !!(persisted && persisted.realms),
+    permissionsMayHide: !!authState && authState.status === AUTH_STATUS.REFUSED
+  });
+}
+function readCodeLabel(code) {
+  switch (code) {
+    case READ_FAILURE.STORAGE_UNAVAILABLE:
+      return "Stockage IndexedDB indisponible : aucune conclusion de base vide n'est tirée.";
+    case READ_FAILURE.READ_REFUSED:
+      return "Lecture IndexedDB refusée : aucun export complet ne peut être promis.";
+    case READ_FAILURE.PROJECTION_INVALID:
+      return "Projection métier invalide : consultation dégradée en lecture seule.";
+    case READ_FAILURE.NOT_VISIBLE_UNAUTHORIZED:
+      return "Données possiblement invisibles ou non autorisées : pas de conclusion de suppression.";
+    case READ_FAILURE.INDETERMINATE:
+      return "État indéterminé : aucune synchronisation ni base vide n'est affirmée.";
+    default:
+      return "État de lecture inconnu : aucune conclusion n'est tirée.";
+  }
+}
+function clearRecovery() {
+  recoveryContext = null;
+  if (recoveryPanelEl) {
+    recoveryPanelEl.hidden = true;
+    if (recoveryDegradedEl) recoveryDegradedEl.replaceChildren();
+    if (recoveryAnomaliesEl) recoveryAnomaliesEl.replaceChildren();
+    if (recoveryReadCodeEl) recoveryReadCodeEl.textContent = "";
+    if (recoveryInstanceEl) recoveryInstanceEl.textContent = "";
+    if (recoveryV1StatusEl) recoveryV1StatusEl.textContent = "";
+  }
+}
+function enterRecoveryMode(raw, code) {
+  const context = recoveryInstanceContext();
+  const inventory = buildIntegrityInventory(raw, context);
+  const degraded = buildDegradedView(raw, inventory);
+  recoveryContext = { raw, inventory, degraded, readCode: code, instanceContext: context };
+  if (raw) {
+    documentState = degraded.document;
+    documentLoaded = true;
+    if (syncedDatabase) cloudWriteBlocked = true;
+    else localWriteBlocked = true;
+    localReadFailed = false;
+    render();
+  }
+  renderRecoveryPanel();
+  applyBusinessVisibility();
+}
+function renderRecoveryPanel() {
+  if (!recoveryPanelEl) return;
+  if (!recoveryContext) {
+    recoveryPanelEl.hidden = true;
+    return;
+  }
+  const { inventory, degraded, readCode, instanceContext } = recoveryContext;
+  if (recoveryInstanceEl) {
+    recoveryInstanceEl.textContent = "Espace " + instanceContext.workspace +
+      (instanceContext.url ? " · URL normalisée " + instanceContext.url : "") +
+      (instanceContext.remoteDbId ? " · base " + instanceContext.remoteDbId : "") +
+      " · session " + instanceContext.sessionCategory +
+      " · droits " + (instanceContext.rightsAvailable ? "disponibles" : "indéterminés") +
+      " · realms " + (instanceContext.realmsAvailable ? "disponibles" : "indéterminés") + ".";
+  }
+  if (recoveryReadCodeEl) recoveryReadCodeEl.textContent = readCodeLabel(readCode);
+  if (recoveryDegradedEl) {
+    recoveryDegradedEl.replaceChildren();
+    recoveryDegradedEl.append(el("p", "recovery-counts",
+      "Consultation : " + degraded.displayed.subjects + " sujet(s) lisible(s), " +
+      degraded.displayed.items + " tâche(s) cohérente(s) ; " +
+      degraded.anomalies.length + " anomalie(s) listée(s)."));
+    const list = el("ul", "recovery-subjects");
+    for (const subject of degraded.document.subjects) {
+      const item = el("li");
+      item.append(el("strong", null, subject.title), el("span", null,
+        " — " + subject.items.length + " tâche(s) consultable(s)"));
+      list.append(item);
+    }
+    recoveryDegradedEl.append(list);
+  }
+  if (recoveryAnomaliesEl) {
+    recoveryAnomaliesEl.replaceChildren();
+    const summary = summarizeIntegrityInventory(inventory);
+    const heading = el("p", null, "Anomalies par code :");
+    recoveryAnomaliesEl.append(heading);
+    const list = el("ul", "recovery-anomaly-list");
+    for (const entry of summary) {
+      list.append(el("li", null, entry.code + " : " + entry.count +
+        " (" + entry.stores.join(", ") + ")"));
+    }
+    for (const entry of degraded.anomalies) {
+      list.append(el("li", null, entry.code + " — " + (entry.store || "store") +
+        " : " + (entry.id || "identifiant inconnu")));
+    }
+    recoveryAnomaliesEl.append(list);
+  }
+  if (recoveryV1StatusEl) {
+    const gate = evaluateV1Export(inventory);
+    recoveryV1StatusEl.textContent = gate.allowed
+      ? "L'export V1 normal reste disponible."
+      : "Export V1 normal désactivé tant qu'une anomalie d'intégrité subsiste : utilisez l'export brut de récupération, distinct et complet.";
+  }
+  if (recoveryRawExportEl) {
+    recoveryRawExportEl.disabled = !recoveryContext.raw || readCode === READ_FAILURE.READ_REFUSED;
+  }
+  if (recoveryRepairPreviewEl) {
+    recoveryRepairPreviewEl.disabled = !recoveryContext.raw ||
+      readCode === READ_FAILURE.READ_REFUSED || readCode === READ_FAILURE.STORAGE_UNAVAILABLE;
+  }
+  recoveryPanelEl.hidden = false;
+}
+function exportRawRecovery() {
+  if (!recoveryContext || !recoveryContext.raw) {
+    notify("Export brut indisponible : la lecture des stores a été refusée. Aucun instantané partiel n'est présenté comme complet.");
+    return;
+  }
+  const snapshot = buildRawRecoveryExport(recoveryContext.raw, recoveryContext.instanceContext);
+  if (snapshot.status !== "ready") {
+    notify("Export brut indisponible : aucun fichier partiel n'est produit.");
+    return;
+  }
+  downloadJsonText(JSON.stringify(snapshot, null, 2),
+    "threadstep-recuperation-brute-" + snapshot.counts.subjects + "-" + snapshot.counts.items + ".json");
+  notify("Export brut de récupération généré : " + snapshot.counts.subjects +
+    " sujet(s), " + snapshot.counts.items + " tâche(s), orphelines incluses.");
+}
+function exportBusinessBackup() {
+  const inventory = recoveryContext ? recoveryContext.inventory : null;
+  const result = buildBusinessExport(lastRecords, { inventory });
+  if (result.status !== "ready") {
+    notify("Export V1 désactivé : une anomalie d'intégrité existe. Utilisez l'export brut de récupération, distinct et complet.");
+    return;
+  }
+  downloadJsonText(JSON.stringify(result.document, null, 2), "threadstep-backup.json");
+  notify("Export JSON V1 généré depuis IndexedDB avec sa provenance d'identifiants.");
+}
+function parseRepairSource(text) {
+  return parseDocument(text);
+}
+function repairDestination() {
+  return {
+    url: migrationDestination(),
+    remoteDbId: recoveryContext && recoveryContext.instanceContext
+      ? recoveryContext.instanceContext.remoteDbId : null,
+    userCategory: authState && authState.status ? authState.status : "unauthenticated",
+    rightsAvailable: !!authState && canAccessBusiness(authState),
+    realmsAvailable: !!(recoveryContext && recoveryContext.instanceContext &&
+      recoveryContext.instanceContext.realmsAvailable)
+  };
+}
+function rebuildRepairPlan() {
+  if (!repairContext) return null;
+  const plan = buildRepairPlan({
+    raw: recoveryContext.raw,
+    source: repairContext.source,
+    provenance: repairContext.provenance,
+    decisions: repairContext.decisions,
+    destination: repairDestination(),
+    context: recoveryContext.instanceContext
+  });
+  repairContext.plan = plan;
+  const snapshot = buildRepairRecoverySnapshot(recoveryContext.raw, recoveryContext.instanceContext);
+  const check = verifyRecoverySnapshot(snapshot, {
+    counts: { subjects: plan.counts.before.subjects, items: plan.counts.before.items }
+  });
+  repairContext.backup = check.valid ? snapshot : null;
+  repairContext.backupCheck = check;
+  return plan;
+}
+function renderRepairPreview() {
+  if (!repairPreviewEl || !repairContext) return;
+  const plan = repairContext.plan;
+  repairPreviewEl.hidden = false;
+  if (repairPreviewSummaryEl) {
+    repairPreviewSummaryEl.textContent = "Destination " + (plan.destination.url || "non configurée") +
+      (plan.destination.remoteDbId ? " (base " + plan.destination.remoteDbId + ")" : "") +
+      " · variante " + plan.idVariant + " · " + plan.changes.length + " changement(s) de référence, " +
+      plan.ambiguousGroups.length + " groupe(s) ambigu(s), " + plan.blockedGroups.length + " groupe(s) bloqué(s). " +
+      "Compteurs " + plan.counts.before.subjects + "/" + plan.counts.before.items + " avant, " +
+      plan.counts.after.danglingSubjects + " référence(s) orpheline(s) après. " +
+      "Empreinte " + plan.fingerprint.slice(0, 12) + "…";
+  }
+  if (repairGroupsEl) {
+    repairGroupsEl.replaceChildren();
+    plan.groups.forEach((group, index) => {
+      const block = el("div", "repair-group");
+      block.append(el("p", null, (group.store === "items" ? "Tâche " : "Sujet ") +
+        group.id + " · " + group.field + " · " + group.code));
+      group.candidates.forEach((candidate, candidateIndex) => {
+        const id = "repair-choice-" + index + "-" + candidateIndex;
+        const input = el("input");
+        input.type = "radio";
+        input.name = "repair-choice-" + index;
+        input.value = candidate;
+        input.id = id;
+        input.dataset.key = group.key;
+        if (repairContext.decisions[group.key] === candidate) input.checked = true;
+        input.addEventListener("change", () => {
+          repairContext.decisions[group.key] = candidate;
+          rebuildRepairPlan();
+          renderRepairPreview();
+        });
+        const label = el("label", "repair-choice");
+        label.htmlFor = id;
+        label.append(input, el("span", null, " Rattacher à " + candidate));
+        block.append(label);
+      });
+      if (group.candidates.length === 0) {
+        block.append(el("p", "repair-hint",
+          "Aucune identité prouvée : aucun rattachement par titre, similitude ou retrait de préfixe."));
+      }
+      repairGroupsEl.append(block);
+    });
+  }
+  if (repairBackupStatusEl) {
+    repairBackupStatusEl.textContent = repairContext.backupCheck && repairContext.backupCheck.valid
+      ? "Sauvegarde de récupération vérifiée : " + repairContext.backupCheck.counts.subjects +
+        " sujet(s), " + repairContext.backupCheck.counts.items + " tâche(s), empreinte conforme."
+      : "Sauvegarde de récupération absente ou invalide : la réparation reste désactivée.";
+  }
+  if (repairConfirmEl) {
+    repairConfirmEl.disabled = !(repairConsentEl && repairConsentEl.checked) ||
+      !repairContext.backup || !plan.writable;
+  }
+}
+function openRepairPreview() {
+  if (!recoveryContext || !recoveryContext.raw) {
+    notify("Réparation indisponible : la lecture brute n'est pas accessible. Le diagnostic reste disponible.");
+    return;
+  }
+  repairContext = {
+    source: null,
+    provenance: null,
+    decisions: {},
+    plan: null,
+    backup: null,
+    backupCheck: null
+  };
+  rebuildRepairPlan();
+  if (repairProvenanceEl) repairProvenanceEl.hidden = !repairContext.source;
+  renderRepairPreview();
+  const title = repairPreviewEl ? repairPreviewEl.querySelector("#repair-preview-title") : null;
+  if (title) title.focus();
+  notify("Prévisualisation de réparation : aucune écriture effectuée.");
+}
+async function loadRepairSource(file) {
+  if (!repairContext || !file) return;
+  if (file.size > 1024 * 1024) {
+    notify("Fichier source trop volumineux : aucune réparation préparée.");
+    return;
+  }
+  try {
+    const documentValue = parseRepairSource(await file.text());
+    repairContext.source = documentValue;
+    const embedded = documentValue && documentValue.provenance;
+    repairContext.provenance = embedded || null;
+    repairContext.decisions = {};
+    rebuildRepairPlan();
+    if (repairProvenanceEl) repairProvenanceEl.hidden = !!repairContext.provenance;
+    renderRepairPreview();
+  } catch {
+    notify("Fichier source illisible : aucune réparation préparée, la sauvegarde reste intacte.");
+  }
+}
+function repairProvenanceChoice(value) {
+  if (!repairContext || !value) return;
+  repairContext.provenance = { exportKind: value };
+  repairContext.decisions = {};
+  rebuildRepairPlan();
+  renderRepairPreview();
+}
+function repairAdapter() {
+  return {
+    async commitRepairs(changes) {
+      if (!syncedDatabase && !localDatabase) throw new Error("transaction-error");
+      const db = syncedDatabase || localDatabase;
+      await db.transaction("rw", db.subjects, db.items, async () => {
+        for (const change of changes) {
+          const table = change.store === "subjects" ? db.subjects : db.items;
+          const current = await table.get(change.id);
+          if (!current || current[change.field] !== change.from) {
+            const error = new Error("collision");
+            error.code = "collision";
+            throw error;
+          }
+          await table.put({ ...current, [change.field]: change.to });
+        }
+      });
+      return { status: "repaired", count: changes.length };
+    }
+  };
+}
+async function confirmRepair() {
+  const context = repairContext;
+  if (!context || !context.plan || !context.backup) {
+    notify("Réparation refusée : sauvegarde de récupération vérifiable requise.");
+    return;
+  }
+  if (!repairConsentEl || !repairConsentEl.checked) {
+    notify("Réparation refusée : consentement explicite requis.");
+    return;
+  }
+  if (!context.plan.writable) {
+    notify("Réparation refusée : groupes ambigus ou consentement de provenance incomplet. Aucune écriture.");
+    return;
+  }
+  const consent = {
+    confirmed: true,
+    fingerprint: context.plan.fingerprint,
+    destinationFingerprint: context.plan.destinationFingerprint,
+    backup: context.backup,
+    backupExpected: {
+      counts: {
+        subjects: context.plan.counts.before.subjects,
+        items: context.plan.counts.before.items
+      }
+    }
+  };
+  const outcome = await runRepairAsync(context, consent);
+  if (outcome.status === REPAIR_OUTCOME.REPAIRED || outcome.status === REPAIR_OUTCOME.ALREADY_REPAIRED) {
+    repairStatus = reduceRepairConvergence(repairStatus, {
+      type: "local-committed",
+      online: typeof navigator === "undefined" || navigator.onLine !== false
+    });
+    if (repairStatusEl) {
+      repairStatusEl.textContent = outcome.status === REPAIR_OUTCOME.REPAIRED
+        ? "Réparation enregistrée localement ; synchronisation Cloud en attente. Aucune convergence inter-appareils n'est affirmée."
+        : "Réparation déjà appliquée : aucune nouvelle écriture.";
+    }
+    hideRepairPanel();
+    await reloadRawAfterRepair();
+    notify("Réparation locale enregistrée ; la propagation vers le serveur et un autre appareil reste à vérifier.");
+    return;
+  }
+  if (repairStatusEl) {
+    repairStatusEl.textContent = "Réparation non appliquée (" + outcome.code + "). Aucune écriture implicite.";
+  }
+  notify("Réparation non appliquée (" + outcome.code + "). Sauvegarde et enregistrements restent intacts.");
+}
+async function runRepairAsync(context, consent) {
+  return runRepair(repairAdapter(), context.plan, consent, async () => {
+    const fresh = syncedDatabase
+      ? await readSyncedWorkspace(syncedDatabase)
+      : await readWorkspaceResult(() => businessStore.readRaw());
+    return {
+      raw: fresh.raw,
+      source: context.source,
+      provenance: context.provenance,
+      decisions: context.decisions,
+      destination: repairDestination(),
+      context: recoveryContext.instanceContext
+    };
+  });
+}
+function hideRepairPanel() {
+  repairContext = null;
+  if (repairPreviewEl) {
+    repairPreviewEl.hidden = true;
+    if (repairGroupsEl) repairGroupsEl.replaceChildren();
+    if (repairConsentEl) repairConsentEl.checked = false;
+    if (repairConfirmEl) repairConfirmEl.disabled = true;
+  }
+}
+async function reloadRawAfterRepair() {
+  try {
+    if (syncedDatabase) {
+      const result = await readSyncedWorkspace(syncedDatabase);
+      if (result.code === "ok") clearRecovery();
+      else enterRecoveryMode(result.raw, result.code);
+    } else if (businessStore && typeof businessStore.readRaw === "function") {
+      const result = await readWorkspaceResult(() => businessStore.readRaw());
+      if (result.code === "ok") clearRecovery();
+      else enterRecoveryMode(result.raw, result.code);
+    }
+  } catch {
+    notify("Relecture après réparation impossible : rechargez la page pour recalculer le diagnostic.");
+  }
+}
+
 function applyBusinessVisibility() {
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
@@ -278,6 +889,7 @@ function exportLegacyBackup() {
 }
 function hideLocalConversion() {
   localConversionContext = null;
+  localImportContext = null;
   if (localConversionEl) localConversionEl.hidden = true;
   if (localConversionConsentEl) localConversionConsentEl.checked = false;
   if (localConversionConfirmEl) localConversionConfirmEl.disabled = true;
@@ -290,11 +902,14 @@ function setLocalConversionStatus(message) {
 }
 function renderLocalConversion(plan) {
   if (!localConversionEl) return;
+  if (localImportContext) localConversionContext = { plan };
   const source = plan.source || {};
   const target = plan.targetCounts || { subjects: 0, items: 0 };
   if (localConversionSourceEl) {
     localConversionSourceEl.textContent = source.status === LOCAL_MIGRATION_STATUS.PRESENT
-      ? `Source : ${plan.counts.subjects} sujet(s) et ${plan.counts.items} étape(s) dans threadstep.document.v1, conservée telle quelle.`
+      ? (localImportContext
+        ? `Source : fichier JSON importé (${plan.counts.subjects} sujet(s), ${plan.counts.items} étape(s)), conservé intact.`
+        : `Source : ${plan.counts.subjects} sujet(s) et ${plan.counts.items} étape(s) dans threadstep.document.v1, conservée telle quelle.`)
       : "Source : aucun document historique convertible.";
   }
   if (localConversionTargetEl) {
@@ -304,7 +919,11 @@ function renderLocalConversion(plan) {
   }
   if (localConversionPlanEl) {
     const insertions = plan.operations.length;
-    if (plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
+    if (plan.status === LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE) {
+      localConversionPlanEl.textContent =
+        "Provenance ambiguë : aucune conversion n'est exécutée avant une décision explicite. " +
+        "Le préfixe legacy:, la similitude de titre ou le retrait de préfixes ne servent pas de preuve.";
+    } else if (plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
       localConversionPlanEl.textContent =
         "Les enregistrements source sont déjà présents à l'identique : aucune insertion n'est nécessaire.";
     } else if (plan.status === LOCAL_MIGRATION_STATUS.COLLISION) {
@@ -330,9 +949,11 @@ function renderLocalConversion(plan) {
           ? "Conversion locale déjà effectuée pour cette source."
           : "Rien n'est écrit avant votre confirmation explicite.";
   }
+  renderLocalProvenanceChoices(plan);
   const writable = plan.operations.length > 0 &&
     plan.status !== LOCAL_MIGRATION_STATUS.COLLISION &&
-    plan.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED;
+    plan.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED &&
+    plan.status !== LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE;
   if (localConversionConsentEl) {
     localConversionConsentEl.checked = false;
     localConversionConsentEl.disabled = !writable;
@@ -343,8 +964,70 @@ function renderLocalConversion(plan) {
   setLocalConversionStatus("Prévisualisation locale prête : aucune donnée n'a encore été écrite.");
   localConversionEl.hidden = false;
 }
+function renderLocalProvenanceChoices(plan) {
+  if (!localProvenanceEl) return;
+  localProvenanceEl.replaceChildren();
+  if (plan.status !== LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE) {
+    localProvenanceEl.hidden = true;
+    return;
+  }
+  const fieldset = el("fieldset");
+  fieldset.append(el("legend", null, "Provenance du fichier importé à confirmer"));
+  const choices = [
+    ["v1-raw", "Document V1 brut"],
+    ["indexeddb-export", "Export IndexedDB déjà projeté"],
+    ["legacy-double", "Export historique legacy:legacy:"]
+  ];
+  for (const [value, text] of choices) {
+    const id = "local-provenance-" + value;
+    const input = el("input");
+    input.type = "radio";
+    input.name = "local-provenance-choice";
+    input.value = value;
+    input.id = id;
+    const label = el("label", "local-provenance-option");
+    label.htmlFor = id;
+    label.append(input, el("span", null, " " + text));
+    input.addEventListener("change", () => {
+      if (!localImportContext) return;
+      localImportContext.provenance = { exportKind: value };
+      localImportContext.plan = planLocalImport(localImportContext);
+      renderLocalConversion(localImportContext.plan);
+    });
+    fieldset.append(label);
+  }
+  localProvenanceEl.append(fieldset);
+  localProvenanceEl.hidden = false;
+}
+function planLocalImport(context) {
+  return planLocalConversion({
+    source: detectSourceText(context.raw),
+    target: context.target,
+    provenance: context.provenance || undefined
+  });
+}
+async function openLocalImportPreview(raw) {
+  let target;
+  try {
+    target = await businessStore.read();
+  } catch {
+    setLocalError("Lecture de la cible locale impossible : import non proposé.");
+    return;
+  }
+  localImportContext = { raw, target, provenance: null, plan: null };
+  localImportContext.plan = planLocalImport(localImportContext);
+  localConversionContext = { plan: localImportContext.plan };
+  setLocalError("");
+  renderLocalConversion(localImportContext.plan);
+  const title = localConversionEl ? localConversionEl.querySelector("#local-conversion-title") : null;
+  if (title) {
+    title.textContent = "Importer et fusionner un fichier JSON";
+    title.focus();
+  }
+}
 async function openLocalConversion() {
   if (requiresAuthentication()) return;
+  localImportContext = null;
   if (!businessStore) {
     setLocalError("Conversion locale indisponible : stockage IndexedDB non initialisé.");
     return;
@@ -406,6 +1089,26 @@ async function confirmLocalConversion() {
     return;
   }
   await pendingCloudWrites;
+  if (localImportContext) {
+    const plan = localImportContext.plan;
+    if (plan.status === LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE ||
+        plan.status === LOCAL_MIGRATION_STATUS.COLLISION ||
+        plan.operations.length === 0) {
+      setLocalConversionStatus("Import non appliqué : provenance ambiguë, collision ou aucune insertion. Aucune écriture.");
+      return;
+    }
+    try {
+      await businessStore.commit(plan.operations);
+    } catch {
+      setLocalConversionStatus("Échec de la transaction d'import : aucune écriture partielle, données existantes intactes.");
+      return;
+    }
+    setLocalConversionStatus("Import fusionné localement : seuls les enregistrements absents ont été ajoutés, sans suppression ni restauration destructive.");
+    notify("Import fusionné localement ; aucune suppression ni écrasement n'a été effectué.");
+    localImportContext = null;
+    await refreshLocalDocument();
+    return;
+  }
   const outcome = await runLocalConversion(localConversionAdapter(), context.plan, {
     confirmed: true,
     fingerprint: context.plan.fingerprint
@@ -665,12 +1368,27 @@ async function refreshLocalDocument() {
   localReadPending = (async () => {
     await businessStore.open();
     let writesSnapshot;
-    let records;
+    let result;
     do {
       writesSnapshot = pendingCloudWrites;
       await writesSnapshot;
-      records = await businessStore.read();
+      result = await readWorkspaceResult(() => businessStore.readRaw());
     } while (writesSnapshot !== pendingCloudWrites);
+    if (result.code !== "ok") {
+      localReadFailed = result.code !== READ_FAILURE.PROJECTION_INVALID;
+      documentLoaded = result.code === READ_FAILURE.PROJECTION_INVALID;
+      localWriteBlocked = true;
+      localWriteStatus = reduceLocalWriteStatus(localWriteStatus, { type: "read-error" });
+      enterRecoveryMode(result.raw, result.code);
+      renderSyncDiagnostic();
+      setLocalError(result.code === READ_FAILURE.PROJECTION_INVALID
+        ? "Projection métier invalide : consultation locale en lecture seule ; aucun enregistrement n'est réécrit."
+        : "Lecture IndexedDB non aboutie (" + result.code + ") : affichage non concluant, aucune base vide affirmée.");
+      notify("Lecture locale non concluante (" + result.code + ") : export brut de récupération disponible si les stores sont lisibles.");
+      return;
+    }
+    clearRecovery();
+    const records = result.records;
     documentState = recordsToDocument(records);
     lastRecords = records;
     documentLoaded = true;
@@ -1658,10 +2376,49 @@ subjectForm.addEventListener("submit", (event) => {
   persist();
   input.focus();
 });
-document.querySelector("#export").addEventListener("click", () => {
-  const committed = recordsToDocument(lastRecords);
-  downloadJsonText(JSON.stringify(committed, null, 2), "threadstep-backup.json");
-  notify("Export JSON généré depuis IndexedDB");
+document.querySelector("#export").addEventListener("click", exportBusinessBackup);
+if (restoreInputEl) restoreInputEl.addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    notify("Fichier de restauration trop volumineux : aucune écriture.");
+    return;
+  }
+  try {
+    await openRestorePreview(await file.text());
+  } catch {
+    notify("Restauration impossible : aucune écriture.");
+  }
+});
+if (restoreDownloadBackupEl) restoreDownloadBackupEl.addEventListener("click", downloadRestoreBackup);
+if (restoreConfirmationEl) restoreConfirmationEl.addEventListener("input", updateRestoreConfirmState);
+if (restoreConfirmEl) restoreConfirmEl.addEventListener("click", () => { void confirmRestore(); });
+if (restoreCancelEl) restoreCancelEl.addEventListener("click", () => {
+  hideRestorePanel();
+  notify("Restauration annulée : aucune écriture effectuée.");
+});
+if (recoveryRawExportEl) recoveryRawExportEl.addEventListener("click", exportRawRecovery);
+if (recoveryRepairPreviewEl) recoveryRepairPreviewEl.addEventListener("click", openRepairPreview);
+if (repairSourceEl) repairSourceEl.addEventListener("change", () => {
+  const file = repairSourceEl.files && repairSourceEl.files[0];
+  if (file) void loadRepairSource(file);
+});
+if (repairProvenanceEl) {
+  repairProvenanceEl.addEventListener("change", (event) => {
+    const input = event.target;
+    if (input && input.name === "repair-provenance-choice") repairProvenanceChoice(input.value);
+  });
+}
+if (repairConsentEl) repairConsentEl.addEventListener("change", () => {
+  if (repairConfirmEl) {
+    repairConfirmEl.disabled = !repairConsentEl.checked || !repairContext ||
+      !repairContext.backup || !repairContext.plan || !repairContext.plan.writable;
+  }
+});
+if (repairConfirmEl) repairConfirmEl.addEventListener("click", () => { void confirmRepair(); });
+if (repairCancelEl) repairCancelEl.addEventListener("click", () => {
+  hideRepairPanel();
+  notify("Réparation annulée : aucune écriture effectuée.");
 });
 if (authLegacyExportEl) authLegacyExportEl.addEventListener("click", exportLegacyBackup);
 if (localExportLegacyEl) localExportLegacyEl.addEventListener("click", exportLegacyBackup);
@@ -1683,7 +2440,8 @@ document.querySelector("#import").addEventListener("change", async (event) => {
   if (!file) return;
   try {
     if (file.size > 1024 * 1024) throw new Error("Fichier trop volumineux (maximum 1 Mo).");
-    const incoming = parseDocument(await file.text());
+    const text = await file.text();
+    const incoming = parseDocument(text);
     if (syncedDatabase) {
       if (!businessAllowed() || !documentLoaded) {
         notify("Connectez-vous et attendez la lecture IndexedDB avant tout import.");
@@ -1693,16 +2451,14 @@ document.querySelector("#import").addEventListener("change", async (event) => {
       await offerJsonReconciliation(incoming);
       return;
     }
-    if (!confirm("Remplacer toutes les données locales par cet import ?")) return;
+    // Import is always a non-destructive merge. A destructive restore remains a
+    // distinct intention and is never an implicit effect of this action.
     invalidatePendingRemoval();
     expandedParents = new Set();
     pendingCollapseFocus = null;
     openMenuId = null;
-    documentState = incoming;
-    documentLoaded = true;
-    localWriteBlocked = false;
-    await persist();
-    if (!localWriteBlocked) notify("Import terminé localement dans IndexedDB");
+    await openLocalImportPreview(text);
+    notify("Import local en prévisualisation : fusion sans suppression. Aucune écriture avant votre confirmation.");
   } catch {
     notify("Import impossible : lecture ou enregistrement refusé. Conservez votre export JSON.");
   } finally {
@@ -1828,31 +2584,44 @@ async function refreshSyncedDocument() {
   if (cloudReadPending) return cloudReadPending;
   cloudReadPending = (async () => {
     let writesSnapshot;
-    let records;
+    let result;
     // Mutations may arrive while a reactive refresh reads IndexedDB. Never
     // replace a freshly edited UI with a stale snapshot.
     do {
       writesSnapshot = pendingCloudWrites;
       await writesSnapshot;
-      records = await readTargetRecords();
+      result = await readSyncedWorkspace(syncedDatabase);
     } while (writesSnapshot !== pendingCloudWrites);
-    const nextDocument = recordsToDocument(records);
-    documentState = nextDocument;
-    lastRecords = records;
-    documentLoaded = true;
-    cloudWriteBlocked = false;
-    syncReadError = null;
-    resumeRef = readResumePreference();
-    render();
-    applyBusinessVisibility();
+    if (result.code === "ok") {
+      clearRecovery();
+      const nextDocument = recordsToDocument(result.records);
+      documentState = nextDocument;
+      lastRecords = result.records;
+      documentLoaded = true;
+      cloudWriteBlocked = false;
+      syncReadError = null;
+      resumeRef = readResumePreference();
+      render();
+      applyBusinessVisibility();
+      renderSyncDiagnostic();
+      notify("Données chargées depuis IndexedDB ; synchronisation Cloud à confirmer.");
+      return;
+    }
+    documentLoaded = result.code === READ_FAILURE.PROJECTION_INVALID;
+    syncReadError = { name: "ReadError", code: result.code };
+    cloudWriteBlocked = true;
+    enterRecoveryMode(result.raw, result.code);
     renderSyncDiagnostic();
-    notify("Données chargées depuis IndexedDB ; synchronisation Cloud à confirmer.");
-  })().catch(() => {
+    notify(result.code === READ_FAILURE.PROJECTION_INVALID
+      ? "Projection métier invalide : consultation en lecture seule, aucune donnée n'est masquée sans explication."
+      : "Lecture IndexedDB non aboutie (" + result.code + ") : aucune conclusion de base vide ni de synchronisation confirmée.");
+  })().catch((error) => {
     documentLoaded = false;
-    syncReadError = { name: "ReadError" };
+    syncReadError = { name: "ReadError", code: READ_FAILURE.INDETERMINATE };
+    cloudWriteBlocked = true;
     applyBusinessVisibility();
     renderSyncDiagnostic();
-    notify("Lecture IndexedDB impossible : affichage bloqué pour protéger les données. Ne réimportez pas.");
+    notify("État de lecture indéterminé : aucune base vide ni synchronisation confirmée n'est affirmée.");
   }).finally(() => { cloudReadPending = null; });
   return cloudReadPending;
 }
@@ -2123,7 +2892,13 @@ function hideMigrationPanel() {
   migrationPanelEl.hidden = true;
   migrationPanelEl.replaceChildren();
 }
-function openReconciliation(documentValue, target, attestation, sourceKind) {
+function historicalProvenance(documentValue) {
+  const records = documentToRecords(documentValue);
+  const prefixed = [...records.subjects, ...records.items]
+    .some((record) => typeof record.id === "string" && record.id.startsWith("legacy:"));
+  return prefixed ? { exportKind: "unknown" } : { exportKind: "v1-raw" };
+}
+function openReconciliation(documentValue, target, attestation, sourceKind, provenance) {
   const destination = destinationIdentity(attestation);
   const userId = attestation && attestation.identity ? attestation.identity.userId : null;
   const resolutions = {};
@@ -2132,9 +2907,10 @@ function openReconciliation(documentValue, target, attestation, sourceKind) {
     target,
     destination,
     userId,
-    resolutions
+    resolutions,
+    provenance
   });
-  migrationContext = { document: documentValue, target, destination, userId, attestation, resolutions, plan, sourceKind };
+  migrationContext = { document: documentValue, target, destination, userId, attestation, resolutions, plan, sourceKind, provenance };
   renderMigrationPanel(migrationContext);
 }
 function replanMigration() {
@@ -2145,7 +2921,8 @@ function replanMigration() {
     target: context.target,
     destination: context.destination,
     userId: context.userId,
-    resolutions: context.resolutions
+    resolutions: context.resolutions,
+    provenance: context.provenance
   });
   return context.plan;
 }
@@ -2160,9 +2937,68 @@ function inventorySummary(view) {
   }
   return lines;
 }
+function renderAmbiguousProvenancePanel(context) {
+  const panel = migrationPanel();
+  if (!panel || !context) return;
+  panel.replaceChildren();
+  const title = el("h2", "migration-title", "Provenance du fichier à confirmer");
+  title.id = "migration-title";
+  title.tabIndex = -1;
+  const live = el("p", "migration-live", "");
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("role", "status");
+  live.textContent = "Provenance ambiguë : aucune écriture, aucun plan d'import n'est appliqué avant votre décision. " +
+    "Les préfixes et les titres ne servent jamais de preuve.";
+  const list = el("ul", "migration-interpretations");
+  const plan = context.plan;
+  for (const interpretation of plan.interpretations || []) {
+    list.append(el("li", null, interpretation.exportKind + " : " +
+      interpretation.counts.subjects + " sujet(s), " + interpretation.counts.items +
+      " tâche(s), " + interpretation.prefixedIdentifiers + " identifiant(s) préfixé(s), " +
+      interpretation.wouldCreateDoublePrefix + " double(s) préfixe(s) potentiel(s)."));
+  }
+  const fieldset = el("fieldset", "migration-provenance");
+  fieldset.append(el("legend", null, "Choisir la provenance réelle du fichier"));
+  const choices = [
+    ["v1-raw", "Document V1 brut (identifiants non encore projetés)"],
+    ["indexeddb-export", "Export IndexedDB déjà projeté (identifiants canoniques)"],
+    ["legacy-double", "Export historique legacy:legacy: (métadonnées explicites)"]
+  ];
+  for (const [value, labelText] of choices) {
+    const id = "migration-provenance-" + value;
+    const input = el("input");
+    input.type = "radio";
+    input.name = "migration-provenance-choice";
+    input.value = value;
+    input.id = id;
+    if (context.provenance && context.provenance.exportKind === value) input.checked = true;
+    input.addEventListener("change", () => {
+      context.provenance = { exportKind: value };
+      replanMigration();
+      renderMigrationPanel(context);
+    });
+    const label = el("label", "migration-provenance-option");
+    label.htmlFor = id;
+    label.append(input, el("span", null, " " + labelText));
+    fieldset.append(label);
+  }
+  const actions = el("div", "migration-actions");
+  const close = el("button", "secondary migration-refuse", "Fermer");
+  close.type = "button";
+  close.addEventListener("click", () => hideMigrationPanel());
+  actions.append(close);
+  panel.append(title, live, list, fieldset, actions);
+  panel.hidden = false;
+  title.focus();
+}
+
 function renderMigrationPanel(context, options = {}) {
   const panel = migrationPanel();
   if (!panel || !context) return;
+  if (context.plan && context.plan.status === "ambiguous-provenance") {
+    renderAmbiguousProvenancePanel(context);
+    return;
+  }
   const view = buildReconciliationView(context.plan);
   panel.replaceChildren();
   const title = el("h2", "migration-title", "Réconcilier mes données existantes");
@@ -2301,7 +3137,8 @@ async function offerHistoricalMigration() {
     notify(reconciliationBlockMessage(result));
     return;
   }
-  openReconciliation(detected.document, result.records, result.attestation, "historical");
+  openReconciliation(detected.document, result.records, result.attestation, "historical",
+    historicalProvenance(detected.document));
 }
 async function offerJsonReconciliation(documentValue) {
   const destination = migrationDestination();
@@ -2356,7 +3193,8 @@ async function confirmReconciliation(context) {
     target: result.records,
     destination,
     userId,
-    resolutions: context.resolutions
+    resolutions: context.resolutions,
+    provenance: context.provenance
   });
   context.document = documentValue;
   context.target = result.records;

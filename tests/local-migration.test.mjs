@@ -232,7 +232,11 @@ test("2.1 local mapping is lossless and never prefixes an already mapped identif
       ]
     }]
   };
-  const again = projectLocalRecords(parseDocument(JSON.stringify(alreadyMapped)));
+  const again = projectLocalRecords(parseDocument(JSON.stringify(alreadyMapped)), {
+    exportKind: "projected",
+    idsCanonical: true,
+    mappingVersion: 1
+  });
   assert.equal(again.subjects[0].id, "legacy:s1");
   assert.equal(again.items[1].id, "legacy:a2");
   assert.equal(again.items[1].parentId, "legacy:a1");

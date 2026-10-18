@@ -374,11 +374,19 @@ export function createDexieStore(db) {
     },
     async read() {
       try {
-        const raw = await db.transaction("r", db.subjects, db.items, async () => ({
+        const raw = await this.readRaw();
+        return normalizedRecords(raw);
+      } catch (error) {
+        if (isLocalError(error)) throw error;
+        throw localError("Lecture de l'espace IndexedDB impossible.", error);
+      }
+    },
+    async readRaw() {
+      try {
+        return await db.transaction("r", db.subjects, db.items, async () => ({
           subjects: await db.subjects.toArray(),
           items: await db.items.toArray()
         }));
-        return normalizedRecords(raw);
       } catch (error) {
         if (isLocalError(error)) throw error;
         throw localError("Lecture de l'espace IndexedDB impossible.", error);

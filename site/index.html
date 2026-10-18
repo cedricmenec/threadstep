@@ -20,8 +20,10 @@
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
       <div class="toolbar" id="business-tools">
         <button type="button" id="export" class="secondary">Exporter mes données</button>
-        <label class="secondary file-action" for="import">Importer JSON</label>
-        <input id="import" type="file" accept=".json,application/json" aria-label="Importer un fichier JSON">
+        <label class="secondary file-action" for="import">Importer et fusionner un JSON</label>
+        <input id="import" type="file" accept=".json,application/json" aria-label="Importer et fusionner un fichier JSON">
+        <label class="secondary file-action" for="restore">Restaurer un état antérieur</label>
+        <input id="restore" type="file" accept=".json,application/json" aria-label="Restaurer un état antérieur depuis un fichier JSON">
       </div>
       <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>
     </header>
@@ -40,6 +42,7 @@
       <p id="local-conversion-plan"></p>
       <p id="local-conversion-fingerprint" class="local-conversion-fingerprint"></p>
       <p id="local-conversion-state"></p>
+      <div id="local-provenance" class="local-provenance" hidden></div>
       <label class="local-conversion-consent" for="local-conversion-consent">
         <input id="local-conversion-consent" type="checkbox">
         <span>Je confirme la conversion locale vers IndexedDB, sans configuration Cloud et sans supprimer ma sauvegarde historique.</span>
@@ -108,6 +111,58 @@
         <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
         <button type="submit" class="primary">Enregistrer l'URL</button>
       </form>
+    </section>
+    <section id="restore-panel" class="restore-panel" aria-labelledby="restore-title" hidden>
+      <h2 id="restore-title" tabindex="-1">Restaurer un état antérieur</h2>
+      <p class="restore-warning">La restauration remplace l'état actuel : elle est distincte de l'import/fusion et n'est jamais un effet implicite d'un import.</p>
+      <p id="restore-scope"></p>
+      <div id="restore-provenance" class="restore-provenance" hidden></div>
+      <p id="restore-backup-status"></p>
+      <button id="restore-download-backup" type="button" class="secondary">Télécharger la sauvegarde de l'état actuel</button>
+      <label for="restore-confirmation">Saisissez RESTAURER pour confirmer explicitement</label>
+      <input id="restore-confirmation" type="text" autocomplete="off" spellcheck="false">
+      <div class="restore-actions">
+        <button id="restore-confirm" type="button" class="primary" disabled>Restaurer et remplacer l'état actuel</button>
+        <button id="restore-cancel" type="button" class="secondary">Annuler</button>
+      </div>
+      <p id="restore-status" class="restore-status" role="status" aria-live="polite"></p>
+    </section>
+    <section id="recovery-panel" class="recovery-panel" aria-labelledby="recovery-title" hidden>
+      <h2 id="recovery-title" tabindex="-1">Diagnostic et récupération en lecture seule</h2>
+      <p id="recovery-instance" class="recovery-instance"></p>
+      <p id="recovery-read-code" class="recovery-status" role="status" aria-live="polite"></p>
+      <div id="recovery-degraded" class="recovery-degraded"></div>
+      <div id="recovery-anomalies" class="recovery-anomalies" role="status" aria-live="polite"></div>
+      <p id="recovery-v1-status" class="recovery-v1-status"></p>
+      <div class="recovery-actions">
+        <button id="recovery-raw-export" type="button" class="secondary">Exporter les enregistrements bruts de récupération</button>
+        <button id="recovery-repair-preview" type="button" class="secondary" disabled>Préparer une réparation</button>
+      </div>
+      <div id="repair-preview" class="repair-preview" hidden>
+        <h3 id="repair-preview-title">Réparation des références</h3>
+        <p id="repair-preview-summary"></p>
+        <label for="repair-source">Fichier source attestant l'identité (facultatif)</label>
+        <input id="repair-source" type="file" accept=".json,application/json">
+        <div id="repair-provenance" class="repair-provenance" hidden>
+          <fieldset>
+            <legend>Provenance de la source de réparation</legend>
+            <label><input type="radio" name="repair-provenance-choice" value="v1-raw"> Document V1 brut</label>
+            <label><input type="radio" name="repair-provenance-choice" value="indexeddb-export"> Export IndexedDB déjà projeté</label>
+            <label><input type="radio" name="repair-provenance-choice" value="legacy-double"> Export historique legacy:legacy:</label>
+          </fieldset>
+        </div>
+        <div id="repair-groups" class="repair-groups"></div>
+        <p id="repair-backup-status" class="repair-backup-status"></p>
+        <label class="repair-consent" for="repair-consent">
+          <input id="repair-consent" type="checkbox">
+          <span>Je confirme réparer uniquement les références affichées, après vérification de la sauvegarde de récupération.</span>
+        </label>
+        <div class="repair-actions">
+          <button id="repair-confirm" type="button" class="primary" disabled>Appliquer la réparation consentie</button>
+          <button id="repair-cancel" type="button" class="secondary">Annuler la réparation</button>
+        </div>
+        <p id="repair-status" class="repair-status" role="status" aria-live="polite"></p>
+      </div>
     </section>
     <section id="sync-diagnostic" class="sync-diagnostic" aria-labelledby="sync-diagnostic-title" hidden></section>
     <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>

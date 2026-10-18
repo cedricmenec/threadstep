@@ -3,7 +3,15 @@
 // IndexedDB or framework access: every browser concern is injected through the
 // adapters used by `site/app.js`.
 import { documentToRecords, SUBJECTS_STORE, ITEMS_STORE, emptyRecords } from "./persistence.js";
-import { mapRecords, unmapLegacyId } from "./migration.js";
+import {
+  EXPORT_KIND,
+  describeProvenanceInterpretations,
+  isAmbiguousProvenance,
+  mapRecords,
+  normalizeProvenance,
+  classifyProvenance,
+  unmapLegacyId
+} from "./migration.js";
 import { sha256Hex } from "./fingerprint.js";
 
 export { sha256Hex };
@@ -165,11 +173,13 @@ export function computeTargetFingerprint(target) {
 }
 
 export function computePlanFingerprint(input = {}) {
+  const provenance = normalizeProvenance(input.provenance);
   const fingerprints = {
     source: computeSourceFingerprint(input.document),
     destination: computeDestinationFingerprint(input.destination),
     user: computeUserFingerprint(input.userId),
-    target: computeTargetFingerprint(input.target)
+    target: computeTargetFingerprint(input.target),
+    provenance: sha256Hex(canonicalJson(provenance))
   };
   const plan = sha256Hex(canonicalJson({
     version: 1,
@@ -177,6 +187,7 @@ export function computePlanFingerprint(input = {}) {
     destination: fingerprints.destination,
     user: fingerprints.user,
     target: fingerprints.target,
+    provenance: fingerprints.provenance,
     resolutions: normalizedResolutions(input.resolutions)
   }));
   return { ...fingerprints, plan };
@@ -265,8 +276,17 @@ export async function withAttestedTarget(attestationInput, readTarget) {
   }
 }
 
+// The Cloud path and the local conversion share this resolver. When no
+// provenance is supplied the historical API keeps the documented raw-V1
+// default; planReconciliation always requires an explicit decision first.
 export function mapSourceDocument(document, options = {}) {
-  return mapRecords(documentToRecords(document), options);
+  const provenance = options.provenance === undefined
+    ? classifyProvenance(document, {})
+    : classifyProvenance(document, options);
+  const mapped = isAmbiguousProvenance(provenance)
+    ? mapRecords(documentToRecords(document), options)
+    : mapRecords(documentToRecords(document), { ...options, provenance });
+  return mapped;
 }
 
 function invalidKey(store, id) {
@@ -647,8 +667,18 @@ export function planReconciliation(input = {}) {
   const destination = normalizeDestination(input.destination);
   const userId = typeof input.userId === "string" ? input.userId : null;
   const resolutions = normalizedResolutions(input.resolutions);
-  const fingerprints = computePlanFingerprint({ document, target: input.target, destination, userId, resolutions });
-  const sourceRecords = mapSourceDocument(document);
+  const provenance = classifyProvenance(document, { provenance: input.provenance });
+  const fingerprints = computePlanFingerprint({
+    document,
+    target: input.target,
+    destination,
+    userId,
+    resolutions,
+    provenance
+  });
+  const sourceRecords = isAmbiguousProvenance(provenance)
+    ? emptyRecords()
+    : mapSourceDocument(document, { provenance });
   const sourceValidation = validateSourceRecords(sourceRecords);
   const targetValidation = validateTargetRecords(input.target);
   const inventory = buildInventoryFrom(sourceRecords, sourceValidation.invalid, targetValidation);
@@ -656,6 +686,7 @@ export function planReconciliation(input = {}) {
     destination,
     userId,
     resolutions,
+    provenance,
     inventory,
     fingerprints,
     fingerprint: fingerprints.plan,
@@ -665,6 +696,15 @@ export function planReconciliation(input = {}) {
     sourceIssues: sourceValidation.issues,
     targetIssues: targetValidation.issues
   };
+  if (isAmbiguousProvenance(provenance)) {
+    return rejectedPlan(base, "ambiguous-provenance", {
+      ambiguous: true,
+      indeterminate: true,
+      sourceRecords: emptyRecords(),
+      interpretations: describeProvenanceInterpretations(document),
+      reason: provenance.reason || "unmarked-source"
+    });
+  }
   if (sourceValidation.issues.length > 0 || targetValidation.issues.length > 0 ||
       inventory.counts[SUBJECTS_STORE][CATEGORY.INVALID] > 0 ||
       inventory.counts[ITEMS_STORE][CATEGORY.INVALID] > 0) {
@@ -998,7 +1038,8 @@ export async function runReconciliation(adapter, plan, consent, revalidate) {
     target: fresh.target,
     destination: fresh.destination === undefined ? plan.destination : fresh.destination,
     userId: fresh.userId === undefined ? plan.userId : fresh.userId,
-    resolutions: plan.resolutions
+    resolutions: plan.resolutions,
+    provenance: plan.provenance
   });
   if (next.plan !== plan.fingerprint) {
     return { status: "stale-plan", operations: [] };

@@ -10,7 +10,16 @@ import {
   emptyRecords,
   documentToRecords
 } from "./persistence.js";
-import { mapLegacyId, mapRecords } from "./migration.js";
+import {
+  EXPORT_KIND,
+  classifyProvenance,
+  describeProvenanceInterpretations,
+  isAmbiguousProvenance,
+  mapLegacyId,
+  mapRecords,
+  normalizeProvenance,
+  provenanceFromDocument
+} from "./migration.js";
 import { sha256Hex } from "./fingerprint.js";
 
 export const LOCAL_MIGRATION_KEY = "threadstep.migration.v1";
@@ -23,6 +32,7 @@ export const LOCAL_MIGRATION_STATUS = Object.freeze({
   INVALID: "invalid",
   UNREADABLE: "unreadable",
   UNAVAILABLE: "unavailable",
+  AMBIGUOUS_PROVENANCE: "ambiguous-provenance",
   READY: "ready",
   ALREADY_MIGRATED: "already-migrated",
   POPULATED: "populated",
@@ -79,7 +89,8 @@ export function detectLocalSource(storage) {
     return sourceResult(LOCAL_MIGRATION_STATUS.UNREADABLE, null, null,
       "Le document historique est illisible.");
   }
-  return detectSourceText(raw);
+  const detected = detectSourceText(raw);
+  return { ...detected, context: "historical-key" };
 }
 
 export function detectSourceText(raw) {
@@ -103,6 +114,7 @@ export function detectSourceText(raw) {
     raw,
     document,
     fingerprint: sha256Hex(raw),
+    context: null,
     message: null
   };
 }
@@ -121,11 +133,51 @@ function normalizeSource(source) {
     "Le document historique n'est pas exploitable.");
 }
 
-// Lossless local projection: every business field and relation is preserved and
-// the mapping is idempotent, so an already prefixed identifier is not prefixed
-// a second time.
-export function projectLocalRecords(document) {
-  return mapRecords(documentToRecords(document), { idempotent: true });
+// Lossless local projection driven by explicit provenance. The historical
+// shortcut `projectLocalRecords(document)` keeps the raw-V1 default for
+// compatibility; planning is the layer that blocks ambiguous sources.
+export function projectLocalRecords(document, provenance) {
+  if (provenance === undefined) {
+    return mapRecords(documentToRecords(document), {});
+  }
+  const normalized = normalizeProvenance(provenance);
+  if (!normalized || isAmbiguousProvenance(normalized)) {
+    throw new TypeError("Ambiguous provenance: explicit choice required");
+  }
+  return mapRecords(documentToRecords(document), { provenance: normalized });
+}
+
+function hasPrefixedIdentifiers(document) {
+  const records = documentToRecords(document);
+  return [...records.subjects, ...records.items].some((record) =>
+    typeof record.id === "string" && record.id.startsWith("legacy:"));
+}
+
+// A source read from `threadstep.document.v1` carries a documented raw-V1
+// context, but only while its identifiers are not already prefixed. Any other
+// unmarked source stays ambiguous, whatever the identifier shape.
+export function resolveLocalProvenance(source, explicit) {
+  if (explicit !== undefined && explicit !== null) {
+    return classifyProvenance(source && source.document, { provenance: explicit });
+  }
+  const embedded = provenanceFromDocument(source && source.document);
+  if (embedded) return embedded;
+  if (source && source.context === "historical-key" && source.document &&
+      !hasPrefixedIdentifiers(source.document)) {
+    return {
+      exportKind: EXPORT_KIND.V1_RAW,
+      idsCanonical: false,
+      mappingVersion: 1,
+      sourceFingerprint: source.fingerprint || null
+    };
+  }
+  return {
+    exportKind: EXPORT_KIND.UNKNOWN,
+    idsCanonical: null,
+    mappingVersion: null,
+    sourceFingerprint: source ? source.fingerprint || null : null,
+    reason: "unmarked-source"
+  };
 }
 
 function normalizeRecords(records) {
@@ -190,7 +242,7 @@ function classify(target, projected) {
 // A preference is remapped only when both referenced identifiers exist in the
 // source document; an unreferenced preference is preserved untouched by the
 // caller (this function returns null and never rewrites it).
-export function remapResumePreference(document, preference) {
+export function remapResumePreference(document, preference, provenance) {
   if (!preference || typeof preference !== "object" || Array.isArray(preference)) return null;
   const subjectId = preference.subjectId;
   const itemId = preference.itemId;
@@ -201,9 +253,16 @@ export function remapResumePreference(document, preference) {
   if (!subject || !Array.isArray(subject.items)) return null;
   const item = subject.items.find((entry) => entry.id === itemId);
   if (!item) return null;
+  const normalized = provenance !== undefined && provenance !== null
+    ? normalizeProvenance(provenance)
+    : null;
+  const options = normalized
+    ? { keep: normalized.exportKind !== EXPORT_KIND.V1_RAW,
+        idempotent: normalized.exportKind !== EXPORT_KIND.V1_RAW }
+    : { idempotent: true };
   return {
-    subjectId: mapLegacyId(subjectId, { idempotent: true }),
-    itemId: mapLegacyId(itemId, { idempotent: true })
+    subjectId: mapLegacyId(subjectId, options),
+    itemId: mapLegacyId(itemId, options)
   };
 }
 
@@ -213,6 +272,9 @@ export function planLocalConversion(input = {}) {
   const empty = {
     status: source.status,
     source,
+    provenance: null,
+    ambiguous: false,
+    interpretations: [],
     sourceFingerprint: source.fingerprint,
     targetFingerprint: targetFingerprint(target),
     fingerprint: null,
@@ -228,7 +290,18 @@ export function planLocalConversion(input = {}) {
   };
   if (source.status !== LOCAL_MIGRATION_STATUS.PRESENT) return empty;
 
-  const projected = projectLocalRecords(source.document);
+  const provenance = resolveLocalProvenance(source, input.provenance);
+  if (isAmbiguousProvenance(provenance)) {
+    return {
+      ...empty,
+      status: LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE,
+      provenance,
+      ambiguous: true,
+      interpretations: describeProvenanceInterpretations(source.document)
+    };
+  }
+
+  const projected = projectLocalRecords(source.document, provenance);
   const { operations, collisions, missing } = classify(target, projected);
   const populatedTarget = !recordsEmpty(target);
   const alreadyMigrated = missing === 0 && collisions.length === 0 && populatedTarget;
@@ -242,11 +315,13 @@ export function planLocalConversion(input = {}) {
     version: MAPPING_VERSION,
     source: source.fingerprint,
     target: targetDigest,
+    provenance,
     operations
   }));
   return {
     ...empty,
     status,
+    provenance,
     targetFingerprint: targetDigest,
     fingerprint,
     projected,
@@ -258,7 +333,7 @@ export function planLocalConversion(input = {}) {
       subjects: projected.subjects.length,
       items: projected.items.length
     },
-    resumePreference: remapResumePreference(source.document, input.resumePreference)
+    resumePreference: remapResumePreference(source.document, input.resumePreference, provenance)
   };
 }
 
@@ -393,7 +468,8 @@ export async function runLocalConversion(adapter, plan, consent) {
   const fresh = planLocalConversion({
     source,
     target,
-    resumePreference: plan.resumePreferenceOriginal
+    resumePreference: plan.resumePreferenceOriginal,
+    provenance: plan.provenance
   });
   if (fresh.fingerprint !== plan.fingerprint) {
     return { status: LOCAL_MIGRATION_STATUS.STALE_PLAN, operations: [] };
