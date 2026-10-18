@@ -85,6 +85,68 @@ façon destructive, donc après un refus, une exception ou une interruption, la
 source reste lisible, exportable et **non destructive** pour la cible. La
 préférence locale de reprise reste hors des tables synchronisées.
 
+## Réconciliation Dexie Cloud d'une base déjà peuplée (TS-031)
+
+`site/migration-reconciliation.js` est le cœur pur, déterministe et sans DOM
+de la réconciliation entre un document `threadstep.document.v1` (ou une
+sauvegarde JSON) et une base Dexie Cloud authentifiée. Avant toute lecture de
+la cible, `evaluateSyncAttestation` exige une **synchronisation initiale
+attestée** par les signaux natifs (`syncState`, `persistedSyncState`,
+utilisateur, `remoteDbId`, `serverRevision`, realms et URL). Hors ligne, session
+refusée, sync initiale en attente, état indéterminé ou lecture IndexedDB en
+erreur bloquent la planification : une IndexedDB vide n'est jamais interprétée
+comme un Cloud vide. `withAttestedTarget` n'appelle le lecteur de cible
+qu'après cette attestation et transforme un échec de lecture en `read-error`
+explicite.
+
+L'inventaire `buildInventory` sépare les magasins `subjects` et `items`, compare
+uniquement les champs métier (titre, note, priorité, `done`, ordre, `subjectId`,
+`parentId`) et ignore les métadonnées natives `owner`, `realmId` et `$ts`. Il
+classe chaque enregistrement en `identical`, `absent-in-cloud`, `conflict`,
+`cloud-only` ou `invalid`. L'ordre est comparé **relativement** aux
+enregistrements source mappés, afin que des enregistrements propres au Cloud
+intercalés ne créent pas de faux conflit.
+
+`planReconciliation` produit uniquement des opérations `add` : les groupes
+indépendants absents sont insérés, les enregistrements identiques et propres au
+Cloud ne sont jamais réécrits, et un conflit non résolu ne bloque que sa branche
+dépendante. Pour chaque divergence, le plan propose **conserver la version Cloud** (`keep-cloud`) ou **importer la version
+historique comme copie** (`import-copy`). Les copies reçoivent
+un identifiant déterministe dérivé de la source et de la destination, sont
+vérifiées avant insertion et remappent parents et descendants ; une seconde
+exécution reconnaît la copie déjà appliquée. Aucun `put`, `delete` ni écrasement
+n'est planifié, et les quotas de 40 sujets / 500 étapes par sujet restent
+appliqués.
+
+Chaque plan porte une empreinte canonique de la source, de l'URL et de la base
+distante, de la session utilisateur, de la projection de la cible et des
+résolutions. `runReconciliation` refuse, **sous la couche de migration et pas
+seulement dans l'interface**, tout consentement absent ou lié à un autre plan,
+puis revalide l'attestation et ces empreintes juste avant de confier les
+insertions à un adaptateur atomique. Une évolution de source, destination,
+session, cible, conflit ou connectivité produit `stale-plan` sans écriture.
+L'adaptateur Dexie utilise une transaction `rw` et `add` uniquement : une
+collision tardive, une panne ou une interruption ne laisse aucun demi-groupe et
+n'annonce jamais un succès distant.
+
+`reduceReconciliationStatus` distingue écrit localement, synchronisation en
+attente, hors ligne en attente, synchronisé et erreur de synchronisation. Un
+commit IndexedDB reste « écrit localement » ; seul un `syncComplete` natif
+ultérieur avec attestation saine peut produire « synchronisé ». L'interface
+`site/app.js` affiche l'inventaire, la destination, les conflits et les champs
+différents avec `createElement`/`textContent` uniquement (pas d'`innerHTML`), des
+`fieldset`/radios accessibles, un contrôle de consentement explicite distinct de
+l'OTP et une zone `aria-live`. L'import JSON Cloud réutilise exactement ce plan
+et ces protections ; l'import JSON local sans Cloud conserve sa confirmation et
+son remplacement actuels. La clé `threadstep.document.v1` et les exports JSON ne
+sont jamais supprimés, et aucun changement d'URL ne copie implicitement une base
+vers une autre.
+
+La recette réelle Chrome mobile, tactile, clavier, lecteur d'écran, première
+synchronisation, propagation réseau et copies sur une instance Dexie Cloud
+**isolée** reste manuelle : les tests Node ne prouvent pas le comportement
+distant.
+
 ## Authentification OTP email native (TS-027)
 
 `site/authentication.js` est le module pur de la connexion : `signInMethods`
