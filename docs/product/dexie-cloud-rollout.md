@@ -72,3 +72,30 @@ La recette destructrice (purge, collisions de données, logout pending et change
 - https://dexie.org/docs/cloud/SyncState
 - https://dexie.org/docs/cloud/best-practices
 - https://dexie.org/docs/cloud/cli
+
+
+## Réconciliation TS-031 (mise à jour produit)
+
+La migration vers une base Cloud déjà peuplée n'est plus bloquée globalement.
+`site/migration-reconciliation.js` exige d'abord une **attestation de
+synchronisation initiale** native et bloque toute planification hors ligne,
+sessionnée différemment, en attente, indéterminée ou après erreur de lecture :
+une IndexedDB vide ne vaut jamais preuve d'un Cloud vide. Le plan classe les
+sujets et étapes par magasin (`identical`, `absent-in-cloud`, `conflict`,
+`cloud-only`, `invalid`), ignore `owner`, `realmId` et `$ts`, insère uniquement
+les groupes indépendants absents et ne réécrit jamais l'existant. Les conflits
+offrent explicitement **keep-cloud** (conserver la version Cloud) ou
+**import-copy** (importer l'historique comme copie à identifiant déterministe),
+sans `put` ni écrasement et sans choix destructif par défaut. Le consentement est
+lié à une empreinte de la source, de l'URL, de la base distante, de la session,
+de la cible et des résolutions ; `runReconciliation` le revalide et refuse tout
+plan périmé avant une transaction atomique `add`. Le statut affiché distingue
+« écrit localement » d'une synchronisation réellement observée.
+
+Cette évolution est couverte par des tests Node déterministes (source 5 sujets /
+18 étapes, cible partiellement peuplée, copies idempotentes, collisions,
+rollback, métadonnées Cloud, attestation, empreintes et rendu accessible). Elle
+ne prouve pas la propagation réseau réelle. La recette sur une instance Dexie
+Cloud **isolée**, avec exports préalables, Chrome mobile et second navigateur,
+tactile/clavier/lecteur d'écran, premier sync non terminé, conflits, copies,
+reconnexion et offline, reste obligatoire et à effectuer hors CI.

@@ -347,16 +347,18 @@ test("6.1 app wiring keeps the consent gate before the commit and core.js pure",
   const app = read("site/app.js");
   assert.match(app, /from "\.\/migration\.js"/);
   assert.match(app, /detectHistoricalDocument\(localStorage\)/);
-  assert.match(app, /describeMigration\(/);
-  assert.match(app, /planMigration\(/);
-  assert.match(app, /runMigration\(/);
-  assert.match(app, /nonOverwritingMigrationAdapter\(\)/);
-  assert.match(app, /operation\.type === "add"/);
-  assert.match(app, /confirmed: true/);
+  assert.match(app, /from "\.\/migration-reconciliation\.js"/);
+  assert.match(app, /detectHistoricalDocument\(localStorage\)/);
+  assert.match(app, /withAttestedTarget\(/);
+  assert.match(app, /planReconciliation\(/);
+  assert.match(app, /runReconciliation\(/);
+  assert.match(app, /reconciliationAdapter\(\)/);
+  assert.match(app, /operation\.type !== "add"/);
+  assert.match(app, /fingerprint: fresh\.fingerprint/);
   assert.match(app, /migration-refuse/);
   assert.ok(
-    app.indexOf("describeMigration(") < app.indexOf("runMigration("),
-    "the disclosure must precede the execution wiring"
+    app.indexOf("readAttestedTarget(") < app.indexOf("runReconciliation("),
+    "the attested target read must precede the commit wiring"
   );
 
   const migration = read("site/migration.js");

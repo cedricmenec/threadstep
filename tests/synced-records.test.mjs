@@ -61,8 +61,8 @@ test("browser wiring initializes native session before displaying the business v
   assert.match(app, /refreshSyncedDocument\(\)/);
   assert.match(app, /readSyncedRecords\(syncedDatabase\)/);
   assert.match(app, /await businessStore\.commit\(operations\);[\s\S]*?lastRecords = records/);
-  assert.match(app, /nonOverwritingMigrationAdapter\(\)/);
-  assert.match(app, /operation\.type === "add"/);
+  assert.match(app, /reconciliationAdapter\(\)/);
+  assert.match(app, /operation\.type !== "add"/);
   assert.match(app, /await pendingCloudWrites/);
   assert.doesNotMatch(app, /return emptyRecords\(\);\s*\}\s*catch/);
 });
