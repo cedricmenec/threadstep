@@ -193,3 +193,12 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .local-panel .secondary{margin-top:12px;min-height:44px}
 .local-error{margin:12px 0 0;color:#ad4938;background:#fff0ed;border:1px solid #efc9c1;border-radius:9px;padding:10px 12px;font-size:.88rem;font-weight:600}
 .local-error[hidden]{display:none}
+.local-conversion{margin-top:24px;background:#f6f4ea;border:1px solid #ddd6bd;border-radius:14px;padding:20px 22px;max-width:720px}
+.local-conversion[hidden]{display:none}
+.local-conversion h2{font-size:1.25rem;letter-spacing:-.03em}
+.local-conversion p{margin:8px 0;color:#4b4a3d;font-size:.92rem}
+.local-conversion-fingerprint{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;overflow-wrap:anywhere}
+.local-conversion-consent{display:flex;gap:10px;align-items:flex-start;margin:14px 0;font-size:.92rem;min-height:44px}
+.local-conversion-consent input{width:20px;height:20px;margin-top:2px;flex:none}
+.local-conversion-actions{display:flex;flex-wrap:wrap;gap:10px}
+.local-conversion-actions button{min-height:44px}

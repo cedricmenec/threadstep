@@ -60,6 +60,21 @@ transfert ne sont créés en mode local. Les tests Node couvrent le bootstrap, l
 transactions, les erreurs et la confidentialité ; Chrome mobile, le hors ligne
 réel, le stockage bloqué et les lecteurs d'écran restent des recettes manuelles.
 
+## Conversion locale explicite TS-033
+
+TS-033 ajoute une étape distincte entre la conservation du document historique
+et une éventuelle activation Cloud : `site/local-migration.js` projette un V1
+validé vers `threadstep-local` après revue de la source, de la cible et des
+insertions, puis consentement explicite. La conversion est atomique et
+idempotente, ne préfixe pas deux fois un identifiant déjà converti, et bloque
+sans écrasement en cas de collision ou de plan périmé. Elle conserve la source
+`threadstep.document.v1` et son export de secours de façon non destructive,
+enregistre une provenance locale `threadstep.migration.v1` sans contenu métier
+et ne construit aucune instance Dexie Cloud, ne demande aucun OTP et ne
+déclenche aucun push. Le scénario de référence est un document de 5 sujets et
+18 étapes relu depuis IndexedDB après rechargement. Le transfert vers une base
+synchronisée reste **TS-037**.
+
 ## 3. Matrice de traçabilité
 
 | Requirement du document fourni | Couverture backlog |

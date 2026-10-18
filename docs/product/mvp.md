@@ -135,6 +135,19 @@ automatiquement : une notice accessible et son export historique restent
 disponibles. La conversion explicite relève de TS-033 et le transfert consenti
 vers une base synchronisée de TS-037.
 
+**Conversion locale explicite V1 (TS-033), intégrée :** `site/local-migration.js`
+convertit, après revue et consentement explicites, un document V1 valide vers
+l'espace local `threadstep-local`, sans instance Dexie Cloud, OTP, réseau ni
+push. La projection conserve sujets, étapes, sous-étapes, relations, ordre,
+notes, priorités, `done` et la préférence de reprise, avec un mapping
+d'identifiants non récursif. Une conversion répétée est idempotente ; une source
+ou une cible modifiée rend le plan périmé ; une collision bloque sans
+écrasement ; un échec de transaction ne laisse aucun demi-document. Le scénario
+de recette attendu est un document de 5 sujets et 18 étapes retrouvé après
+rechargement, avec la source et l'export historique non destructifs et
+identiques. La provenance `threadstep.migration.v1` reste locale et non
+synchronisée. Le transfert vers le Cloud reste TS-037.
+
 **Migration du document historique (TS-026), intégrée :** `site/migration.js`
 détecte et valide strictement le document V1, présente la destination et l'effet
 de synchronisation, puis ne convertit les données vers les tables synchronisées

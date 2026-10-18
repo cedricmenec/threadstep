@@ -21,6 +21,30 @@ IndexedDB réel, ni le hors ligne, ni le tactile, ni le lecteur d'écran.
 - [ ] Parcourir au clavier et au lecteur d'écran la notice locale, le bouton d'export historique et les états d'erreur ; vérifier le focus, les noms accessibles et les cibles tactiles.
 - [ ] Après avoir configuré une URL Cloud, vérifier que la base synchronisée est distincte et qu'aucune donnée locale n'a été copiée ou envoyée par cette seule configuration.
 
+## Conversion locale V1 sans Cloud (TS-033)
+
+À vérifier manuellement sur Chrome mobile, dans un profil de test, après avoir
+conservé un export JSON de secours. Ces contrôles ne sont pas prouvés par les
+tests Node.
+
+- Avec un document V1 réel de 5 sujets et 18 étapes, ouvrir la prévisualisation
+  de conversion locale : vérifier la destination `threadstep-local`, les comptes
+  source et cible, les insertions prévues et l'empreinte de source, sans OTP ni
+  URL Cloud.
+- Refuser une première fois, puis confirmer explicitement : la source et la
+  cible restent inchangées après refus ; après confirmation, recharger et
+  comparer sujets, étapes, sous-étapes, notes, priorités, ordres et états
+  terminés.
+- Vérifier que `threadstep.document.v1` et l'export historique restent
+  non destructifs et identiques, et que `threadstep.migration.v1` ne contient
+  aucune donnée métier.
+- Relancer la même conversion : aucun doublon ni écrasement. Tester un V1
+  invalide, une cible partiellement peuplée, une collision et un échec de
+  transaction sans demi-document.
+- Dans l'onglet Réseau, confirmer l'absence d'instance Dexie Cloud, d'OTP et de
+  push ; le statut doit annoncer une conversion locale terminée, jamais une
+  synchronisation Cloud. Le transfert vers le Cloud reste TS-037.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.

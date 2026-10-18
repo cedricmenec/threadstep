@@ -30,7 +30,25 @@
       <p id="local-status" class="local-status" role="status" aria-live="polite">Vos données sont lues et enregistrées dans IndexedDB sur cet appareil, sans compte Cloud.</p>
       <p id="local-legacy-notice" class="local-legacy" role="status" aria-live="polite" hidden></p>
       <button id="local-export-legacy" type="button" class="secondary" hidden>Exporter ma sauvegarde locale historique (JSON)</button>
+      <button id="local-convert-legacy" type="button" class="secondary" hidden>Convertir ma sauvegarde locale historique vers IndexedDB</button>
       <p id="local-storage-error" class="local-error" role="alert" hidden></p>
+    </section>
+    <section id="local-conversion" class="local-conversion" aria-labelledby="local-conversion-title" hidden>
+      <h2 id="local-conversion-title" tabindex="-1">Convertir le document historique en base locale</h2>
+      <p id="local-conversion-source"></p>
+      <p id="local-conversion-target"></p>
+      <p id="local-conversion-plan"></p>
+      <p id="local-conversion-fingerprint" class="local-conversion-fingerprint"></p>
+      <p id="local-conversion-state"></p>
+      <label class="local-conversion-consent" for="local-conversion-consent">
+        <input id="local-conversion-consent" type="checkbox">
+        <span>Je confirme la conversion locale vers IndexedDB, sans configuration Cloud et sans supprimer ma sauvegarde historique.</span>
+      </label>
+      <div class="local-conversion-actions">
+        <button id="local-conversion-confirm" type="button" class="primary" disabled>Confirmer la conversion locale</button>
+        <button id="local-conversion-refuse" type="button" class="secondary">Refuser</button>
+      </div>
+      <p id="local-conversion-status" class="local-status" role="status" aria-live="polite"></p>
     </section>
     <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
       <h2 id="auth-title">Connexion par code email</h2>
