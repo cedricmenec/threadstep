@@ -27,6 +27,30 @@
       </div>
       <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>
     </header>
+    <section id="workspace-panel" class="workspace-panel" aria-labelledby="workspace-panel-title">
+      <h2 id="workspace-panel-title">Espaces de travail</h2>
+      <p id="workspace-status" class="workspace-status" role="status" aria-live="polite"></p>
+      <label for="workspace-select">Espace à sélectionner</label>
+      <select id="workspace-select"></select>
+      <div class="workspace-actions">
+        <button type="button" id="workspace-apply" class="secondary">Sélectionner cet espace</button>
+        <button type="button" id="workspace-suspend" class="secondary">Suspendre Cloud</button>
+        <button type="button" id="workspace-logout" class="secondary">Se déconnecter</button>
+        <button type="button" id="workspace-purge" class="danger">Purger la copie locale</button>
+      </div>
+      <p id="workspace-binding-status" class="workspace-binding-status" role="status" aria-live="polite"></p>
+      <div id="workspace-confirmation" class="workspace-confirmation" role="alertdialog" aria-labelledby="workspace-confirmation-title" aria-describedby="workspace-confirmation-warning" hidden>
+        <h3 id="workspace-confirmation-title">Confirmer l'action locale</h3>
+        <p id="workspace-confirmation-scope"></p>
+        <p id="workspace-confirmation-warning"></p>
+        <div class="workspace-confirmation-actions">
+          <button type="button" id="workspace-backup" class="secondary">Télécharger une sauvegarde JSON</button>
+          <button type="button" id="workspace-confirmation-cancel" class="secondary">Annuler</button>
+          <button type="button" id="workspace-confirmation-continue" class="danger">Confirmer</button>
+        </div>
+        <p id="workspace-confirmation-status" class="workspace-confirmation-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
     <section id="local-panel" class="local-panel" aria-labelledby="local-panel-title" hidden>
       <h2 id="local-panel-title">Espace local IndexedDB</h2>
       <p id="local-status" class="local-status" role="status" aria-live="polite">Vos données sont lues et enregistrées dans IndexedDB sur cet appareil, sans compte Cloud.</p>

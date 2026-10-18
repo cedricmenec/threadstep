@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  BINDING_DIAGNOSTIC_STATE,
   CONNECTION_STATE,
   DIAGNOSTIC_ERROR,
   INITIAL_PULL,
@@ -12,6 +13,7 @@ import {
   REMOTE_EVIDENCE,
   SESSION_STATE,
   SYNC_PHASE,
+  WORKSPACE_DIAGNOSTIC_TYPE,
   buildDiagnosticView,
   buildSyncDiagnostic,
   canRetryInitialPull,
@@ -480,6 +482,58 @@ test("6.1 injected observables update session, phase, initial pull and URL", () 
   const third = controller.refresh();
   assert.equal(third.initialPull, INITIAL_PULL.COMPLETE);
   assert.notEqual(third.initialPull, second.initialPull);
+});
+
+test("5.1 workspace, URL and binding rows are allowlisted and refresh with the input", () => {
+  const a = diagnostic({
+    workspace: {
+      type: WORKSPACE_DIAGNOSTIC_TYPE.SYNCHRONIZED,
+      effectiveBase: "threadstep-ws-aaaaaaaaaaaaaaaa",
+      url: URL_BASE,
+      remoteDbId: "remote-1"
+    },
+    binding: BINDING_DIAGNOSTIC_STATE.BOUND
+  });
+  const b = diagnostic({
+    workspace: {
+      type: WORKSPACE_DIAGNOSTIC_TYPE.SYNCHRONIZED,
+      effectiveBase: "threadstep-ws-bbbbbbbbbbbbbbbb",
+      url: "https://other.dexie.cloud",
+      remoteDbId: "remote-2"
+    },
+    binding: BINDING_DIAGNOSTIC_STATE.MISMATCH
+  });
+  const viewA = buildDiagnosticView(a);
+  const viewB = buildDiagnosticView(b);
+  const keysA = viewA.rows.map((row) => row.key);
+  for (const key of [
+    "workspace-type", "workspace-base", "workspace-url",
+    "workspace-remote-db", "workspace-binding"
+  ]) {
+    assert.ok(keysA.includes(key), key);
+  }
+  const valueOf = (view, key) => view.rows.find((row) => row.key === key).value;
+  assert.equal(valueOf(viewA, "workspace-base"), "threadstep-ws-aaaaaaaaaaaaaaaa");
+  assert.equal(valueOf(viewA, "workspace-url"), URL_BASE);
+  assert.equal(valueOf(viewB, "workspace-url"), "https://other.dexie.cloud");
+  assert.match(valueOf(viewB, "workspace-binding"), /Compte différent/);
+  assert.equal(a.binding, BINDING_DIAGNOSTIC_STATE.BOUND);
+  assert.equal(b.binding, BINDING_DIAGNOSTIC_STATE.MISMATCH);
+
+  const local = buildDiagnosticView(diagnostic({
+    workspace: {
+      type: WORKSPACE_DIAGNOSTIC_TYPE.LOCAL,
+      effectiveBase: "threadstep-local"
+    },
+    binding: BINDING_DIAGNOSTIC_STATE.UNAUTHENTICATED
+  }));
+  assert.equal(valueOf(local, "workspace-type"), "Local autonome");
+  assert.equal(local.rows.some((row) => row.key === "workspace-url"), false);
+
+  const serialized = JSON.stringify([viewA, viewB, local, a, b]);
+  for (const forbidden of ["user-1", "user@example.com", "otp-123", "bearer-token"]) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
 });
 
 test("6.3 local mode shows an inactive Cloud diagnostic and disables retry", () => {

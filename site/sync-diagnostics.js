@@ -71,6 +71,37 @@ export const DIAGNOSTIC_ERROR = Object.freeze({
   UNCATEGORIZED: "uncategorized"
 });
 
+export const WORKSPACE_DIAGNOSTIC_TYPE = Object.freeze({
+  LOCAL: "local",
+  SYNCHRONIZED: "synchronized"
+});
+
+export const BINDING_DIAGNOSTIC_STATE = Object.freeze({
+  BOUND: "bound",
+  UNBOUND: "unbound",
+  UNVERIFIED: "unverified",
+  MISMATCH: "mismatch",
+  UNAUTHENTICATED: "unauthenticated",
+  INDETERMINATE: "indeterminate"
+});
+
+export const WORKSPACE_TYPE_LABELS = Object.freeze({
+  [WORKSPACE_DIAGNOSTIC_TYPE.LOCAL]: "Local autonome",
+  [WORKSPACE_DIAGNOSTIC_TYPE.SYNCHRONIZED]: "Synchronisé"
+});
+
+export const BINDING_DIAGNOSTIC_LABELS = Object.freeze({
+  [BINDING_DIAGNOSTIC_STATE.BOUND]: "Compte lié à cet espace",
+  [BINDING_DIAGNOSTIC_STATE.UNBOUND]: "Espace lié au compte courant (cache vide)",
+  [BINDING_DIAGNOSTIC_STATE.UNVERIFIED]: "Cache local non vérifié : déconnexion ou purge explicite requise",
+  [BINDING_DIAGNOSTIC_STATE.MISMATCH]: "Compte différent de la liaison : données métier masquées",
+  [BINDING_DIAGNOSTIC_STATE.UNAUTHENTICATED]: "Aucune session authentifiée",
+  [BINDING_DIAGNOSTIC_STATE.INDETERMINATE]: "Liaison de compte indéterminée"
+});
+
+const WORKSPACE_TYPE_VALUES = new Set(Object.values(WORKSPACE_DIAGNOSTIC_TYPE));
+const BINDING_VALUES = new Set(Object.values(BINDING_DIAGNOSTIC_STATE));
+
 const SESSION_VALUES = new Set(Object.values(SESSION_STATE));
 const CONNECTION_VALUES = new Set(Object.values(CONNECTION_STATE));
 const PHASE_VALUES = new Set(Object.values(SYNC_PHASE));
@@ -459,6 +490,30 @@ function deriveRemoteEvidence({ configured, base, input, readError, initialPull 
   };
 }
 
+function sanitizeWorkspaceDiagnostic(value) {
+  if (!isPlainObject(value)) return null;
+  const type = WORKSPACE_TYPE_VALUES.has(value.type)
+    ? value.type
+    : WORKSPACE_DIAGNOSTIC_TYPE.LOCAL;
+  const effectiveBase = safeDiagnosticString(value.effectiveBase);
+  const url = type === WORKSPACE_DIAGNOSTIC_TYPE.SYNCHRONIZED
+    ? safeDiagnosticString(value.url)
+    : null;
+  const remoteDbId = safeDiagnosticString(value.remoteDbId);
+  return {
+    type,
+    effectiveBase: effectiveBase || "indisponible",
+    url,
+    remoteDbId
+  };
+}
+
+function safeDiagnosticString(value) {
+  return typeof value === "string" && value.length > 0 && value.length <= 512
+    ? value
+    : null;
+}
+
 export function buildSyncDiagnostic(input = {}) {
   const source = isPlainObject(input) ? input : {};
   const configured = source.configured === true;
@@ -515,7 +570,11 @@ export function buildSyncDiagnostic(input = {}) {
     base,
     errors,
     localWrites,
-    remoteEvidence
+    remoteEvidence,
+    workspace: sanitizeWorkspaceDiagnostic(source.workspace),
+    binding: BINDING_VALUES.has(source.binding)
+      ? source.binding
+      : BINDING_DIAGNOSTIC_STATE.INDETERMINATE
   };
 }
 
@@ -668,6 +727,10 @@ export function buildDiagnosticView(diagnostic, options = {}) {
   const decision = canRetryInitialPull(state);
   const autoDisabled = decision.allowed !== true;
   const busy = settings.busy === true;
+  const workspace = isPlainObject(state.workspace) ? state.workspace : null;
+  const binding = BINDING_VALUES.has(state.binding)
+    ? state.binding
+    : BINDING_DIAGNOSTIC_STATE.INDETERMINATE;
   const rows = [
     { key: "session", label: "Session", value: SESSION_LABELS[session] },
     { key: "connection", label: "Connexion", value: CONNECTION_LABELS[connection] },
@@ -679,6 +742,35 @@ export function buildDiagnosticView(diagnostic, options = {}) {
   ];
   if (base.configured && typeof base.remoteDbId === "string" && base.remoteDbId.length > 0) {
     rows.splice(5, 0, { key: "remote-db", label: "Identifiant distant", value: base.remoteDbId });
+  }
+  if (workspace) {
+    const workspaceType = WORKSPACE_TYPE_VALUES.has(workspace.type)
+      ? workspace.type
+      : WORKSPACE_DIAGNOSTIC_TYPE.LOCAL;
+    const workspaceRows = [
+      { key: "workspace-type", label: "Espace de travail", value: WORKSPACE_TYPE_LABELS[workspaceType] },
+      { key: "workspace-base", label: "Base locale effective", value: safeValue(workspace.effectiveBase, "indisponible") }
+    ];
+    if (workspaceType === WORKSPACE_DIAGNOSTIC_TYPE.SYNCHRONIZED) {
+      workspaceRows.push({
+        key: "workspace-url",
+        label: "URL normalisée",
+        value: safeValue(workspace.url, "URL indisponible")
+      });
+      if (safeValue(workspace.remoteDbId, null)) {
+        workspaceRows.push({
+          key: "workspace-remote-db",
+          label: "Identifiant distant",
+          value: workspace.remoteDbId
+        });
+      }
+    }
+    workspaceRows.push({
+      key: "workspace-binding",
+      label: "Liaison de compte",
+      value: BINDING_DIAGNOSTIC_LABELS[binding]
+    });
+    rows.splice(1, 0, ...workspaceRows);
   }
   rows.push({ key: "remote-message", label: "État du Cloud", value: safeValue(remote.message, REMOTE_NOT_EMPTY) });
 
@@ -696,6 +788,8 @@ export function buildDiagnosticView(diagnostic, options = {}) {
     phaseLabel: PHASE_LABELS[phase],
     initialPullLabel: INITIAL_PULL_LABELS[initialPull],
     localWritesLabel: LOCAL_WRITE_LABELS[localWrites],
+    workspaceTypeLabel: workspace ? WORKSPACE_TYPE_LABELS[workspace.type] : null,
+    bindingLabel: workspace ? BINDING_DIAGNOSTIC_LABELS[binding] : null,
     remoteEvidenceLabel: REMOTE_EVIDENCE_LABELS[remoteState],
     remoteEvidenceMessage: safeValue(remote.message, REMOTE_NOT_EMPTY),
     remoteNotEmpty: true,

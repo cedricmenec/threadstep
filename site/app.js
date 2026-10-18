@@ -1,5 +1,5 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
-import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase } from "./dexie-foundation.js";
+import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
   ACTIVATION_STATUS,
@@ -83,6 +83,33 @@ import {
   reduceLocalWriteStatus,
   retryReasonLabel
 } from "./sync-diagnostics.js";
+import {
+  BINDING_STATE,
+  PENDING_STATE,
+  WORKSPACE_SELECTION_LOCAL,
+  WORKSPACE_STATUS,
+  WORKSPACE_TYPE,
+  activationRecordForWorkspace,
+  bindWorkspaceAccount,
+  buildWorkspaceDiagnostic,
+  describeBindingState,
+  evaluateAccountBinding,
+  initializeWorkspaceRegistry,
+  pendingChangeWarning,
+  pendingStatusFromMutationTables,
+  planWorkspaceLogout,
+  planWorkspacePurge,
+  planWorkspaceResume,
+  planWorkspaceSelection,
+  planWorkspaceSuspension,
+  readWorkspaceRegistryState,
+  registerWorkspace,
+  resolveWorkspaceStartup,
+  selectWorkspaceInRegistry,
+  updateWorkspaceStatus,
+  workspaceDatabaseName,
+  writeWorkspaceRegistry
+} from "./workspace-identity.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -131,7 +158,24 @@ const cloudActivationResumeEl = document.querySelector("#cloud-activation-resume
 const cloudActivationConfirmEl = document.querySelector("#cloud-activation-confirm");
 const cloudActivationCancelEl = document.querySelector("#cloud-activation-cancel");
 const cloudActivationRetryEl = document.querySelector("#cloud-activation-retry");
-const cloudActivationStagesEl = document.querySelector("#cloud-activation-stages");const localStatusEl = document.querySelector("#local-status");
+const cloudActivationStagesEl = document.querySelector("#cloud-activation-stages");
+const workspacePanelEl = document.querySelector("#workspace-panel");
+const workspaceStatusEl = document.querySelector("#workspace-status");
+const workspaceSelectEl = document.querySelector("#workspace-select");
+const workspaceApplyEl = document.querySelector("#workspace-apply");
+const workspaceSuspendEl = document.querySelector("#workspace-suspend");
+const workspaceLogoutEl = document.querySelector("#workspace-logout");
+const workspacePurgeEl = document.querySelector("#workspace-purge");
+const workspaceBindingStatusEl = document.querySelector("#workspace-binding-status");
+const workspaceConfirmationEl = document.querySelector("#workspace-confirmation");
+const workspaceConfirmationTitleEl = document.querySelector("#workspace-confirmation-title");
+const workspaceConfirmationScopeEl = document.querySelector("#workspace-confirmation-scope");
+const workspaceConfirmationWarningEl = document.querySelector("#workspace-confirmation-warning");
+const workspaceConfirmationCancelEl = document.querySelector("#workspace-confirmation-cancel");
+const workspaceConfirmationContinueEl = document.querySelector("#workspace-confirmation-continue");
+const workspaceBackupEl = document.querySelector("#workspace-backup");
+const workspaceConfirmationStatusEl = document.querySelector("#workspace-confirmation-status");
+const localStatusEl = document.querySelector("#local-status");
 const localLegacyNoticeEl = document.querySelector("#local-legacy-notice");
 const localExportLegacyEl = document.querySelector("#local-export-legacy");
 const localConvertLegacyEl = document.querySelector("#local-convert-legacy");
@@ -178,6 +222,14 @@ const restoreStatusEl = document.querySelector("#restore-status");
 const restoreInputEl = document.querySelector("#restore");
 let syncedDatabase = null;
 let localDatabase = null;
+let workspaceRegistry = null;
+let workspaceRegistryInvalid = false;
+let workspaceStartup = null;
+let workspaceEntry = null;
+let accountBinding = { state: BINDING_STATE.INDETERMINATE, businessAllowed: false };
+let workspaceConfirmation = null;
+let workspaceBusy = false;
+let bindingGeneration = 0;
 let activationLifecycle = createGenerationGuard();
 let activationState = initialActivationState();
 let activationStatus = initialFirstSyncState();
@@ -264,15 +316,27 @@ function clearMigrationFooter(generation) {
 function requiresAuthentication() {
   return !!syncedDatabase;
 }
-function businessAllowed() {
-  return !requiresAuthentication() || canAccessBusiness(authState);
+function selectedSyncedEntry() {
+  return workspaceEntry && workspaceEntry.type === WORKSPACE_TYPE.SYNCHRONIZED
+    ? workspaceEntry
+    : null;
 }
-function bootstrapSyncedDatabase() {
+function bindingAllowsBusiness() {
+  return !requiresAuthentication() || accountBinding.businessAllowed === true;
+}
+function businessAllowed() {
+  if (!requiresAuthentication()) return true;
+  return bindingAllowsBusiness() && canAccessBusiness(authState);
+}
+function bootstrapSyncedDatabase(entry) {
   const config = readCloudConfig();
   if (!shouldOpenSyncedDatabase(config)) return null;
   const schema = dexieSchema();
   const options = cloudConfigureOptions(config.databaseUrl);
-  const db = new Dexie(schema.name, { addons: [dexieCloud] });
+  const databaseName = entry && typeof entry.databaseName === "string"
+    ? entry.databaseName
+    : schema.name;
+  const db = new Dexie(databaseName, { addons: [dexieCloud] });
   db.version(schema.version).stores(schema.stores).upgrade(schema.upgrade);
   db.cloud.configure(options);
   return db;
@@ -283,6 +347,420 @@ function bootstrapSyncedDatabase() {
 function bootstrapLocalDatabase() {
   return openLocalDatabase(Dexie);
 }
+// TS-038 workspace identity, binding and scoped destructive actions ----------------
+
+function persistWorkspaceRegistry(next) {
+  if (!next) return false;
+  if (!writeWorkspaceRegistry(localStorage, next)) return false;
+  workspaceRegistry = next;
+  workspaceEntry = next.selected === WORKSPACE_SELECTION_LOCAL
+    ? null
+    : next.workspaces[next.selected] || null;
+  return true;
+}
+function persistActivationMarkerFor(registry, url) {
+  const entry = registry && registry.workspaces ? registry.workspaces[url] : null;
+  if (!entry) return true;
+  const record = activationRecordForWorkspace(entry, activationMarker());
+  if (!record) return true;
+  return writeActivationRecord(localStorage, createActivationRecord({
+    status: record.status,
+    url: record.url,
+    remoteDbId: record.remoteDbId,
+    sourceFingerprint: record.sourceFingerprint,
+    userDigest: record.userDigest
+  }));
+}
+function diagnosticSessionCategory() {
+  const status = authState && authState.status;
+  if (status === AUTH_STATUS.AUTHENTICATED) return "authenticated";
+  if (status === AUTH_STATUS.LOADING) return "loading";
+  if (status === AUTH_STATUS.SIGNED_OUT) return "signed-out";
+  if (status === AUTH_STATUS.EXPIRED) return "expired";
+  if (status === AUTH_STATUS.REFUSED) return "refused";
+  return "indeterminate";
+}
+function workspaceDiagnosticInput() {
+  const entry = selectedSyncedEntry();
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  return buildWorkspaceDiagnostic({
+    type: syncedDatabase ? WORKSPACE_TYPE.SYNCHRONIZED : WORKSPACE_TYPE.LOCAL,
+    entry,
+    effectiveBase: syncedDatabase && typeof syncedDatabase.name === "string"
+      ? syncedDatabase.name : LOCAL_DATABASE_NAME,
+    url: entry ? entry.url : null,
+    remoteDbId: persisted && typeof persisted.remoteDbId === "string"
+      ? persisted.remoteDbId : null,
+    session: diagnosticSessionCategory(),
+    binding: accountBinding.state
+  });
+}
+function renderWorkspacePanel() {
+  if (!workspacePanelEl) return;
+  const registry = workspaceRegistry;
+  const selected = registry ? registry.selected : WORKSPACE_SELECTION_LOCAL;
+  if (workspaceSelectEl) {
+    workspaceSelectEl.replaceChildren();
+    const localOption = el("option", null, "Espace local autonome");
+    localOption.value = WORKSPACE_SELECTION_LOCAL;
+    workspaceSelectEl.append(localOption);
+    if (registry) {
+      const entries = Object.values(registry.workspaces)
+        .sort((left, right) => left.url.localeCompare(right.url));
+      for (const entry of entries) {
+        const label = entry.url + " (" + entry.status + ")";
+        const option = el("option", null, label);
+        option.value = entry.url;
+        workspaceSelectEl.append(option);
+      }
+    }
+    workspaceSelectEl.value = registry ? selected : WORKSPACE_SELECTION_LOCAL;
+    if (workspaceSelectEl.value !== (registry ? selected : WORKSPACE_SELECTION_LOCAL)) {
+      workspaceSelectEl.value = WORKSPACE_SELECTION_LOCAL;
+    }
+  }
+  const entry = selectedSyncedEntry();
+  const entryForSelection = registry && selected !== WORKSPACE_SELECTION_LOCAL
+    ? registry.workspaces[selected] : null;
+  if (workspaceStatusEl) {
+    if (workspaceRegistryInvalid) {
+      workspaceStatusEl.textContent =
+        "Registre d'espaces illisible : l'espace local autonome est ouvert. Aucune purge ni copie n'est autorisée.";
+    } else if (syncedDatabase && entry) {
+      workspaceStatusEl.textContent =
+        "Espace synchronisé actif : " + entry.url + ". Base locale effective : " +
+        (syncedDatabase.name || entry.databaseName) + ".";
+    } else if (entryForSelection && entryForSelection.status === WORKSPACE_STATUS.SUSPENDED) {
+      workspaceStatusEl.textContent =
+        "Espace Cloud suspendu : " + entryForSelection.url +
+        " (" + entryForSelection.databaseName + "). Il reste sélectionnable pour une reprise explicite.";
+    } else if (entryForSelection && entryForSelection.status === WORKSPACE_STATUS.CANCELLED) {
+      workspaceStatusEl.textContent =
+        "Espace Cloud annulé : " + entryForSelection.url +
+        ". Aucun nouveau transfert n'est déclenché automatiquement.";
+    } else {
+      workspaceStatusEl.textContent =
+        "Espace local autonome actif. Aucune réplication Cloud n'est tentée.";
+    }
+  }
+  const suspended = !!entryForSelection &&
+    (entryForSelection.status === WORKSPACE_STATUS.SUSPENDED ||
+      entryForSelection.status === WORKSPACE_STATUS.CANCELLED);
+  if (workspaceSuspendEl) workspaceSuspendEl.disabled = !entry || suspended || workspaceBusy;
+  if (workspaceLogoutEl) workspaceLogoutEl.disabled = !entry || workspaceBusy;
+  if (workspacePurgeEl) workspacePurgeEl.disabled = workspaceBusy;
+  if (workspaceBindingStatusEl) {
+    if (syncedDatabase) {
+      const extra = accountBinding.state === BINDING_STATE.MISMATCH ||
+        accountBinding.state === BINDING_STATE.UNVERIFIED ||
+        accountBinding.state === BINDING_STATE.INDETERMINATE
+        ? " Déconnectez-vous ou purgez explicitement la copie locale."
+        : "";
+      workspaceBindingStatusEl.textContent = describeBindingState(accountBinding.state) + extra;
+    } else {
+      workspaceBindingStatusEl.textContent = "";
+    }
+  }
+}
+function setWorkspaceConfirmationStatus(message) {
+  if (!workspaceConfirmationStatusEl) return;
+  workspaceConfirmationStatusEl.textContent = typeof message === "string" ? message : "";
+}
+function hideWorkspaceConfirmation() {
+  workspaceConfirmation = null;
+  if (workspaceConfirmationEl) workspaceConfirmationEl.hidden = true;
+  setWorkspaceConfirmationStatus("");
+}
+function showWorkspaceConfirmation(kind, entry, pending) {
+  workspaceConfirmation = { kind, entry, pending };
+  if (!workspaceConfirmationEl) return;
+  workspaceConfirmationEl.hidden = false;
+  if (workspaceConfirmationTitleEl) {
+    workspaceConfirmationTitleEl.textContent = kind === "logout"
+      ? "Confirmer la déconnexion"
+      : "Confirmer la purge locale";
+  }
+  if (workspaceConfirmationScopeEl) {
+    workspaceConfirmationScopeEl.textContent = entry
+      ? "Espace synchronisé : " + entry.url + ". Base locale effective : " + entry.databaseName +
+        ". La copie distante n'est pas supprimée."
+      : "Espace local autonome. Base locale effective : " + LOCAL_DATABASE_NAME + ".";
+  }
+  if (workspaceConfirmationWarningEl) {
+    workspaceConfirmationWarningEl.textContent = pendingChangeWarning(pending);
+  }
+  if (workspaceConfirmationContinueEl) {
+    workspaceConfirmationContinueEl.textContent = kind === "logout"
+      ? "Confirmer la déconnexion"
+      : "Purger cette copie locale";
+    workspaceConfirmationContinueEl.disabled = false;
+  }
+  if (workspaceBackupEl) workspaceBackupEl.disabled = false;
+  setWorkspaceConfirmationStatus("");
+  if (workspaceConfirmationCancelEl) workspaceConfirmationCancelEl.focus();
+}
+async function readCacheHasBusinessRecords() {
+  if (!syncedDatabase) return null;
+  try {
+    const raw = await readSyncedRaw(syncedDatabase);
+    return raw.subjects.length > 0 || raw.items.length > 0;
+  } catch {
+    return null;
+  }
+}
+function clearBusinessForBindingBlock() {
+  documentState = emptyDocument();
+  lastRecords = emptyRecords();
+  documentLoaded = false;
+  cloudWriteBlocked = true;
+  subjectForm.hidden = false;
+  if (subjectsEl) subjectsEl.replaceChildren();
+  applyBusinessVisibility();
+}
+async function refreshAccountBinding() {
+  const generation = ++bindingGeneration;
+  const entry = selectedSyncedEntry();
+  const authenticated = authState.status === AUTH_STATUS.AUTHENTICATED;
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const user = observableValue(cloud && cloud.currentUser);
+  const userId = user && typeof user.userId === "string" ? user.userId : null;
+  let cacheHasRecords = null;
+  if (authenticated && userId && syncedDatabase) {
+    cacheHasRecords = await readCacheHasBusinessRecords();
+  }
+  if (generation !== bindingGeneration) return accountBinding;
+  accountBinding = evaluateAccountBinding({
+    entry,
+    userId,
+    authenticated,
+    cacheHasRecords
+  });
+  if (accountBinding.bind && entry && userId) {
+    const next = bindWorkspaceAccount(workspaceRegistry, entry.url, userId);
+    if (next) {
+      persistWorkspaceRegistry(next);
+      persistActivationMarkerFor(next, entry.url);
+    }
+  }
+  if (entry && (accountBinding.state === BINDING_STATE.MISMATCH ||
+      accountBinding.state === BINDING_STATE.UNVERIFIED ||
+      accountBinding.state === BINDING_STATE.INDETERMINATE)) {
+    clearBusinessForBindingBlock();
+  }
+  renderWorkspacePanel();
+  applyBusinessVisibility();
+  return accountBinding;
+}
+async function continueAuthenticatedWorkspace() {
+  // Hide any stale business view while the current session is compared to the
+  // stored account binding, before any business row is read again.
+  accountBinding = { state: BINDING_STATE.INDETERMINATE, businessAllowed: false };
+  applyBusinessVisibility();
+  const binding = await refreshAccountBinding();
+  authInteraction = null;
+  if (!binding.businessAllowed) {
+    renderAuthPanel();
+    notify("Données métier masquées : la liaison de compte ne permet pas la lecture de cet espace. Déconnectez-vous ou purgez la copie locale explicitement.");
+    return;
+  }
+  renderAuthPanel();
+  startBusiness();
+}
+async function diagnosePendingChanges() {
+  if (!syncedDatabase) return { status: PENDING_STATE.NONE, count: 0 };
+  const tables = Array.isArray(syncedDatabase.tables) ? syncedDatabase.tables : [];
+  const mutationTables = tables.filter((table) =>
+    table && typeof table.name === "string" && table.name.endsWith("_mutations"));
+  if (mutationTables.length === 0) {
+    return pendingStatusFromMutationTables({ mutationTables: [] });
+  }
+  const counts = {};
+  try {
+    await syncedDatabase.transaction("r", mutationTables, async () => {
+      for (const table of mutationTables) {
+        counts[table.name] = await table.count();
+      }
+    });
+    return pendingStatusFromMutationTables({
+      mutationTables: mutationTables.map((table) => table.name),
+      counts
+    });
+  } catch {
+    return pendingStatusFromMutationTables({ error: true });
+  }
+}
+function downloadWorkspaceSnapshot() {
+  const inventory = recoveryContext ? recoveryContext.inventory : null;
+  const result = buildBusinessExport(lastRecords, { inventory });
+  if (result.status !== "ready") {
+    setWorkspaceConfirmationStatus(
+      "Sauvegarde impossible depuis l'export métier : anomalie d'intégrité. Utilisez l'export brut de récupération, distinct et complet."
+    );
+    return false;
+  }
+  downloadJsonText(JSON.stringify(result.document, null, 2), "threadstep-workspace-backup.json");
+  setWorkspaceConfirmationStatus("Sauvegarde JSON téléchargée. Aucune donnée n'a été supprimée.");
+  return true;
+}
+async function applyWorkspaceSelection() {
+  if (workspaceBusy) return;
+  const target = workspaceSelectEl ? workspaceSelectEl.value : WORKSPACE_SELECTION_LOCAL;
+  const entry = workspaceRegistry && workspaceRegistry.workspaces
+    ? workspaceRegistry.workspaces[target] : null;
+  const pending = await diagnosePendingChanges();
+  const plan = entry && (entry.status === WORKSPACE_STATUS.SUSPENDED ||
+    entry.status === WORKSPACE_STATUS.CANCELLED)
+    ? planWorkspaceResume({ registry: workspaceRegistry, url: entry.url })
+    : planWorkspaceSelection({ registry: workspaceRegistry, target, pending });
+  if (!plan.allowed) {
+    notifyError("Sélection impossible : " + (plan.reason || "espace inconnu") +
+      ". Aucune base n'est copiée ni supprimée.");
+    return;
+  }
+  if (!persistWorkspaceRegistry(plan.registry)) {
+    notifyError("Impossible d'enregistrer la sélection d'espace. Aucune base n'est modifiée.");
+    return;
+  }
+  if (plan.url) writeCloudConfig(localStorage, plan.url);
+  persistActivationMarkerFor(plan.registry, plan.url);
+  if (plan.notice) notify(plan.notice);
+  location.reload();
+}
+async function suspendCurrentWorkspace() {
+  if (workspaceBusy) return;
+  const entry = selectedSyncedEntry();
+  if (!entry) return;
+  const pending = await diagnosePendingChanges();
+  const plan = planWorkspaceSuspension({
+    registry: workspaceRegistry,
+    url: entry.url,
+    pending
+  });
+  if (!plan.allowed) {
+    notifyError("Suspension impossible : aucune session n'est terminée et aucune base n'est supprimée.");
+    return;
+  }
+  if (!persistWorkspaceRegistry(plan.registry)) {
+    notifyError("Impossible d'enregistrer la suspension. Aucune base n'est supprimée.");
+    return;
+  }
+  persistActivationMarkerFor(plan.registry, entry.url);
+  if (plan.notice) notify(plan.notice);
+  location.reload();
+}
+async function executeWorkspaceLogout(url) {
+  const entry = workspaceRegistry && workspaceRegistry.workspaces
+    ? workspaceRegistry.workspaces[url] : null;
+  if (!entry || !syncedDatabase || !syncedDatabase.cloud ||
+      typeof syncedDatabase.cloud.logout !== "function") {
+    notifyError("Déconnexion impossible : la session native n'est pas disponible. Aucune donnée n'est supprimée.");
+    return false;
+  }
+  // Re-run the diagnosis immediately before the confirmed native call.
+  const pending = await diagnosePendingChanges();
+  const plan = planWorkspaceLogout({
+    registry: workspaceRegistry,
+    url,
+    pending,
+    confirmed: true
+  });
+  if (!plan.allowed) {
+    showWorkspaceConfirmation("logout", entry, pending);
+    return false;
+  }
+  try {
+    await syncedDatabase.cloud.logout({ force: true });
+  } catch {
+    notifyError("La déconnexion native a échoué : la session et le cache local restent inchangés, les données métier restent masquées si nécessaire.");
+    return false;
+  }
+  persistWorkspaceRegistry(plan.registry);
+  const previous = activationMarker();
+  writeActivationRecord(localStorage, createActivationRecord({
+    status: WORKSPACE_STATUS.ACTIVE,
+    url,
+    remoteDbId: previous ? previous.remoteDbId : entry.remoteDbId,
+    sourceFingerprint: previous ? previous.sourceFingerprint : null
+  }));
+  location.reload();
+  return true;
+}
+async function requestWorkspaceLogout() {
+  if (workspaceBusy) return;
+  const entry = selectedSyncedEntry();
+  if (!entry) return;
+  const pending = await diagnosePendingChanges();
+  const plan = planWorkspaceLogout({
+    registry: workspaceRegistry,
+    url: entry.url,
+    pending
+  });
+  if (plan.action === "confirm") {
+    showWorkspaceConfirmation("logout", entry, pending);
+    return;
+  }
+  await executeWorkspaceLogout(entry.url);
+}
+async function executeWorkspacePurge() {
+  const entry = selectedSyncedEntry();
+  const target = entry ? entry.url : WORKSPACE_SELECTION_LOCAL;
+  const effective = syncedDatabase && typeof syncedDatabase.name === "string"
+    ? syncedDatabase.name
+    : LOCAL_DATABASE_NAME;
+  const pending = await diagnosePendingChanges();
+  const plan = planWorkspacePurge({
+    registry: workspaceRegistry,
+    target,
+    effectiveDatabaseName: effective,
+    pending,
+    confirmed: true
+  });
+  if (!plan.allowed) {
+    setWorkspaceConfirmationStatus(
+      "Purge refusée : " + (plan.reason || "base non identifiée") +
+      ". Aucune base n'a été supprimée et aucune donnée distante n'a été modifiée."
+    );
+    return false;
+  }
+  const db = syncedDatabase || localDatabase;
+  try {
+    if (db && typeof db.close === "function") db.close();
+    await Dexie.delete(plan.databaseName);
+  } catch {
+    setWorkspaceConfirmationStatus(
+      "Purge locale impossible : la base est peut-être encore ouverte. Rechargez la page puis réessayez ; aucune donnée distante n'a été modifiée."
+    );
+    return false;
+  }
+  persistWorkspaceRegistry(plan.registry);
+  location.reload();
+  return true;
+}
+async function requestWorkspacePurge() {
+  if (workspaceBusy) return;
+  const entry = selectedSyncedEntry();
+  const pending = await diagnosePendingChanges();
+  showWorkspaceConfirmation("purge", entry, pending);
+}
+async function confirmWorkspaceAction() {
+  if (!workspaceConfirmation || workspaceBusy) return;
+  workspaceBusy = true;
+  if (workspaceConfirmationContinueEl) workspaceConfirmationContinueEl.disabled = true;
+  if (workspaceBackupEl) workspaceBackupEl.disabled = true;
+  const kind = workspaceConfirmation.kind;
+  if (kind === "logout") {
+    const entry = selectedSyncedEntry();
+    if (entry) await executeWorkspaceLogout(entry.url);
+  } else {
+    await executeWorkspacePurge();
+  }
+  workspaceBusy = false;
+  if (workspaceConfirmationContinueEl) workspaceConfirmationContinueEl.disabled = false;
+  if (workspaceBackupEl) workspaceBackupEl.disabled = false;
+  renderWorkspacePanel();
+}
+
 // TS-037 activation assistant: the marker decides whether startup opens the
 // autonomous local workspace or the synchronized database. No activation path
 // ever reads business records out of the synchronized store as its source.
@@ -290,6 +768,8 @@ function activationMarker() {
   return readActivationRecord(localStorage);
 }
 function activationConfiguredUrl() {
+  const entry = selectedSyncedEntry();
+  if (entry) return entry.url;
   const config = readCloudConfig();
   return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
 }
@@ -648,6 +1128,12 @@ function updateActivationFromNative() {
       sourceFingerprint: record.sourceFingerprint,
       userDigest: record.userDigest
     }));
+    const activated = updateWorkspaceStatus(
+      workspaceRegistry,
+      record.url,
+      WORKSPACE_STATUS.ACTIVE
+    );
+    if (activated) persistWorkspaceRegistry(activated);
   } else if (activationStatus.status === FIRST_SYNC.ERROR) {
     setActivationStage({ type: "fail", reason: activationStatus.reason || "sync-error" });
   }
@@ -1382,9 +1868,11 @@ async function reloadRawAfterRepair() {
 function applyBusinessVisibility() {
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
-  if (businessToolsEl) businessToolsEl.hidden = configured && !authenticated;
-  // Do not display an empty dashboard while IndexedDB is still loading.
-  if (dashboardEl) dashboardEl.hidden = configured && (!authenticated || !documentLoaded);
+  const bindingBlocked = configured && accountBinding.businessAllowed !== true;
+  if (businessToolsEl) businessToolsEl.hidden = configured && (!authenticated || bindingBlocked);
+  // Do not display an empty dashboard while IndexedDB is still loading or
+  // while another account's cache is unverified/mismatched.
+  if (dashboardEl) dashboardEl.hidden = configured && (!authenticated || bindingBlocked || !documentLoaded);
   // In local mode the dashboard may load visibly, but a failed read must never
   // be presented as an authoritative empty workspace.
   if (dashboardEl && !configured) dashboardEl.hidden = localReadFailed;
@@ -1792,10 +2280,10 @@ function handleAuthState(next) {
   }
   if (canAccessBusiness(authState)) {
     authInteraction = null;
-    renderAuthPanel();
-    startBusiness();
+    void continueAuthenticatedWorkspace();
     return;
   }
+  accountBinding = { state: BINDING_STATE.UNAUTHENTICATED, businessAllowed: false };
   renderAuthPanel();
 }
 function handleAuthInteraction(interaction) {
@@ -1808,6 +2296,7 @@ function handleAuthInteraction(interaction) {
 }
 function startBusiness() {
   if (businessStarted) return;
+  if (requiresAuthentication() && !bindingAllowsBusiness()) return;
   businessStarted = true;
   documentLoaded = false;
   applyBusinessVisibility();
@@ -2985,6 +3474,21 @@ subjectForm.addEventListener("submit", (event) => {
   persist();
   input.focus();
 });
+if (workspaceApplyEl) workspaceApplyEl.addEventListener("click", () => { void applyWorkspaceSelection(); });
+if (workspaceSuspendEl) workspaceSuspendEl.addEventListener("click", () => { void suspendCurrentWorkspace(); });
+if (workspaceLogoutEl) workspaceLogoutEl.addEventListener("click", () => { void requestWorkspaceLogout(); });
+if (workspacePurgeEl) workspacePurgeEl.addEventListener("click", () => { void requestWorkspacePurge(); });
+if (workspaceConfirmationCancelEl) workspaceConfirmationCancelEl.addEventListener("click", () => {
+  const kind = workspaceConfirmation ? workspaceConfirmation.kind : null;
+  hideWorkspaceConfirmation();
+  notify("Action annulée : la session, la base locale et la destination restent inchangées.");
+  if (kind === "logout" && workspaceLogoutEl) workspaceLogoutEl.focus();
+  else if (workspacePurgeEl) workspacePurgeEl.focus();
+});
+if (workspaceBackupEl) workspaceBackupEl.addEventListener("click", () => { downloadWorkspaceSnapshot(); });
+if (workspaceConfirmationContinueEl) {
+  workspaceConfirmationContinueEl.addEventListener("click", () => { void confirmWorkspaceAction(); });
+}
 document.querySelector("#export").addEventListener("click", exportBusinessBackup);
 if (restoreInputEl) restoreInputEl.addEventListener("change", async (event) => {
   const file = event.target.files && event.target.files[0];
@@ -3137,12 +3641,23 @@ if (cloudConfigFormEl) {
       showCloudConfigError("Impossible d'enregistrer l'activation dans ce navigateur. La source locale reste intacte.");
       return;
     }
+    const registered = registerWorkspace(workspaceRegistry, {
+      url: result.url,
+      databaseName: workspaceDatabaseName(result.url),
+      schemaVersion: SCHEMA_VERSION,
+      status: WORKSPACE_STATUS.ACTIVATING
+    });
+    const selectedRegistry = selectWorkspaceInRegistry(registered, result.url);
+    if (!selectedRegistry || !persistWorkspaceRegistry(selectedRegistry)) {
+      showCloudConfigError("Impossible d'enregistrer l'espace de travail. La source locale reste intacte.");
+      return;
+    }
     activationState = initialActivationState();
     activationStatus = initialFirstSyncState();
     activationContext = null;
     if (cloudUrlEl) cloudUrlEl.value = result.url;
     hideCloudConfigError();
-    syncedDatabase = bootstrapSyncedDatabase();
+    syncedDatabase = bootstrapSyncedDatabase(workspaceEntry);
     businessStore = syncedDatabase ? createDexieStore(syncedDatabase) : null;
     documentState = emptyDocument();
     documentLoaded = false;
@@ -3219,7 +3734,7 @@ function commitOperations(records) {
   return pendingCloudWrites;
 }
 async function refreshSyncedDocument() {
-  if (!syncedDatabase || !businessAllowed()) return;
+  if (!syncedDatabase || !businessAllowed() || !bindingAllowsBusiness()) return;
   // Await previously submitted writes before replacing the DOM from IndexedDB.
   if (cloudReadPending) return cloudReadPending;
   cloudReadPending = (async () => {
@@ -3282,7 +3797,8 @@ function subscribeToChanges() {
   }
   // Dexie Cloud emits a sync completion when remote records have arrived.
   // The Dexie 'changes' event requires an addon absent from this bundle.
-  if (syncedDatabase && syncedDatabase.cloud.events.syncComplete) {
+  if (syncedDatabase && bindingAllowsBusiness() &&
+      syncedDatabase.cloud.events.syncComplete) {
     syncedDatabase.cloud.events.syncComplete.subscribe(() => {
       const attestation = evaluateSyncAttestation(nativeAttestationInput());
       migrationStatus = reduceReconciliationStatus(migrationStatus, {
@@ -3347,6 +3863,8 @@ function migrationPanel() {
   return migrationPanelEl;
 }
 function migrationDestination() {
+  const entry = selectedSyncedEntry();
+  if (entry) return entry.url;
   const config = readCloudConfig();
   return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
 }
@@ -3414,7 +3932,9 @@ function readSyncDiagnosticInput() {
     readError: syncReadError,
     authRefusal: refusal,
     authLoading: !!syncedDatabase && authState.status === AUTH_STATUS.LOADING,
-    authExpired: !!syncedDatabase && authState.status === AUTH_STATUS.EXPIRED
+    authExpired: !!syncedDatabase && authState.status === AUTH_STATUS.EXPIRED,
+    workspace: workspaceDiagnosticInput(),
+    binding: accountBinding.state
   };
 }
 function nativePullAdapter(db) {
@@ -4153,19 +4673,46 @@ async function confirmReconciliation(context) {
   }
 }
 
+const workspaceLegacyConfig = readCloudConfig();
+const workspaceLegacyRecord = activationMarker();
+const workspaceRegistryState = readWorkspaceRegistryState(localStorage);
+const initializedRegistry = initializeWorkspaceRegistry({
+  state: workspaceRegistryState,
+  config: workspaceLegacyConfig,
+  record: workspaceLegacyRecord,
+  schemaVersion: SCHEMA_VERSION
+});
+workspaceRegistry = initializedRegistry.registry;
+workspaceRegistryInvalid = initializedRegistry.invalid;
+if (initializedRegistry.migrated && workspaceRegistry) {
+  // Migrate the legacy entry in place without renaming, copying or deleting
+  // any existing IndexedDB base.
+  writeWorkspaceRegistry(localStorage, workspaceRegistry);
+}
+workspaceStartup = resolveWorkspaceStartup({
+  registry: workspaceRegistry,
+  registryInvalid: workspaceRegistryInvalid,
+  config: workspaceLegacyConfig,
+  record: workspaceLegacyRecord,
+  schemaVersion: SCHEMA_VERSION,
+  state: initializedRegistry
+});
+workspaceRegistry = workspaceStartup.registry;
+workspaceEntry = workspaceStartup.entry || null;
 activationStartup = resolveStartupWorkspace({
-  record: activationMarker(),
-  config: readCloudConfig()
+  record: workspaceLegacyRecord,
+  config: workspaceLegacyConfig
 });
 if (activationStartup.reason === ACTIVATION_STATUS.ACTIVATING) {
   activationState = { ...initialActivationState(), stage: ACTIVATION_STAGE.CONNECTING };
 }
 syncedDatabase = null;
-if (activationStartup.workspace === "synced") syncedDatabase = bootstrapSyncedDatabase();
+if (workspaceStartup.workspace === "synced") syncedDatabase = bootstrapSyncedDatabase(workspaceEntry);
 historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
 renderLocalWorkspace();
 renderActivationPanel();
+renderWorkspacePanel();
 if (syncedDatabase) {
   businessStore = createDexieStore(syncedDatabase);
   setupAuthentication();

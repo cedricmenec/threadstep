@@ -522,7 +522,7 @@ test("6.6 app starts the business view on local IndexedDB without authentication
 
   const bootstrap = app.slice(
     app.indexOf("function bootstrapLocalDatabase"),
-    app.indexOf("function showCloudConfigError")
+    app.indexOf("// TS-038 workspace identity")
   );
   assert.doesNotMatch(bootstrap, /dexieCloud|cloud\.configure|addons|fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|setupAuthentication|renderAuthPanel/);
   const localStart = app.slice(
@@ -530,7 +530,7 @@ test("6.6 app starts the business view on local IndexedDB without authentication
     app.indexOf("function readResumePreference")
   );
   assert.doesNotMatch(localStart, /setupAuthentication|renderAuthPanel|authController|OTP/);
-  const startup = app.slice(app.lastIndexOf("syncedDatabase = bootstrapSyncedDatabase()"));
+  const startup = app.slice(app.lastIndexOf("syncedDatabase = bootstrapSyncedDatabase(workspaceEntry)"));
   assert.match(startup, /if \(syncedDatabase\) \{[\s\S]*?setupAuthentication\(\);[\s\S]*?\} else \{[\s\S]*?startLocalWorkspace\(\);/);
   assert.doesNotMatch(startup.slice(startup.indexOf("} else {")), /setupAuthentication|offerHistoricalMigration|detectHistoricalDocument|runMigration|planMigration/);
 
