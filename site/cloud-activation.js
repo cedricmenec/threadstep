@@ -18,6 +18,7 @@ export const ACTIVATION_VERSION = 1;
 
 export const ACTIVATION_STATUS = Object.freeze({
   ACTIVATING: "activating",
+  SUSPENDED: "suspended",
   CANCELLED: "cancelled",
   ACTIVE: "active"
 });
@@ -279,13 +280,22 @@ export function resolveStartupWorkspace(input = {}) {
   if (!configured) {
     return { workspace: "local", reason: "not-configured", legacy: false };
   }
-  const record = parseActivationRecord(source.record);
+  const rawRecord = source.record;
+  const record = parseActivationRecord(rawRecord);
   if (!record) {
+    // An absent marker keeps the historical legacy configuration active, but
+    // any present yet invalid/unknown marker fails closed to the local base.
+    if (rawRecord !== undefined && rawRecord !== null && rawRecord !== "") {
+      return { workspace: "local", reason: "invalid-record", legacy: false };
+    }
     return { workspace: "synced", reason: "legacy-configuration", legacy: true };
   }
   if (record.status === ACTIVATION_STATUS.ACTIVATING ||
       record.status === ACTIVATION_STATUS.ACTIVE) {
     return { workspace: "synced", reason: record.status, legacy: false };
+  }
+  if (record.status === ACTIVATION_STATUS.SUSPENDED) {
+    return { workspace: "local", reason: ACTIVATION_STATUS.SUSPENDED, legacy: false };
   }
   return { workspace: "local", reason: record.status, legacy: false };
 }

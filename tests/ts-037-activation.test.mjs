@@ -411,6 +411,32 @@ test("1.5 configuration, OTP, first pull and cancellation never write the source
 
 // 2.2 --------------------------------------------------------------------------
 
+test("2.2 suspended activation is parsed, starts locally and keeps its destination", () => {
+  const config = { databaseUrl: destination.url };
+  const record = createActivationRecord({
+    status: ACTIVATION_STATUS.SUSPENDED,
+    url: destination.url,
+    remoteDbId: destination.remoteDbId,
+    userId
+  });
+  assert.equal(record.status, ACTIVATION_STATUS.SUSPENDED);
+  assert.equal(parseActivationRecord(record).status, ACTIVATION_STATUS.SUSPENDED);
+  const startup = resolveStartupWorkspace({ record, config });
+  assert.equal(startup.workspace, "local");
+  assert.equal(startup.reason, ACTIVATION_STATUS.SUSPENDED);
+  assert.equal(startup.legacy, false);
+  assert.equal(record.url, destination.url);
+  assert.equal(record.remoteDbId, destination.remoteDbId);
+  assert.equal(record.userDigest, hashActivationUser(userId));
+
+  // Unknown statuses remain fail-closed to the local workspace.
+  const unknown = resolveStartupWorkspace({
+    record: { version: 1, status: "mystery", url: destination.url },
+    config
+  });
+  assert.equal(unknown.workspace, "local");
+});
+
 test("2.2 startup routes local, cancelled, activating, active and legacy configurations", () => {
   const config = { databaseUrl: destination.url };
   const cases = [

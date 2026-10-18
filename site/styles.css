@@ -270,3 +270,16 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .cloud-activation button:focus-visible,.cloud-activation-consent input:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
 .cloud-activation-blocked{margin:.5rem 0;color:#6d4a3f;font-size:.88rem}
 @media(max-width:620px){.cloud-activation{padding:.75rem}.cloud-activation-stages{font-size:.75rem}}
+.workspace-panel{border:1px solid #dde4d6;background:#f9faf5;border-radius:14px;padding:16px 18px;margin-top:22px;display:flex;flex-direction:column;gap:10px}
+.workspace-panel[hidden]{display:none}
+.workspace-panel label{font-size:.82rem;font-weight:700;color:#415748}
+.workspace-panel select{max-width:100%;min-height:44px;border-radius:10px;border:1px solid #cbd5c9;background:#fff;color:#24382f;padding:8px 12px}
+.workspace-status,.workspace-binding-status{margin:0;font-size:.85rem;color:#53675a;line-height:1.5;overflow-wrap:anywhere}
+.workspace-binding-status:empty{display:none}
+.workspace-actions,.workspace-confirmation-actions{display:flex;gap:8px;flex-wrap:wrap}
+.workspace-actions button,.workspace-confirmation-actions button{min-height:44px}
+.workspace-confirmation{border:1px solid #e2c9c0;background:#fff7f4;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.workspace-confirmation[hidden]{display:none}
+.workspace-confirmation h3{margin:0;font-size:1rem}
+.workspace-confirmation p{margin:0;font-size:.85rem;color:#5c4a43;line-height:1.5;overflow-wrap:anywhere}
+.workspace-confirmation-status{font-weight:600}

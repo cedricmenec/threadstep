@@ -19,7 +19,8 @@ import {
   validateSynchronizedStores,
   readCloudConfig,
   writeCloudConfig,
-  clearCloudConfig
+  clearCloudConfig,
+  synchronizedDatabaseName
 } from "../site/dexie-foundation.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -189,6 +190,37 @@ test("3.3 database name is stable and nameSuffix stays active", () => {
   assert.deepEqual(Object.keys(SYNCHRONIZED_STORES).sort(), ["items", "subjects"]);
   const options = cloudConfigureOptions("https://demo.dexie.cloud");
   assert.notEqual(options.nameSuffix, false);
+});
+
+test("3.3 per-URL base names are deterministic, distinct and legacy preserving", () => {
+  const same = synchronizedDatabaseName("https://alpha.dexie.cloud");
+  assert.equal(same, synchronizedDatabaseName("https://alpha.dexie.cloud/"));
+  assert.match(same, /^threadstep-ws-[a-f0-9]{16}$/);
+
+  // Both URLs derive the same native nameSuffix ("alpha" / first path segment)
+  // but must still receive distinct application-level bases.
+  const pathCollision = synchronizedDatabaseName("https://dexie.cloud/alpha");
+  const hostCollision = synchronizedDatabaseName("https://alpha.dexie.cloud");
+  assert.notEqual(pathCollision, hostCollision);
+
+  const beta = synchronizedDatabaseName("https://beta.dexie.cloud");
+  assert.notEqual(same, beta);
+  assert.equal(synchronizedDatabaseName("https://alpha.dexie.cloud", {
+    legacyDatabaseName: DATABASE_NAME
+  }), DATABASE_NAME);
+  assert.equal(synchronizedDatabaseName("https://alpha.dexie.cloud", {
+    legacyName: DATABASE_NAME
+  }), DATABASE_NAME);
+  assert.equal(synchronizedDatabaseName("not a url"), null);
+  assert.equal(synchronizedDatabaseName("http://alpha.dexie.cloud"), null);
+  assert.notEqual(synchronizedDatabaseName("https://alpha.dexie.cloud"), DATABASE_NAME);
+  assert.notEqual(synchronizedDatabaseName("https://alpha.dexie.cloud"), LOCAL_DATABASE_NAME);
+
+  const options = cloudConfigureOptions("https://alpha.dexie.cloud");
+  assert.equal(options.nameSuffix, undefined);
+  assert.notEqual(options.nameSuffix, false);
+  assert.equal(options.requireAuth, true);
+  assert.equal(dexieSchema().version, SCHEMA_VERSION);
 });
 
 test("3.4 the autonomous local workspace has a distinct stable schema", () => {

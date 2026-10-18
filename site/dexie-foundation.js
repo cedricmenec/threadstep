@@ -1,3 +1,5 @@
+import { sha256Hex } from "./fingerprint.js";
+
 export const CLOUD_CONFIG_KEY = "threadstep.cloud.config.v1";
 export const DATABASE_NAME = "threadstep";
 export const LOCAL_DATABASE_NAME = "threadstep-local";
@@ -47,6 +49,22 @@ export function shouldOpenSyncedDatabase(config) {
     ? config.databaseUrl
     : typeof config.url === "string" ? config.url : null;
   return validateCloudUrl(candidate).valid;
+}
+
+// Deterministic per-URL base name. `nameSuffix: true` (the Dexie Cloud
+// default) remains enabled, so the effective IndexedDB name is
+// `<base>-<nativeSuffix>`. Legacy workspaces pass their existing name.
+export function synchronizedDatabaseName(rawUrl, options = {}) {
+  const result = validateCloudUrl(rawUrl);
+  if (!result.valid) return null;
+  const settings = options && typeof options === "object" ? options : {};
+  if (typeof settings.legacyDatabaseName === "string" && settings.legacyDatabaseName.length > 0) {
+    return settings.legacyDatabaseName;
+  }
+  if (typeof settings.legacyName === "string" && settings.legacyName.length > 0) {
+    return settings.legacyName;
+  }
+  return "threadstep-ws-" + sha256Hex(result.url).slice(0, 16);
 }
 
 export function cloudConfigureOptions(databaseUrl) {
