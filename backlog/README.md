@@ -1,5 +1,11 @@
 # Backlog ThreadStep
 
+## Fiabilisation des migrations Dexie Cloud : TS-031 (18 octobre 2026)
+
+- **[TS-031](tasks/TS-031.md) : reprendre et réconcilier une migration Dexie Cloud sans perte de données.** `ready / manual / high`, priorité critique. Après le correctif de persistance [#127](https://github.com/cedricmenec/threadstep/pull/127), une source V1 peut rester bloquée devant une cible déjà peuplée avec des identifiants divergents. Le brief couvre diagnostic détaillé, décisions explicites par conflit, import partiel non destructif, copies à identifiants stables, contrôle de la première synchronisation distante et reprise idempotente. **Il s'agit uniquement d'une préparation à implémenter via Agent OpenSpec, pas d'un correctif runtime livré.**
+
+*La section datée du 17 octobre ci-dessous est le cadrage historique de TS-024 à TS-030 et ne constitue pas un état de livraison actualisé.*
+
 ## Synchronisation Dexie Cloud proposée le 17 octobre 2026 (non implémentée)
 
 [Spécification normative complète](../docs/product/specs/dexie-cloud-local-first.md) · [Architecture et plan de déploiement](../docs/product/dexie-cloud-rollout.md).
