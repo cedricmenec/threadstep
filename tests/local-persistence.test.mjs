@@ -545,8 +545,9 @@ test("6.6 app starts the business view on local IndexedDB without authentication
   assert.match(app, /Échec de la transaction locale/);
   assert.match(app, /Lecture de l'espace IndexedDB impossible/);
   assert.match(app, /Stockage local IndexedDB indisponible/);
-  assert.match(app, /await persist\(\);/);
+  assert.match(app, /openLocalImportPreview\(text\)/);
   assert.match(app, /businessStore\.commit\(operations\)/);
+  assert.doesNotMatch(app, /confirm\("Remplacer toutes les données locales par cet import \?"\)/);
 });
 
 test("6.7 documentation records local-first startup, legacy export and TS boundaries", () => {

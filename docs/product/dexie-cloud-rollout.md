@@ -165,3 +165,34 @@ Un changement de session ou d'URL actualise le diagnostic et signale une
 incohérence de base persistée sans copier de données entre espaces. La recette
 réelle sur instance Cloud isolée, Chrome mobile, OTP, coupure réseau, droits et
 premier pull reste manuelle et hors CI.
+
+## Import, récupération et réparation TS-035
+
+L'import Cloud et la conversion locale partagent désormais le même résolveur de
+**provenance**. Un export IndexedDB déclare `idsCanonical: true` ; un V1 brut
+reste mappé une seule fois ; un export historique `legacy:legacy:` n'est reconnu
+que par des métadonnées explicites. Une source non marquée est **ambiguë**,
+même sans préfixe, et aucun plan d'écriture n'est produit avant une décision
+humaine. Réimporter le même fichier ne crée aucun doublon et ne transforme
+jamais `legacy:s1` en `legacy:legacy:s1`.
+
+En cas d'incohérence (par exemple **5 sujets / 19 tâches** avec une tâche
+orpheline créée sur un autre appareil), la lecture stricte n'efface plus la vue
+entière : l'application entre en **lecture seule**, affiche les sujets valides et
+liste les anomalies par codes stables. L'**export brut de récupération** contient
+les 19 tâches accessibles, orpheline comprise, avec compteurs et empreinte, et
+reste distinct de l'export V1 désactivé tant que l'anomalie subsiste.
+
+Une **réparation** de références exige une source/provenance prouvant l'identité,
+une **sauvegarde de récupération** vérifiée, un **consentement** lié au plan et à
+la destination affichée (URL, `remoteDbId`, compte, droits, realms), puis une
+revalidation juste avant le commit. Seuls `subjectId`/`parentId` planifiés sont
+modifiés, sans suppression ni remplacement arbitraire ; une collision ou une
+modification concurrente annule la transaction. Une exécution répétée ne crée
+aucun doublon.
+
+La **convergence** n'est pas déduite d'un commit local ni d'un simple état
+`in-sync`. Elle exige un pull natif et une lecture métier fraîche sur le même
+appareil ; la propagation vers un second navigateur et la recette Chrome
+Android restent **manuelles**, sur une instance Dexie Cloud isolée, avec
+sauvegardes préalables et sans jamais utiliser les bases personnelles.

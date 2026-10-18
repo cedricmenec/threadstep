@@ -95,6 +95,7 @@ function plan(document, target, extra = {}) {
     destination,
     userId,
     resolutions: {},
+    provenance: { exportKind: "v1-raw" },
     ...extra
   });
 }

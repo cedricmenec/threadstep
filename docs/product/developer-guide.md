@@ -445,3 +445,49 @@ métier** ; aucune permission n'est modifiée. Un import/migration est effectué
 avec `add` transactionnel (jamais `put`) afin de refuser une collision
 intervenue après la relecture du plan. Il faut encore effectuer la recette
 sur Dexie Cloud réel avec un schéma de serveur autorisant les clés `id`.
+
+## Provenance, récupération et réparation des références (TS-035)
+
+TS-035 rend le mapping d'identités **provenance-aware** dans
+`site/migration.js`. Chaque source est classée explicitement comme V1 brut,
+export IndexedDB déjà projeté, export historique `legacy:legacy:` ou provenance
+inconnue. Une source inconnue reste **ambiguë** et bloque toute écriture, avec
+ou sans préfixe, jusqu'à une décision explicite : ni le titre, ni la
+ressemblance, ni le retrait de `legacy:` ne prouvent une identité. La réponse
+choisie entre dans l'empreinte du plan, donc changer d'avis invalide le
+consentement précédent.
+
+`site/data-integrity-recovery.js` fournit une taxonomie de lecture distincte :
+`storage-unavailable`, `read-refused`, `projection-invalid`,
+`not-visible-unauthorized` et `indeterminate`. Aucun de ces états ne devient un
+espace vide, une base Cloud vide ou une synchronisation confirmée. Une
+projection métier invalide ouvre une **consultation en lecture seule** : les
+sujets cohérents restent lisibles, chaque anomalie est listée par code
+(`dangling-subject`, `prefix-variant`, etc.) et aucune réparation automatique
+n'est lancée au chargement.
+
+L'**export brut de récupération** est distinct de l'export V1 métier. Il est lu
+depuis les stores bruts, inclut les orphelins et les métadonnées utiles, expose
+compteurs et empreinte, et exclut tokens, OTP, identifiants d'authentification
+et secrets. Tant qu'une anomalie d'intégrité existe, l'export V1 normal est
+désactivé avec explication ; aucun enregistrement accessible n'est omis
+silencieusement. La fixture de régression déterministe **5 sujets / 19 tâches
+dont une orpheline** et les variantes `legacy:s1` / `legacy:legacy:s1` couvrent
+ce diagnostic sans écrire.
+
+Le plan de réparation est prévisualisable et déterministe : sources, cible,
+destination/compte, variante d'identité, mapping proposé, changements
+`subjectId`/`parentId`, champs métier préservés, groupes ambigus ou bloqués,
+compteurs avant/après et empreinte. Un rattachement n'est proposé que si la
+provenance sélectionnée fournit une identité unique ; l'application exige une
+**sauvegarde de récupération vérifiée** (empreinte et comptes) et un
+**consentement** lié au plan et à la destination (URL, `remoteDbId`, session,
+droits/realms). Le commit ne modifie que les références planifiées, sans
+suppression ni renommage massif, et reste idempotent après reprise.
+
+La **convergence** reste prudente : un commit IndexedDB local ou un signal
+`in-sync` seul ne prouve rien. Seul un pull natif attesté suivi d'une lecture
+métier fraîche contenant les enregistrements réparés peut afficher une
+convergence sur cet appareil ; la convergence sur un second appareil reste une
+recette manuelle sur instance isolée. Aucun titre, note, email, OTP ou token
+n'est journalisé : les événements exposent uniquement des codes et des comptes.
