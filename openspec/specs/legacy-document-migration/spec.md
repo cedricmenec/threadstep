@@ -70,6 +70,14 @@ data untouched.
 - **AND** the JSON export of the historical document remains available
 - **AND** no synchronized or remote data is added, changed or removed
 
+#### Scenario: Local conversion does not require a Cloud consent
+
+- **GIVEN** a valid historical document and an autonomous local workspace
+- **WHEN** the user explicitly confirms a local conversion
+- **THEN** the conversion may write only to the local IndexedDB workspace
+- **AND** no configured Dexie Cloud destination, session or synchronized write is required
+- **AND** this consent gate remains required for any later synchronized import
+
 ### Requirement: Migration destination and effect disclosure
 
 Before requesting consent, the application SHALL present the migration
