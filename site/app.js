@@ -15,10 +15,19 @@ import {
   runReconciliation,
   withAttestedTarget
 } from "./migration-reconciliation.js";
-import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
+import { AUTH_MESSAGE_KINDS, AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { availableLocalBackup } from "./local-recovery.js";
 import { LOCAL_MIGRATION_STATUS, detectLocalSource, isLocalCompletion, planLocalConversion, readLocalProvenance, runLocalConversion, writeLocalProvenance } from "./local-migration.js";
 import { readSyncedRecords } from "./synced-records.js";
+import {
+  LOCAL_WRITE_STATE,
+  buildDiagnosticView,
+  buildSyncDiagnostic,
+  createSyncDiagnosticsController,
+  normalizeSyncState,
+  reduceLocalWriteStatus,
+  retryReasonLabel
+} from "./sync-diagnostics.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -67,6 +76,7 @@ const localConversionConfirmEl = document.querySelector("#local-conversion-confi
 const localConversionRefuseEl = document.querySelector("#local-conversion-refuse");
 const localConversionStatusEl = document.querySelector("#local-conversion-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
+const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
 let syncedDatabase = null;
 let localDatabase = null;
 let authController = null;
@@ -109,6 +119,12 @@ let localReadFailed = false;
 let localWriteBlocked = false;
 let historicalGuard = null;
 let localConversionContext = null;
+let syncDiagnosticsController = null;
+let syncDiagnosticsSubscribedFor = null;
+let syncReadError = null;
+let localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
+let syncRetryBusy = false;
+let syncDiagnosticAnnouncement = "";
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -664,13 +680,16 @@ async function refreshLocalDocument() {
     setLocalError("");
     render();
     applyBusinessVisibility();
+    renderSyncDiagnostic();
     setLocalStatus("Données chargées depuis IndexedDB sur cet appareil.");
     notify("Données chargées depuis IndexedDB sur cet appareil.");
   })().catch(() => {
     documentLoaded = false;
     localReadFailed = true;
     localWriteBlocked = true;
+    localWriteStatus = reduceLocalWriteStatus(localWriteStatus, { type: "read-error" });
     applyBusinessVisibility();
+    renderSyncDiagnostic();
     setLocalError("Lecture de l'espace IndexedDB impossible : affichage bloqué pour protéger les données. Vos données historiques restent exportables ; ne réimportez pas à l'aveugle.");
     notify("Lecture IndexedDB impossible : affichage bloqué pour protéger les données. Ne réimportez pas.");
   }).finally(() => { localReadPending = null; });
@@ -1714,8 +1733,8 @@ if (authFormEl) authFormEl.addEventListener("submit", submitAuthForm);
 if (authSubmitEl) authSubmitEl.addEventListener("click", submitAuthForm);
 if (authResendEl) authResendEl.addEventListener("click", resendOtp);
 if (authCancelEl) authCancelEl.addEventListener("click", cancelOtp);
-window.addEventListener("online", () => { if (authController) authController.refresh(); });
-window.addEventListener("offline", () => { if (authController) authController.refresh(); });
+window.addEventListener("online", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); });
+window.addEventListener("offline", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); });
 if (cloudConfigFormEl) {
   cloudConfigFormEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1745,6 +1764,9 @@ if (cloudConfigFormEl) {
     businessStarted = false;
     changesSubscribed = false;
     authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
+    syncReadError = null;
+    localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
+    syncDiagnosticAnnouncement = "";
     renderCloudConfig();
     renderLocalWorkspace();
     if (syncedDatabase) {
@@ -1754,6 +1776,7 @@ if (cloudConfigFormEl) {
       businessStore = createDexieStore(localDatabase);
       startLocalWorkspace();
     }
+    setupSyncDiagnostics();
     notify("Instance Dexie Cloud enregistrée");
   });
 }
@@ -1767,6 +1790,7 @@ function commitOperations(records) {
     try {
       await businessStore.commit(operations);
       lastRecords = records;
+      localWriteStatus = reduceLocalWriteStatus(localWriteStatus, { type: "commit-local" });
       broadcastChange();
       if (syncedDatabase) {
         notify("Enregistré dans IndexedDB ; synchronisation Cloud à confirmer.");
@@ -1775,9 +1799,12 @@ function commitOperations(records) {
         setLocalStatus("Enregistré sur cet appareil dans IndexedDB.");
         notify("Enregistré sur cet appareil dans IndexedDB.");
       }
+      renderSyncDiagnostic();
     } catch (error) {
+      localWriteStatus = reduceLocalWriteStatus(localWriteStatus, { type: "commit-error" });
       documentState = recordsToDocument(lastRecords);
       render();
+      renderSyncDiagnostic();
       if (syncedDatabase) {
         cloudWriteBlocked = true;
         const refusal = classifyPermissionFailure(error && error.cause ? error.cause : error);
@@ -1814,13 +1841,17 @@ async function refreshSyncedDocument() {
     lastRecords = records;
     documentLoaded = true;
     cloudWriteBlocked = false;
+    syncReadError = null;
     resumeRef = readResumePreference();
     render();
     applyBusinessVisibility();
+    renderSyncDiagnostic();
     notify("Données chargées depuis IndexedDB ; synchronisation Cloud à confirmer.");
   })().catch(() => {
     documentLoaded = false;
+    syncReadError = { name: "ReadError" };
     applyBusinessVisibility();
+    renderSyncDiagnostic();
     notify("Lecture IndexedDB impossible : affichage bloqué pour protéger les données. Ne réimportez pas.");
   }).finally(() => { cloudReadPending = null; });
   return cloudReadPending;
@@ -1849,6 +1880,11 @@ function subscribeToChanges() {
         type: "sync-complete",
         attested: attestation.attested
       });
+      localWriteStatus = reduceLocalWriteStatus(localWriteStatus, {
+        type: "sync-complete",
+        attested: attestation.attested
+      });
+      renderSyncDiagnostic();
       load();
       if (!migrationContext) void offerHistoricalMigration();
     });
@@ -1920,6 +1956,146 @@ function nativeAttestationInput() {
     databaseUrl: migrationDestination(),
     remoteDbId: persisted && typeof persisted.remoteDbId === "string" ? persisted.remoteDbId : null
   };
+}
+function syncLocalWriteStatusFromNative() {
+  const configured = shouldOpenSyncedDatabase(readCloudConfig());
+  if (!configured) {
+    if (localWriteStatus === LOCAL_WRITE_STATE.NONE) {
+      localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
+    }
+    return;
+  }
+  if (localWriteStatus === LOCAL_WRITE_STATE.NOT_APPLICABLE) {
+    localWriteStatus = LOCAL_WRITE_STATE.NONE;
+  }
+  if (!syncedDatabase) return;
+  const cloud = syncedDatabase.cloud;
+  if (!cloud) return;
+  const phase = normalizeSyncState(observableValue(cloud.syncState)).phase;
+  if (localWriteStatus !== LOCAL_WRITE_STATE.LOCAL && localWriteStatus !== LOCAL_WRITE_STATE.PENDING) {
+    return;
+  }
+  const persisted = observableValue(cloud.persistedSyncState);
+  localWriteStatus = reduceLocalWriteStatus(localWriteStatus, {
+    type: "sync-state",
+    phase,
+    initiallySynced: !!persisted && persisted.initiallySynced === true
+  });
+}
+function readSyncDiagnosticInput() {
+  syncLocalWriteStatusFromNative();
+  const config = readCloudConfig();
+  const configured = shouldOpenSyncedDatabase(config);
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const refusal = authState.kind === AUTH_MESSAGE_KINDS.ORIGIN_REFUSAL ||
+    authState.kind === AUTH_MESSAGE_KINDS.PERMISSION_REFUSAL
+    ? authState.kind
+    : null;
+  return {
+    configured,
+    databaseUrl: configured ? config.databaseUrl : null,
+    online: typeof navigator === "undefined" || navigator.onLine !== false,
+    user: observableValue(cloud && cloud.currentUser),
+    syncState: observableValue(cloud && cloud.syncState),
+    persistedSyncState: persisted,
+    localWrites: localWriteStatus,
+    readError: syncReadError,
+    authRefusal: refusal,
+    authLoading: !!syncedDatabase && authState.status === AUTH_STATUS.LOADING,
+    authExpired: !!syncedDatabase && authState.status === AUTH_STATUS.EXPIRED
+  };
+}
+function nativePullAdapter(db) {
+  return db.cloud.sync({ purpose: "pull", wait: true });
+}
+function paintSyncDiagnostic(diagnostic) {
+  if (!syncDiagnosticEl) return;
+  const view = buildDiagnosticView(diagnostic, { busy: syncRetryBusy });
+  syncDiagnosticEl.replaceChildren();
+  const title = el("h2", null, view.title);
+  title.id = "sync-diagnostic-title";
+  const readonly = el("p", "sync-diagnostic-readonly", view.readonly);
+  const list = el("dl", "sync-diagnostic-list");
+  for (const row of view.rows) {
+    list.append(el("dt", null, row.label), el("dd", null, row.value));
+  }
+  syncDiagnosticEl.append(title, readonly, list);
+  if (view.errors.length > 0) {
+    syncDiagnosticEl.append(el("h3", null, "Erreurs techniques classées"));
+    const errors = el("ul", "sync-diagnostic-errors");
+    for (const entry of view.errors) {
+      errors.append(el("li", null, entry.message));
+    }
+    syncDiagnosticEl.append(errors);
+  }
+  const retry = el("button", "secondary sync-diagnostic-retry", view.retry.label);
+  retry.type = "button";
+  retry.id = "sync-diagnostic-retry";
+  retry.disabled = view.retry.disabled;
+  retry.setAttribute("aria-describedby", "sync-diagnostic-reason sync-diagnostic-status");
+  retry.addEventListener("click", () => { void retrySyncInitialPull(); });
+  const reason = el("p", "sync-diagnostic-reason", view.retry.reasonLabel);
+  reason.id = "sync-diagnostic-reason";
+  const status = el("p", "sync-diagnostic-status", syncDiagnosticAnnouncement || view.statusMessage);
+  status.id = "sync-diagnostic-status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  syncDiagnosticEl.append(retry, reason, status);
+  syncDiagnosticEl.hidden = false;
+}
+function renderSyncDiagnostic() {
+  if (!syncDiagnosticEl) return;
+  if (!syncDiagnosticsController) {
+    paintSyncDiagnostic(buildSyncDiagnostic(readSyncDiagnosticInput()));
+    return;
+  }
+  syncDiagnosticsController.refresh();
+}
+function setupSyncDiagnostics() {
+  syncDiagnosticsController = createSyncDiagnosticsController({
+    readInput: readSyncDiagnosticInput,
+    syncPull: () => {
+      if (!syncedDatabase) return Promise.reject({ name: "ReadError" });
+      return nativePullAdapter(syncedDatabase);
+    },
+    onChange: (diagnostic, meta) => {
+      syncRetryBusy = !!(meta && meta.retrying);
+      paintSyncDiagnostic(diagnostic);
+    }
+  });
+  if (syncedDatabase && syncDiagnosticsSubscribedFor !== syncedDatabase) {
+    syncDiagnosticsSubscribedFor = syncedDatabase;
+    const cloud = syncedDatabase.cloud;
+    const subscribe = (observable) => {
+      if (observable && typeof observable.subscribe === "function") {
+        observable.subscribe(() => { renderSyncDiagnostic(); });
+      }
+    };
+    subscribe(cloud.syncState);
+    subscribe(cloud.persistedSyncState);
+    subscribe(cloud.currentUser);
+  }
+  renderSyncDiagnostic();
+}
+async function retrySyncInitialPull() {
+  if (!syncDiagnosticsController || syncRetryBusy) return;
+  syncRetryBusy = true;
+  syncDiagnosticAnnouncement = "Relance native du pull initial demandée…";
+  renderSyncDiagnostic();
+  const result = await syncDiagnosticsController.retry();
+  if (result.status === "completed") {
+    syncDiagnosticAnnouncement =
+      "Relance du pull initial terminée. Le diagnostic est actualisé et aucune donnée métier n'a été modifiée.";
+  } else if (result.status === "blocked") {
+    syncDiagnosticAnnouncement = "Relance non effectuée : " + retryReasonLabel(result.reason);
+  } else {
+    const category = result.error && result.error.category ? result.error.category : "uncategorized";
+    syncDiagnosticAnnouncement =
+      "La relance a échoué (catégorie " + category + "). Le Cloud n'est pas considéré comme vide.";
+  }
+  syncRetryBusy = false;
+  renderSyncDiagnostic();
 }
 function destinationIdentity(attestation) {
   return {
@@ -2255,4 +2431,5 @@ if (syncedDatabase) {
   }
   startLocalWorkspace();
 }
+setupSyncDiagnostics();
 
