@@ -1,5 +1,22 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase } from "./dexie-foundation.js";
+import {
+  ACTIVATION_STAGE,
+  ACTIVATION_STATUS,
+  FIRST_SYNC,
+  TARGET_CLASSIFICATION,
+  classifyTarget,
+  createActivationRecord,
+  describeActivationStage,
+  describeTargetClassification,
+  initialActivationState,
+  initialFirstSyncState,
+  readActivationRecord,
+  reduceFirstSync,
+  resolveStartupWorkspace,
+  transitionActivation,
+  writeActivationRecord
+} from "./cloud-activation.js";
 import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compatibilityGuard, isLocalError, createDexieStore } from "./persistence.js";
 import { detectHistoricalDocument } from "./migration.js";
 import {
@@ -103,7 +120,18 @@ const historicalBackupStatusEl = document.querySelector("#historical-backup-stat
 const historicalBackupDownloadEl = document.querySelector("#historical-backup-download");
 const historicalBackupVerifyEl = document.querySelector("#historical-backup-verify");
 const localPanelEl = document.querySelector("#local-panel");
-const localStatusEl = document.querySelector("#local-status");
+const cloudActivationEl = document.querySelector("#cloud-activation");
+const cloudActivationStageEl = document.querySelector("#cloud-activation-stage");
+const cloudActivationStatusEl = document.querySelector("#cloud-activation-status");
+const cloudActivationDestinationEl = document.querySelector("#cloud-activation-destination");
+const cloudActivationReviewEl = document.querySelector("#cloud-activation-review");
+const cloudActivationConsentEl = document.querySelector("#cloud-activation-consent");
+const cloudActivationStartEl = document.querySelector("#cloud-activation-start");
+const cloudActivationResumeEl = document.querySelector("#cloud-activation-resume");
+const cloudActivationConfirmEl = document.querySelector("#cloud-activation-confirm");
+const cloudActivationCancelEl = document.querySelector("#cloud-activation-cancel");
+const cloudActivationRetryEl = document.querySelector("#cloud-activation-retry");
+const cloudActivationStagesEl = document.querySelector("#cloud-activation-stages");const localStatusEl = document.querySelector("#local-status");
 const localLegacyNoticeEl = document.querySelector("#local-legacy-notice");
 const localExportLegacyEl = document.querySelector("#local-export-legacy");
 const localConvertLegacyEl = document.querySelector("#local-convert-legacy");
@@ -150,6 +178,11 @@ const restoreStatusEl = document.querySelector("#restore-status");
 const restoreInputEl = document.querySelector("#restore");
 let syncedDatabase = null;
 let localDatabase = null;
+let activationLifecycle = createGenerationGuard();
+let activationState = initialActivationState();
+let activationStatus = initialFirstSyncState();
+let activationContext = null;
+let activationStartup = null;
 let authController = null;
 let authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
 let authInteraction = null;
@@ -250,6 +283,518 @@ function bootstrapSyncedDatabase() {
 function bootstrapLocalDatabase() {
   return openLocalDatabase(Dexie);
 }
+// TS-037 activation assistant: the marker decides whether startup opens the
+// autonomous local workspace or the synchronized database. No activation path
+// ever reads business records out of the synchronized store as its source.
+function activationMarker() {
+  return readActivationRecord(localStorage);
+}
+function activationConfiguredUrl() {
+  const config = readCloudConfig();
+  return shouldOpenSyncedDatabase(config) ? config.databaseUrl : null;
+}
+function setActivationStage(event) {
+  const outcome = transitionActivation(activationState, event);
+  if (outcome.ok) activationState = outcome.state;
+  return outcome;
+}
+function activationInProgress() {
+  const record = activationMarker();
+  return !!record && record.status === ACTIVATION_STATUS.ACTIVATING;
+}
+function activationPanelVisible() {
+  const record = activationMarker();
+  if (record && record.status === ACTIVATION_STATUS.ACTIVE) return false;
+  if (record && record.status === ACTIVATION_STATUS.ACTIVATING) return true;
+  return !activationConfiguredUrl();
+}
+function activationStageReached(stage) {
+  const order = [
+    ACTIVATION_STAGE.LOCAL, ACTIVATION_STAGE.PREPARING, ACTIVATION_STAGE.CONNECTING,
+    ACTIVATION_STAGE.DISCOVERING, ACTIVATION_STAGE.REVIEW, ACTIVATION_STAGE.TRANSFER_PENDING,
+    ACTIVATION_STAGE.ACTIVE
+  ];
+  const current = order.indexOf(activationState.stage);
+  const target = order.indexOf(stage);
+  if (current === -1 || target === -1) return false;
+  return target <= current;
+}
+function setActivationStatus(message) {
+  if (cloudActivationStatusEl) {
+    cloudActivationStatusEl.textContent = typeof message === "string" ? message : "";
+  }
+}
+function renderActivationStages() {
+  if (!cloudActivationStagesEl) return;
+  for (const entry of cloudActivationStagesEl.querySelectorAll("li")) {
+    if (entry.dataset.stage === activationState.stage) entry.setAttribute("aria-current", "step");
+    else entry.removeAttribute("aria-current");
+    entry.dataset.reached = activationStageReached(entry.dataset.stage) ? "true" : "false";
+  }
+}
+function activationDestinationText() {
+  const record = activationMarker();
+  const url = record && record.url ? record.url : activationConfiguredUrl();
+  if (!url) return "Aucune destination Cloud configurée.";
+  return "Destination normalisée : " + url +
+    (record && record.remoteDbId ? " (base " + record.remoteDbId + ")" : "") + ".";
+}
+function renderActivationReview(context) {
+  if (!cloudActivationReviewEl) return;
+  cloudActivationReviewEl.replaceChildren();
+  if (!context || !context.displayedPlan) {
+    cloudActivationReviewEl.hidden = true;
+    return;
+  }
+  const plan = context.displayedPlan;
+  const view = buildReconciliationView(plan);
+  const summary = el("p", "cloud-activation-review-summary",
+    view.operationCount + " insertion(s) indépendante(s) prévue(s), " +
+    view.blocked.length + " groupe(s) bloqué(s). Rien n'est encore écrit.");
+  const counts = el("p", "cloud-activation-review-counts",
+    "Source locale : " + context.sourceCounts.subjects + " sujet(s), " +
+    context.sourceCounts.items + " étape(s). Cible attestée : " +
+    context.targetCounts.subjects + " sujet(s), " + context.targetCounts.items + " étape(s).");
+  cloudActivationReviewEl.append(summary, counts);
+  if (view.blocked.length > 0) {
+    const list = el("ul", "cloud-activation-blocked");
+    for (const entry of view.blocked) {
+      list.append(el("li", null,
+        (entry.store === "subjects" ? "Sujet" : "Étape") + " " + (entry.title || entry.id) +
+        " : " + blockReasonLabel(entry.reason)));
+    }
+    cloudActivationReviewEl.append(list);
+  }
+  cloudActivationReviewEl.hidden = false;
+}
+function renderActivationPanel() {
+  if (!cloudActivationEl) return;
+  const visible = activationPanelVisible();
+  cloudActivationEl.hidden = !visible;
+  if (!visible) return;
+  const record = activationMarker();
+  const activated = !!record && record.status === ACTIVATION_STATUS.ACTIVATING;
+  const cancelled = !!record && record.status === ACTIVATION_STATUS.CANCELLED;
+  const authenticated = businessAllowed();
+  let message = activationStatus.status !== FIRST_SYNC.IDLE
+    ? describeFirstSync(activationStatus)
+    : activationState.error
+      ? "Interruption récupérable : la source locale reste intacte. Réessayez ou annulez l'activation."
+      : "";
+  if (activationContext && activationContext.classification) {
+    message = describeTargetClassification(activationContext.classification) +
+      (message ? " " + message : "");
+  }
+  if (cloudActivationStageEl) cloudActivationStageEl.textContent = describeActivationStage(activationState.stage);
+  setActivationStatus(message);
+  if (cloudActivationDestinationEl) cloudActivationDestinationEl.textContent = activationDestinationText();
+  renderActivationStages();
+  renderActivationReview(activationContext);
+  const localStage = activationState.stage === ACTIVATION_STAGE.LOCAL ||
+    activationState.stage === ACTIVATION_STAGE.CANCELLED ||
+    (!activated && !authenticated);
+  if (cloudActivationStartEl) {
+    cloudActivationStartEl.hidden = !localStage;
+    cloudActivationStartEl.disabled = false;
+  }
+  if (cloudActivationResumeEl) {
+    cloudActivationResumeEl.hidden = !(cancelled && !!activationConfiguredUrl()) || localStage;
+  }
+  if (cloudActivationConfirmEl) {
+    const reviewReady = !!activationContext && activationContext.displayedPlan &&
+      activationContext.displayedPlan.operations.length > 0 &&
+      activationState.stage === ACTIVATION_STAGE.REVIEW;
+    cloudActivationConfirmEl.hidden = !reviewReady;
+    cloudActivationConfirmEl.disabled = !reviewReady ||
+      !cloudActivationConsentEl || !cloudActivationConsentEl.checked;
+  }
+  if (cloudActivationCancelEl) {
+    cloudActivationCancelEl.hidden = !activated && activationState.stage === ACTIVATION_STAGE.LOCAL;
+  }
+  if (cloudActivationRetryEl) {
+    cloudActivationRetryEl.hidden = activationState.stage !== ACTIVATION_STAGE.FAILED;
+  }
+}
+function describeFirstSync(state) {
+  switch (state && state.status) {
+    case FIRST_SYNC.LOCAL_WRITTEN:
+      return "Écrit localement dans la base synchronisée ; synchronisation distante non encore confirmée.";
+    case FIRST_SYNC.PENDING:
+      return "Écrit localement, synchronisation en attente. Aucun push distant n'est confirmé.";
+    case FIRST_SYNC.REMOTE_COMPLETE:
+      return "Première synchronisation distante attestée sur cet appareil ; un second appareil reste à vérifier séparément.";
+    case FIRST_SYNC.ERROR:
+      return "Écrit localement, mais la synchronisation distante a échoué. Reprise sans duplication possible.";
+    case FIRST_SYNC.INDETERMINATE:
+      return "Écrit localement ; propagation distante indéterminée, aucun succès n'est affirmé.";
+    default:
+      return "";
+  }
+}
+async function readLocalActivationSource() {
+  const reader = openLocalDatabase(Dexie);
+  try {
+    const store = createDexieStore(reader);
+    const raw = await store.readRaw();
+    const projected = recordsToDocument(raw);
+    return {
+      raw,
+      documentValue: { ...projected, provenance: { exportKind: "indexeddb-export" } },
+      sourceCounts: { subjects: raw.subjects.length, items: raw.items.length }
+    };
+  } finally {
+    if (reader && typeof reader.close === "function") reader.close();
+  }
+}
+function rememberActivationContext(record, context) {
+  if (!record || !context) return;
+  writeActivationRecord(localStorage, createActivationRecord({
+    status: ACTIVATION_STATUS.ACTIVATING,
+    url: record.url,
+    remoteDbId: context.destination ? context.destination.remoteDbId : record.remoteDbId,
+    sourceFingerprint: context.sourceFingerprint,
+    userId: context.userId
+  }));
+}
+function failActivation(reason) {
+  setActivationStage({ type: "fail", reason });
+  activationContext = null;
+  renderActivationPanel();
+}
+async function runActivationDiscovery() {
+  const record = activationMarker();
+  if (!syncedDatabase || !record || record.status !== ACTIVATION_STATUS.ACTIVATING) return null;
+  const generation = activationLifecycle.begin();
+  if (activationState.stage === ACTIVATION_STAGE.LOCAL ||
+      activationState.stage === ACTIVATION_STAGE.CANCELLED) {
+    setActivationStage({ type: "start" });
+    setActivationStage({ type: "configured" });
+  }
+  if (!businessAllowed()) {
+    renderActivationPanel();
+    return { status: "awaiting-authentication" };
+  }
+  setActivationStage({ type: "authenticated" });
+  renderActivationPanel();
+  let source;
+  try {
+    source = await readLocalActivationSource();
+  } catch {
+    if (!activationLifecycle.isCurrent(generation)) return { status: "superseded" };
+    failActivation("local-read-error");
+    notifyError("Lecture de la source locale impossible : activation bloquée, aucune écriture.");
+    return { status: "local-read-error" };
+  }
+  if (!activationLifecycle.isCurrent(generation)) return { status: "superseded" };
+  const result = await readAttestedTarget();
+  if (!activationLifecycle.isCurrent(generation)) return { status: "superseded" };
+  const destination = destinationIdentity(result.attestation);
+  const currentRecord = activationMarker();
+  if (!currentRecord || currentRecord.status !== ACTIVATION_STATUS.ACTIVATING ||
+      currentRecord.url !== destination.url) {
+    return { status: "superseded" };
+  }
+  const expected = {
+    url: currentRecord.url,
+    remoteDbId: currentRecord.remoteDbId || null,
+    userId: result.attestation && result.attestation.identity
+      ? result.attestation.identity.userId : null
+  };
+  const plan = result.status === "ready"
+    ? planReconciliation({
+      document: source.documentValue,
+      target: result.records,
+      destination,
+      userId: expected.userId,
+      resolutions: {},
+      provenance: { exportKind: "indexeddb-export" }
+    })
+    : null;
+  const classification = classifyTarget({
+    attestation: result.attestation,
+    targetStatus: result.status,
+    records: result.records,
+    expected,
+    plan
+  });
+  if (classification.blocked) {
+    failActivation(classification.reason);
+    notifyError(describeTargetClassification(classification.classification));
+    return { status: classification.classification, classification };
+  }
+  const targetCounts = result.records
+    ? { subjects: result.records.subjects.length, items: result.records.items.length }
+    : { subjects: 0, items: 0 };
+  activationContext = {
+    documentValue: source.documentValue,
+    target: result.records,
+    destination,
+    userId: expected.userId,
+    attestation: result.attestation,
+    plan,
+    displayedPlan: plan,
+    sourceFingerprint: computeSourceFingerprint(source.documentValue),
+    classification: classification.classification,
+    sourceCounts: source.sourceCounts,
+    targetCounts
+  };
+  rememberActivationContext(currentRecord, activationContext);
+  setActivationStage({ type: "discovered" });
+  if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+  renderActivationPanel();
+  notify("Première lecture distante attestée : relisez le plan affiché avant tout transfert.");
+  return { status: classification.classification, classification };
+}
+function startActivation() {
+  const url = activationConfiguredUrl();
+  if (!url) {
+    setActivationStage({ type: "start" });
+    renderActivationPanel();
+    if (cloudConfigEl) cloudConfigEl.hidden = false;
+    if (cloudUrlEl) cloudUrlEl.focus();
+    notify("Saisissez l'URL de votre instance Dexie Cloud pour démarrer l'activation.");
+    return;
+  }
+  const record = activationMarker();
+  if (!record || record.status === ACTIVATION_STATUS.CANCELLED) {
+    const written = writeActivationRecord(localStorage, createActivationRecord({
+      status: ACTIVATION_STATUS.ACTIVATING,
+      url
+    }));
+    if (!written) {
+      notifyError("Impossible d'enregistrer l'activation dans ce navigateur. La source locale reste intacte.");
+      return;
+    }
+  }
+  if (typeof location !== "undefined" && typeof location.reload === "function") location.reload();
+}
+function resumeActivation() {
+  const record = activationMarker();
+  if (record && record.status === ACTIVATION_STATUS.CANCELLED) {
+    startActivation();
+    return;
+  }
+  void runActivationDiscovery();
+}
+function cancelActivation() {
+  const postCommit = activationStatus.localWritten ||
+    activationState.stage === ACTIVATION_STAGE.TRANSFER_PENDING;
+  if (postCommit) {
+    const outcome = transitionActivation(activationState, { type: "cancel" });
+    if (outcome.ok) activationState = outcome.state;
+    activationContext = null;
+    if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+    setActivationStatus("Transfert déjà écrit localement : annulation sans suppression de la copie synchronisée ni de la source locale. Synchronisation distante toujours en attente ou indéterminée.");
+    renderActivationPanel();
+    notify("Annulation après commit local : aucune suppression implicite, synchronisation distante non affirmée.");
+    return;
+  }
+  const record = activationMarker();
+  const url = record ? record.url : activationConfiguredUrl();
+  if (url) {
+    writeActivationRecord(localStorage, createActivationRecord({
+      status: ACTIVATION_STATUS.CANCELLED,
+      url,
+      remoteDbId: record ? record.remoteDbId : undefined
+    }));
+  }
+  activationContext = null;
+  activationStatus = initialFirstSyncState();
+  activationState = initialActivationState();
+  if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+  if (typeof location !== "undefined" && typeof location.reload === "function") {
+    location.reload();
+    return;
+  }
+  renderActivationPanel();
+  notify("Activation annulée avant consentement : la source locale et la cible restent inchangées.");
+}
+function retryActivation() {
+  const outcome = transitionActivation(activationState, { type: "retry" });
+  if (outcome.ok) activationState = outcome.state;
+  activationStatus = initialFirstSyncState();
+  void runActivationDiscovery();
+}
+function activationAdapter() {
+  return {
+    commit(operations) {
+      if (!Array.isArray(operations) || operations.some((operation) => operation.type !== "add")) {
+        return Promise.reject(new Error("L'activation n'accepte que des insertions add."));
+      }
+      return businessStore.commit(operations);
+    }
+  };
+}
+function updateActivationFromNative() {
+  const record = activationMarker();
+  if (!record || record.status !== ACTIVATION_STATUS.ACTIVATING) return;
+  if (!activationStatus.localWritten) {
+    if (businessAllowed() && activationState.stage === ACTIVATION_STAGE.CONNECTING) {
+      setActivationStage({ type: "authenticated" });
+      renderActivationPanel();
+    }
+    return;
+  }
+  activationStatus = reduceFirstSync(activationStatus, {
+    type: "native",
+    ...nativeAttestationInput()
+  });
+  if (activationStatus.status === FIRST_SYNC.REMOTE_COMPLETE) {
+    setActivationStage({ type: "complete" });
+    writeActivationRecord(localStorage, createActivationRecord({
+      status: ACTIVATION_STATUS.ACTIVE,
+      url: record.url,
+      remoteDbId: record.remoteDbId,
+      sourceFingerprint: record.sourceFingerprint,
+      userDigest: record.userDigest
+    }));
+  } else if (activationStatus.status === FIRST_SYNC.ERROR) {
+    setActivationStage({ type: "fail", reason: activationStatus.reason || "sync-error" });
+  }
+  renderActivationPanel();
+}
+async function confirmActivation() {
+  const context = activationContext;
+  if (!context || !context.displayedPlan) {
+    notify("Aucun plan d'activation affiché : aucune écriture effectuée.");
+    return;
+  }
+  if (!cloudActivationConsentEl || !cloudActivationConsentEl.checked) {
+    notify("Consentement explicite requis avant tout transfert d'activation.");
+    return;
+  }
+  const displayed = context.displayedPlan;
+  await pendingCloudWrites;
+  const result = await readAttestedTarget();
+  if (result.status !== "ready") {
+    failActivation(result.reason || "read-error");
+    notifyError(reconciliationBlockMessage(result));
+    return;
+  }
+  let source;
+  try {
+    source = await readLocalActivationSource();
+  } catch {
+    failActivation("local-read-error");
+    notifyError("Reliure de la source locale impossible : aucune écriture.");
+    return;
+  }
+  const destination = destinationIdentity(result.attestation);
+  const userId = result.attestation && result.attestation.identity
+    ? result.attestation.identity.userId : null;
+  const fresh = planReconciliation({
+    document: source.documentValue,
+    target: result.records,
+    destination,
+    userId,
+    resolutions: context.plan ? context.plan.resolutions : {},
+    provenance: { exportKind: "indexeddb-export" }
+  });
+  const review = reviewDisplayedPlan(displayed, fresh);
+  if (!review.same) {
+    context.documentValue = source.documentValue;
+    context.target = result.records;
+    context.destination = destination;
+    context.userId = userId;
+    context.attestation = result.attestation;
+    context.plan = fresh;
+    context.displayedPlan = fresh;
+    context.sourceFingerprint = computeSourceFingerprint(source.documentValue);
+    context.sourceCounts = source.sourceCounts;
+    context.targetCounts = {
+      subjects: result.records.subjects.length,
+      items: result.records.items.length
+    };
+    if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+    renderActivationPanel();
+    notify("Plan modifié depuis la prévisualisation : relisez l'inventaire et confirmez à nouveau. Aucune écriture effectuée.");
+    return;
+  }
+  setActivationStage({ type: "consent" });
+  renderActivationPanel();
+  const outcome = await runReconciliation(activationAdapter(), displayed,
+    { confirmed: true, fingerprint: displayed.fingerprint },
+    async () => {
+      const refreshed = await readAttestedTarget();
+      let revalidatedSource;
+      try {
+        revalidatedSource = await readLocalActivationSource();
+      } catch {
+        revalidatedSource = null;
+      }
+      const revalidatedDestination = destinationIdentity(refreshed.attestation);
+      const revalidatedUserId = refreshed.attestation && refreshed.attestation.identity
+        ? refreshed.attestation.identity.userId : null;
+      const revalidatedPlan = refreshed.status === "ready" && revalidatedSource
+        ? planReconciliation({
+          document: revalidatedSource.documentValue,
+          target: refreshed.records,
+          destination: revalidatedDestination,
+          userId: revalidatedUserId,
+          resolutions: context.plan ? context.plan.resolutions : {},
+          provenance: { exportKind: "indexeddb-export" }
+        })
+        : null;
+      return {
+        attestation: refreshed.attestation,
+        document: revalidatedSource ? revalidatedSource.documentValue : null,
+        target: refreshed.records,
+        destination: revalidatedDestination,
+        userId: revalidatedUserId,
+        plan: revalidatedPlan
+      };
+    });
+  if (outcome.status === "local-written") {
+    activationStatus = reduceFirstSync(activationStatus, { type: "local-written" });
+    activationContext = null;
+    if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+    const record = activationMarker();
+    if (record) {
+      writeActivationRecord(localStorage, createActivationRecord({
+        status: ACTIVATION_STATUS.ACTIVATING,
+        url: record.url,
+        remoteDbId: destination.remoteDbId,
+        sourceFingerprint: context.sourceFingerprint,
+        userId
+      }));
+    }
+    await refreshSyncedDocument();
+    updateActivationFromNative();
+    renderActivationPanel();
+    notify("Écrit localement dans IndexedDB ; synchronisation Cloud en attente. Aucun push distant n'est confirmé.");
+    return;
+  }
+  if (outcome.status === "already-migrated" || outcome.status === "up-to-date") {
+    activationContext = null;
+    if (cloudActivationConsentEl) cloudActivationConsentEl.checked = false;
+    updateActivationFromNative();
+    renderActivationPanel();
+    notify("Aucune insertion nécessaire : les enregistrements déjà présents sont reconnus, sans doublon.");
+    return;
+  }
+  if (outcome.status === "stale-plan") {
+    context.displayedPlan = null;
+    activationState = { ...activationState, stage: ACTIVATION_STAGE.REVIEW };
+    void runActivationDiscovery();
+    notify("Plan périmé : source, destination, session ou cible modifiée. Nouvelle revue requise, aucune écriture.");
+    return;
+  }
+  const reason = outcome.reason || outcome.status;
+  failActivation(reason);
+  if (outcome.status === "failed") {
+    activationStatus = reduceFirstSync(activationStatus, { type: "local-error" });
+    notifyError("Échec de la transaction : aucune écriture partielle, source et cible inchangées.");
+  } else if (outcome.status === "sync-blocked") {
+    notifyError(describeAttestationReason(reason));
+  } else if (outcome.status === "read-error") {
+    notifyError("Lecture de revalidation impossible : activation bloquée, source et cible inchangées.");
+  } else if (outcome.status === "refused" || outcome.status === "consent-mismatch") {
+    notify("Activation refusée : consentement absent ou lié à un autre plan. Aucune écriture.");
+  } else {
+    notify("Activation interrompue : aucune écriture confirmée.");
+  }
+}
+
 function showCloudConfigError(message) {
   if (!cloudConfigErrorEl) return;
   cloudConfigErrorEl.textContent = message;
@@ -1272,7 +1817,10 @@ function startBusiness() {
     changesSubscribed = true;
   }
   // Cloud is the single source of truth after authentication, not localStorage.
-  void refreshSyncedDocument().then(() => offerHistoricalMigration());
+  void refreshSyncedDocument().then(() => {
+    void offerHistoricalMigration();
+    void runActivationDiscovery();
+  });
 }
 function setupAuthentication() {
   if (!syncedDatabase) return;
@@ -2551,10 +3099,24 @@ if (authFormEl) authFormEl.addEventListener("submit", submitAuthForm);
 if (authSubmitEl) authSubmitEl.addEventListener("click", submitAuthForm);
 if (authResendEl) authResendEl.addEventListener("click", resendOtp);
 if (authCancelEl) authCancelEl.addEventListener("click", cancelOtp);
+if (cloudActivationStartEl) cloudActivationStartEl.addEventListener("click", startActivation);
+if (cloudActivationResumeEl) cloudActivationResumeEl.addEventListener("click", resumeActivation);
+if (cloudActivationConfirmEl) cloudActivationConfirmEl.addEventListener("click", () => { void confirmActivation(); });
+if (cloudActivationCancelEl) cloudActivationCancelEl.addEventListener("click", cancelActivation);
+if (cloudActivationRetryEl) cloudActivationRetryEl.addEventListener("click", retryActivation);
+if (cloudActivationConsentEl) {
+  cloudActivationConsentEl.addEventListener("change", () => {
+    if (!cloudActivationConfirmEl) return;
+    const ready = !!activationContext && activationContext.displayedPlan &&
+      activationContext.displayedPlan.operations.length > 0 &&
+      activationState.stage === ACTIVATION_STAGE.REVIEW;
+    cloudActivationConfirmEl.disabled = !ready || !cloudActivationConsentEl.checked;
+  });
+}
 if (historicalBackupDownloadEl) historicalBackupDownloadEl.addEventListener("click", exportLegacyBackup);
 if (historicalBackupVerifyEl) historicalBackupVerifyEl.addEventListener("click", verifyHistoricalBackup);
-window.addEventListener("online", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); void offerHistoricalMigration(); });
-window.addEventListener("offline", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); void offerHistoricalMigration(); });
+window.addEventListener("online", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); void offerHistoricalMigration(); });
+window.addEventListener("offline", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); void offerHistoricalMigration(); });
 if (cloudConfigFormEl) {
   cloudConfigFormEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -2567,6 +3129,17 @@ if (cloudConfigFormEl) {
       showCloudConfigError("Impossible d'enregistrer l'URL dans ce navigateur.");
       return;
     }
+    const markerWritten = writeActivationRecord(localStorage, createActivationRecord({
+      status: ACTIVATION_STATUS.ACTIVATING,
+      url: result.url
+    }));
+    if (!markerWritten) {
+      showCloudConfigError("Impossible d'enregistrer l'activation dans ce navigateur. La source locale reste intacte.");
+      return;
+    }
+    activationState = initialActivationState();
+    activationStatus = initialFirstSyncState();
+    activationContext = null;
     if (cloudUrlEl) cloudUrlEl.value = result.url;
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase();
@@ -2589,7 +3162,9 @@ if (cloudConfigFormEl) {
     syncDiagnosticAnnouncement = "";
     renderCloudConfig();
     renderLocalWorkspace();
+    renderActivationPanel();
     if (syncedDatabase) {
+      activationState = { ...initialActivationState(), stage: ACTIVATION_STAGE.CONNECTING };
       setupAuthentication();
     } else {
       if (!localDatabase) localDatabase = bootstrapLocalDatabase();
@@ -2907,6 +3482,7 @@ function setupSyncDiagnostics() {
       if (observable && typeof observable.subscribe === "function") {
         observable.subscribe(() => {
           renderSyncDiagnostic();
+          updateActivationFromNative();
           void offerHistoricalMigration();
         });
       }
@@ -3577,10 +4153,19 @@ async function confirmReconciliation(context) {
   }
 }
 
-syncedDatabase = bootstrapSyncedDatabase();
+activationStartup = resolveStartupWorkspace({
+  record: activationMarker(),
+  config: readCloudConfig()
+});
+if (activationStartup.reason === ACTIVATION_STATUS.ACTIVATING) {
+  activationState = { ...initialActivationState(), stage: ACTIVATION_STAGE.CONNECTING };
+}
+syncedDatabase = null;
+if (activationStartup.workspace === "synced") syncedDatabase = bootstrapSyncedDatabase();
 historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
 renderLocalWorkspace();
+renderActivationPanel();
 if (syncedDatabase) {
   businessStore = createDexieStore(syncedDatabase);
   setupAuthentication();

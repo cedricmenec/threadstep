@@ -224,3 +224,48 @@ réécrite par TS-036. Son retrait optionnel relève de **TS-040**.
 La recette réelle sur instance Dexie Cloud isolée, deux navigateurs, Chrome
 mobile, tactile/clavier/lecteur d'écran et événements de synchronisation
 concurrents reste manuelle et distincte de la CI.
+
+## Activation volontaire après usage local TS-037
+
+TS-037 ajoute un parcours d'activation explicite depuis `threadstep-local`.
+L'assistant affiche les étapes préparation, connexion OTP native, première
+lecture distante attestée, revue/consentement, transfert local en attente et
+actif. L'URL doit être une instance `https://…dexie.cloud` valide ; l'OTP seul ne
+vaut jamais consentement.
+
+La base autonome reste non répliquée pendant la configuration, l'OTP et le
+premier pull. Aucun enregistrement local, mutation ou attachement à une table
+synchronisée n'est créé avant acceptation du plan affiché. Un marqueur
+`threadstep.cloud.activation.v1` sans contenu métier décide du démarrage :
+`activating` reprend la découverte, `cancelled` revient au local, `active` garde
+le démarrage synchronisé et une configuration héritée sans marqueur reste
+compatible.
+
+La cible est classée après une lecture attestée :
+
+- `verified-empty` : instance autorisée, pull initial et révision connus, aucune
+  donnée métier ; le consentement reste obligatoire ;
+- `populated` : cible attestée déjà peuplée, seules les insertions absentes et
+  sûres sont proposées ;
+- `divergent` : conflits, groupes dépendants bloqués ou inventaire ambigu, sans
+  écrasement ni fusion silencieuse ;
+- `unavailable` : hors ligne, lecture en erreur ou preuve native insuffisante,
+  le Cloud n'est jamais considéré vide ;
+- `identity-mismatch` : URL, `remoteDbId`, utilisateur ou realms différents,
+  aucun transfert n'est proposé.
+
+L'annulation avant consentement laisse la source et la cible intactes et
+conserve l'URL pour une reprise explicite. Après le commit IndexedDB, la copie
+synchronisée locale et la source autonome restent présentes ; l'interface parle
+de transfert écrit localement ou en attente, jamais de push réussi. Le statut
+d'achèvement distant (`remote-complete`) n'est affiché qu'avec une session
+autorisée, un pull initial attesté et une synchronisation native convergente. Un
+échec postérieur conserve la preuve locale et propose une reprise native sans
+doublon. Aucune purge locale ni réécriture de `threadstep.document.v1` n'est
+effectuée.
+
+Les tests runner déterministes vérifient les états, l'isolation avant
+consentement, les cibles vide/peuplée/divergente/indisponible/autre compte,
+l'annulation, le rechargement et l'idempotence. La recette Chrome mobile,
+second navigateur, OTP réel, coupure réseau et observation d'un pull/push
+effectif reste **externe à la CI** et doit être rapportée séparément.

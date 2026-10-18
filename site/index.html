@@ -53,6 +53,34 @@
       </div>
       <p id="local-conversion-status" class="local-status" role="status" aria-live="polite"></p>
     </section>
+    <section id="cloud-activation" class="cloud-activation" aria-labelledby="cloud-activation-title" hidden>
+      <h2 id="cloud-activation-title">Activer Dexie Cloud depuis mon espace local</h2>
+      <p id="cloud-activation-source" class="cloud-activation-source">Source conservée : la base autonome threadstep-local reste intacte, lisible et exportable. Elle n'est copiée vers aucune table synchronisée avant votre consentement explicite au plan affiché.</p>
+      <ol id="cloud-activation-stages" class="cloud-activation-stages" aria-label="Étapes de l'activation">
+        <li data-stage="local">Local</li>
+        <li data-stage="preparing">Préparation</li>
+        <li data-stage="connecting">Connexion OTP</li>
+        <li data-stage="discovering">Première lecture distante</li>
+        <li data-stage="review">Revue et consentement</li>
+        <li data-stage="transfer-pending">Transfert local en attente</li>
+        <li data-stage="active">Actif</li>
+      </ol>
+      <p id="cloud-activation-stage" class="cloud-activation-stage" role="status" aria-live="polite">Espace local actif : aucune configuration, authentification ou réplication Cloud n'est tentée.</p>
+      <p id="cloud-activation-status" class="cloud-activation-status" role="status" aria-live="polite"></p>
+      <p id="cloud-activation-destination" class="cloud-activation-destination"></p>
+      <div id="cloud-activation-review" class="cloud-activation-review" hidden></div>
+      <label class="cloud-activation-consent" for="cloud-activation-consent">
+        <input id="cloud-activation-consent" type="checkbox">
+        <span>Je confirme le transfert des seules insertions du plan affiché vers cette destination. La connexion OTP seule ne vaut pas consentement.</span>
+      </label>
+      <div class="cloud-activation-actions">
+        <button id="cloud-activation-start" type="button" class="primary">Activer Cloud depuis mon espace local</button>
+        <button id="cloud-activation-resume" type="button" class="secondary" hidden>Reprendre l'activation</button>
+        <button id="cloud-activation-confirm" type="button" class="primary" disabled>Confirmer le transfert affiché</button>
+        <button id="cloud-activation-cancel" type="button" class="secondary" hidden>Annuler l'activation</button>
+        <button id="cloud-activation-retry" type="button" class="secondary" hidden>Réessayer l'activation</button>
+      </div>
+    </section>
     <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
       <h2 id="auth-title">Connexion par code email</h2>
       <p id="auth-help" class="auth-help">Un code à usage unique est envoyé par Dexie Cloud à votre adresse email. Aucun mot de passe n'est demandé.</p>
