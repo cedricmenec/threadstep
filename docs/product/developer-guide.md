@@ -118,6 +118,36 @@ façon destructive, donc après un refus, une exception ou une interruption, la
 source reste lisible, exportable et **non destructive** pour la cible. La
 préférence locale de reprise reste hors des tables synchronisées.
 
+## Conversion locale explicite du document historique (TS-033)
+
+`site/local-migration.js` convertit un document `threadstep.document.v1` valide
+vers l'espace local autonome `threadstep-local` **sans construire ni configurer
+d'instance Dexie Cloud**, sans OTP, sans requête réseau et sans push. La
+conversion n'est jamais automatique : `detectLocalSource` lit la valeur brute et
+calcule son empreinte SHA-256 via `site/fingerprint.js`, puis
+`planLocalConversion` présente la destination, l'inventaire source, l'inventaire
+de la cible, les insertions absentes et l'empreinte examinée avant tout
+consentement. Une source absente, illisible ou invalide ne produit aucun plan et
+aucune écriture.
+
+La projection conserve sujets, étapes, sous-étapes, relations `subjectId` et
+`parentId`, ordre, notes, priorités, états `done` et la préférence locale de
+reprise. Le mapping local est idempotent : un identifiant déjà préfixé
+`legacy:` n'est jamais préfixé une seconde fois. `runLocalConversion` relit la
+source et la cible, exige un consentement lié à l'empreinte du plan, puis
+commite une seule fois. Un refus, une source modifiée, une cible modifiée, une
+collision ou un échec de transaction n'écrit rien ; une seconde exécution ne
+crée aucun doublon. La provenance non synchronisée `threadstep.migration.v1`
+enregistre l'empreinte, la version de mapping, la cible et les comptes, sans
+aucun titre ni note, et distingue « conversion locale terminée » d'une
+activation Cloud.
+
+Le scénario de recette de référence est un document V1 de **5 sujets et
+18 étapes**, retrouvé après rechargement sans Cloud, avec la source
+`threadstep.document.v1` et son export de secours **non destructifs** et
+identiques. Le transfert local vers une base synchronisée, l'OTP et tout push
+restent hors de cette conversion et relèvent de **TS-037**.
+
 ## Réconciliation Dexie Cloud d'une base déjà peuplée (TS-031)
 
 `site/migration-reconciliation.js` est le cœur pur, déterministe et sans DOM

@@ -66,6 +66,12 @@ export function reproduceHistoricalDocument(records) {
 // Deterministic and injective: a fixed prefix is prepended to the legacy id.
 export function mapLegacyId(legacyId, options = {}) {
   const prefix = options && typeof options.prefix === "string" ? options.prefix : LEGACY_ID_PREFIX;
+  // The local conversion is re-entrant: a value produced by a later export may
+  // already carry the stable prefix and must never become `legacy:legacy:ID`.
+  if (options && options.idempotent === true &&
+      typeof legacyId === "string" && legacyId.startsWith(prefix)) {
+    return legacyId;
+  }
   return prefix + legacyId;
 }
 

@@ -21,6 +21,32 @@ ThreadStep SHALL present its business features on an autonomous local IndexedDB/
 - **WHEN** l'utilisateur ouvre ThreadStep
 - **THEN** les sujets, étapes et exports restent accessibles
 - **AND** aucun OTP, email ou identité Cloud n'est requis
+#### Scenario: Explicit local conversion is offered in local mode
+- **GIVEN** un document V1 valide et aucune configuration Cloud active
+- **WHEN** l'utilisateur ouvre la prévisualisation de conversion locale
+- **THEN** il voit la destination locale, les comptes source et cible et les insertions prévues
+- **AND** il peut confirmer ou refuser sans OTP ni URL Cloud
+- **AND** la conversion ne construit aucune instance synchronisée
+### Requirement: ThreadStep historical V1 local conversion
+ThreadStep SHALL convert a validated V1 document into its own local Dexie workspace only after an explicit local review and consent, preserving subjects, steps, substeps, relations, order, notes, priorities, `done` and the resume preference. The historical source and its JSON export MUST remain available, and the conversion MUST NOT create, configure or push to a Dexie Cloud instance.
+#### Scenario: Five subjects and eighteen steps survive reload
+- **GIVEN** un document V1 valide de 5 sujets et 18 étapes
+- **WHEN** la conversion locale est confirmée puis l'application rechargée sans Cloud
+- **THEN** les 5 sujets, les 18 étapes, les sous-étapes et leurs relations sont présents dans l'espace local
+- **AND** la source `threadstep.document.v1` et son export de secours sont inchangés
+- **AND** aucune instance Cloud, aucun OTP et aucun push n'ont été créés
+#### Scenario: Invalid, repeated or interrupted conversion is non-destructive
+- **GIVEN** une cible locale vide, partiellement peuplée ou déjà convertie
+- **WHEN** la conversion est relancée, reçoit un V1 invalide ou échoue dans sa transaction
+- **THEN** aucune duplication ni aucun écrasement n'est produit
+- **AND** la source reste lisible et exportable
+- **AND** une reprise ultérieure reconnaît les enregistrements déjà convertis
+#### Scenario: Business fields and resume tracking are preserved
+- **GIVEN** une source V1 avec notes, priorités mixtes, états `done`, ordre et une préférence de reprise
+- **WHEN** la conversion locale réussit
+- **THEN** chaque note, priorité, état et ordre est conservé
+- **AND** la préférence de reprise pointe vers la même étape convertie sans être synchronisée ni exportée
+- **AND** les identifiants déjà convertis ne reçoivent pas un second préfixe `legacy:`
 ### Requirement: ThreadStep business schema and relationships
 Les sujets et étapes SHALL conserver leurs identifiants, titres, ordres, notes, priorités, états `done` et hiérarchie (`subjectId`, `parentId`). Les préférences de reprise restent non synchronisées. Les quotas métier actuels font partie du profil ThreadStep.
 #### Scenario: Hierarchy preservation

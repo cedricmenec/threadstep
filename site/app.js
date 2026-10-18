@@ -17,6 +17,7 @@ import {
 } from "./migration-reconciliation.js";
 import { AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
 import { availableLocalBackup } from "./local-recovery.js";
+import { LOCAL_MIGRATION_STATUS, detectLocalSource, isLocalCompletion, planLocalConversion, readLocalProvenance, runLocalConversion, writeLocalProvenance } from "./local-migration.js";
 import { readSyncedRecords } from "./synced-records.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
@@ -54,6 +55,17 @@ const localPanelEl = document.querySelector("#local-panel");
 const localStatusEl = document.querySelector("#local-status");
 const localLegacyNoticeEl = document.querySelector("#local-legacy-notice");
 const localExportLegacyEl = document.querySelector("#local-export-legacy");
+const localConvertLegacyEl = document.querySelector("#local-convert-legacy");
+const localConversionEl = document.querySelector("#local-conversion");
+const localConversionSourceEl = document.querySelector("#local-conversion-source");
+const localConversionTargetEl = document.querySelector("#local-conversion-target");
+const localConversionPlanEl = document.querySelector("#local-conversion-plan");
+const localConversionFingerprintEl = document.querySelector("#local-conversion-fingerprint");
+const localConversionStateEl = document.querySelector("#local-conversion-state");
+const localConversionConsentEl = document.querySelector("#local-conversion-consent");
+const localConversionConfirmEl = document.querySelector("#local-conversion-confirm");
+const localConversionRefuseEl = document.querySelector("#local-conversion-refuse");
+const localConversionStatusEl = document.querySelector("#local-conversion-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 let syncedDatabase = null;
 let localDatabase = null;
@@ -96,6 +108,7 @@ let localReadPending = null;
 let localReadFailed = false;
 let localWriteBlocked = false;
 let historicalGuard = null;
+let localConversionContext = null;
 
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
@@ -181,15 +194,25 @@ function renderLocalWorkspace() {
   if (!localPanelEl) return;
   const local = !requiresAuthentication();
   localPanelEl.hidden = !local;
-  if (!local) return;
+  if (!local) {
+    if (localConversionEl) localConversionEl.hidden = true;
+    return;
+  }
   const backup = availableLocalBackup(localStorage);
+  const provenance = readLocalProvenance(localStorage);
+  const converted = isLocalCompletion(provenance);
   if (localLegacyNoticeEl) {
     localLegacyNoticeEl.hidden = !backup;
     localLegacyNoticeEl.textContent = backup
-      ? `Un document historique threadstep.document.v1 est conservé dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). Il reste lisible et exportable ci-dessous ; aucune conversion ni transmission Cloud n'est lancée automatiquement. Une conversion explicite distincte sera proposée séparément (TS-033).`
+      ? `Un document historique threadstep.document.v1 est conservé dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). Il reste lisible et exportable ci-dessous ; aucune conversion ni transmission Cloud n'est lancée automatiquement.` +
+        (converted
+          ? ` Conversion locale terminée dans IndexedDB (${provenance.subjects} sujets et ${provenance.items} étapes) ; elle ne constitue pas une synchronisation Cloud.`
+          : " Une conversion locale explicite reste disponible ci-dessous, avec revue et consentement.")
       : "";
   }
   if (localExportLegacyEl) localExportLegacyEl.hidden = !backup;
+  if (localConvertLegacyEl) localConvertLegacyEl.hidden = !backup;
+  if (!backup && localConversionEl) localConversionEl.hidden = true;
 }
 function setAuthStatus(message) {
   if (authStatusEl) authStatusEl.textContent = typeof message === "string" ? message : "";
@@ -237,6 +260,171 @@ function exportLegacyBackup() {
     setLocalStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
   }
 }
+function hideLocalConversion() {
+  localConversionContext = null;
+  if (localConversionEl) localConversionEl.hidden = true;
+  if (localConversionConsentEl) localConversionConsentEl.checked = false;
+  if (localConversionConfirmEl) localConversionConfirmEl.disabled = true;
+  setLocalConversionStatus("");
+}
+function setLocalConversionStatus(message) {
+  if (localConversionStatusEl) {
+    localConversionStatusEl.textContent = typeof message === "string" ? message : "";
+  }
+}
+function renderLocalConversion(plan) {
+  if (!localConversionEl) return;
+  const source = plan.source || {};
+  const target = plan.targetCounts || { subjects: 0, items: 0 };
+  if (localConversionSourceEl) {
+    localConversionSourceEl.textContent = source.status === LOCAL_MIGRATION_STATUS.PRESENT
+      ? `Source : ${plan.counts.subjects} sujet(s) et ${plan.counts.items} étape(s) dans threadstep.document.v1, conservée telle quelle.`
+      : "Source : aucun document historique convertible.";
+  }
+  if (localConversionTargetEl) {
+    localConversionTargetEl.textContent =
+      `Destination : base locale IndexedDB threadstep-local, sur cet appareil, sans configuration Cloud. ` +
+      `Cible actuelle : ${target.subjects} sujet(s) et ${target.items} étape(s).`;
+  }
+  if (localConversionPlanEl) {
+    const insertions = plan.operations.length;
+    if (plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
+      localConversionPlanEl.textContent =
+        "Les enregistrements source sont déjà présents à l'identique : aucune insertion n'est nécessaire.";
+    } else if (plan.status === LOCAL_MIGRATION_STATUS.COLLISION) {
+      localConversionPlanEl.textContent =
+        `Collision sur ${plan.collisions.length} identifiant(s) local(aux) au contenu différent : ` +
+        "aucune écriture ne sera effectuée et les enregistrements existants restent inchangés.";
+    } else {
+      localConversionPlanEl.textContent =
+        `Insertions prévues : ${insertions} enregistrement(s) absent(s), sans écrasement des données locales existantes.`;
+    }
+  }
+  if (localConversionFingerprintEl) {
+    localConversionFingerprintEl.textContent = plan.sourceFingerprint
+      ? `Empreinte SHA-256 de la source examinée : ${plan.sourceFingerprint}.`
+      : "";
+  }
+  if (localConversionStateEl) {
+    localConversionStateEl.textContent = plan.status === LOCAL_MIGRATION_STATUS.POPULATED
+      ? "La cible locale contient déjà des données : seuls les enregistrements absents seront insérés après consentement."
+      : plan.status === LOCAL_MIGRATION_STATUS.COLLISION
+        ? "Conversion bloquée par une collision : aucune écriture, aucune donnée écrasée."
+        : plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED
+          ? "Conversion locale déjà effectuée pour cette source."
+          : "Rien n'est écrit avant votre confirmation explicite.";
+  }
+  const writable = plan.operations.length > 0 &&
+    plan.status !== LOCAL_MIGRATION_STATUS.COLLISION &&
+    plan.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED;
+  if (localConversionConsentEl) {
+    localConversionConsentEl.checked = false;
+    localConversionConsentEl.disabled = !writable;
+  }
+  if (localConversionConfirmEl) {
+    localConversionConfirmEl.disabled = !writable;
+  }
+  setLocalConversionStatus("Prévisualisation locale prête : aucune donnée n'a encore été écrite.");
+  localConversionEl.hidden = false;
+}
+async function openLocalConversion() {
+  if (requiresAuthentication()) return;
+  if (!businessStore) {
+    setLocalError("Conversion locale indisponible : stockage IndexedDB non initialisé.");
+    return;
+  }
+  const detected = detectLocalSource(localStorage);
+  if (detected.status !== LOCAL_MIGRATION_STATUS.PRESENT) {
+    hideLocalConversion();
+    setLocalError(detected.message || "Document historique non convertible.");
+    return;
+  }
+  let target;
+  try {
+    target = await businessStore.read();
+  } catch {
+    setLocalError("Lecture de la cible locale impossible : conversion non proposée.");
+    return;
+  }
+  const plan = planLocalConversion({
+    source: detected,
+    target,
+    resumePreference: readResumePreference()
+  });
+  localConversionContext = { plan };
+  setLocalError("");
+  renderLocalConversion(plan);
+  const title = localConversionEl ? localConversionEl.querySelector("#local-conversion-title") : null;
+  if (title) title.focus();
+}
+function localConversionAdapter() {
+  return {
+    readSource() {
+      return detectLocalSource(localStorage).raw;
+    },
+    readTarget() {
+      return businessStore.read();
+    },
+    commit(operations) {
+      return businessStore.commit(operations);
+    },
+    writeProvenance(record) {
+      return writeLocalProvenance(localStorage, record);
+    },
+    writeResumePreference(value) {
+      const serialized = serializeResumePreference(value);
+      if (serialized === null) throw new Error("Préférence de reprise invalide.");
+      localStorage.setItem(RESUME_KEY, serialized);
+    }
+  };
+}
+async function confirmLocalConversion() {
+  const context = localConversionContext;
+  if (!context) return;
+  if (requiresAuthentication() || !businessStore) {
+    setLocalConversionStatus("Conversion locale indisponible dans cet espace.");
+    return;
+  }
+  if (!localConversionConsentEl || !localConversionConsentEl.checked) {
+    setLocalConversionStatus("Consentement explicite requis avant toute écriture locale.");
+    return;
+  }
+  await pendingCloudWrites;
+  const outcome = await runLocalConversion(localConversionAdapter(), context.plan, {
+    confirmed: true,
+    fingerprint: context.plan.fingerprint
+  });
+  if (outcome.status === LOCAL_MIGRATION_STATUS.LOCAL_COMPLETE) {
+    hideLocalConversion();
+    await refreshLocalDocument();
+    setLocalError("");
+    setLocalStatus(
+      `Conversion locale terminée : ${outcome.counts.subjects} sujet(s) et ${outcome.counts.items} étape(s) sont dans IndexedDB sur cet appareil. ` +
+      "La sauvegarde historique et son export restent disponibles. Aucune synchronisation Cloud n'a été configurée ni déclenchée."
+    );
+    notify("Conversion locale terminée dans IndexedDB. Aucune synchronisation Cloud n'a été effectuée.");
+    return;
+  }
+  const messages = {
+    [LOCAL_MIGRATION_STATUS.REFUSED]: "Conversion refusée : la source et la cible locale restent inchangées.",
+    [LOCAL_MIGRATION_STATUS.CONSENT_MISMATCH]: "Consentement lié à un autre plan : aucune écriture. Rouvrez la prévisualisation.",
+    [LOCAL_MIGRATION_STATUS.STALE_SOURCE]: "Document historique modifié depuis la prévisualisation : aucune écriture. Rouvrez la prévisualisation.",
+    [LOCAL_MIGRATION_STATUS.STALE_PLAN]: "Cible locale modifiée depuis la prévisualisation : aucune écriture. Rouvrez la prévisualisation.",
+    [LOCAL_MIGRATION_STATUS.COLLISION]: "Collision d'identifiant : aucune écriture, aucune donnée locale écrasée.",
+    [LOCAL_MIGRATION_STATUS.READ_ERROR]: "Lecture de revalidation impossible : conversion bloquée, source et cible inchangées.",
+    [LOCAL_MIGRATION_STATUS.FAILED]: "Échec de la transaction locale : aucun demi-document écrit. La sauvegarde historique reste intacte.",
+    [LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED]: "Aucune nouvelle insertion nécessaire : les enregistrements sont déjà présents."
+  };
+  const message = messages[outcome.status] || "Conversion locale interrompue : aucune écriture confirmée.";
+  setLocalConversionStatus(message);
+  notify(message);
+  if (outcome.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
+    context.plan = { ...context.plan, operations: [], fingerprint: context.plan.fingerprint };
+    if (localConversionConfirmEl) localConversionConfirmEl.disabled = true;
+    if (localConversionConsentEl) localConversionConsentEl.disabled = true;
+  }
+}
+
 function renderAuthPanel() {
   if (!authPanelEl) return;
   const authenticated = canAccessBusiness(authState);
@@ -1458,6 +1646,19 @@ document.querySelector("#export").addEventListener("click", () => {
 });
 if (authLegacyExportEl) authLegacyExportEl.addEventListener("click", exportLegacyBackup);
 if (localExportLegacyEl) localExportLegacyEl.addEventListener("click", exportLegacyBackup);
+if (localConvertLegacyEl) localConvertLegacyEl.addEventListener("click", () => { void openLocalConversion(); });
+if (localConversionConsentEl) localConversionConsentEl.addEventListener("change", () => {
+  if (localConversionConfirmEl) {
+    const plan = localConversionContext ? localConversionContext.plan : null;
+    localConversionConfirmEl.disabled = !localConversionConsentEl.checked ||
+      !plan || plan.operations.length === 0;
+  }
+});
+if (localConversionConfirmEl) localConversionConfirmEl.addEventListener("click", () => { void confirmLocalConversion(); });
+if (localConversionRefuseEl) localConversionRefuseEl.addEventListener("click", () => {
+  hideLocalConversion();
+  notify("Conversion locale refusée : la source historique et la cible IndexedDB restent inchangées.");
+});
 document.querySelector("#import").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
