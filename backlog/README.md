@@ -1,8 +1,23 @@
 # Backlog ThreadStep
 
+## Cible approuvée : IndexedDB local par défaut, Dexie Cloud facultatif (18 octobre 2026)
+
+Les [huit spécifications OpenSpec cibles](../docs/product/specs/dexie-data-lifecycle-target-v1.md) sont désormais versionnées sous `openspec/specs/` : sept capacités génériques réutilisables (persistance, activation, synchronisation, migration, réconciliation, import/restauration, isolation) et **un profil spécifique ThreadStep**. Elles constituent le **contrat cible approuvé**, pas une preuve que le site actuel l'implémente déjà. Les anciennes spécifications restent traçables et seront réconciliées via les changements OpenSpec de chaque implémentation. [Source de cadrage Notion](https://app.notion.com/p/3fd12ac9163681769406d0e98180b7ef).
+
+- **[TS-032](tasks/TS-032.md)** : base Dexie locale autonome, sans compte ni URL Cloud. `ready / manual / high`, priorité critique.
+- **[TS-033](tasks/TS-033.md)** : conversion du V1 `threadstep.document.v1` vers IndexedDB local, sans push Cloud. `ready / manual / high`, priorité critique.
+- **[TS-034](tasks/TS-034.md)** : vrai diagnostic Dexie et relance du pull, sans assimiler déconnexion et Cloud vide. `ready / manual / high`.
+- **[TS-035](tasks/TS-035.md)** : imports JSON, réimports et restaurations idempotents, sans `legacy:legacy:`. `ready / manual / high`.
+- **[TS-036](tasks/TS-036.md)** : réconciliation non destructive avec consentement lié au plan réellement affiché. `ready / manual / high`, priorité critique.
+- **[TS-037](tasks/TS-037.md)** : activation Cloud opt-in après usage local, premier transfert explicitement consenti. `ready / manual / high`, priorité critique.
+- **[TS-038](tasks/TS-038.md)** : isolation local / instances / comptes, logout et purge maîtrisés. `ready / manual / high`.
+- **[TS-039](tasks/TS-039.md)** : recette E2E sur instance de test, Chrome mobile, deux navigateurs, hors ligne et backups. `ready / manual / high`.
+
+**Ordre prudent :** TS-032 → TS-033 → TS-034 → TS-035 → TS-036 → TS-037 → TS-038 → TS-039 ; les dépendances du frontmatter sont normatives et autorisent certains travaux parallèles. Aucun agent OpenSpec/OpenRouter n'est déclenché par ces briefs. La réussite CI des PR précédentes ne vaut pas recette Dexie Cloud réelle.
+
 ## Fiabilisation des migrations Dexie Cloud : TS-031 (18 octobre 2026)
 
-- **[TS-031](tasks/TS-031.md) : reprendre et réconcilier une migration Dexie Cloud sans perte de données.** `ready / manual / high`, priorité critique. Après le correctif de persistance [#127](https://github.com/cedricmenec/threadstep/pull/127), une source V1 peut rester bloquée devant une cible déjà peuplée avec des identifiants divergents. Le brief couvre diagnostic détaillé, décisions explicites par conflit, import partiel non destructif, copies à identifiants stables, contrôle de la première synchronisation distante et reprise idempotente. **Il s'agit uniquement d'une préparation à implémenter via Agent OpenSpec, pas d'un correctif runtime livré.**
+- **[TS-031](tasks/TS-031.md) : reprendre et réconcilier une migration Dexie Cloud sans perte de données.** `ready / manual / high`, priorité critique. Après le correctif de persistance [#127](https://github.com/cedricmenec/threadstep/pull/127), une source V1 peut rester bloquée devant une cible déjà peuplée avec des identifiants divergents. Le brief couvre diagnostic détaillé, décisions explicites par conflit, import partiel non destructif, copies à identifiants stables, contrôle de la première synchronisation distante et reprise idempotente. **État actualisé :** cette tâche a depuis été implémentée par la [PR #130 fusionnée](https://github.com/cedricmenec/threadstep/pull/130), mais la recette Chrome mobile reste bloquée sur « Dexie Cloud n'est pas connecté ». Le nouveau chantier TS-032 à TS-039 traite l'architecture local-first et Cloud optionnel de façon systémique.
 
 *La section datée du 17 octobre ci-dessous est le cadrage historique de TS-024 à TS-030 et ne constitue pas un état de livraison actualisé.*
 
