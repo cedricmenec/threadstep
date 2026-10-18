@@ -8,12 +8,13 @@ Les [huit spécifications OpenSpec cibles](../docs/product/specs/dexie-data-life
 - **[TS-033](tasks/TS-033.md)** : conversion du V1 `threadstep.document.v1` vers IndexedDB local, sans push Cloud. `ready / manual / high`, priorité critique.
 - **[TS-034](tasks/TS-034.md)** : vrai diagnostic Dexie et relance du pull, sans assimiler déconnexion et Cloud vide. `ready / manual / high`.
 - **[TS-035](tasks/TS-035.md)** : correction du mapping `legacy:` dans **l'import Cloud** et les réimports JSON, récupération non destructive des données déjà doublement préfixées, export brut des enregistrements orphelins et restauration contrôlée. `ready / manual / high`, priorité **critique** ; incident observé Chrome Android → laptop (5 sujets, 19 tâches dont une orpheline). **Aucune remise à zéro réelle sans sauvegardes vérifiées et consentement.**
-- **[TS-036](tasks/TS-036.md)** : réconciliation non destructive avec consentement lié au plan réellement affiché. `ready / manual / high`, priorité critique.
+- **[TS-036](tasks/TS-036.md)** : réconciliation non destructive avec consentement lié au plan affiché, **correction du panneau de migration V1 et des messages Dexie périmés après restauration/synchronisation réussies**, sans supprimer les données historiques durant cette étape. `ready / manual / high`, priorité critique.
 - **[TS-037](tasks/TS-037.md)** : activation Cloud opt-in après usage local, premier transfert explicitement consenti. `ready / manual / high`, priorité critique.
 - **[TS-038](tasks/TS-038.md)** : isolation local / instances / comptes, logout et purge maîtrisés. `ready / manual / high`.
 - **[TS-039](tasks/TS-039.md)** : recette E2E sur instance de test, Chrome mobile, deux navigateurs, hors ligne et backups. `ready / manual / high`.
+- **[TS-040](tasks/TS-040.md)** : décommission définitif du chemin métier `localStorage` V1, **sans maintien du support des anciennes sauvegardes V1** ; auparavant, livrer et vérifier un **nouveau format d'export/import issu d'IndexedDB**, car les exports actuels utilisent encore `version: 1`. Nettoyage des anciennes clés **uniquement volontaire et local**. `ready / manual / high`, après TS-036/037/038/039.
 
-**Ordre prudent :** TS-032 → TS-033 → TS-034 → TS-035 → TS-036 → TS-037 → TS-038 → TS-039 ; les dépendances du frontmatter sont normatives et autorisent certains travaux parallèles. Aucun agent OpenSpec/OpenRouter n'est déclenché par ces briefs. La réussite CI des PR précédentes ne vaut pas recette Dexie Cloud réelle.
+**Ordre prudent :** TS-032 → TS-033 → TS-034 → TS-035 → TS-036 → TS-037 → TS-038 → TS-039 → TS-040 ; les dépendances du frontmatter sont normatives et autorisent certains travaux parallèles. Aucun agent OpenSpec/OpenRouter n'est déclenché par ces briefs. La réussite CI des PR précédentes ne vaut pas recette Dexie Cloud réelle.
 
 ## Fiabilisation des migrations Dexie Cloud : TS-031 (18 octobre 2026)
 
