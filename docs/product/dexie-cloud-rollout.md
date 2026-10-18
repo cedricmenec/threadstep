@@ -196,3 +196,31 @@ La **convergence** n'est pas déduite d'un commit local ni d'un simple état
 appareil ; la propagation vers un second navigateur et la recette Chrome
 Android restent **manuelles**, sur une instance Dexie Cloud isolée, avec
 sauvegardes préalables et sans jamais utiliser les bases personnelles.
+
+## Plan affiché, écartement et cycle de vie historique TS-036
+
+Le consentement de réconciliation est désormais lié au **plan affiché** et non
+au plan recalculé pendant le clic. `reviewDisplayedPlan` compare statut,
+empreinte, opérations ordonnées et groupes bloqués ; toute divergence de source,
+cible, destination, URL, `remoteDbId`, utilisateur, droits/realms, résolution ou
+ordre invalide l'ancien consentement et réaffiche le plan sans commit.
+
+Le panneau historique et le footer suivent les signaux natifs courants avec une
+**génération** monotone : un ancien résultat asynchrone tardif est ignoré, un
+blocage transitoire disparaît après `connected` / `in-sync` et validation de la
+cible, tandis qu'une vraie déconnexion ou un conflit réapparaît après une
+nouvelle évaluation. Le footer garde la propriété de son message : une erreur
+de stockage réelle survit à la disparition d'un blocage et aucun message de
+migration n'annonce une synchronisation distante non prouvée.
+
+La présence de `threadstep.document.v1` ne suffit plus à redemander un import :
+une cible déjà réconciliée est silencieuse, et un **écartement** explicite est
+mémorisé localement pour l'empreinte de source, l'URL, la base distante et
+l'utilisateur haché, sans contenu métier ni identité brute. Un changement réel
+rouvre la vérification. La source reste exportable et vérifiable dans la zone
+Cloud « Sauvegarde historique conservée » ; elle n'est jamais supprimée ni
+réécrite par TS-036. Son retrait optionnel relève de **TS-040**.
+
+La recette réelle sur instance Dexie Cloud isolée, deux navigateurs, Chrome
+mobile, tactile/clavier/lecteur d'écran et événements de synchronisation
+concurrents reste manuelle et distincte de la CI.

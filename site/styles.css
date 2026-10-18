@@ -184,6 +184,13 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .migration-consent input{min-width:24px;min-height:24px;margin-top:2px}
 .migration-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .migration-actions button{min-height:44px;min-width:44px}
+.historical-backup{margin-top:32px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:20px 22px;max-width:720px}
+.historical-backup[hidden]{display:none}
+.historical-backup h2{font-size:1.2rem;letter-spacing:-.03em}
+.historical-backup-status{margin:8px 0 0;color:#415748;font-size:.9rem}
+.historical-backup-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.historical-backup-actions button{min-height:44px;min-width:44px}
+.historical-backup-actions button:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
 .local-panel{margin-top:24px;background:#eef3e3;border:1px solid #cdd9b6;border-radius:14px;padding:18px 20px;max-width:640px}
 .local-panel[hidden]{display:none}
 .local-panel h2{font-size:1.2rem;letter-spacing:-.03em}

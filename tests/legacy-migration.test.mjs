@@ -354,7 +354,8 @@ test("6.1 app wiring keeps the consent gate before the commit and core.js pure",
   assert.match(app, /runReconciliation\(/);
   assert.match(app, /reconciliationAdapter\(\)/);
   assert.match(app, /operation\.type !== "add"/);
-  assert.match(app, /fingerprint: fresh\.fingerprint/);
+  assert.match(app, /reviewDisplayedPlan\(displayed, fresh\)/);
+  assert.match(app, /fingerprint: displayed\.fingerprint/);
   assert.match(app, /migration-refuse/);
   assert.ok(
     app.indexOf("readAttestedTarget(") < app.indexOf("runReconciliation("),

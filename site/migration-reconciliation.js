@@ -991,6 +991,58 @@ export function planReconciliation(input = {}) {
   };
 }
 
+function projectOperations(plan) {
+  if (!plan || !Array.isArray(plan.operations)) return [];
+  return plan.operations.map((operation) => ({
+    type: operation.type,
+    store: operation.store,
+    value: projectBusinessRecord(operation.store, operation.value)
+  }));
+}
+
+function projectBlocked(plan) {
+  if (!plan || !Array.isArray(plan.blocked)) return [];
+  return plan.blocked.map((entry) => ({
+    store: entry.store,
+    id: entry.id,
+    reason: entry.reason,
+    title: entry.title
+  }));
+}
+
+// Canonical projection of the parts of a plan a human actually reviewed.
+// Metadata-only native sync changes never alter this projection.
+export function projectPlanForReview(plan) {
+  return {
+    status: plan && typeof plan.status === "string" ? plan.status : null,
+    fingerprint: plan && typeof plan.fingerprint === "string" ? plan.fingerprint : null,
+    operations: projectOperations(plan),
+    blocked: projectBlocked(plan)
+  };
+}
+
+// The displayed plan is the only object consent may authorise. A recomputed
+// plan that differs by status, fingerprint, ordered operations or blocked
+// groups requires a new explicit review.
+export function reviewDisplayedPlan(displayedPlan, nextPlan) {
+  if (!displayedPlan || !nextPlan) {
+    return { same: false, reason: "missing-plan" };
+  }
+  if (displayedPlan.status !== nextPlan.status) {
+    return { same: false, reason: "status" };
+  }
+  if (displayedPlan.fingerprint !== nextPlan.fingerprint) {
+    return { same: false, reason: "fingerprint" };
+  }
+  if (canonicalJson(projectOperations(displayedPlan)) !== canonicalJson(projectOperations(nextPlan))) {
+    return { same: false, reason: "operations" };
+  }
+  if (canonicalJson(projectBlocked(displayedPlan)) !== canonicalJson(projectBlocked(nextPlan))) {
+    return { same: false, reason: "blocked" };
+  }
+  return { same: true, reason: null };
+}
+
 function consentConfirmed(consent) {
   return isPlainObject(consent) && consent.confirmed === true &&
     typeof consent.fingerprint === "string" && consent.fingerprint.length > 0;
@@ -1032,6 +1084,12 @@ export async function runReconciliation(adapter, plan, consent, revalidate) {
   const attestation = fresh && fresh.attestation;
   if (!attestation || attestation.attested !== true) {
     return { status: "sync-blocked", reason: attestation ? attestation.reason : "indeterminate", operations: [] };
+  }
+  if (fresh.plan !== undefined && fresh.plan !== null) {
+    const review = reviewDisplayedPlan(plan, fresh.plan);
+    if (!review.same) {
+      return { status: "stale-plan", reason: review.reason, operations: [] };
+    }
   }
   const next = computePlanFingerprint({
     document: fresh.document,
