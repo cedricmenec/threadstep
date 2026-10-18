@@ -1,5 +1,6 @@
 export const CLOUD_CONFIG_KEY = "threadstep.cloud.config.v1";
 export const DATABASE_NAME = "threadstep";
+export const LOCAL_DATABASE_NAME = "threadstep-local";
 export const SCHEMA_VERSION = 2;
 export const CLOUD_HOST_SUFFIX = "dexie.cloud";
 export const SYNCHRONIZED_STORES = Object.freeze({
@@ -66,6 +67,28 @@ export function dexieSchema() {
     stores: { ...SYNCHRONIZED_STORES },
     upgrade: upgradeSchema
   };
+}
+
+export function localDexieSchema() {
+  return {
+    name: LOCAL_DATABASE_NAME,
+    version: SCHEMA_VERSION,
+    stores: { ...SYNCHRONIZED_STORES },
+    upgrade: upgradeSchema
+  };
+}
+
+// Opens the autonomous local workspace with a plain Dexie constructor. It
+// deliberately installs no Dexie Cloud addon and never touches db.cloud, so
+// local records cannot become eligible for replication before TS-037 consent.
+export function openLocalDatabase(DexieConstructor) {
+  if (typeof DexieConstructor !== "function") {
+    throw new TypeError("Dexie constructor is required for the local workspace");
+  }
+  const schema = localDexieSchema();
+  const db = new DexieConstructor(schema.name);
+  db.version(schema.version).stores(schema.stores).upgrade(schema.upgrade);
+  return db;
 }
 
 export function validateSynchronizedStores(stores) {

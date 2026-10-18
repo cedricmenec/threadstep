@@ -288,6 +288,21 @@ export function isSyncError(error) {
   return !!error && error.kind === SYNC_ERROR_KIND;
 }
 
+// Validated projection of the two IndexedDB tables. A failed or incoherent
+// read must never be rendered as an empty authoritative workspace.
+export function normalizedRecords(raw) {
+  if (!raw || !Array.isArray(raw.subjects) || !Array.isArray(raw.items)) {
+    throw new TypeError("Dexie returned invalid tables");
+  }
+  const document = parseDocument(JSON.stringify(recordsToDocument(raw)));
+  const records = documentToRecords(document);
+  if (records.subjects.length !== raw.subjects.length ||
+      records.items.length !== raw.items.length) {
+    throw new Error("Dangling subject references in IndexedDB");
+  }
+  return records;
+}
+
 export function createChangeChannel() {
   const listeners = new Set();
   return {
@@ -339,6 +354,55 @@ export function createMemoryStore(options = {}) {
     networkCalls: 0
   };
   return store;
+}
+
+// Transactional Dexie adapter shared by the local and synchronized
+// workspaces. Every operation set is committed atomically in one `rw`
+// transaction; only a committed transaction is reported as recorded.
+export function createDexieStore(db) {
+  if (!db || typeof db.transaction !== "function" || !db.subjects || !db.items) {
+    throw new TypeError("Dexie database is not initialized");
+  }
+  return {
+    async open() {
+      if (typeof db.open !== "function") return;
+      try {
+        await db.open();
+      } catch (error) {
+        throw localError("Impossible d'ouvrir le stockage local IndexedDB.", error);
+      }
+    },
+    async read() {
+      try {
+        const raw = await db.transaction("r", db.subjects, db.items, async () => ({
+          subjects: await db.subjects.toArray(),
+          items: await db.items.toArray()
+        }));
+        return normalizedRecords(raw);
+      } catch (error) {
+        if (isLocalError(error)) throw error;
+        throw localError("Lecture de l'espace IndexedDB impossible.", error);
+      }
+    },
+    async commit(operations) {
+      if (!Array.isArray(operations) || operations.length === 0) {
+        return { status: "recorded", operations: [] };
+      }
+      try {
+        await db.transaction("rw", db.subjects, db.items, async () => {
+          for (const operation of operations) {
+            const table = operation.store === SUBJECTS_STORE ? db.subjects : db.items;
+            if (operation.type === "put") await table.put(operation.value);
+            else if (operation.type === "add") await table.add(operation.value);
+            else if (operation.type === "delete") await table.delete(operation.key);
+          }
+        });
+        return { status: "recorded", operations };
+      } catch (error) {
+        throw localError("Échec de l'enregistrement local.", error);
+      }
+    }
+  };
 }
 
 export async function recordLocalWrite(store, operations) {

@@ -8,6 +8,19 @@ Version de la checklist : Version testée à noter : `main` et commit `97d326c5b
 
 Avant de tester, **exporter le JSON réel**. Utiliser de préférence un navigateur/profil de test. Dans le produit, créer deux sujets A et B, plusieurs actions de même priorité, une action parente P avec trois sous-tâches (dont une terminée) et un autre parent Q. Ne pas vider le stockage de son profil habituel : l'import demande confirmation et remplace le document courant.
 
+## Mode local IndexedDB sans Cloud (TS-032)
+
+À vérifier sur Chrome mobile, sans URL Cloud enregistrée et hors ligne, dans un
+profil de test. Ces contrôles restent manuels : les tests Node ne prouvent ni
+IndexedDB réel, ni le hors ligne, ni le tactile, ni le lecteur d'écran.
+
+- [ ] Au premier lancement sans Cloud, la vue métier est disponible sans OTP ni formulaire de configuration bloquant ; aucun appel réseau métier n'est visible dans l'onglet Réseau.
+- [ ] Créer des sujets, des étapes et une sous-tâche, les modifier, en supprimer, puis recharger : les mêmes données et relations reviennent depuis l'espace local IndexedDB `threadstep-local`.
+- [ ] Vérifier dans les outils du navigateur que l'ancienne clé `threadstep.document.v1` reste intacte, que la notice de préservation est visible et que l'export historique restitue le JSON d'origine.
+- [ ] Bloquer ou saturer IndexedDB : un message d'erreur local explicite apparaît, aucun faux succès n'est annoncé et l'export historique encore lisible reste possible après rechargement.
+- [ ] Parcourir au clavier et au lecteur d'écran la notice locale, le bouton d'export historique et les états d'erreur ; vérifier le focus, les noms accessibles et les cibles tactiles.
+- [ ] Après avoir configuré une URL Cloud, vérifier que la base synchronisée est distincte et qu'aucune donnée locale n'a été copiée ou envoyée par cette seule configuration.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.

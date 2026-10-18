@@ -1,19 +1,9 @@
 // Dexie Cloud read boundary. A failed read must never become "empty database":
 // callers must not migrate, import or render an empty dashboard on error.
-import { parseDocument } from "./core.js";
-import { documentToRecords, recordsToDocument } from "./persistence.js";
+import { normalizedRecords } from "./persistence.js";
 
 export function normalizedSyncedRecords(raw) {
-  if (!raw || !Array.isArray(raw.subjects) || !Array.isArray(raw.items)) {
-    throw new TypeError("Dexie returned invalid tables");
-  }
-  const document = parseDocument(JSON.stringify(recordsToDocument(raw)));
-  const records = documentToRecords(document);
-  if (records.subjects.length !== raw.subjects.length ||
-      records.items.length !== raw.items.length) {
-    throw new Error("Dangling subject references in IndexedDB");
-  }
-  return records;
+  return normalizedRecords(raw);
 }
 
 export async function readSyncedRecords(db) {

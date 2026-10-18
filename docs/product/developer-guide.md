@@ -4,7 +4,7 @@
 
 ## Architecture
 
-ThreadStep est une application **statique**, en JavaScript vanilla sans build front-end ni backend. `site/index.html` expose les formulaires et les zones d'affichage ; `site/styles.css` gère le responsive ; `site/core.js` contient les fonctions pures du modèle ; `site/app.js` implémente le DOM, les événements, `localStorage`, JSON, focus, pointeurs et notifications.
+ThreadStep est une application **statique**, en JavaScript vanilla sans build front-end ni backend. `site/index.html` expose les formulaires et les zones d'affichage ; `site/styles.css` gère le responsive ; `site/core.js` contient les fonctions pures du modèle ; `site/app.js` implémente le DOM, les événements, `IndexedDB` (via Dexie), JSON, focus, pointeurs, préférences locales et notifications.
 
 ```text
 site/index.html
@@ -12,9 +12,10 @@ site/index.html
   ├─ site/app.js → site/core.js
   │             → site/dexie-foundation.js
   │             → site/vendor/dexie-cloud.mjs (Dexie.js + dexie-cloud-addon, buildé)
-  ├─ site/dexie-foundation.js (validation d'URL, portail, schéma, configuration locale)
+  ├─ site/dexie-foundation.js (validation d'URL, portail, schémas local et synchronisé)
   └─ site/vendor/dexie-cloud.mjs
-        ↕ localStorage du navigateur
+        ↕ IndexedDB du navigateur (threadstep-local par défaut, threadstep si Cloud configuré)
+        ↕ localStorage limité aux préférences et à la clé historique threadstep.document.v1
         ↕ import / export JSON explicites
 GitHub Pages publie uniquement site/ ; aucune API produit
 ```
@@ -23,7 +24,7 @@ CSP `connect-src https://*.dexie.cloud wss://*.dexie.cloud` : seuls les hôtes D
 
 ## Socle Dexie Cloud (TS-024)
 
-Le socle local-first est amorcé par `site/dexie-foundation.js` : `validateCloudUrl` n'accepte qu'une URL HTTPS sous `dexie.cloud` (validation purement syntaxique, sans réseau), `shouldOpenSyncedDatabase` et `cloudConfigureOptions` produisent `{ databaseUrl, requireAuth: true }` sans désactiver `nameSuffix`, et `dexieSchema` déclare une version entière explicite avec des magasins synchronisés à identifiants uniques `@id` (jamais `++id`). L'URL est conservée en local sous la clé non synchronisée `threadstep.cloud.config.v1`, distincte de `threadstep.document.v1` et absente de l'export JSON. `site/app.js` ne construit et ne configure la base synchronisée que derrière `shouldOpenSyncedDatabase` ; sans URL valide, un formulaire de configuration accessible est présenté et aucune opération métier Dexie n'est exécutée. Les dépendances `dexie` et `dexie-cloud-addon` sont épinglées dans `package.json`/`package-lock.json` et livrées en ESM local `site/vendor/dexie-cloud.mjs` (`npm run vendor:build`), sans CDN tiers à l'exécution. Aucun secret, fichier `dexie-cloud.key`/`dexie-cloud.json`, jeton d'administration ni URL d'instance imposée ne doit être livré.
+Le socle local-first est amorcé par `site/dexie-foundation.js` : `validateCloudUrl` n'accepte qu'une URL HTTPS sous `dexie.cloud` (validation purement syntaxique, sans réseau), `shouldOpenSyncedDatabase` et `cloudConfigureOptions` produisent `{ databaseUrl, requireAuth: true }` sans désactiver `nameSuffix`, et `dexieSchema` déclare une version entière explicite avec des magasins synchronisés à identifiants uniques `@id` (jamais `++id`). L'URL est conservée en local sous la clé non synchronisée `threadstep.cloud.config.v1`, distincte de `threadstep.document.v1` et absente de l'export JSON. `site/app.js` ne construit et ne configure la base **synchronisée** que derrière `shouldOpenSyncedDatabase` ; sans URL valide, il ouvre l'espace local autonome décrit ci-dessous et aucune instance Dexie Cloud n'est construite. Les dépendances `dexie` et `dexie-cloud-addon` sont épinglées dans `package.json`/`package-lock.json` et livrées en ESM local `site/vendor/dexie-cloud.mjs` (`npm run vendor:build`), sans CDN tiers à l'exécution. Aucun secret, fichier `dexie-cloud.key`/`dexie-cloud.json`, jeton d'administration ni URL d'instance imposée ne doit être livré.
 
 ## Persistance métier local-first (TS-025)
 
@@ -42,8 +43,9 @@ C'est ce qui évite qu'un appareil écrase l'édition indépendante d'un autre.
 
 L'adaptateur de stockage est un contrat injectable `commit(operations)`.
 `createMemoryStore` en fournit une implémentation en mémoire déterministe pour
-les tests ; `site/app.js` l'implémente au-dessus de Dexie dans une transaction
-`rw`. Une écriture est confirmée localement dès la validation de la transaction,
+les tests ; `createDexieStore` implémente au-dessus de Dexie une transaction
+`rw` atomique, partagée par l'espace local autonome et l'espace synchronisé.
+Une écriture est confirmée localement dès la validation de la transaction,
 sans attendre d'accusé Dexie Cloud. Un échec IndexedDB est rejeté avec le type
 d'erreur `local`, distinct du type `sync` : il n'est jamais présenté comme un
 succès. La propagation multi-onglets passe par le canal de changement
@@ -54,10 +56,41 @@ restent hors des tables synchronisées et hors de l'export.
 Une **garde de compatibilité** non destructive lit le document historique
 `threadstep.document.v1` sans jamais le supprimer ni le réécrire de façon
 destructive, et sans le transférer à Dexie Cloud sans consentement explicite :
-`site/app.js` conserve l'écriture locale V1 et propose désormais la conversion
-explicite (TS-026) sous consentement, sans purger la source. La recette
-navigateur, hors ligne, multi-onglets et IndexedDB réel reste une validation
-manuelle.
+en mode local, `site/app.js` affiche une notice de préservation et l'export
+historique existant, sans conversion automatique. La conversion explicite
+reste TS-033 et le transfert consenti vers une base synchronisée reste TS-037.
+La recette navigateur, hors ligne, multi-onglets et IndexedDB réel reste une
+validation manuelle.
+
+## Espace local IndexedDB par défaut (TS-032)
+
+`site/dexie-foundation.js` expose `LOCAL_DATABASE_NAME` (`threadstep-local`),
+`localDexieSchema()` et `openLocalDatabase(Dexie)`. L'espace local utilise la
+même version de schéma entière et les mêmes magasins `subjects`/`items` à
+identifiants chaîne que le schéma synchronisé, mais il est ouvert par un
+constructeur Dexie nu : aucun addon `dexieCloud`, aucun `db.cloud.configure()`,
+aucun OTP et aucune requête réseau. Le nom reste distinct de la base
+synchronisée `threadstep` afin qu'enregistrer une URL Cloud plus tard ne
+rattache ni ne copie automatiquement les données locales.
+
+Au démarrage sans URL Cloud valide, `site/app.js` ouvre cet espace local et
+rend la vue métier immédiatement, sans contrôleur d'authentification. Toutes
+les lectures, créations, éditions, suppressions, réordonnancements, imports et
+exports passent par `createDexieStore(...)` et une transaction IndexedDB. Une
+confirmation locale n'est affichée qu'après validation du commit ; un échec
+d'ouverture, de lecture ou de transaction affiche une erreur locale distincte
+d'une erreur réseau, restaure la dernière vue confirmée et bloque les écritures
+suivantes. Aucun repli silencieux sur `localStorage` n'est effectué pour les
+données métier.
+
+L'export JSON est reconstruit depuis les enregistrements IndexedDB confirmés
+via `recordsToDocument`, conserve la forme V1 et n'inclut ni URL Cloud, ni OTP,
+ni identifiant, ni secret. La clé historique `threadstep.document.v1` n'est ni
+lue comme stockage métier, ni supprimée, ni renommée, ni convertie
+automatiquement ; elle reste exportable à l'identique via
+`availableLocalBackup(localStorage)`. Les exports V1 existants restent
+importables. La conversion explicite des données historiques est planifiée par
+TS-033 ; le transfert vers une base synchronisée après consentement reste TS-037.
 
 ## Migration du document historique (TS-026)
 
@@ -270,9 +303,9 @@ Toutes les modifications passent par une branche et PR ; les workflows CI et Pag
 
 ## Frontières de sécurité et évolution
 
-**État courant du pilote :** le socle de configuration Dexie Cloud (TS-024), la persistance local-first (TS-025), la migration historique (TS-026) et l'authentification OTP email native (TS-027) sont intégrés ; l'indicateur de synchronisation, la purge locale et la consolidation de la recette restent à livrer (TS-028 à TS-030). Tant qu'aucune URL valide n'est enregistrée, aucune base synchronisée n'est ouverte et les données restent dans le navigateur. La CSP n'autorise que les hôtes Dexie Cloud. Cette progression est **additive** : le document `threadstep.document.v1` et ses exports restent inchangés.
+**État courant du pilote :** le socle de configuration Dexie Cloud (TS-024), la persistance local-first (TS-025), la migration historique (TS-026), l'authentification OTP email native (TS-027) et l'espace local IndexedDB par défaut (TS-032) sont intégrés ; l'indicateur de synchronisation, la purge locale et la consolidation de la recette restent à livrer (TS-028 à TS-030). Sans URL valide, aucune base synchronisée n'est construite : la vue métier lit et écrit l'espace local `threadstep-local`. La CSP n'autorise que les hôtes Dexie Cloud, et aucun appel n'est émis en mode local. La clé `threadstep.document.v1` et ses exports restent préservés ; sa conversion explicite relève de TS-033 et le transfert consenti de TS-037.
 
-**Cible Dexie Cloud, non déployée :** la
+**Cible Dexie Cloud et bascule locale :** la
 [spécification normative](specs/dexie-cloud-local-first.md)
 autorise et exige dans son périmètre IndexedDB/Dexie.js,
 authentification OTP email native et synchronisation.

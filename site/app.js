@@ -1,6 +1,6 @@
 import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
-import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema } from "./dexie-foundation.js";
-import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compatibilityGuard, localError, isLocalError } from "./persistence.js";
+import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase } from "./dexie-foundation.js";
+import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compatibilityGuard, isLocalError, createDexieStore } from "./persistence.js";
 import { detectHistoricalDocument } from "./migration.js";
 import {
   CATEGORY,
@@ -50,7 +50,13 @@ const authCancelEl = document.querySelector("#auth-cancel");
 const authOfflineEl = document.querySelector("#auth-offline");
 const authLocalDataEl = document.querySelector("#auth-local-data");
 const authLegacyExportEl = document.querySelector("#auth-export-legacy");
+const localPanelEl = document.querySelector("#local-panel");
+const localStatusEl = document.querySelector("#local-status");
+const localLegacyNoticeEl = document.querySelector("#local-legacy-notice");
+const localExportLegacyEl = document.querySelector("#local-export-legacy");
+const localStorageErrorEl = document.querySelector("#local-storage-error");
 let syncedDatabase = null;
+let localDatabase = null;
 let authController = null;
 let authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
 let authInteraction = null;
@@ -86,6 +92,9 @@ let lastRecords = emptyRecords();
 let pendingCloudWrites = Promise.resolve();
 let cloudWriteBlocked = false;
 let cloudReadPending = null;
+let localReadPending = null;
+let localReadFailed = false;
+let localWriteBlocked = false;
 let historicalGuard = null;
 
 const UNDO_WINDOW_MS = 10000;
@@ -110,6 +119,12 @@ function bootstrapSyncedDatabase() {
   db.version(schema.version).stores(schema.stores).upgrade(schema.upgrade);
   db.cloud.configure(options);
   return db;
+}
+// Autonomous workspace: a plain Dexie database with no Cloud addon, no
+// configuration, no OTP and no network. It is a distinct stable database so
+// local records can never be attached by merely entering a Cloud URL later.
+function bootstrapLocalDatabase() {
+  return openLocalDatabase(Dexie);
 }
 function showCloudConfigError(message) {
   if (!cloudConfigErrorEl) return;
@@ -150,6 +165,31 @@ function applyBusinessVisibility() {
   if (businessToolsEl) businessToolsEl.hidden = configured && !authenticated;
   // Do not display an empty dashboard while IndexedDB is still loading.
   if (dashboardEl) dashboardEl.hidden = configured && (!authenticated || !documentLoaded);
+  // In local mode the dashboard may load visibly, but a failed read must never
+  // be presented as an authoritative empty workspace.
+  if (dashboardEl && !configured) dashboardEl.hidden = localReadFailed;
+}
+function setLocalStatus(message) {
+  if (localStatusEl) localStatusEl.textContent = typeof message === "string" ? message : "";
+}
+function setLocalError(message) {
+  if (!localStorageErrorEl) return;
+  localStorageErrorEl.textContent = typeof message === "string" ? message : "";
+  localStorageErrorEl.hidden = !localStorageErrorEl.textContent;
+}
+function renderLocalWorkspace() {
+  if (!localPanelEl) return;
+  const local = !requiresAuthentication();
+  localPanelEl.hidden = !local;
+  if (!local) return;
+  const backup = availableLocalBackup(localStorage);
+  if (localLegacyNoticeEl) {
+    localLegacyNoticeEl.hidden = !backup;
+    localLegacyNoticeEl.textContent = backup
+      ? `Un document historique threadstep.document.v1 est conservé dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). Il reste lisible et exportable ci-dessous ; aucune conversion ni transmission Cloud n'est lancée automatiquement. Une conversion explicite distincte sera proposée séparément (TS-033).`
+      : "";
+  }
+  if (localExportLegacyEl) localExportLegacyEl.hidden = !backup;
 }
 function setAuthStatus(message) {
   if (authStatusEl) authStatusEl.textContent = typeof message === "string" ? message : "";
@@ -185,11 +225,17 @@ function downloadJsonText(json, filename) {
 function exportLegacyBackup() {
   const backup = availableLocalBackup(localStorage);
   if (!backup) {
-    setAuthError("Aucune sauvegarde historique locale lisible à exporter.");
+    if (requiresAuthentication()) setAuthError("Aucune sauvegarde historique locale lisible à exporter.");
+    else setLocalError("Aucune sauvegarde historique locale lisible à exporter.");
     return;
   }
   downloadJsonText(backup.json, "threadstep-historique-v1-sauvegarde.json");
-  setAuthStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
+  if (requiresAuthentication()) {
+    setAuthStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
+  } else {
+    setLocalError("");
+    setLocalStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
+  }
 }
 function renderAuthPanel() {
   if (!authPanelEl) return;
@@ -377,25 +423,19 @@ function el(tag, cls, text) {
   return node;
 }
 function persist() {
-  if (!businessAllowed() || (syncedDatabase && (!documentLoaded || cloudWriteBlocked))) {
+  if (!businessAllowed() || (syncedDatabase && (!documentLoaded || cloudWriteBlocked)) ||
+      (!syncedDatabase && (!documentLoaded || localWriteBlocked))) {
+    if (!syncedDatabase && localWriteBlocked) {
+      setLocalError("Écriture locale interrompue : rechargez la page après avoir exporté vos données.");
+    }
     notify("Enregistrement indisponible : gardez votre export JSON, ne supprimez pas les données locales.");
-    return;
+    return Promise.resolve();
   }
-  if (syncedDatabase) {
-    // Mutations are serialized and lastRecords advances only AFTER Dexie
-    // commits the local transaction. No more false 'saved' on write failure.
-    commitOperations(documentToRecords(documentState));
-    render();
-    return;
-  }
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(documentState));
-    notify("Sauvegardé localement");
-  } catch {
-    notify("Stockage indisponible : exportez vos données.");
-  }
-  documentLoaded = true;
+  // Mutations are serialized and lastRecords advances only AFTER Dexie
+  // commits the local transaction. No false 'saved' on write failure.
+  const records = documentToRecords(documentState);
   render();
+  return commitOperations(records);
 }
 function load() {
   expandedParents = new Set();
@@ -405,18 +445,62 @@ function load() {
     void refreshSyncedDocument();
     return;
   }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      documentState = parseDocument(raw);
-      documentLoaded = true;
-      resumeRef = readResumePreference();
-    }
-  } catch {
-    notify("Données locales illisibles. Une importation reste possible.");
+  void refreshLocalDocument();
+}
+async function refreshLocalDocument() {
+  if (!localDatabase || !businessStore) {
+    localReadFailed = true;
+    localWriteBlocked = true;
+    documentLoaded = false;
+    applyBusinessVisibility();
+    setLocalError("Stockage local IndexedDB indisponible : aucune donnée métier n'est lue ni écrite dans un autre stockage.");
+    notify("Stockage local indisponible : exportez votre sauvegarde historique si elle existe.");
+    return;
   }
-  lastRecords = documentToRecords(documentState);
-  render();
+  if (localReadPending) return localReadPending;
+  localReadPending = (async () => {
+    await businessStore.open();
+    let writesSnapshot;
+    let records;
+    do {
+      writesSnapshot = pendingCloudWrites;
+      await writesSnapshot;
+      records = await businessStore.read();
+    } while (writesSnapshot !== pendingCloudWrites);
+    documentState = recordsToDocument(records);
+    lastRecords = records;
+    documentLoaded = true;
+    localReadFailed = false;
+    localWriteBlocked = false;
+    resumeRef = readResumePreference();
+    setLocalError("");
+    render();
+    applyBusinessVisibility();
+    setLocalStatus("Données chargées depuis IndexedDB sur cet appareil.");
+    notify("Données chargées depuis IndexedDB sur cet appareil.");
+  })().catch(() => {
+    documentLoaded = false;
+    localReadFailed = true;
+    localWriteBlocked = true;
+    applyBusinessVisibility();
+    setLocalError("Lecture de l'espace IndexedDB impossible : affichage bloqué pour protéger les données. Vos données historiques restent exportables ; ne réimportez pas à l'aveugle.");
+    notify("Lecture IndexedDB impossible : affichage bloqué pour protéger les données. Ne réimportez pas.");
+  }).finally(() => { localReadPending = null; });
+  return localReadPending;
+}
+function startLocalWorkspace() {
+  if (businessStarted) return;
+  businessStarted = true;
+  documentLoaded = false;
+  applyBusinessVisibility();
+  renderLocalWorkspace();
+  setLocalStatus("Chargement des données enregistrées dans IndexedDB sur cet appareil…");
+  notify("Chargement des données enregistrées dans IndexedDB…");
+  if (!changesSubscribed) {
+    subscribeToChanges();
+    changesSubscribed = true;
+  }
+  void refreshLocalDocument();
 }
 function readResumePreference() {
   try {
@@ -1368,10 +1452,12 @@ subjectForm.addEventListener("submit", (event) => {
   input.focus();
 });
 document.querySelector("#export").addEventListener("click", () => {
-  downloadJsonText(JSON.stringify(documentState, null, 2), "threadstep-backup.json");
-  notify("Export JSON généré");
+  const committed = recordsToDocument(lastRecords);
+  downloadJsonText(JSON.stringify(committed, null, 2), "threadstep-backup.json");
+  notify("Export JSON généré depuis IndexedDB");
 });
 if (authLegacyExportEl) authLegacyExportEl.addEventListener("click", exportLegacyBackup);
+if (localExportLegacyEl) localExportLegacyEl.addEventListener("click", exportLegacyBackup);
 document.querySelector("#import").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -1394,8 +1480,9 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     openMenuId = null;
     documentState = incoming;
     documentLoaded = true;
-    persist();
-    notify("Import terminé localement");
+    localWriteBlocked = false;
+    await persist();
+    if (!localWriteBlocked) notify("Import terminé localement dans IndexedDB");
   } catch {
     notify("Import impossible : lecture ou enregistrement refusé. Conservez votre export JSON.");
   } finally {
@@ -1443,11 +1530,13 @@ if (cloudConfigFormEl) {
     if (cloudUrlEl) cloudUrlEl.value = result.url;
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase();
-    businessStore = createBusinessStore(syncedDatabase);
+    businessStore = syncedDatabase ? createDexieStore(syncedDatabase) : null;
     documentState = emptyDocument();
     documentLoaded = false;
     lastRecords = emptyRecords();
     cloudWriteBlocked = false;
+    localWriteBlocked = false;
+    localReadFailed = false;
     pendingCloudWrites = Promise.resolve();
     authController = null;
     authInteraction = null;
@@ -1456,56 +1545,51 @@ if (cloudConfigFormEl) {
     changesSubscribed = false;
     authState = { status: AUTH_STATUS.LOADING, kind: null, message: "" };
     renderCloudConfig();
+    renderLocalWorkspace();
     if (syncedDatabase) {
       setupAuthentication();
     } else {
-      load();
-      offerHistoricalMigration();
+      if (!localDatabase) localDatabase = bootstrapLocalDatabase();
+      businessStore = createDexieStore(localDatabase);
+      startLocalWorkspace();
     }
     notify("Instance Dexie Cloud enregistrée");
   });
 }
-function createBusinessStore(db) {
-  if (!db) return null;
-  return {
-    async commit(operations) {
-      if (!Array.isArray(operations) || operations.length === 0) {
-        return { status: "recorded", operations: [] };
-      }
-      try {
-        await db.transaction("rw", db.subjects, db.items, async () => {
-          for (const operation of operations) {
-            const table = operation.store === "subjects" ? db.subjects : db.items;
-            if (operation.type === "put") await table.put(operation.value);
-            else if (operation.type === "add") await table.add(operation.value);
-            else if (operation.type === "delete") await table.delete(operation.key);
-          }
-        });
-        return { status: "recorded", operations };
-      } catch (error) {
-        throw localError("Échec de l'enregistrement local.", error);
-      }
-    }
-  };
-}
 function commitOperations(records) {
-  if (!businessAllowed() || !businessStore || cloudWriteBlocked) return;
+  const writeBlocked = syncedDatabase ? cloudWriteBlocked : localWriteBlocked;
+  if (!businessAllowed() || !businessStore || writeBlocked) return Promise.resolve();
   pendingCloudWrites = pendingCloudWrites.then(async () => {
-    if (cloudWriteBlocked) return;
+    if (syncedDatabase ? cloudWriteBlocked : localWriteBlocked) return;
     const operations = diffRecords(lastRecords, records);
     if (!operations.length) return;
     try {
       await businessStore.commit(operations);
       lastRecords = records;
       broadcastChange();
-      notify("Enregistré dans IndexedDB ; synchronisation Cloud à confirmer.");
+      if (syncedDatabase) {
+        notify("Enregistré dans IndexedDB ; synchronisation Cloud à confirmer.");
+      } else {
+        setLocalError("");
+        setLocalStatus("Enregistré sur cet appareil dans IndexedDB.");
+        notify("Enregistré sur cet appareil dans IndexedDB.");
+      }
     } catch (error) {
-      cloudWriteBlocked = true;
       documentState = recordsToDocument(lastRecords);
       render();
-      const refusal = classifyPermissionFailure(error && error.cause ? error.cause : error);
-      notify(refusal ? authMessage(refusal) :
-        "Échec d'écriture IndexedDB : données non enregistrées. Conservez votre export JSON.");
+      if (syncedDatabase) {
+        cloudWriteBlocked = true;
+        const refusal = classifyPermissionFailure(error && error.cause ? error.cause : error);
+        notify(refusal ? authMessage(refusal) :
+          "Échec d'écriture IndexedDB : données non enregistrées. Conservez votre export JSON.");
+      } else {
+        localWriteBlocked = true;
+        const message = isLocalError(error)
+          ? "Échec de la transaction locale : la modification n'est pas enregistrée. Exportez votre sauvegarde puis rechargez."
+          : "Échec d'écriture IndexedDB local : données non enregistrées. Conservez votre export JSON.";
+        setLocalError(message);
+        notify(message);
+      }
     }
   });
   return pendingCloudWrites;
@@ -1954,15 +2038,20 @@ async function confirmReconciliation(context) {
 }
 
 syncedDatabase = bootstrapSyncedDatabase();
-businessStore = createBusinessStore(syncedDatabase);
 historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
+renderLocalWorkspace();
 if (syncedDatabase) {
+  businessStore = createDexieStore(syncedDatabase);
   setupAuthentication();
 } else {
-  subscribeToChanges();
-  changesSubscribed = true;
-  load();
-  offerHistoricalMigration();
+  try {
+    localDatabase = bootstrapLocalDatabase();
+    businessStore = createDexieStore(localDatabase);
+  } catch {
+    localDatabase = null;
+    businessStore = null;
+  }
+  startLocalWorkspace();
 }
 

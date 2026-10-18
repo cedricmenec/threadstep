@@ -1,12 +1,16 @@
 # MVP specification
 
 **Ce document décrit le MVP et ses extensions historiques, pas une
-interdiction pour les fonctionnalités futures.** Ses règles de
-persistance `localStorage` restent le contrat du code actuel.
+interdiction pour les fonctionnalités futures.** Les règles de
+persistance `localStorage` décrites ci-dessous sont l'héritage V1 :
+depuis TS-032, l'application lit et écrit par défaut dans l'espace
+local IndexedDB `threadstep-local` et ne conserve `threadstep.document.v1`
+que comme document historique exportable non converti automatiquement.
 La [spécification Dexie Cloud](specs/dexie-cloud-local-first.md)
 et le [plan de migration](dexie-cloud-rollout.md) définissent
 l'évolution TS-024 à TS-030 (IndexedDB, OTP, synchronisation),
-**non encore implémentée**. Ne pas lire les non-objectifs du MVP
+partiellement livrée ; TS-032 rend IndexedDB autonome utilisable sans Cloud.
+Ne pas lire les non-objectifs du MVP
 comme une politique d'agent ou comme un veto technologique.
 
 **État : 16 octobre 2026.** Les fonctions FR-02/15 sont livrées par
@@ -117,6 +121,19 @@ planificateurs de mutation différentiels ainsi que le contrat d'adaptateur
 `commit(operations)`, avec confirmation locale indépendante du réseau, erreurs
 locales distinctes des erreurs de synchronisation, propagation multi-onglets
 et garde de compatibilité non destructive du document `threadstep.document.v1`.
+
+**Espace local IndexedDB par défaut (TS-032), intégré :** sans URL Dexie Cloud
+valide, `site/app.js` ouvre la base locale distincte `threadstep-local` via
+`openLocalDatabase(Dexie)`, sans addon Cloud, sans OTP et sans réseau. Toutes
+les actions métier, imports et exports passent par `createDexieStore(...)` et
+une transaction IndexedDB ; une écriture n'est confirmée qu'après commit et un
+échec d'ouverture, de lecture ou d'écriture affiche une erreur locale sans faux
+succès ni repli métier sur `localStorage`. L'export JSON reste au format V1 et
+n'inclut aucune configuration Cloud. La clé historique
+`threadstep.document.v1` n'est ni supprimée, ni renommée, ni convertie
+automatiquement : une notice accessible et son export historique restent
+disponibles. La conversion explicite relève de TS-033 et le transfert consenti
+vers une base synchronisée de TS-037.
 
 **Migration du document historique (TS-026), intégrée :** `site/migration.js`
 détecte et valide strictement le document V1, présente la destination et l'effet

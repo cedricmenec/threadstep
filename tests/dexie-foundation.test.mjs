@@ -7,12 +7,15 @@ import { STORAGE_KEY, emptyDocument } from "../site/core.js";
 import {
   CLOUD_CONFIG_KEY,
   DATABASE_NAME,
+  LOCAL_DATABASE_NAME,
   SCHEMA_VERSION,
   SYNCHRONIZED_STORES,
   validateCloudUrl,
   shouldOpenSyncedDatabase,
   cloudConfigureOptions,
   dexieSchema,
+  localDexieSchema,
+  openLocalDatabase,
   validateSynchronizedStores,
   readCloudConfig,
   writeCloudConfig,
@@ -186,6 +189,68 @@ test("3.3 database name is stable and nameSuffix stays active", () => {
   assert.deepEqual(Object.keys(SYNCHRONIZED_STORES).sort(), ["items", "subjects"]);
   const options = cloudConfigureOptions("https://demo.dexie.cloud");
   assert.notEqual(options.nameSuffix, false);
+});
+
+test("3.4 the autonomous local workspace has a distinct stable schema", () => {
+  const local = localDexieSchema();
+  const synced = dexieSchema();
+  assert.equal(local.name, LOCAL_DATABASE_NAME);
+  assert.equal(typeof LOCAL_DATABASE_NAME, "string");
+  assert.ok(LOCAL_DATABASE_NAME.length > 0);
+  assert.notEqual(local.name, synced.name);
+  assert.equal(local.version, synced.version);
+  assert.equal(local.version, SCHEMA_VERSION);
+  assert.deepEqual(local.stores, synced.stores);
+  assert.deepEqual(Object.keys(local.stores).sort(), ["items", "subjects"]);
+  for (const definition of Object.values(local.stores)) {
+    assert.equal(definition, "id");
+    assert.doesNotMatch(definition, /\+\+id/);
+  }
+});
+
+test("3.4 the local schema upgrade neither deletes, clears nor recreates records", () => {
+  const local = localDexieSchema();
+  assert.equal(typeof local.upgrade, "function");
+  const forbidden = () => { throw new Error("implicit deletion is not allowed"); };
+  const transaction = { delete: forbidden, clear: forbidden, drop: forbidden };
+  assert.doesNotThrow(() => local.upgrade(transaction));
+});
+
+test("3.5 the local bootstrap installs no Dexie Cloud addon, configuration or network", () => {
+  const calls = [];
+  class FakeDexie {
+    constructor(name, options) {
+      calls.push({ type: "construct", name, options });
+      this.cloud = { configure() { throw new Error("local workspace must not configure Cloud"); } };
+    }
+    version(value) { calls.push({ type: "version", value }); return this; }
+    stores(value) { calls.push({ type: "stores", value }); return this; }
+    upgrade(value) { calls.push({ type: "upgrade", value }); return this; }
+  }
+  const db = openLocalDatabase(FakeDexie);
+  assert.ok(db instanceof FakeDexie);
+  const construct = calls.find((call) => call.type === "construct");
+  assert.equal(construct.name, LOCAL_DATABASE_NAME);
+  assert.equal(construct.options, undefined);
+  assert.equal(calls.some((call) => call.type === "configure"), false);
+  assert.equal(calls.find((call) => call.type === "version").value, SCHEMA_VERSION);
+  assert.deepEqual(calls.find((call) => call.type === "stores").value, { ...SYNCHRONIZED_STORES });
+
+  const source = read("site/dexie-foundation.js");
+  const start = source.indexOf("export function openLocalDatabase");
+  const localBootstrap = source.slice(start, source.indexOf("export function validateSynchronizedStores"));
+  assert.doesNotMatch(localBootstrap, /dexieCloud|cloud\.configure|addons|fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon/i);
+  assert.throws(() => openLocalDatabase(null), /Dexie constructor is required/);
+});
+
+test("3.5 every site module is covered by npm run check", () => {
+  const modules = readdirSync(resolve(root, "site")).filter((file) => file.endsWith(".js"));
+  assert.ok(modules.includes("dexie-foundation.js"));
+  assert.ok(modules.includes("persistence.js"));
+  for (const file of modules) {
+    const escaped = file.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(pkg.scripts.check, new RegExp(`node --check site/${escaped}`), file);
+  }
 });
 
 test("4.1 bootstrap constructs and configures only behind the gate", () => {

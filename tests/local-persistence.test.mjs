@@ -18,6 +18,7 @@ import {
   LOCAL_ERROR_KIND,
   SYNC_ERROR_KIND,
   LOCAL_PREFERENCE_KEYS,
+  emptyRecords,
   documentToRecords,
   recordsToDocument,
   applyOperations,
@@ -41,6 +42,8 @@ import {
   isSyncError,
   createChangeChannel,
   createMemoryStore,
+  createDexieStore,
+  normalizedRecords,
   recordLocalWrite,
   markSyncFailure,
   readHistoricalDocument,
@@ -80,6 +83,66 @@ function spyStorage(initial = {}) {
     getItem: (key) => (map.has(key) ? map.get(key) : null),
     setItem: (key, value) => { writes.push(["set", key]); map.set(key, String(value)); },
     removeItem: (key) => { writes.push(["remove", key]); map.delete(key); }
+  };
+}
+
+function fakeTable(initial = []) {
+  const map = new Map(initial.map((record) => [record.id, structuredClone(record)]));
+  let failPut = false;
+  return {
+    async put(value) {
+      if (failPut) {
+        failPut = false;
+        throw new Error("IndexedDB put refused");
+      }
+      map.set(value.id, structuredClone(value));
+    },
+    async add(value) {
+      if (map.has(value.id)) throw new Error("ConstraintError");
+      map.set(value.id, structuredClone(value));
+    },
+    async delete(key) { map.delete(key); },
+    async toArray() { return [...map.values()].map((record) => structuredClone(record)); },
+    failNextPut() { failPut = true; },
+    snapshot() { return [...map.values()].map((record) => structuredClone(record)); },
+    restore(records) {
+      map.clear();
+      for (const record of records) map.set(record.id, structuredClone(record));
+    }
+  };
+}
+
+function fakeDexieDatabase(options = {}) {
+  const subjects = fakeTable(options.subjects || []);
+  const items = fakeTable(options.items || []);
+  let openFailures = options.failOpen || 0;
+  let readFailures = options.failRead || 0;
+  return {
+    subjects,
+    items,
+    networkCalls: 0,
+    async open() {
+      if (openFailures > 0) {
+        openFailures -= 1;
+        throw new Error("IndexedDB open refused");
+      }
+    },
+    async transaction(mode, first, second, callback) {
+      assert.equal(first, this.subjects);
+      assert.equal(second, this.items);
+      if (mode === "r" && readFailures > 0) {
+        readFailures -= 1;
+        throw new Error("IndexedDB read refused");
+      }
+      const snapshot = { subjects: subjects.snapshot(), items: items.snapshot() };
+      try {
+        return await callback();
+      } catch (error) {
+        subjects.restore(snapshot.subjects);
+        items.restore(snapshot.items);
+        throw error;
+      }
+    }
   };
 }
 
@@ -321,4 +384,227 @@ test("5.4 the developer guide and MVP note describe the transactional adapter", 
   const mvp = read("docs/product/mvp.md");
   assert.match(mvp, /TS-025/);
   assert.match(mvp, /persistence\.js/);
+});
+
+test("6.1 the local Dexie adapter creates, edits, deletes and reloads a parent/child tree", async () => {
+  const db = fakeDexieDatabase();
+  const store = createDexieStore(db);
+  await store.open();
+  assert.deepEqual(await store.read(), emptyRecords());
+
+  await store.commit(planCreateSubject(emptyRecords(), { title: "Projet", id: "s1" }));
+  let records = await store.read();
+  await store.commit(planAddStep(records, "s1", { title: "Parent", priority: "normal", id: "parent" }));
+  records = await store.read();
+  await store.commit(planAddSubstep(records, "s1", "parent", { title: "Enfant", id: "child" }));
+  records = await store.read();
+  await store.commit(planAddStep(records, "s1", { title: "À retirer", priority: "later", id: "gone" }));
+  records = await store.read();
+  await store.commit(planEditStep(records, "s1", "child", { title: "Enfant modifié", priority: "urgent" }));
+  records = await store.read();
+  await store.commit(planCompleteStep(records, "s1", "parent", true));
+  records = await store.read();
+  await store.commit(planRemoveStep(records, "s1", "gone").operations);
+
+  const reloaded = createDexieStore(db);
+  const restored = await reloaded.read();
+  const document = recordsToDocument(restored);
+  assert.equal(document.subjects.length, 1);
+  assert.equal(document.subjects[0].id, "s1");
+  assert.equal(document.subjects[0].title, "Projet");
+  const parent = document.subjects[0].items.find((item) => item.id === "parent");
+  const child = document.subjects[0].items.find((item) => item.id === "child");
+  assert.equal(parent.parentId, null);
+  assert.equal(parent.done, true);
+  assert.equal(child.parentId, "parent");
+  assert.equal(child.title, "Enfant modifié");
+  assert.equal(child.priority, "urgent");
+  assert.equal(document.subjects[0].items.some((item) => item.id === "gone"), false);
+  for (const record of [...restored.subjects, ...restored.items]) {
+    assert.equal(typeof record.id, "string");
+  }
+  assert.equal(db.networkCalls, 0);
+});
+
+test("6.2 a failed local transaction keeps the previous state and leaves no partial records", async () => {
+  const db = fakeDexieDatabase();
+  const store = createDexieStore(db);
+  await store.commit(planCreateSubject(emptyRecords(), { title: "Projet", id: "s1" }));
+  const before = await store.read();
+  db.items.failNextPut();
+  const operations = [
+    { store: SUBJECTS_STORE, type: "put", value: { id: "s1", title: "Renommé", order: 0 } },
+    { store: ITEMS_STORE, type: "put", value: {
+      id: "new", subjectId: "s1", parentId: null, title: "Nouvelle",
+      priority: "normal", done: false, order: 0
+    } }
+  ];
+  await assert.rejects(() => store.commit(operations), (error) => {
+    assert.equal(isLocalError(error), true);
+    assert.equal(error.kind, LOCAL_ERROR_KIND);
+    assert.equal(isSyncError(error), false);
+    return true;
+  });
+  assert.deepEqual(await store.read(), before);
+  assert.equal((await store.read()).items.length, 0);
+});
+
+test("6.3 unavailable open and failed reads surface distinct local errors", async () => {
+  const openFailure = createDexieStore(fakeDexieDatabase({ failOpen: 1 }));
+  await assert.rejects(() => openFailure.open(), (error) => {
+    assert.equal(isLocalError(error), true);
+    assert.match(error.message, /ouvrir le stockage local IndexedDB/i);
+    return true;
+  });
+
+  const readFailure = createDexieStore(fakeDexieDatabase({ failRead: 1 }));
+  await assert.rejects(() => readFailure.read(), (error) => {
+    assert.equal(isLocalError(error), true);
+    assert.match(error.message, /Lecture de l'espace IndexedDB impossible/);
+    return true;
+  });
+
+  assert.throws(() => createDexieStore(null), /not initialized/);
+  assert.throws(() => normalizedRecords({ subjects: [], items: [{ id: "orphan" }] }), /Dangling subject references/);
+});
+
+test("6.4 the local adapter never reads or writes the historical localStorage document", async () => {
+  const historical = fixture();
+  const raw = JSON.stringify(historical);
+  const storage = spyStorage({
+    [STORAGE_KEY]: raw,
+    [RESUME_KEY]: JSON.stringify({ subjectId: "s1", itemId: "a" })
+  });
+  const db = fakeDexieDatabase();
+  const store = createDexieStore(db);
+  await store.open();
+  assert.deepEqual(await store.read(), emptyRecords());
+  await store.commit(planCreateSubject(emptyRecords(), { title: "Local", id: "local-1" }));
+  const beforeFailure = await store.read();
+  db.items.failNextPut();
+  await assert.rejects(() => store.commit([
+    { store: ITEMS_STORE, type: "put", value: {
+      id: "x", subjectId: "local-1", parentId: null, title: "X",
+      priority: "normal", done: false, order: 0
+    } }
+  ]));
+  assert.deepEqual(await store.read(), beforeFailure);
+  assert.equal(storage.getItem(STORAGE_KEY), raw);
+  assert.deepEqual(storage.writes, []);
+  assert.equal(JSON.stringify(await store.read()).includes(RESUME_KEY), false);
+});
+
+test("6.5 local export is built from committed records without Cloud data", async () => {
+  const db = fakeDexieDatabase();
+  const store = createDexieStore(db);
+  await store.commit(documentToRecords(fixture()).items.map((value) => ({ store: ITEMS_STORE, type: "put", value }))
+    .concat(documentToRecords(fixture()).subjects.map((value) => ({ store: SUBJECTS_STORE, type: "put", value }))));
+  const document = exportDocument(await store.read());
+  assert.deepEqual(document, fixture());
+  const json = JSON.stringify(document);
+  assert.doesNotMatch(json, /databaseUrl|cloud\.config|dexie\.cloud|otp|secret|credential|token/i);
+  assert.deepEqual(parseDocument(json), fixture());
+});
+
+test("6.6 app starts the business view on local IndexedDB without authentication", () => {
+  const app = read("site/app.js");
+  const html = read("site/index.html");
+  assert.match(app, /function bootstrapLocalDatabase\(\)/);
+  assert.match(app, /return openLocalDatabase\(Dexie\)/);
+  assert.match(app, /createDexieStore\(localDatabase\)/);
+  assert.match(app, /function startLocalWorkspace\(\)/);
+  assert.match(app, /function refreshLocalDocument\(\)/);
+  assert.match(app, /if \(!syncedDatabase\)[\s\S]*?startLocalWorkspace\(\)/);
+  assert.match(app, /localExportLegacyEl\.addEventListener\("click", exportLegacyBackup\)/);
+  assert.doesNotMatch(app, /localStorage\.getItem\(STORAGE_KEY/);
+  assert.doesNotMatch(app, /localStorage\.setItem\(STORAGE_KEY/);
+  assert.doesNotMatch(app, /innerHTML/);
+
+  const bootstrap = app.slice(
+    app.indexOf("function bootstrapLocalDatabase"),
+    app.indexOf("function showCloudConfigError")
+  );
+  assert.doesNotMatch(bootstrap, /dexieCloud|cloud\.configure|addons|fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|setupAuthentication|renderAuthPanel/);
+  const localStart = app.slice(
+    app.indexOf("function startLocalWorkspace"),
+    app.indexOf("function readResumePreference")
+  );
+  assert.doesNotMatch(localStart, /setupAuthentication|renderAuthPanel|authController|OTP/);
+  const startup = app.slice(app.lastIndexOf("syncedDatabase = bootstrapSyncedDatabase()"));
+  assert.match(startup, /if \(syncedDatabase\) \{[\s\S]*?setupAuthentication\(\);[\s\S]*?\} else \{[\s\S]*?startLocalWorkspace\(\);/);
+  assert.doesNotMatch(startup.slice(startup.indexOf("} else {")), /setupAuthentication|offerHistoricalMigration|detectHistoricalDocument|runMigration|planMigration/);
+
+  assert.match(html, /id="local-panel"[^>]*hidden/);
+  assert.match(html, /id="local-status"[^>]*role="status"/);
+  assert.match(html, /id="local-legacy-notice"[^>]*role="status"/);
+  assert.match(html, /id="local-storage-error"[^>]*role="alert"/);
+  assert.match(html, /id="local-export-legacy"[^>]*type="button"[^>]*hidden/);
+  assert.match(app, /aucune conversion ni transmission Cloud n'est lancée automatiquement/i);
+  assert.doesNotMatch(html, /convertir automatiquement|migrer automatiquement/i);
+  assert.doesNotMatch(html, /innerHTML/);
+  assert.match(app, /Échec de la transaction locale/);
+  assert.match(app, /Lecture de l'espace IndexedDB impossible/);
+  assert.match(app, /Stockage local IndexedDB indisponible/);
+  assert.match(app, /await persist\(\);/);
+  assert.match(app, /businessStore\.commit\(operations\)/);
+});
+
+test("6.7 documentation records local-first startup, legacy export and TS boundaries", () => {
+  const guide = read("docs/product/developer-guide.md");
+  const mvp = read("docs/product/mvp.md");
+  const rollout = read("docs/product/dexie-cloud-rollout.md");
+  const acceptance = read("docs/product/acceptance-checklist.md");
+  for (const source of [guide, mvp, rollout, acceptance]) {
+    assert.match(source, /IndexedDB/);
+  }
+  assert.match(guide, /threadstep-local/);
+  assert.match(guide, /TS-032/);
+  assert.match(guide, /TS-033/);
+  assert.match(guide, /TS-037/);
+  assert.match(guide, /threadstep\.document\.v1/);
+  assert.match(mvp, /TS-032/);
+  assert.match(rollout, /TS-032/);
+  assert.match(acceptance, /hors ligne|offline/i);
+  const docs = guide + mvp + rollout + acceptance;
+  assert.doesNotMatch(docs, /https:\/\/[a-z0-9-]+\.dexie\.cloud/i);
+});
+
+test("6.8 local JSON import is one atomic adapter commit and invalid input changes nothing", async () => {
+  const db = fakeDexieDatabase();
+  const store = createDexieStore(db);
+  await store.commit(documentToRecords(fixture()));
+  const before = await store.read();
+  assert.throws(() => planImport(before, JSON.stringify({ version: 2, subjects: [] })), /Format ThreadStep incompatible/);
+  assert.deepEqual(await store.read(), before);
+
+  const incoming = emptyDocument();
+  const subject = newSubject("Importé", "s9");
+  subject.items.push(newItem("X", "urgent", "x"));
+  incoming.subjects.push(subject);
+  const operations = planImport(before, JSON.stringify(incoming));
+  let commits = 0;
+  const counting = {
+    async commit(values) { commits += 1; return store.commit(values); }
+  };
+  await counting.commit(operations);
+  assert.equal(commits, 1);
+  assert.deepEqual(recordsToDocument(await store.read()), incoming);
+  assert.deepEqual(exportDocument(await store.read()), incoming);
+});
+
+test("6.9 local reads preserve UUID and legacy identifiers as stable strings", async () => {
+  const uuid = "123e4567-e89b-12d3-a456-426614174000";
+  const db = fakeDexieDatabase({
+    subjects: [{ id: uuid, title: "UUID", order: 0 }],
+    items: [{ id: "legacy:a", subjectId: uuid, parentId: null, title: "Legacy",
+      priority: "normal", done: false, order: 0 }]
+  });
+  const store = createDexieStore(db);
+  const records = await store.read();
+  assert.equal(records.subjects[0].id, uuid);
+  assert.equal(records.items[0].id, "legacy:a");
+  assert.equal(records.items[0].subjectId, uuid);
+  assert.equal(records.items[0].parentId, null);
+  const reloaded = await createDexieStore(db).read();
+  assert.deepEqual(reloaded, records);
 });

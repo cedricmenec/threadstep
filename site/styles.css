@@ -184,3 +184,12 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .migration-consent input{min-width:24px;min-height:24px;margin-top:2px}
 .migration-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .migration-actions button{min-height:44px;min-width:44px}
+.local-panel{margin-top:24px;background:#eef3e3;border:1px solid #cdd9b6;border-radius:14px;padding:18px 20px;max-width:640px}
+.local-panel[hidden]{display:none}
+.local-panel h2{font-size:1.2rem;letter-spacing:-.03em}
+.local-status{margin:8px 0 0;color:#415748;font-size:.9rem}
+.local-legacy{margin:10px 0 0;color:#5d5a3f;background:#fbf8e8;border:1px solid #e3d9ae;border-radius:10px;padding:10px 12px;font-size:.88rem}
+.local-legacy[hidden]{display:none}
+.local-panel .secondary{margin-top:12px;min-height:44px}
+.local-error{margin:12px 0 0;color:#ad4938;background:#fff0ed;border:1px solid #efc9c1;border-radius:9px;padding:10px 12px;font-size:.88rem;font-weight:600}
+.local-error[hidden]{display:none}

@@ -1,6 +1,6 @@
 # ThreadStep : architecture cible Dexie Cloud et plan de livraison
 
-**Statut : proposition, non implémentée.** Cadrage initial : 17 octobre 2026.
+**Statut : architecture cible partiellement livrée.** Cadrage initial : 17 octobre 2026. Depuis TS-032, l'espace local IndexedDB autonome est le mode par défaut ; l'activation Cloud, l'OTP et la synchronisation restent optionnels et gouvernés par les tâches TS-024 à TS-030 puis TS-037.
 
 ## 1. Contrat et état observé
 
@@ -23,19 +23,42 @@ interdiction générale de l'agent**.
 ```text
 ThreadStep (JS vanilla, site statique GitHub Pages /threadstep/)
  ├─ configuration URL Cloud HTTPS, conservée hors synchronisation
+ ├─ espace local autonome IndexedDB threadstep-local (mode par défaut)
+ │    ├─ même schéma versionné subjects/items à identifiants chaîne
+ │    └─ aucun addon Cloud, aucun OTP, aucun réseau
  ├─ Dexie.js + dexie-cloud-addon, schema explicite et versionné
  │    ├─ IndexedDB distinctes par instance Cloud via nameSuffix natif
  │    ├─ tables de sujets et d'actions synchronisables, IDs uniques
  │    └─ données purement locales jamais copiées au cloud
  ├─ Dexie Cloud : OTP email natif, permissions, réplication bidirectionnelle
- └─ export/import V1 explicites et migration non destructive localStorage
+ └─ export/import V1 explicites et préservation non destructive localStorage
 ```
 
 Choisir une granularité de tables évitant l'écrasement de **tout le document** sur chaque modification, ce qui introduirait une perte d'écritures concurrentes entre appareils. Le modèle conserve identité, relations parent/enfant, priorité, ordre des items, notes et opérations actuelles (undo, promotion, suggestion, suivi). Les identifiants des tables doivent être globalement uniques, sans `++id`. Avec `@id`, les préfixes obligatoires Dexie Cloud imposent une stratégie documentée de correspondance des anciens IDs, sans casser l'export JSON V1 ni les références.
 
-La synchronisation est directe entre navigateur et Dexie Cloud. Une écriture locale réussit sur commit IndexedDB, sans attendre l'acquittement distant. Après première configuration et authentification valides, les opérations locales peuvent fonctionner hors ligne selon la session et les autorisations applicables. Un navigateur jamais configuré ou authentifié ne peut pas commencer hors ligne.
+La synchronisation est directe entre navigateur et Dexie Cloud. Une écriture locale réussit sur commit IndexedDB, sans attendre l'acquittement distant. Depuis TS-032, un navigateur jamais configuré peut travailler hors ligne dans l'espace local autonome ; après configuration et authentification valides, les opérations synchronisées peuvent aussi fonctionner hors ligne selon la session et les autorisations applicables.
 
 La migration de la clé `localStorage` historique vers des tables synchronisées expose potentiellement des données à un service cloud : obtenir **un consentement explicite avant migration** et conserver la source. Il ne faut ni effacer une ancienne IndexedDB en changeant d'URL, ni effectuer de copie automatique entre A et B. Déconnexion et purge sont des opérations différentes, avec confirmations et précautions vis-à-vis des modifications non synchronisées.
+
+## Espace local autonome TS-032
+
+TS-032 sépare physiquement deux bases IndexedDB : `threadstep-local` pour le
+mode autonome et `threadstep` (avec le `nameSuffix` natif) pour la base
+synchronisée. Le mode local utilise le même schéma versionné et les mêmes
+identifiants chaîne, mais il est ouvert sans addon Dexie Cloud. Toutes les
+actions métier, l'import et l'export JSON passent par une transaction
+IndexedDB ; une écriture n'est confirmée qu'après commit, et un échec
+d'ouverture, de lecture ou d'écriture est signalé comme erreur locale, jamais
+comme un succès ou une synchronisation en attente.
+
+Le document historique `threadstep.document.v1` reste intact, lisible et
+exportable sans conversion automatique. Sa conversion explicite est prévue par
+TS-033 ; son éventuel transfert vers une base synchronisée après consentement
+relève de TS-037. Configurer une URL Cloud ne copie ni ne rattache les
+enregistrements locaux. Aucun OTP, aucune requête réseau et aucune file de
+transfert ne sont créés en mode local. Les tests Node couvrent le bootstrap, les
+transactions, les erreurs et la confidentialité ; Chrome mobile, le hors ligne
+réel, le stockage bloqué et les lecteurs d'écran restent des recettes manuelles.
 
 ## 3. Matrice de traçabilité
 
