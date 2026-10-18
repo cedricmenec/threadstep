@@ -737,7 +737,8 @@ test("7.2 historical and JSON imports share the attested plan and explicit conse
   assert.match(app, /readAttestedTarget\(/);
   assert.match(app, /planReconciliation\(/);
   assert.match(app, /runReconciliation\(/);
-  assert.match(app, /fingerprint: fresh\.fingerprint/);
+  assert.match(app, /reviewDisplayedPlan\(displayed, fresh\)/);
+  assert.match(app, /fingerprint: displayed\.fingerprint/);
   assert.match(app, /offerJsonReconciliation\(incoming\)/);
   assert.match(app, /offerHistoricalMigration\(\)/);
   assert.match(app, /reconciliationAdapter\(\)/);
@@ -749,7 +750,7 @@ test("7.2 historical and JSON imports share the attested plan and explicit conse
   const attestationCall = app.indexOf("readAttestedTarget()");
   assert.notEqual(historicalCall, -1);
   assert.notEqual(attestationCall, -1);
-  assert.ok(attestationCall < app.indexOf("openReconciliation(detected.document", historicalCall));
+  assert.ok(attestationCall < app.indexOf("const plan = result.status === \"ready\"", historicalCall));
 });
 
 test("7.3 the product documentation records the TS-031 reconciliation guarantees", () => {
@@ -765,4 +766,153 @@ test("7.3 the product documentation records the TS-031 reconciliation guarantees
   assert.match(guide, /site\/migration-reconciliation\.js/);
   assert.match(guide, /threadstep\.document\.v1/);
   assert.match(rollout, /isolée|isolated/i);
+});
+
+test("2.1 a 5-subject / 18-step source merges into a populated target without touching Cloud-only data", () => {
+  const document = fixture5x18();
+  const mapped = mapSourceDocument(document);
+  const sourceItems = new Map();
+  for (const record of mapped.items) {
+    if (!sourceItems.has(record.subjectId)) sourceItems.set(record.subjectId, []);
+    sourceItems.get(record.subjectId).push(record);
+  }
+  const s3Items = sourceItems.get("legacy:s3").slice().sort((left, right) => left.order - right.order);
+  const missingS3Item = s3Items[2];
+  const target = {
+    subjects: [
+      clone(mapped.subjects[0]),
+      clone(mapped.subjects[1]),
+      clone(mapped.subjects[2]),
+      clone(mapped.subjects[3]),
+      { id: "cloud-subject", title: "Propriétaire Cloud", order: 90 }
+    ],
+    items: [
+      ...sourceItems.get("legacy:s1").map(clone),
+      ...sourceItems.get("legacy:s2").map(clone),
+      ...s3Items.slice(0, 2).map(clone),
+      ...sourceItems.get("legacy:s4").map(clone),
+      { id: "cloud-item", subjectId: "cloud-subject", parentId: null,
+        title: "Étape Cloud", priority: "normal", done: false, order: 0 }
+    ]
+  };
+  const before = JSON.stringify(target);
+  const result = plan(document, target);
+  assert.equal(result.status, "ready");
+  assert.equal(result.operations.every((operation) => operation.type === "add"), true);
+  assert.equal(result.operations.length, 5);
+  const ids = result.operations.map((operation) => operation.value.id);
+  assert.ok(ids.includes("legacy:s5"));
+  assert.ok(ids.includes(missingS3Item.id));
+  assert.equal(ids.filter((id) => id !== missingS3Item.id && id.startsWith("legacy:s5")).length, 4);
+  assert.equal(result.operations.filter((operation) => operation.store === "items" &&
+    String(operation.value.id).startsWith("legacy:s5")).length, 3);
+  assert.equal(result.operations.some((operation) => operation.value.id === "legacy:s1"), false);
+  assert.equal(result.operations.some((operation) => operation.value.id === "legacy:s2"), false);
+  assert.equal(result.operations.some((operation) => operation.value.id === "legacy:s4"), false);
+  assert.equal(result.operations.some((operation) => String(operation.value.id).startsWith("copy:")), false);
+  assert.equal(result.inventory.counts.subjects[CATEGORY.CLOUD_ONLY], 1);
+  assert.equal(result.inventory.counts.items[CATEGORY.CLOUD_ONLY], 1);
+  assert.equal(JSON.stringify(target), before);
+
+  const committed = targetWithOperations(target, result.operations);
+  const rerun = plan(document, committed);
+  assert.equal(rerun.status, "already-migrated");
+  assert.equal(rerun.operations.length, 0);
+  assert.equal(committed.subjects.length, 6);
+  assert.equal(committed.items.length, target.items.length + 4);
+});
+
+test("2.2 subject and sub-step conflicts, order changes, late collisions, divergence and quotas stay deterministic", async () => {
+  const document = emptyDocument();
+  const subject = newSubject("Projet", "s1");
+  subject.items.push(newItem("A", "normal", "a"), newItem("B", "normal", "b"), newItem("B1", "normal", "b1", "b"));
+  const independent = newSubject("Indépendant", "s2");
+  independent.items.push(newItem("C", "normal", "c"));
+  document.subjects.push(subject, independent);
+  const mapped = mapSourceDocument(document);
+  const target = {
+    subjects: [clone(mapped.subjects[0])],
+    items: [
+      clone(mapped.items.find((record) => record.id === "legacy:a")),
+      { ...clone(mapped.items.find((record) => record.id === "legacy:b")), title: "B cloud" }
+    ]
+  };
+
+  const defaultPlan = plan(document, target);
+  assert.ok(defaultPlan.blocked.some((entry) => entry.id === "legacy:b" && entry.reason === "unresolved-conflict"));
+  assert.ok(defaultPlan.blocked.some((entry) => entry.id === "legacy:b1" && entry.reason === "parent-blocked"));
+  assert.ok(defaultPlan.operations.some((operation) => operation.value.id === "legacy:s2"));
+  assert.ok(defaultPlan.operations.some((operation) => operation.value.id === "legacy:c"));
+
+  const copied = plan(document, target, { resolutions: { "items:legacy:b": RESOLUTION.IMPORT_COPY } });
+  const copiedB = copied.operations.find((operation) => operation.value.title === "B").value;
+  const copiedB1 = copied.operations.find((operation) => operation.value.title === "B1").value;
+  assert.equal(copiedB1.parentId, copiedB.id);
+  assert.equal(copiedB1.subjectId, "legacy:s1");
+
+  const subjectConflictTarget = {
+    subjects: [{ ...clone(mapped.subjects[0]), title: "Projet Cloud" }],
+    items: [clone(mapped.items.find((record) => record.id === "legacy:a"))]
+  };
+  const subjectKept = plan(document, subjectConflictTarget);
+  assert.ok(subjectKept.blocked.some((entry) => entry.id === "legacy:s1" && entry.reason === "unresolved-conflict"));
+  assert.ok(subjectKept.operations.some((operation) => operation.value.id === "legacy:s2"));
+  const subjectCopied = plan(document, subjectConflictTarget, {
+    resolutions: { "subjects:legacy:s1": RESOLUTION.IMPORT_COPY }
+  });
+  const copySubject = subjectCopied.operations.find((operation) => operation.store === "subjects").value;
+  assert.notEqual(copySubject.id, "legacy:s1");
+  assert.ok(subjectCopied.operations.some((operation) => operation.value.subjectId === copySubject.id));
+
+  const reversed = {
+    subjects: [clone(mapped.subjects[0])],
+    items: [
+      { ...clone(mapped.items.find((record) => record.id === "legacy:b")), order: 0 },
+      { ...clone(mapped.items.find((record) => record.id === "legacy:a")), order: 1 }
+    ]
+  };
+  const reversedInventory = buildInventory(mapped, reversed);
+  assert.ok(reversedInventory.index.items.get("legacy:a").fields.includes("order"));
+  assert.ok(reversedInventory.index.items.get("legacy:b").fields.includes("order"));
+
+  const divergentSource = clone(document);
+  divergentSource.subjects[0].title = "Projet source modifié";
+  const divergentTarget = {
+    subjects: [{ ...clone(mapped.subjects[0]), title: "Projet cible modifié" }],
+    items: []
+  };
+  const divergent = plan(divergentSource, divergentTarget);
+  assert.ok(divergent.blocked.some((entry) => entry.id === "legacy:s1" && entry.reason === "unresolved-conflict"));
+
+  const latePlan = plan(document, target);
+  const lateTarget = clone(target);
+  const lateOperation = latePlan.operations.find((operation) => operation.store === "subjects") ||
+    latePlan.operations[0];
+  if (lateOperation.store === "subjects") {
+    lateTarget.subjects.push({ ...clone(lateOperation.value), title: "Collision tardive" });
+  } else {
+    lateTarget.items.push({ ...clone(lateOperation.value), title: "Collision tardive" });
+  }
+  const lateFresh = plan(document, lateTarget);
+  const lateCalls = [];
+  const lateAdapter = { commit(operations) { lateCalls.push(operations); return { status: "recorded" }; } };
+  const lateOutcome = await runReconciliation(lateAdapter, latePlan,
+    { confirmed: true, fingerprint: latePlan.fingerprint },
+    async () => ({ attestation: evaluateSyncAttestation(attested()), document, target: lateTarget, destination, userId, plan: lateFresh }));
+  assert.equal(lateOutcome.status, "stale-plan");
+  assert.equal(lateCalls.length, 0);
+
+  const quotaDocument = emptyDocument();
+  const present = newSubject("Présent", "present");
+  present.items.push(newItem("X", "normal", "x"));
+  quotaDocument.subjects.push(present, newSubject("Nouveau", "new"));
+  const quotaSource = mapSourceDocument(quotaDocument);
+  const fillers = [];
+  for (let index = 0; index < QUOTAS.subjects - 1; index += 1) {
+    fillers.push({ id: "cloud-" + index, title: "Cloud " + index, order: index + 1 });
+  }
+  const quotaPlan = plan(quotaDocument, { subjects: [clone(quotaSource.subjects[0]), ...fillers], items: [] });
+  assert.ok(quotaPlan.blocked.some((entry) => entry.id === "legacy:new" && entry.reason === "quota"));
+  assert.ok(quotaPlan.operations.some((operation) => operation.value.id === "legacy:x"));
+  assert.equal(quotaPlan.operations.some((operation) => operation.value.id === "legacy:new"), false);
 });

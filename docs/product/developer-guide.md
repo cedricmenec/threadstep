@@ -491,3 +491,49 @@ métier fraîche contenant les enregistrements réparés peut afficher une
 convergence sur cet appareil ; la convergence sur un second appareil reste une
 recette manuelle sur instance isolée. Aucun titre, note, email, OTP ou token
 n'est journalisé : les événements exposent uniquement des codes et des comptes.
+
+## Consentement lié au plan affiché et cycle de vie historique (TS-036)
+
+`site/migration-reconciliation.js` expose `reviewDisplayedPlan`, qui compare le
+**plan affiché** et un plan recalculé par statut, empreinte, opérations `add`
+ordonnées et groupes bloqués. `site/app.js` conserve `displayedPlan` et
+`previewFingerprint` au moment du rendu ; la confirmation utilise uniquement
+l'empreinte réellement vue. Si la source, la cible, la destination, l'URL, le
+`remoteDbId`, l'utilisateur, les droits/realms, les résolutions ou l'ordre des
+insertions changent, l'ancien consentement est refusé, le nouvel inventaire est
+affiché et l'adaptateur de commit n'est pas appelé. `runReconciliation` compare
+aussi le plan frais fourni par la revalidation juste avant l'unique transaction
+`add`, sans `put`, `delete` ni écrasement.
+
+`site/migration-lifecycle.js` porte les règles pures du parcours historique.
+Chaque évaluation démarre une **génération** monotone ; un résultat asynchrone
+n'est appliqué que si sa génération est encore courante et si la source, l'URL,
+le `remoteDbId` et l'utilisateur n'ont pas changé. Les abonnements natifs
+`currentUser`, `syncState`, `persistedSyncState`, les événements
+`online`/`offline`, l'URL Cloud et l'événement `storage` de
+`threadstep.document.v1` relancent la décision. Un ancien résultat tardif ne peut
+donc pas réafficher « Migration temporairement bloquée » après un état sain.
+
+La source historique conservée n'est pas un ordre de migration. Une cible déjà
+réconciliée ne produit aucune demande d'import ni insertion. Un refus explicite
+« Conserver localement » mémorise un **écartement** dans
+`threadstep.migration.dismissals.v1`, limité à l'empreinte de source, à l'URL,
+au `remoteDbId` et à l'utilisateur haché ; aucun titre, note, email, OTP, jeton
+ni identifiant brut n'y figure. Un changement réel de source, d'URL, de base ou
+de compte rouvre la vérification. La zone Cloud « Sauvegarde historique
+conservée » propose un export et une vérification explicite dans tous les cas ;
+`threadstep.document.v1` n'est ni supprimé ni réécrit. Son retrait optionnel
+reste TS-040.
+
+Le message de bas de page est réduit avec un propriétaire et une génération.
+Une erreur de stockage ou de lecture réelle n'est jamais effacée par la
+disparition d'un blocage de migration, un message de migration périmé ne
+remplace pas un statut plus récent, et aucune réévaluation de migration
+n'annonce une synchronisation distante non prouvée. Les messages de migration
+sont remplacés uniquement par le statut vérifié du parcours actif.
+
+Les tests Node déterministes couvrent l'invalidation du consentement, les
+opérations réordonnées, les groupes bloqués, les écartements, les générations
+concurrentes, la conservation de V1 et le footer. La recette Chrome mobile,
+tactile, clavier, lecteur d'écran, second navigateur et Cloud réel demeure
+manuelle sur une instance isolée.
