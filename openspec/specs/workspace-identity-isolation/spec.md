@@ -52,7 +52,7 @@ Changer l'instance, arrêter la réplication ou supprimer un cache local MUST NO
 - **THEN** une sauvegarde et un avertissement sont proposés
 - **AND** la perte éventuelle n'est pas dissimulée
 ### Requirement: Operational safety and diagnostics
-Les diagnostics et journaux SHALL permettre d'identifier espace, URL normalisée, session, phase et erreurs techniques sans divulguer le contenu métier ni des secrets. Les données de test MUST rester séparées des données personnelles.
+Les diagnostics et journaux SHALL permettre d'identifier espace, URL normalisée, session, phase et erreurs techniques sans divulguer le contenu métier ni des secrets. Les données de test MUST rester séparées des données personnelles. Le diagnostic SHALL se mettre à jour lors d'un changement de session, d'URL ou de base distante.
 #### Scenario: Diagnostic report
 - **WHEN** un incident de connexion est étudié
 - **THEN** des états natifs observables et une catégorie d'erreur peuvent être transmis
@@ -61,5 +61,16 @@ Les diagnostics et journaux SHALL permettre d'identifier espace, URL normalisée
 - **WHEN** les tests simulent une purge, deux comptes ou un changement d'URL
 - **THEN** ils ciblent des bases de test isolées et une origine autorisée
 - **AND** aucune donnée de production n'est effacée
+#### Scenario: Session or URL change updates the diagnostic
+- **GIVEN** un diagnostic affichant une session et une URL données
+- **WHEN** la session change ou une autre URL Dexie Cloud est enregistrée
+- **THEN** le diagnostic affiche la nouvelle session et la nouvelle URL normalisée
+- **AND** il signale une incohérence si la base distante persistée ne correspond plus
+- **AND** aucune donnée de l'ancien espace n'est copiée ou exposée
+#### Scenario: No personal or secret data in the diagnostic
+- **WHEN** une session authentifiée affiche le diagnostic
+- **THEN** le diagnostic ne contient ni email, ni OTP, ni token, ni titre, ni note, ni message d'erreur brut
+- **AND** il ne contient aucun identifiant utilisateur réversible ou secret
+- **AND** seule une catégorie de session et la base configurée sont exposées
 ## Notes d'intégration
 Dexie Cloud utilise un suffixe de nom de base par URL par défaut, mais cette protection seule ne couvre pas toutes les identités d'utilisateur. Une politique supplémentaire de séparation des comptes et des espaces doit être conçue/testée. La suppression physique de la base est différente des commandes métier `delete()`.
