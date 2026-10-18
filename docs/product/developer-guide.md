@@ -537,3 +537,53 @@ opérations réordonnées, les groupes bloqués, les écartements, les générat
 concurrentes, la conservation de V1 et le footer. La recette Chrome mobile,
 tactile, clavier, lecteur d'écran, second navigateur et Cloud réel demeure
 manuelle sur une instance isolée.
+
+## Activation Cloud depuis l'espace local (TS-037)
+
+`site/cloud-activation.js` porte les règles pures de l'activation : machine à
+états (`local`, `preparing`, `connecting`, `discovering`, `review`,
+`transfer-pending`, `active`, `failed`, `cancelled`), marqueur local, routage de
+démarrage, classification de cible, réduction de la première synchronisation et
+prédicats d'isolation. Le module n'accède ni au DOM, ni à IndexedDB, ni au
+réseau ; `site/app.js` injecte les signaux natifs `currentUser`, `syncState` et
+`persistedSyncState`, les événements `online`/`offline` et les adaptateurs de
+stockage.
+
+Deux bases restent physiquement distinctes : `threadstep-local` est ouverte par
+`openLocalDatabase()` sans addon Cloud, tandis que la base synchronisée
+`threadstep` est ouverte séparément avec Dexie Cloud. Avant consentement,
+l'assistant peut configurer l'URL, effectuer l'OTP natif et le premier pull sans
+jamais écrire un enregistrement local dans une table répliquée.
+`evaluateActivationIsolation` et `findPreConsentSourceWrites` vérifient que la
+source, la cible et les opérations restent séparées.
+
+Le marqueur `threadstep.cloud.activation.v1` (version 1, statut `activating`,
+`cancelled` ou `active`, URL normalisée, `remoteDbId` facultatif, empreinte de
+source et identité utilisateur hachée) ne contient aucun titre, note, email,
+OTP, jeton ni identifiant brut. Au démarrage, un marqueur absent ou annulé ouvre
+`threadstep-local`, un marqueur `activating` ouvre la base synchronisée pour la
+reprise, et une configuration Cloud héritée sans marqueur reste active. Le
+bouton d'annulation avant consentement écrit `cancelled` et revient à l'espace
+local sans purge ; après le commit local, l'annulation reste
+`transfer-pending` et n'affirme pas annuler la copie synchronisée.
+
+La source locale est lue en transaction `r`, projetée avec `recordsToDocument()`
+et déclarée `indexeddb-export`. Le plan est construit par `planReconciliation()`
+puis affiché (`destination`, `remoteDbId`, compteurs, insertions `add`, conflits,
+groupes bloqués). La confirmation réutilise `reviewDisplayedPlan()` et
+`runReconciliation()` : une source, cible, URL, session, résolution ou version
+de plan différente refuse le commit sans écriture.
+
+La classification de cible est fermée par défaut : `verified-empty` exige une
+lecture distante attestée avec pull initial et révision serveur ; une erreur de
+lecture, un cache vide, un état hors ligne ou une identité/URL/`remoteDbId`
+incohérent donne `unavailable` ou `identity-mismatch`, jamais une cible vide.
+
+`reduceFirstSync` distingue `local-written`, `pending`, `remote-complete`,
+`error` et `indeterminate`. Un `in-sync` générique ne vaut pas preuve de
+propagation par enregistrement ; un échec après le commit conserve la preuve
+d'écriture locale et n'annonce aucun push réussi. Les tests déterministes
+`tests/ts-037-activation.test.mjs` couvrent les étapes, l'isolation, les cibles
+vide/peuplée/divergente/indisponible/autre compte, l'annulation, le rechargement
+et la reprise idempotente. La recette navigateur, mobile, tactile, clavier,
+lecteur d'écran et Cloud réel reste **manuelle** sur une instance isolée.

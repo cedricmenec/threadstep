@@ -9,7 +9,7 @@
     "backlog:index": "node scripts/asf/backlog-cli.mjs generate",
     "backlog:check": "node scripts/asf/backlog-cli.mjs check",
     "vendor:build": "node tools/build-vendor.mjs",
-    "check": "npm test && npm run backlog:check && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/authentication.js && node --check site/local-recovery.js && node --check site/synced-records.js && node --check site/fingerprint.js && node --check site/local-migration.js && node --check site/persistence.js && node --check site/migration.js && node --check site/migration-reconciliation.js && node --check site/migration-lifecycle.js && node --check site/data-integrity-recovery.js && node --check site/sync-diagnostics.js && node --check site/app.js"
+    "check": "npm test && npm run backlog:check && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/authentication.js && node --check site/local-recovery.js && node --check site/synced-records.js && node --check site/cloud-activation.js && node --check site/fingerprint.js && node --check site/local-migration.js && node --check site/persistence.js && node --check site/migration.js && node --check site/migration-reconciliation.js && node --check site/migration-lifecycle.js && node --check site/data-integrity-recovery.js && node --check site/sync-diagnostics.js && node --check site/app.js"
   },
   "engines": {
     "node": ">=22"
