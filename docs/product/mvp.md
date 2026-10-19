@@ -2,10 +2,14 @@
 
 **Ce document décrit le MVP et ses extensions historiques, pas une
 interdiction pour les fonctionnalités futures.** Les règles de
-persistance `localStorage` décrites ci-dessous sont l'héritage V1 :
-depuis TS-032, l'application lit et écrit par défaut dans l'espace
-local IndexedDB `threadstep-local` et ne conserve `threadstep.document.v1`
-que comme document historique exportable non converti automatiquement.
+persistance `localStorage` décrites ci-dessous sont l'héritage V1 et ne
+décrivent plus le comportement courant depuis TS-032 et TS-040 :
+l'application lit et écrit exclusivement dans IndexedDB (`threadstep-local`
+ou l'espace synchronisé), exporte et restaure le format
+`threadstep.indexeddb-backup`, et ne lit plus `threadstep.document.v1` comme
+donnée métier. Les fichiers `version: 1` sont refusés sans écriture ; les
+anciennes clés locales restent inertes et ne peuvent être supprimées que par
+un nettoyage volontaire, sauvegarde vérifiée et consentement explicite.
 La [spécification Dexie Cloud](specs/dexie-cloud-local-first.md)
 et le [plan de migration](dexie-cloud-rollout.md) définissent
 l'évolution TS-024 à TS-030 (IndexedDB, OTP, synchronisation),

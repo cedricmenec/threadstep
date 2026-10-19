@@ -221,8 +221,8 @@ test("2.6 the reference V1 fixture of 5 subjects and 18 steps survives the deter
   assert.ok(scenario);
   assert.equal(scenario.ci.status, STATUS.PASSED);
   assert.deepEqual(scenario.ci.checks.map((check) => check.id).sort(), [
-    "reference-v1-reconciliation",
-    "reference-v1-survives"
+    "reference-modern-backup",
+    "reference-modern-reconciliation"
   ]);
   assert.equal(scenario.ci.checks.every((check) => check.status === STATUS.PASSED), true);
 });
@@ -305,5 +305,5 @@ test("4.1 the check chain covers the module and keeps runtime dependencies and s
     "dexie-cloud-addon": "4.4.15"
   });
   assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10" });
-  assert.equal(SCHEMA_VERSION, 2);
+  assert.equal(SCHEMA_VERSION, 3);
 });

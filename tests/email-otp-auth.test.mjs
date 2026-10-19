@@ -292,9 +292,8 @@ test("2.2 the sign-in surface declares only email, OTP, resend and live regions"
   assert.match(html, /id="auth-otp"[^>]*type="text"/);
   assert.match(html, /id="auth-resend"/);
   assert.match(html, /id="auth-local-data"/);
-  assert.match(html, /id="auth-export-legacy"[^>]*type="button"[^>]*hidden/);
-  assert.match(read("site/app.js"), /authLegacyExportEl\.addEventListener\("click", exportLegacyBackup\)/);
-  assert.match(read("site/app.js"), /renderLocalRecovery\(\)/);
+  assert.doesNotMatch(html, /id="auth-export-legacy"/);
+  assert.doesNotMatch(read("site/app.js"), /authLegacyExportEl|exportLegacyBackup|renderLocalRecovery/);
   assert.match(read("site/app.js"), /Demande de code en cours auprès de Dexie Cloud/);
   assert.match(html, /id="auth-error"[^>]*role="alert"/);
   assert.match(html, /id="auth-status"[^>]*role="status"[^>]*aria-live="polite"|id="auth-status"[^>]*aria-live="polite"[^>]*role="status"/);
@@ -316,7 +315,8 @@ test("2.3 the authenticated gate protects loads, writes, subscriptions and migra
   assert.match(app, /if \(syncedDatabase\) \{[\s\S]*?refreshSyncedDocument\(\)/);
   assert.match(app, /function businessAllowed\(\)/);
   assert.match(app, /if \(canAccessBusiness\(authState\)\) \{[\s\S]*?startBusiness\(\)/);
-  assert.match(app, /function startBusiness\(\) \{[\s\S]*?refreshSyncedDocument\(\)[\s\S]*?offerHistoricalMigration\(\)/);
+  assert.match(app, /function startBusiness\(\) \{[\s\S]*?refreshSyncedDocument\(\)[\s\S]*?runActivationDiscovery\(\)/);
+  assert.doesNotMatch(app, /offerHistoricalMigration|detectHistoricalDocument/);
   assert.match(app, /requiresAuthentication\(\)/);
   assert.equal(cloudConfigureOptions("https://demo.dexie.cloud").requireAuth, true);
 });

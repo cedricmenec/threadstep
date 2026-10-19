@@ -1,11 +1,8 @@
-// Pure local-first persistence model: fine-grained records, V1 projection,
-// mutation planners, an injectable commit adapter contract and the
-// non-destructive compatibility guard. No DOM, network or framework access.
+// Pure local-first persistence model: fine-grained records, internal
+// projections, mutation planners and an injectable commit adapter contract.
+// No DOM, network or framework access.
 import {
-  STORAGE_KEY,
-  RESUME_KEY,
   PRIORITIES,
-  parseDocument,
   newSubject,
   newItem,
   renameSubject as renameSubjectDocument,
@@ -18,12 +15,12 @@ import {
   reorderWithinPriority,
   moveWithinPriority
 } from "./core.js";
+import { validateBackupRecords, parseIndexedDbBackup, canonicalBackupJson } from "./indexeddb-backup.js";
 
 export const SUBJECTS_STORE = "subjects";
 export const ITEMS_STORE = "items";
 export const LOCAL_ERROR_KIND = "local";
 export const SYNC_ERROR_KIND = "sync";
-export const LOCAL_PREFERENCE_KEYS = Object.freeze([RESUME_KEY]);
 
 export function emptyRecords() {
   return { subjects: [], items: [] };
@@ -147,6 +144,65 @@ export function diffRecords(before, after) {
   return operations;
 }
 
+
+const LOCAL_SUBJECT_FIELDS = ["id", "title", "order"];
+const LOCAL_ITEM_FIELDS = ["id", "subjectId", "parentId", "title", "note", "priority", "done", "order"];
+
+function comparableRecord(record, fields) {
+  const projected = {};
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(record, field)) projected[field] = record[field];
+  }
+  return canonicalBackupJson(projected);
+}
+
+// Idempotent, non-destructive local merge: matching identifiers with identical
+// business fields produce no operation, missing identifiers are inserted and a
+// differing existing identifier blocks the whole plan without any write.
+export function planLocalMerge(targetRecords, incomingRecords) {
+  const target = cloneRecords(targetRecords);
+  const incoming = cloneRecords(incomingRecords);
+  const existing = new Map();
+  for (const record of target.subjects) existing.set("subjects:" + record.id, record);
+  for (const record of target.items) existing.set("items:" + record.id, record);
+  const operations = [];
+  const collisions = [];
+  let missing = 0;
+  const inspect = (store, record, fields) => {
+    const current = existing.get(store + ":" + record.id);
+    if (!current) {
+      operations.push({ type: "put", store, value: { ...record } });
+      missing += 1;
+      return;
+    }
+    if (comparableRecord(current, fields) !== comparableRecord(record, fields)) {
+      collisions.push(record.id);
+    }
+  };
+  for (const record of incoming.subjects) inspect(SUBJECTS_STORE, record, LOCAL_SUBJECT_FIELDS);
+  for (const record of incoming.items) inspect(ITEMS_STORE, record, LOCAL_ITEM_FIELDS);
+  const incomingCount = incoming.subjects.length + incoming.items.length;
+  if (incomingCount === 0) {
+    return { status: "empty-source", code: "invalid-backup", operations: [], collisions: [], counts: { subjects: 0, items: 0 } };
+  }
+  if (collisions.length > 0) {
+    return {
+      status: "collision",
+      code: "collision",
+      operations: [],
+      collisions: collisions.sort(),
+      counts: { subjects: incoming.subjects.length, items: incoming.items.length }
+    };
+  }
+  return {
+    status: missing === 0 ? "already-present" : "ready",
+    code: missing === 0 ? "already-present" : "merge-ready",
+    operations,
+    collisions: [],
+    counts: { subjects: incoming.subjects.length, items: incoming.items.length }
+  };
+}
+
 function replaceSubjectItems(document, subjectId, items) {
   const subjects = document.subjects.map((subject) =>
     subject.id === subjectId ? { ...subject, items } : subject);
@@ -261,9 +317,23 @@ export function planRestoreRemoval(records, removal) {
   return planDocument(records, (document) => restoreRemoval(document, removal));
 }
 
+// Parses a modern IndexedDB backup and plans a non-destructive merge. A V1
+// document, an unknown format or a collision is rejected before any operation.
 export function planImport(records, source) {
-  const incoming = parseDocument(typeof source === "string" ? source : JSON.stringify(source));
-  return diffRecords(records, documentToRecords(incoming));
+  const parsed = parseIndexedDbBackup(source);
+  if (!parsed.ok) {
+    const error = new Error(parsed.message || parsed.code);
+    error.code = parsed.code;
+    throw error;
+  }
+  const plan = planLocalMerge(records, parsed.records);
+  if (plan.status === "collision") {
+    const error = new Error("Collision d'identifiant : aucune écriture.");
+    error.code = "collision";
+    error.collisions = plan.collisions;
+    throw error;
+  }
+  return plan.operations;
 }
 
 export function localError(message, cause) {
@@ -294,13 +364,19 @@ export function normalizedRecords(raw) {
   if (!raw || !Array.isArray(raw.subjects) || !Array.isArray(raw.items)) {
     throw new TypeError("Dexie returned invalid tables");
   }
-  const document = parseDocument(JSON.stringify(recordsToDocument(raw)));
-  const records = documentToRecords(document);
-  if (records.subjects.length !== raw.subjects.length ||
-      records.items.length !== raw.items.length) {
+  const validation = validateBackupRecords(raw);
+  if (!validation.ok) {
+    const error = new Error(validation.code === "dangling-reference"
+      ? "Dangling subject references in IndexedDB"
+      : validation.message);
+    error.code = validation.code;
+    throw error;
+  }
+  if (validation.records.subjects.length !== raw.subjects.length ||
+      validation.records.items.length !== raw.items.length) {
     throw new Error("Dangling subject references in IndexedDB");
   }
-  return records;
+  return validation.records;
 }
 
 export function createChangeChannel() {
@@ -427,25 +503,3 @@ export function markSyncFailure(confirmation, error) {
   };
 }
 
-export function readHistoricalDocument(storage) {
-  if (!storage || typeof storage.getItem !== "function") return null;
-  try {
-    const raw = storage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return parseDocument(raw);
-  } catch {
-    return null;
-  }
-}
-
-export function compatibilityGuard(storage) {
-  return { historical: readHistoricalDocument(storage) };
-}
-
-export function isLocalPreferenceKey(key) {
-  return LOCAL_PREFERENCE_KEYS.includes(key);
-}
-
-export function exportDocument(records) {
-  return recordsToDocument(records);
-}

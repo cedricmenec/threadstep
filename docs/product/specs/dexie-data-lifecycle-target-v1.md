@@ -1,6 +1,6 @@
 # Cycle de vie Dexie : spécifications cibles versionnées (v1.0)
 
-**Statut au 18 octobre 2026 : exigences produit approuvées, implémentation en cours de planification.** Cette cible reprend les huit spécifications validées dans [Notion](https://app.notion.com/p/3fd12ac9163681769406d0e98180b7ef). La [spécification historique](dexie-cloud-local-first.md) et les anciennes exigences OpenSpec sont conservées comme sources de traçabilité ; leur présence ne prouve pas qu'elles satisfont la nouvelle cible.
+**Statut au 18 octobre 2026 : exigences produit approuvées ; transition V1 → sauvegarde IndexedDB livrée par TS-040.** Cette cible reprend les huit spécifications validées dans [Notion](https://app.notion.com/p/3fd12ac9163681769406d0e98180b7ef). La [spécification historique](dexie-cloud-local-first.md) et les anciennes exigences OpenSpec sont conservées comme sources de traçabilité ; leur présence ne prouve pas qu'elles satisfont la nouvelle cible.
 
 ## Décision et invariants
 
@@ -18,14 +18,14 @@
 | [local-indexeddb-persistence](../../../openspec/specs/local-indexeddb-persistence/spec.md) | Démarrage et écritures locales indépendants du Cloud |
 | [cloud-opt-in-activation](../../../openspec/specs/cloud-opt-in-activation/spec.md) | Connexion volontaire et découverte distante, sans push pré-consentement |
 | [cloud-sync-lifecycle](../../../openspec/specs/cloud-sync-lifecycle/spec.md) | Réplication native, statuts et diagnostic |
-| [legacy-storage-migration](../../../openspec/specs/legacy-storage-migration/spec.md) | Conversion historique vers la base locale autonome |
+| [legacy-storage-migration](../../../openspec/specs/legacy-storage-migration/spec.md) | Valeurs V1 retirées, inertes ; métadonnées locales et nettoyage volontaire |
 | [data-reconciliation](../../../openspec/specs/data-reconciliation/spec.md) | Inventaire, conflits, copies, plan revalidé |
 | [data-backup-import-restore](../../../openspec/specs/data-backup-import-restore/spec.md) | JSON, déduplication, fusion et restauration explicite |
 | [workspace-identity-isolation](../../../openspec/specs/workspace-identity-isolation/spec.md) | Isolation des comptes/instances et déconnexion sans purge |
 
 ## Profil de produit, non généralisable
 
-[threadstep-integration-profile](../../../openspec/specs/threadstep-integration-profile/spec.md) fixe pour ThreadStep les objets `subjects`/`items`, `parentId`/`subjectId`, les 40 sujets et 500 étapes par sujet, la clé V1 `threadstep.document.v1`, les exports compatibles V1, la destination `dexie.cloud` et le login natif OTP email. Ces contraintes **ne sont pas propagées aux sept capacités génériques**. Un autre produit doit fournir son propre profil pour clés/stores/droits/authentification/formats/tests.
+[threadstep-integration-profile](../../../openspec/specs/threadstep-integration-profile/spec.md) fixe pour ThreadStep les objets `subjects`/`items`, `parentId`/`subjectId`, les 40 sujets et 500 étapes par sujet, la clé V1 `threadstep.document.v1` conservée inerte jusqu'à nettoyage volontaire, le format de sauvegarde `threadstep.indexeddb-backup`, la destination `dexie.cloud` et le login natif OTP email. Ces contraintes **ne sont pas propagées aux sept capacités génériques**. Un autre produit doit fournir son propre profil pour clés/stores/droits/authentification/formats/tests.
 
 ## Compatibilité et précédence pendant la transition
 
@@ -34,6 +34,26 @@ Les capacités OpenSpec existantes `dexie-cloud-configuration`, `dexie-local-dat
 - Pour **les nouvelles tâches TS-032 à TS-039**, les huit spécifications ci-dessus constituent les exigences cibles approuvées. En cas de contradiction avec l'ancien parcours « Cloud obligatoire », la cible approuvée prime pour la partie modifiée, mais l'agent MUST documenter explicitement le delta et mettre à jour les capacités historiques affectées au moment de chaque changement via OpenSpec sync. Ne pas ignorer silencieusement les contradictions.
 - Pour **le comportement livré**, consulter `site/`, les tests et les PR fusionnées ; les nouvelles capacités ne sont pas des preuves de livraison.
 - Ne pas modifier rétroactivement les archives `openspec/changes/archive/`. Les phases de plan/apply restent distinctes des recettes manuelles et CI post-sync.
+
+## Transition V1 terminée (TS-040)
+
+La transition est livrée dans le code courant :
+
+- **Stockage métier exclusivement IndexedDB.** `localStorage` ne porte plus de contenu métier. Les préférences qui référencent des identifiants de sujets/étapes (dont la reprise) vivent dans le store IndexedDB `meta`, par workspace et déclaré dans `unsyncedTables` de Dexie Cloud.
+- **Nouveau format de sauvegarde.** Les exports sont produits par `serializeIndexedDbBackup` au format `threadstep.indexeddb-backup` (version de format 1), avec provenance IndexedDB, identifiants canoniques, compteurs et empreinte SHA-256. Le parseur `parseIndexedDbBackup` valide le format, les identifiants, les relations, les quotas, les compteurs et l'empreinte avant toute écriture.
+- **Fin du support V1.** Un document ou fichier `version: 1` et une valeur `threadstep.document.v1` ne sont **plus pris en charge** par l'import, la fusion ou la restauration. Le refus est explicite (`unsupported-v1-backup`), sans conversion, sans heuristique `legacy:` et sans écriture. Les anciens fichiers déjà téléchargés restent la propriété de l'utilisateur ; ThreadStep ne les supprime jamais.
+- **Nettoyage volontaire uniquement.** Les clés `threadstep.document.v1`, `threadstep.migration.v1`, `threadstep.resume.v1` et `threadstep.migration.dismissals.v1` peuvent être listées et supprimées uniquement après consentement, sauvegarde IndexedDB vérifiée et migration des préférences terminée. L'option par défaut est « ne rien effacer » ; aucune purge automatique n'existe.
+- **Diagnostic natif conservé.** La déconnexion ou une erreur Dexie native reste diagnostiquée ; aucun panneau de migration V1 ne réapparaît.
+
+## Transition V1 terminée (TS-040)
+
+La transition est livrée dans le code courant :
+
+- **Stockage métier exclusivement IndexedDB.** `localStorage` ne porte plus de contenu métier. Les préférences qui référencent des identifiants de sujets/étapes (dont la reprise) vivent dans le store IndexedDB `meta`, par workspace et déclaré dans `unsyncedTables` de Dexie Cloud.
+- **Nouveau format de sauvegarde.** Les exports sont produits par `serializeIndexedDbBackup` au format `threadstep.indexeddb-backup` (version de format 1), avec provenance IndexedDB, identifiants canoniques, compteurs et empreinte SHA-256. Le parseur `parseIndexedDbBackup` valide le format, les identifiants, les relations, les quotas, les compteurs et l'empreinte avant toute écriture.
+- **Fin du support V1.** Un document ou fichier `version: 1` et une valeur `threadstep.document.v1` ne sont **plus pris en charge** par l'import, la fusion ou la restauration. Le refus est explicite (`unsupported-v1-backup`), sans conversion, sans heuristique `legacy:` et sans écriture. Les anciens fichiers déjà téléchargés restent la propriété de l'utilisateur ; ThreadStep ne les supprime jamais.
+- **Nettoyage volontaire uniquement.** Les clés `threadstep.document.v1`, `threadstep.migration.v1`, `threadstep.resume.v1` et `threadstep.migration.dismissals.v1` peuvent être listées et supprimées uniquement après consentement, sauvegarde IndexedDB vérifiée et migration des préférences terminée. L'option par défaut est « ne rien effacer » ; aucune purge automatique n'existe.
+- **Diagnostic natif conservé.** La déconnexion ou une erreur Dexie native reste diagnostiquée ; aucun panneau de migration V1 ne réapparaît.
 
 ## Décision complémentaire (18 octobre 2026) — fin de compatibilité V1 après transition
 

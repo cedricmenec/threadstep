@@ -15,7 +15,7 @@ site/index.html
   ├─ site/dexie-foundation.js (validation d'URL, portail, schémas local et synchronisé)
   └─ site/vendor/dexie-cloud.mjs
         ↕ IndexedDB du navigateur (threadstep-local par défaut, threadstep si Cloud configuré)
-        ↕ localStorage limité aux préférences et à la clé historique threadstep.document.v1
+        ↕ localStorage limité aux réglages techniques Cloud ; préférences dans le store IndexedDB local `meta` ; clé V1 retirée, inerte et supprimable seulement avec consentement
         ↕ import / export JSON explicites
 GitHub Pages publie uniquement site/ ; aucune API produit
 ```
@@ -84,69 +84,52 @@ suivantes. Aucun repli silencieux sur `localStorage` n'est effectué pour les
 données métier.
 
 L'export JSON est reconstruit depuis les enregistrements IndexedDB confirmés
-via `recordsToDocument`, conserve la forme V1 et n'inclut ni URL Cloud, ni OTP,
-ni identifiant, ni secret. La clé historique `threadstep.document.v1` n'est ni
-lue comme stockage métier, ni supprimée, ni renommée, ni convertie
-automatiquement ; elle reste exportable à l'identique via
-`availableLocalBackup(localStorage)`. Les exports V1 existants restent
-importables. La conversion explicite des données historiques est planifiée par
-TS-033 ; le transfert vers une base synchronisée après consentement reste TS-037.
+par `serializeIndexedDbBackup` au format `threadstep.indexeddb-backup` et
+n'inclut ni URL Cloud, ni OTP, ni identifiant, ni secret. La clé historique
+`threadstep.document.v1` n'est ni lue comme stockage métier, ni supprimée, ni
+renommée, ni convertie automatiquement. Un fichier `version: 1` est refusé
+explicitement sans écriture. Le transfert vers une base synchronisée après
+consentement reste TS-037.
 
-## Migration du document historique (TS-026)
+## Sauvegarde IndexedDB modern et retrait V1 (TS-040)
 
-`site/migration.js` est le module pur de conversion du document
-`threadstep.document.v1` vers les tables synchronisées. `detectHistoricalDocument`
-lit la clé historique et n'accepte le document que si `parseDocument` le valide :
-une valeur absente, illisible ou invalide ne déclenche aucune migration et laisse
-la source intacte. `describeMigration` présente la destination Dexie Cloud, le
-nombre de sujets et d'étapes transférés et l'effet de synchronisation à venir
-**avant** toute demande de consentement.
+`site/indexeddb-backup.js` est le contrat pur de sauvegarde. `serializeIndexedDbBackup`
+projette directement les enregistrements `subjects`/`items` confirmés, triés par
+identifiant, avec une liste blanche de champs métier. Le document produit déclare
+`format: "threadstep.indexeddb-backup"`, `formatVersion: 1`, une provenance
+`source: "indexeddb"` et `idsCanonical: true`, les compteurs et une empreinte
+SHA-256. Les identifiants canoniques sont conservés tels quels, y compris ceux
+qui commencent littéralement par `legacy:` ; aucun préfixe n'est ajouté ni retiré.
 
-`planMigration` projette le document via `documentToRecords`, remappe les
-identifiants historiques de façon déterministe, stable et injective
-(`mapLegacyId`, préfixe documenté) en suivant les `parentId` et `subjectId`, puis
-ne produit que les opérations `put` des enregistrements manquants : un
-enregistrement déjà identique n'est jamais réécrit, une base déjà migrée ne
-produit aucune opération (**idempotent**), un identifiant présent avec un contenu
-différent est signalé comme collision et une base cible non vide est signalée
-sans écrasement. `runMigration` n'appelle `commit(operations)` qu'après un
-consentement explicite (`{ confirmed: true }`), en une seule opération atomique,
-et abandonne si la destination a changé entre la divulgation et l'écriture : le
-changement d'URL n'importe jamais implicitement une base dans une autre. Aucun
-chemin n'appelle `removeItem(STORAGE_KEY)` ni ne réécrit la valeur historique de
-façon destructive, donc après un refus, une exception ou une interruption, la
-source reste lisible, exportable et **non destructive** pour la cible. La
-préférence locale de reprise reste hors des tables synchronisées.
+`parseIndexedDbBackup` est le seul lecteur des fichiers utilisateur. Il refuse
+sans écriture un document `version: 1` (`unsupported-v1-backup`), un format
+inconnu (`unknown-format`), une structure invalide, des identifiants dupliqués,
+des références orphelines, un dépassement de quota, des compteurs incohérents ou
+une empreinte erronée. Aucun parseur V1 de secours, aucune heuristique `legacy:`
+et aucune conversion silencieuse ne subsiste dans les parcours d'import, de
+fusion ou de restauration.
 
-## Conversion locale explicite du document historique (TS-033)
+`site/local-migration.js` expose `planModernRecordsMerge` / `planModernLocalImport`
+pour une fusion locale strictement additive : un enregistrement identique ne
+produit aucune opération, un identifiant absent est inséré et un identifiant
+existant au contenu différent bloque tout le plan. L'import Cloud utilise le même
+jeu d'enregistrements via `planReconciliation({ records })`, avec le plan attesté,
+la revue et le consentement existants.
 
-`site/local-migration.js` convertit un document `threadstep.document.v1` valide
-vers l'espace local autonome `threadstep-local` **sans construire ni configurer
-d'instance Dexie Cloud**, sans OTP, sans requête réseau et sans push. La
-conversion n'est jamais automatique : `detectLocalSource` lit la valeur brute et
-calcule son empreinte SHA-256 via `site/fingerprint.js`, puis
-`planLocalConversion` présente la destination, l'inventaire source, l'inventaire
-de la cible, les insertions absentes et l'empreinte examinée avant tout
-consentement. Une source absente, illisible ou invalide ne produit aucun plan et
-aucune écriture.
+La préférence de reprise et les métadonnées locales sont migrées de façon
+idempotente depuis `threadstep.resume.v1` vers le store IndexedDB `meta`
+(`site/local-metadata.js`). Une cible déjà peuplée reste autoritaire, une
+écriture indisponible ne supprime jamais la clé historique et ne prétend pas
+avoir rendu la préférence durable, et chaque workspace possède son propre store.
+`meta` est déclaré dans `unsyncedTables` et n'apparaît jamais dans un export.
 
-La projection conserve sujets, étapes, sous-étapes, relations `subjectId` et
-`parentId`, ordre, notes, priorités, états `done` et la préférence locale de
-reprise. Le mapping local est idempotent : un identifiant déjà préfixé
-`legacy:` n'est jamais préfixé une seconde fois. `runLocalConversion` relit la
-source et la cible, exige un consentement lié à l'empreinte du plan, puis
-commite une seule fois. Un refus, une source modifiée, une cible modifiée, une
-collision ou un échec de transaction n'écrit rien ; une seconde exécution ne
-crée aucun doublon. La provenance non synchronisée `threadstep.migration.v1`
-enregistre l'empreinte, la version de mapping, la cible et les comptes, sans
-aucun titre ni note, et distingue « conversion locale terminée » d'une
-activation Cloud.
-
-Le scénario de recette de référence est un document V1 de **5 sujets et
-18 étapes**, retrouvé après rechargement sans Cloud, avec la source
-`threadstep.document.v1` et son export de secours **non destructifs** et
-identiques. Le transfert local vers une base synchronisée, l'OTP et tout push
-restent hors de cette conversion et relèvent de **TS-037**.
+Le nettoyage de `threadstep.document.v1`, `threadstep.migration.v1`,
+`threadstep.resume.v1` et `threadstep.migration.dismissals.v1` est facultatif,
+limité à l'origine et au navigateur courants, et exige une sauvegarde IndexedDB
+vérifiée dans la session, une migration terminée et une confirmation explicite.
+L'option par défaut est « ne rien effacer » ; une annulation ou une erreur laisse
+les valeurs intactes. Aucun démarrage, rechargement, login, synchronisation ou
+changement d'espace n'appelle ce nettoyage.
 
 ## Réconciliation Dexie Cloud d'une base déjà peuplée (TS-031)
 
@@ -323,23 +306,20 @@ encore confirmer les échanges réseau, l'origine autorisée et l'absence de
 régression sur les données locales.
 
 **Protection des données pendant une panne d'authentification :**
-l'interface masque les outils métier avant connexion, sans effacer le
-`localStorage`. Si une sauvegarde historique `threadstep.document.v1`
-est encore lisible dans **cette origine et ce navigateur**, la page de
-connexion affiche le nombre de sujets/étapes retrouvés et permet un
-**export JSON de secours sans session**. Celui-ci télécharge le texte exact
-de la clé historique : il ne déclenche ni import, ni ouverture d'IndexedDB,
-ni migration, ni envoi au Cloud. Conserver tout export externe déjà effectué.
-Si aucune donnée V1 n'est présente sur cette origine, le bouton n'apparaît
-pas : cela ne prouve pas que les données sont supprimées d'une autre origine
-ou d'une IndexedDB. Une absence d'email malgré la configuration correcte
-nécessite ensuite le contrôle opérateur de l'origine autorisée Dexie Cloud,
-la connectivité et la réception email réelle. Ne pas purger le navigateur ni
-importer un backup dans une base potentiellement déjà peuplée avant diagnostic.
+l'interface masque les outils métier avant connexion sans effacer les données.
+Aucune valeur `threadstep.document.v1` n'est lue comme sauvegarde métier et
+aucun bouton d'export V1 n'est proposé. Les données métier restent dans
+IndexedDB ; une absence d'email malgré la configuration correcte nécessite le
+contrôle opérateur de l'origine autorisée Dexie Cloud, la connectivité et la
+réception email réelle. Ne pas purger le navigateur ni importer un backup dans
+une base potentiellement déjà peuplée avant diagnostic.
 
 ## Modèle de données
 
-- Document versionné `threadstep.document.v1` dans le `localStorage`.
+- Stockage métier exclusivement IndexedDB (`subjects`/`items`) ; la clé `threadstep.document.v1` n'est plus une source métier.
+- Sauvegarde portable `threadstep.indexeddb-backup` (format versionné, provenance, compteurs, empreinte) exportée et restaurée depuis IndexedDB.
+- Préférences locales dans le store IndexedDB `meta`, non synchronisé et jamais exporté.
+- Un fichier V1 (`version: 1`) est refusé explicitement sans écriture.
 - Un document contient des **sujets** ordonnés ; chaque sujet contient un tableau `items`.
 - Une action principale possède `parentId: null` ; une sous-tâche possède `parentId` égal à l'ID de son action principale. **Un seul niveau** d'imbrication.
 - L'ordre des priorités est `urgent`, `normal`, `later`. À priorité égale, la position dans le tableau `items` détermine l'ordre. Réordonner un parent n'arrache pas ses enfants.
@@ -476,11 +456,11 @@ sujets cohérents restent lisibles, chaque anomalie est listée par code
 (`dangling-subject`, `prefix-variant`, etc.) et aucune réparation automatique
 n'est lancée au chargement.
 
-L'**export brut de récupération** est distinct de l'export V1 métier. Il est lu
+L'**export brut de récupération** est distinct de la sauvegarde métier `threadstep.indexeddb-backup`. Il est lu
 depuis les stores bruts, inclut les orphelins et les métadonnées utiles, expose
 compteurs et empreinte, et exclut tokens, OTP, identifiants d'authentification
-et secrets. Tant qu'une anomalie d'intégrité existe, l'export V1 normal est
-désactivé avec explication ; aucun enregistrement accessible n'est omis
+et secrets. Tant qu'une anomalie d'intégrité existe, la sauvegarde métier modern est
+désactivée avec explication ; aucun enregistrement accessible n'est omis
 silencieusement. La fixture de régression déterministe **5 sujets / 19 tâches
 dont une orpheline** et les variantes `legacy:s1` / `legacy:legacy:s1` couvrent
 ce diagnostic sans écrire.
@@ -515,25 +495,15 @@ affiché et l'adaptateur de commit n'est pas appelé. `runReconciliation` compar
 aussi le plan frais fourni par la revalidation juste avant l'unique transaction
 `add`, sans `put`, `delete` ni écrasement.
 
-`site/migration-lifecycle.js` porte les règles pures du parcours historique.
-Chaque évaluation démarre une **génération** monotone ; un résultat asynchrone
-n'est appliqué que si sa génération est encore courante et si la source, l'URL,
-le `remoteDbId` et l'utilisateur n'ont pas changé. Les abonnements natifs
-`currentUser`, `syncState`, `persistedSyncState`, les événements
-`online`/`offline`, l'URL Cloud et l'événement `storage` de
-`threadstep.document.v1` relancent la décision. Un ancien résultat tardif ne peut
-donc pas réafficher « Migration temporairement bloquée » après un état sain.
+`site/migration-lifecycle.js` ne porte plus que la garde de génération et
+l'ordonnancement du pied de page. Aucun panneau, écartement ou message de
+migration V1 ne subsiste. Une erreur de stockage ou de lecture réelle n'est
+jamais effacée par la disparition d'un état transitoire, et un résultat
+asynchrone ancien ne remplace pas le diagnostic courant.
 
-La source historique conservée n'est pas un ordre de migration. Une cible déjà
-réconciliée ne produit aucune demande d'import ni insertion. Un refus explicite
-« Conserver localement » mémorise un **écartement** dans
-`threadstep.migration.dismissals.v1`, limité à l'empreinte de source, à l'URL,
-au `remoteDbId` et à l'utilisateur haché ; aucun titre, note, email, OTP, jeton
-ni identifiant brut n'y figure. Un changement réel de source, d'URL, de base ou
-de compte rouvre la vérification. La zone Cloud « Sauvegarde historique
-conservée » propose un export et une vérification explicite dans tous les cas ;
-`threadstep.document.v1` n'est ni supprimé ni réécrit. Son retrait optionnel
-reste TS-040.
+Le seul accès restant aux clés V1 retirées est l'inventaire de nettoyage de
+`site/local-recovery.js`, qui lit leur présence sans parser leur valeur. Cet
+inventaire ne déclenche ni écriture, ni trafic Cloud, ni conversion.
 
 Le message de bas de page est réduit avec un propriétaire et une génération.
 Une erreur de stockage ou de lecture réelle n'est jamais effacée par la

@@ -17,7 +17,6 @@ import {
   ITEMS_STORE,
   LOCAL_ERROR_KIND,
   SYNC_ERROR_KIND,
-  LOCAL_PREFERENCE_KEYS,
   emptyRecords,
   documentToRecords,
   recordsToDocument,
@@ -46,12 +45,12 @@ import {
   normalizedRecords,
   recordLocalWrite,
   markSyncFailure,
-  readHistoricalDocument,
-  compatibilityGuard,
-  isLocalPreferenceKey,
-  exportDocument
+  planLocalMerge
 } from "../site/persistence.js";
 import { SYNCHRONIZED_STORES, validateSynchronizedStores } from "../site/dexie-foundation.js";
+import { serializeIndexedDbBackup, parseIndexedDbBackup, BACKUP_FORMAT } from "../site/indexeddb-backup.js";
+import { buildBusinessExport } from "../site/data-integrity-recovery.js";
+import { buildCleanupInventory, runCleanup } from "../site/local-recovery.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relative) => readFileSync(resolve(root, relative), "utf8");
@@ -168,12 +167,17 @@ test("1.1 records carry globally unique string ids and the synchronized stores s
   assert.doesNotMatch(read("site/persistence.js"), /\+\+id/);
 });
 
-test("1.2 documentToRecords and recordsToDocument reproduce the exact V1 shape", () => {
-  const document = fixture();
-  const records = documentToRecords(document);
-  const rebuilt = recordsToDocument(records);
-  assert.deepEqual(rebuilt, document);
-  assert.deepEqual(parseDocument(JSON.stringify(rebuilt)), document);
+test("1.2 records round-trip through the modern IndexedDB backup format", () => {
+  const records = documentToRecords(fixture());
+  const serialized = serializeIndexedDbBackup(records);
+  assert.equal(serialized.ok, true);
+  assert.equal(serialized.document.format, BACKUP_FORMAT);
+  assert.equal("version" in serialized.document, false);
+  const parsed = parseIndexedDbBackup(serialized.document);
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(recordsToDocument(parsed.records), recordsToDocument(records));
+  const rebuilt = recordsToDocument(parsed.records);
+  assert.deepEqual(rebuilt, fixture());
   assert.equal(rebuilt.subjects[0].items.find((item) => item.id === "a").note, "Note A\nligne 2");
   assert.equal(rebuilt.subjects[0].items.find((item) => item.id === "b").parentId, null);
   assert.equal(rebuilt.subjects[0].items.find((item) => item.id === "c").parentId, "b");
@@ -295,43 +299,46 @@ test("3.2 independent edits to distinct steps both survive propagation", async (
   assert.deepEqual(recordsToDocument(tabA.snapshot()), recordsToDocument(tabB.snapshot()));
 });
 
-test("4.1 a valid V1 import replaces records in a single operation set", async () => {
-  const store = createMemoryStore({ initial: documentToRecords(fixture()) });
+test("4.1 a valid modern backup merges into an empty store in one operation set", async () => {
   const incoming = emptyDocument();
   const subject = newSubject("Importé", "s9");
   subject.items.push(newItem("X", "urgent", "x"));
   subject.items[0].note = "note importée\nligne 2";
   incoming.subjects.push(subject);
-  const operations = planImport(store.snapshot(), JSON.stringify(incoming));
+  const backup = serializeIndexedDbBackup(documentToRecords(incoming)).document;
+  const operations = planImport(emptyRecords(), backup);
   assert.ok(Array.isArray(operations) && operations.length > 0);
-  await store.commit(operations);
-  assert.deepEqual(recordsToDocument(store.snapshot()), incoming);
-  assert.deepEqual(parseDocument(JSON.stringify(exportDocument(store.snapshot()))), incoming);
+  const after = applyOperations(emptyRecords(), operations);
+  assert.deepEqual(recordsToDocument(after), incoming);
 });
 
-test("4.2 an invalid import changes nothing and reports the validation error", () => {
+test("4.2 an invalid import changes nothing and reports a stable code", () => {
   const store = createMemoryStore({ initial: documentToRecords(fixture()) });
   const before = JSON.stringify(store.snapshot());
-  assert.throws(() => planImport(store.snapshot(), JSON.stringify({ version: 2, subjects: [] })), /Format ThreadStep incompatible/);
+  assert.throws(() => planImport(store.snapshot(), JSON.stringify({ version: 2, subjects: [] })),
+    (error) => error.code === "unknown-format");
   assert.equal(JSON.stringify(store.snapshot()), before);
-  const orphan = JSON.stringify({
-    version: 1,
-    subjects: [{ id: "s1", title: "S", items: [{ id: "c", title: "C", priority: "normal", done: false, parentId: "missing" }] }]
-  });
-  assert.throws(() => planImport(store.snapshot(), orphan), /Hiérarchie/);
+  assert.throws(() => planImport(store.snapshot(), JSON.stringify({ version: 1, subjects: [] })),
+    (error) => error.code === "unsupported-v1-backup");
+  assert.equal(JSON.stringify(store.snapshot()), before);
+  const backup = serializeIndexedDbBackup(documentToRecords(fixture())).document;
+  const orphan = structuredClone(backup);
+  orphan.records.items[0].parentId = "missing";
+  assert.throws(() => planImport(store.snapshot(), orphan),
+    (error) => error.code === "checksum-mismatch" || error.code === "dangling-reference");
   assert.equal(JSON.stringify(store.snapshot()), before);
 });
 
 test("4.3 preferences stay local, out of the synchronized records and out of the export", () => {
   const records = documentToRecords(fixture());
   assert.equal(JSON.stringify(records).includes(RESUME_KEY), false);
-  assert.equal(JSON.stringify(exportDocument(records)).includes(RESUME_KEY), false);
-  assert.equal(JSON.stringify(exportDocument(records)).includes("resume"), false);
-  assert.equal(isLocalPreferenceKey(RESUME_KEY), true);
-  assert.deepEqual(LOCAL_PREFERENCE_KEYS, [RESUME_KEY]);
+  const backup = buildBusinessExport(records).document;
+  assert.equal(JSON.stringify(backup).includes(RESUME_KEY), false);
+  assert.equal(JSON.stringify(backup).includes("resume"), false);
   assert.equal(RESUME_KEY, "threadstep.resume.v1");
   const app = read("site/app.js");
-  assert.match(app, /localStorage\.setItem\(RESUME_KEY/);
+  assert.doesNotMatch(app, /localStorage\.(?:setItem|getItem|removeItem)\(RESUME_KEY/);
+  assert.match(read("site/local-metadata.js"), /RESUME_STORAGE_KEY = "threadstep\.resume\.v1"/);
 });
 
 test("5.1 core.js stays pure and app.js routes mutations through the adapter", () => {
@@ -354,26 +361,32 @@ test("5.2 app subscribes through a broadcast channel, not only the storage event
   assert.match(app, /new BroadcastChannel\(/);
   assert.match(app, /function subscribeToChanges\(/);
   assert.match(app, /syncedDatabase\.cloud\.events\.syncComplete\.subscribe/);
-  assert.match(app, /window\.addEventListener\("storage"/);
+  assert.doesNotMatch(app, /window\.addEventListener\("storage"/);
   assert.match(app, /subscribeToChanges\(\);/);
 });
 
-test("5.3 the compatibility guard preserves the historical document and no path deletes it", () => {
+test("5.3 retired V1 keys are inventoried without parsing and cleaned only with consent", () => {
   const historical = fixture();
   const storage = spyStorage({ [STORAGE_KEY]: JSON.stringify(historical) });
-  const guard = compatibilityGuard(storage);
-  assert.deepEqual(guard.historical, historical);
-  assert.notEqual(storage.getItem(STORAGE_KEY), null);
-  assert.deepEqual(JSON.parse(storage.getItem(STORAGE_KEY)), historical);
+  const inventory = buildCleanupInventory(storage);
+  assert.deepEqual(inventory.keys, [STORAGE_KEY]);
+  assert.equal(storage.getItem(STORAGE_KEY), JSON.stringify(historical));
   assert.deepEqual(storage.writes, []);
-  assert.equal(readHistoricalDocument(spyStorage()), null);
-  assert.equal(readHistoricalDocument(spyStorage({ [STORAGE_KEY]: "{broken" })), null);
+  const refused = runCleanup(storage, inventory, { confirmed: false });
+  assert.deepEqual(refused.removed, []);
+  assert.notEqual(storage.getItem(STORAGE_KEY), null);
+  const cleaned = runCleanup(storage, inventory, {
+    confirmed: true,
+    backupVerified: true,
+    metadataMigrationComplete: true
+  });
+  assert.deepEqual(cleaned.removed, [STORAGE_KEY]);
+  assert.equal(storage.getItem(STORAGE_KEY), null);
   const app = read("site/app.js");
-  assert.match(app, /compatibilityGuard\(localStorage\)/);
+  assert.doesNotMatch(app, /compatibilityGuard|readHistoricalDocument|availableLocalBackup/);
   assert.doesNotMatch(app, /removeItem\(STORAGE_KEY\)/);
   assert.doesNotMatch(app, /deleteDatabase/);
-  assert.doesNotMatch(app, /\bfetch\s*\(/);
-  assert.doesNotMatch(app, /XMLHttpRequest/);
+  assert.doesNotMatch(app, /localStorage\.clear/);
 });
 
 test("5.4 the developer guide and MVP note describe the transactional adapter", () => {
@@ -465,7 +478,8 @@ test("6.3 unavailable open and failed reads surface distinct local errors", asyn
   });
 
   assert.throws(() => createDexieStore(null), /not initialized/);
-  assert.throws(() => normalizedRecords({ subjects: [], items: [{ id: "orphan" }] }), /Dangling subject references/);
+  assert.throws(() => normalizedRecords({ subjects: [], items: [{ id: "orphan" }] }),
+    (error) => error.code === "invalid-backup" || /Dangling subject references/.test(error.message));
 });
 
 test("6.4 the local adapter never reads or writes the historical localStorage document", async () => {
@@ -499,11 +513,13 @@ test("6.5 local export is built from committed records without Cloud data", asyn
   const store = createDexieStore(db);
   await store.commit(documentToRecords(fixture()).items.map((value) => ({ store: ITEMS_STORE, type: "put", value }))
     .concat(documentToRecords(fixture()).subjects.map((value) => ({ store: SUBJECTS_STORE, type: "put", value }))));
-  const document = exportDocument(await store.read());
-  assert.deepEqual(document, fixture());
-  const json = JSON.stringify(document);
+  const result = buildBusinessExport(await store.read());
+  assert.equal(result.status, "ready");
+  assert.equal(result.document.format, BACKUP_FORMAT);
+  assert.deepEqual(recordsToDocument(result.records), fixture());
+  const json = JSON.stringify(result.document);
   assert.doesNotMatch(json, /databaseUrl|cloud\.config|dexie\.cloud|otp|secret|credential|token/i);
-  assert.deepEqual(parseDocument(json), fixture());
+  assert.deepEqual(recordsToDocument(parseIndexedDbBackup(json).records), fixture());
 });
 
 test("6.6 app starts the business view on local IndexedDB without authentication", () => {
@@ -515,7 +531,7 @@ test("6.6 app starts the business view on local IndexedDB without authentication
   assert.match(app, /function startLocalWorkspace\(\)/);
   assert.match(app, /function refreshLocalDocument\(\)/);
   assert.match(app, /if \(!syncedDatabase\)[\s\S]*?startLocalWorkspace\(\)/);
-  assert.match(app, /localExportLegacyEl\.addEventListener\("click", exportLegacyBackup\)/);
+  assert.doesNotMatch(app, /exportLegacyBackup|localExportLegacyEl|localConvertLegacyEl/);
   assert.doesNotMatch(app, /localStorage\.getItem\(STORAGE_KEY/);
   assert.doesNotMatch(app, /localStorage\.setItem\(STORAGE_KEY/);
   assert.doesNotMatch(app, /innerHTML/);
@@ -527,7 +543,7 @@ test("6.6 app starts the business view on local IndexedDB without authentication
   assert.doesNotMatch(bootstrap, /dexieCloud|cloud\.configure|addons|fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|setupAuthentication|renderAuthPanel/);
   const localStart = app.slice(
     app.indexOf("function startLocalWorkspace"),
-    app.indexOf("function readResumePreference")
+    app.indexOf("function expandAncestorForFocus")
   );
   assert.doesNotMatch(localStart, /setupAuthentication|renderAuthPanel|authController|OTP/);
   const startup = app.slice(app.lastIndexOf("syncedDatabase = bootstrapSyncedDatabase(workspaceEntry)"));
@@ -536,16 +552,15 @@ test("6.6 app starts the business view on local IndexedDB without authentication
 
   assert.match(html, /id="local-panel"[^>]*hidden/);
   assert.match(html, /id="local-status"[^>]*role="status"/);
-  assert.match(html, /id="local-legacy-notice"[^>]*role="status"/);
+  assert.doesNotMatch(html, /id="local-legacy-notice"/);
   assert.match(html, /id="local-storage-error"[^>]*role="alert"/);
-  assert.match(html, /id="local-export-legacy"[^>]*type="button"[^>]*hidden/);
-  assert.match(app, /aucune conversion ni transmission Cloud n'est lancée automatiquement/i);
+  assert.doesNotMatch(html, /id="local-export-legacy"|id="local-convert-legacy"/);
   assert.doesNotMatch(html, /convertir automatiquement|migrer automatiquement/i);
   assert.doesNotMatch(html, /innerHTML/);
   assert.match(app, /Échec de la transaction locale/);
   assert.match(app, /Lecture de l'espace IndexedDB impossible/);
   assert.match(app, /Stockage local IndexedDB indisponible/);
-  assert.match(app, /openLocalImportPreview\(text\)/);
+  assert.match(app, /openLocalImportPreview\(parsed\.records\)/);
   assert.match(app, /businessStore\.commit\(operations\)/);
   assert.doesNotMatch(app, /confirm\("Remplacer toutes les données locales par cet import \?"\)/);
 });
@@ -575,22 +590,26 @@ test("6.8 local JSON import is one atomic adapter commit and invalid input chang
   const store = createDexieStore(db);
   await store.commit(documentToRecords(fixture()));
   const before = await store.read();
-  assert.throws(() => planImport(before, JSON.stringify({ version: 2, subjects: [] })), /Format ThreadStep incompatible/);
+  assert.throws(() => planImport(before, JSON.stringify({ version: 2, subjects: [] })),
+    (error) => error.code === "unknown-format");
   assert.deepEqual(await store.read(), before);
 
   const incoming = emptyDocument();
   const subject = newSubject("Importé", "s9");
   subject.items.push(newItem("X", "urgent", "x"));
   incoming.subjects.push(subject);
-  const operations = planImport(before, JSON.stringify(incoming));
+  const backup = serializeIndexedDbBackup(documentToRecords(incoming)).document;
+  const operations = planImport(before, backup);
   let commits = 0;
   const counting = {
     async commit(values) { commits += 1; return store.commit(values); }
   };
   await counting.commit(operations);
   assert.equal(commits, 1);
-  assert.deepEqual(recordsToDocument(await store.read()), incoming);
-  assert.deepEqual(exportDocument(await store.read()), incoming);
+  const after = await store.read();
+  assert.equal(after.subjects.some((record) => record.id === "s9"), true);
+  const projected = recordsToDocument(after);
+  assert.equal(projected.subjects.some((entry) => entry.id === "s9"), true);
 });
 
 test("6.9 local reads preserve UUID and legacy identifiers as stable strings", async () => {
