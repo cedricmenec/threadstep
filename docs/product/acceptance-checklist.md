@@ -88,6 +88,17 @@ IndexedDB isolée** ; la base historique n'est ni supprimée, ni fusionnée.
   enregistrements historiques peuvent contenir des modifications non poussées,
   même si la phase native Dexie indique `in-sync`.
 
+## Tablette Android : première lecture Cloud avant liaison de compte
+
+Recette manuelle à exécuter **sur des profils et données de test uniquement** :
+
+- [ ] Sur un navigateur Android neuf, confirmer OTP et provoquer un pull qui peuple la base `threadstep-ws-*` avant le premier enregistrement de liaison : les données restent masquées et le diagnostic indique le cache non vérifié.
+- [ ] Vérifier le bouton « Retrouver les projets Cloud dans un nouveau cache isolé » pour un workspace en activation ; lire l'avertissement et pouvoir annuler sans effet.
+- [ ] Confirmer la récupération avec identité, cible, première synchronisation et absence de mutations attestées : nouvelle base vierge créée et liée au compte, ancienne IndexedDB et ses tables `*_mutations` inchangées, aucun push.
+- [ ] Après recharge et OTP éventuellement renouvelé, vérifier les données autorisées, sans transfert fictif si la base locale autonome est vide.
+- [ ] Simuler déconnexion réseau, pull non attesté, mutation en attente/inconnue, URL ou compte différent, base candidate préexistante : aucune récupération.
+- [ ] Si la source locale autonome contient des données, vérifier qu'un transfert exige toujours revue et consentement explicite.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.
