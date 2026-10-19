@@ -70,6 +70,19 @@ L'assistant SHALL exposer les états local, préparation, connexion, première l
 - **WHEN** la connexion redevient disponible après un blocage
 - **THEN** l'utilisateur peut reprendre une découverte et revalidation explicites
 - **AND** les données d'origine et la destination précédemment saisie ne sont pas effacées
+### Requirement: Read-only activation on an additional device
+Sur un appareil dont l'espace local autonome est vide, après authentification et attestation distante, l'activation SHALL pouvoir se terminer sans transfert ni faux consentement. Une source locale non vide ou une preuve distante incertaine MUST préserver la revue ou le blocage.
+#### Scenario: Empty local source and attested populated Cloud
+- **GIVEN** zéro sujet et zéro étape dans l'IndexedDB autonome, un compte lié et un premier pull attesté
+- **WHEN** le plan validé ne contient aucune opération
+- **THEN** l'activation devient active sans créer de mutation, sans transfert et sans prétendre à un commit de copie
+- **AND** les données Cloud autorisées restent accessibles depuis la base locale synchronisée
+#### Scenario: Local records or missing attestation
+- **GIVEN** des données locales ou une erreur de lecture/identité distante
+- **WHEN** l'assistant découvre la cible
+- **THEN** il impose un plan de rapprochement avec consentement ou bloque l'activation
+- **AND** aucun succès fictif n'est annoncé
+
 ### Requirement: Retained historical source is not a migration order
 La présence de `threadstep.document.v1` SHALL être traitée comme une donnée retirée et non comme une source de migration ou d'import. Elle MUST NOT déclencher de proposition, de conversion, d'insertion, d'export V1 ou de trafic Cloud. La valeur MUST rester physiquement intacte jusqu'à un nettoyage volontaire et consenti, et une différence réelle doit être observée uniquement à partir des données IndexedDB et des sauvegardes modernes.
 #### Scenario: Restored target already contains every relevant record

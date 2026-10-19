@@ -156,6 +156,24 @@ même valeur. Une base héritée SHALL conserver son nom existant.
 - **THEN** l'entrée conserve le nom de base legacy déjà utilisé
 - **AND** les changements locaux non synchronisés restent attachés à cette base
 
+### Requirement: Recovery of unverified freshly synchronized cache
+Un pull natif peut remplir une nouvelle IndexedDB avant l'écriture de la première liaison de compte. L'application MUST NOT adopter ce cache peuplé sans preuve. Elle SHALL proposer une récupération confirmée dans une base isolée liée à l'identité attestée, en conservant l'ancien cache, les mutations et l'espace autonome intacts.
+#### Scenario: Tablet completes OTP and pull before account binding
+- **GIVEN** une session OTP authentifiée, un premier pull terminé et un nouveau cache peuplé sans empreinte de compte
+- **WHEN** ThreadStep constate que le cache reste non vérifié
+- **THEN** aucune donnée métier du cache non lié n'est affichée
+- **AND** une action explicite de récupération isolée reste visible même pour une base `threadstep-ws-*` en activation
+#### Scenario: Attested isolated recovery
+- **GIVEN** la session, l'URL, l'identité et la base distante attestées, sans mutation locale en attente
+- **WHEN** l'utilisateur confirme la récupération
+- **THEN** une nouvelle base vierge et inédite est liée à l'empreinte opaque du compte avant toute lecture métier
+- **AND** aucune donnée n'est copiée depuis l'ancien cache, conservé sans suppression
+- **AND** aucune mutation distante n'est créée par la récupération
+#### Scenario: Unsafe recovery remains blocked
+- **WHEN** les mutations sont en attente, les preuves distantes manquent, l'identité diffère ou le nom de la base candidate existe
+- **THEN** aucune récupération ni changement de base n'est appliqué
+- **AND** le cache initial demeure intact
+
 ### Requirement: Account binding on a shared URL
 
 Un espace synchronisé SHALL être lié à une empreinte opaque du compte authentifié.

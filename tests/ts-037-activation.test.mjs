@@ -20,6 +20,7 @@ import {
   FIRST_SYNC,
   TARGET_CLASSIFICATION,
   classifyTarget,
+  canCompleteReadOnlyActivation,
   createActivationRecord,
   describeActivationStage,
   evaluateActivationIsolation,
@@ -146,6 +147,38 @@ test("1.1 every activation stage is reachable only through its own evidence", ()
     assert.equal(outcome.state.stage, stage);
     state = outcome.state;
   }
+});
+
+test("1.1 read-only activation accepts only an empty source and an attested target", () => {
+  const good = {
+    sourceCounts: { subjects: 0, items: 0 },
+    plan: { operations: [] },
+    attestation: { attested: true },
+    targetStatus: "ready"
+  };
+  assert.equal(canCompleteReadOnlyActivation(good), true);
+  for (const change of [
+    { sourceCounts: { subjects: 1, items: 0 } },
+    { sourceCounts: { subjects: 0, items: 1 } },
+    { plan: { operations: [{ type: "add" }] } },
+    { plan: null },
+    { attestation: { attested: false } },
+    { targetStatus: "read-error" },
+    { targetStatus: "pending" }
+  ]) assert.equal(canCompleteReadOnlyActivation({ ...good, ...change }), false);
+  let stage = initialActivationState();
+  for (const type of ["start", "configured", "authenticated"]) {
+    stage = transitionActivation(stage, { type }).state;
+  }
+  assert.equal(stage.stage, ACTIVATION_STAGE.DISCOVERING);
+  const success = transitionActivation(stage, { type: "no-transfer" });
+  assert.equal(success.ok, true);
+  assert.equal(success.state.stage, ACTIVATION_STAGE.ACTIVE);
+  assert.equal(success.state.transferCommitted, false);
+  assert.equal(transitionActivation(initialActivationState(), { type: "no-transfer" }).ok, false);
+  assert.equal(transitionActivation(transitionActivation(stage, {
+    type: "discovered"
+  }).state, { type: "no-transfer" }).ok, false);
 });
 
 test("1.1 invalid transitions never move the stage or announce a result", () => {
@@ -505,7 +538,10 @@ test("2.3 the assistant status regions never contain business content", () => {
   const app = read("site/app.js");
   const render = app.match(/function renderActivationPanel\([\s\S]*?\n\}/);
   assert.ok(render, "activation renderer present");
-  assert.match(render[0], /cloudActivationStageEl\.textContent = describeActivationStage\(/);
+  assert.match(render[0], /cloudActivationStageEl\.textContent = needsIsolatedRecovery/);
+  assert.match(render[0], /describeActivationStage\(activationState\.stage\)/);
+  assert.match(render[0], /authState\.status === AUTH_STATUS\.AUTHENTICATED/);
+  assert.match(render[0], /accountBinding\.state === BINDING_STATE\.UNVERIFIED/);
   assert.match(render[0], /setActivationStatus\(message\)/);
   assert.match(app, /describeActivationStage\(/);
   assert.match(app, /describeTargetClassification\(/);
