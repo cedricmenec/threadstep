@@ -283,3 +283,27 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .workspace-confirmation h3{margin:0;font-size:1rem}
 .workspace-confirmation p{margin:0;font-size:.85rem;color:#5c4a43;line-height:1.5;overflow-wrap:anywhere}
 .workspace-confirmation-status{font-weight:600}
+.header-nav{position:relative;margin-top:14px}
+.nav-menu-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;padding:10px 14px;background:#fff;border:1px solid #cbd5c9;border-radius:10px;color:#30473a;font-size:.88rem;font-weight:700}
+.nav-menu-button:hover{background:#f0f3eb}
+.nav-menu-button:focus-visible,.nav-menu a:focus-visible,.settings-page a:focus-visible,.settings-page h2:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
+.nav-menu-icon{font-size:1.1rem;line-height:1}
+.nav-menu-panel{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:min(280px,calc(100vw - 32px));max-width:calc(100vw - 16px);background:#fff;border:1px solid #dde4d6;border-radius:12px;box-shadow:0 10px 24px #24382f1f;padding:6px}
+.nav-menu-panel[hidden]{display:none}
+.nav-menu{display:flex;flex-direction:column;gap:2px}
+.nav-menu a{display:flex;align-items:center;min-width:44px;min-height:44px;padding:8px 12px;border-radius:8px;color:#30473a;text-decoration:none;font-weight:600;overflow-wrap:anywhere}
+.nav-menu a:hover{background:#eef2e8}
+.settings-page{padding-top:37px;max-width:720px}
+.settings-page[hidden]{display:none}
+.settings-nav{margin-bottom:14px}
+.settings-back{display:inline-flex;align-items:center;min-height:44px;padding:8px 4px;color:#466e4d;font-weight:700;text-decoration:none}
+.settings-back:hover{text-decoration:underline}
+.settings-page h2:focus-visible{border-radius:6px}
+.settings-page p{color:#53675a;line-height:1.55;overflow-wrap:anywhere}
+.settings-links{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:8px}
+.settings-links a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #dde4d6;border-radius:10px;background:#fff;color:#30473a;font-weight:700;text-decoration:none}
+.settings-links a:hover{background:#eef2e8}
+.settings-destination{background:#fff;border:1px solid #e1e5de;border-radius:14px;padding:14px 16px;margin-top:14px}
+.settings-destination h3{margin:0;font-size:1rem}
+.settings-destination p{margin:6px 0 0;font-size:.9rem}
+@media(max-width:620px){.nav-menu-panel{left:0;right:auto;width:min(280px,calc(100vw - 30px))}.settings-page{padding-top:26px}}

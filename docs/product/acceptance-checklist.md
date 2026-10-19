@@ -99,6 +99,30 @@ Recette manuelle à exécuter **sur des profils et données de test uniquement**
 - [ ] Simuler déconnexion réseau, pull non attesté, mutation en attente/inconnue, URL ou compte différent, base candidate préexistante : aucune récupération.
 - [ ] Si la source locale autonome contient des données, vérifier qu'un transfert exige toujours revue et consentement explicite.
 
+## Navigation, menu et pages de paramètres (TS-041)
+
+À vérifier dans un vrai navigateur, sur téléphone et sur ordinateur. Ce
+contrôle reste **à effectuer** tant qu'aucune preuve réelle n'est consignée.
+
+- Le bouton « Menu » est présent dans l'en-tête sur toutes les pages et
+  ouvre un panneau contenant, dans l'ordre, « Mes projets », « Paramètres »,
+  « Imports / Exports » et « Synchronisation Dexie Cloud ».
+- Les fragments `#/parametres`, `#/parametres/donnees` et
+  `#/parametres/synchronisation` affichent la bonne page ; les liens
+  profonds, Précédent/Suivant et le rechargement restaurent la vue, y compris
+  pour `#/sujet/<id>`.
+- Échap ferme le menu et rend le focus au bouton ; un clic extérieur le
+  ferme ; après un lien, le focus rejoint le titre de destination ;
+  `aria-expanded` et l'état masqué restent cohérents.
+- Le menu et les pages de paramètres restent utilisables à 320 px et au
+  clavier, sans débordement horizontal, avec des cibles d'au moins 44 × 44 px.
+- Les commandes d'export, d'import, de restauration, de connexion, de
+  configuration Cloud et de diagnostic restent à leur emplacement actuel ;
+  les pages de paramètres ne les dupliquent pas.
+- Naviguer entre Mes projets et les pages de paramètres ne modifie aucune
+  donnée IndexedDB, aucune configuration Cloud et ne déclenche ni requête
+  réseau, ni authentification, ni pull.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.

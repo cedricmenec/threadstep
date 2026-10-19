@@ -57,7 +57,7 @@ test("a projected native record roundtrips and stays valid with a legacy ID", ()
 test("browser wiring initializes native session before displaying the business view", () => {
   const app = readFileSync(new URL("../site/app.js", import.meta.url), "utf8");
   assert.match(app, /syncedDatabase\.open\(\)/);
-  assert.match(app, /if \(dashboardEl\) dashboardEl\.hidden = configured && \(!authenticated \|\| bindingBlocked \|\| !documentLoaded\)/);
+  assert.match(app, /dashboardEl\.hidden = Boolean\(settingsSection\) \|\|\s*\(configured && \(!authenticated \|\| bindingBlocked \|\| !documentLoaded\)\)/);
   assert.match(app, /refreshSyncedDocument\(\)/);
   assert.match(app, /readSyncedRecords\(syncedDatabase\)/);
   assert.match(app, /await businessStore\.commit\(operations\);[\s\S]*?lastRecords = records/);

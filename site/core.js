@@ -14,10 +14,48 @@ export function subjectRoute(subjectId) {
   if (!validId(subjectId)) return null;
   return "#/sujet/" + encodeURIComponent(subjectId);
 }
+export const NAV_MENU_ENTRIES = Object.freeze([
+  Object.freeze({ label: "Mes projets", fragment: "#/", headingId: "dashboard-title" }),
+  Object.freeze({ label: "Paramètres", fragment: "#/parametres", headingId: "settings-title" }),
+  Object.freeze({ label: "Imports / Exports", fragment: "#/parametres/donnees", headingId: "settings-data-title" }),
+  Object.freeze({ label: "Synchronisation Dexie Cloud", fragment: "#/parametres/synchronisation", headingId: "settings-sync-title" })
+]);
+const SETTINGS_ROUTES = Object.freeze({
+  "/parametres": "root",
+  "/parametres/donnees": "data",
+  "/parametres/synchronisation": "sync"
+});
+export function routeHeadingId(route) {
+  if (!route || typeof route !== "object") return null;
+  if (route.view === "overview") return "dashboard-title";
+  if (route.view !== "settings") return null;
+  if (route.section === "root") return "settings-title";
+  if (route.section === "data") return "settings-data-title";
+  if (route.section === "sync") return "settings-sync-title";
+  return null;
+}
+export function navigationMenuState(state, action) {
+  const open = !!(state && state.open === true);
+  switch (action) {
+    case "toggle":
+      return { open: !open, restoreFocus: false };
+    case "escape":
+      return { open: false, restoreFocus: open };
+    case "outside":
+    case "navigate":
+    case "route-change":
+      return { open: false, restoreFocus: false };
+    default:
+      return { open, restoreFocus: false };
+  }
+}
 export function parseRoute(hash) {
   if (typeof hash !== "string") return { view: "overview" };
   const fragment = hash.startsWith("#") ? hash.slice(1) : hash;
   if (fragment === "" || fragment === "/") return { view: "overview" };
+  if (Object.prototype.hasOwnProperty.call(SETTINGS_ROUTES, fragment)) {
+    return { view: "settings", section: SETTINGS_ROUTES[fragment] };
+  }
   if (fragment === "/sujet") return { view: "invalid" };
   if (!fragment.startsWith("/sujet/")) return { view: "overview" };
   const rawId = fragment.slice("/sujet/".length);
@@ -153,6 +191,10 @@ function viewKey(route) {
   const view = typeof route.view === "string" ? route.view : "";
   if (view === "subject" && typeof route.subjectId === "string") {
     return "subject:" + route.subjectId;
+  }
+  if (view === "settings") {
+    const section = typeof route.section === "string" ? route.section : "";
+    return "settings:" + section;
   }
   return view;
 }

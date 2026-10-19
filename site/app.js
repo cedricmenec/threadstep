@@ -1,4 +1,4 @@
-import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, pendingCount, totalTaskCount, totalTaskCountLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -125,6 +125,11 @@ const cloudUrlEl = document.querySelector("#cloud-url");
 const cloudConfigErrorEl = document.querySelector("#cloud-config-error");
 const businessToolsEl = document.querySelector("#business-tools");
 const dashboardEl = document.querySelector("#dashboard");
+const navMenuButtonEl = document.querySelector("#nav-menu-button");
+const navMenuPanelEl = document.querySelector("#nav-menu-panel");
+const settingsPageEl = document.querySelector("#settings-page");
+const settingsDataPageEl = document.querySelector("#settings-data-page");
+const settingsSyncPageEl = document.querySelector("#settings-sync-page");
 const authPanelEl = document.querySelector("#auth-panel");
 const authFormEl = document.querySelector("#auth-form");
 const authStatusEl = document.querySelector("#auth-status");
@@ -247,6 +252,8 @@ let focusOpenSubjectId = null;
 let focusRenameControl = false;
 let openMenuId = null;
 let pendingMenuFocus = null;
+let navMenuOpen = false;
+let pendingNavigationFocus = null;
 
 const CHANGE_CHANNEL = "threadstep.changes.v1";
 let businessStore = null;
@@ -2011,13 +2018,18 @@ function applyBusinessVisibility() {
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
   const bindingBlocked = configured && accountBinding.businessAllowed !== true;
+  const settingsSection = route.view === "settings" ? route.section : null;
   if (businessToolsEl) businessToolsEl.hidden = configured && (!authenticated || bindingBlocked);
   // Do not display an empty dashboard while IndexedDB is still loading or
   // while another account's cache is unverified/mismatched.
-  if (dashboardEl) dashboardEl.hidden = configured && (!authenticated || bindingBlocked || !documentLoaded);
-  // In local mode the dashboard may load visibly, but a failed read must never
-  // be presented as an authoritative empty workspace.
-  if (dashboardEl && !configured) dashboardEl.hidden = localReadFailed;
+  if (dashboardEl) {
+    dashboardEl.hidden = Boolean(settingsSection) ||
+      (configured && (!authenticated || bindingBlocked || !documentLoaded));
+    // In local mode the dashboard may load visibly, but a failed read must never
+    // be presented as an authoritative empty workspace.
+    if (!configured && !settingsSection) dashboardEl.hidden = localReadFailed;
+  }
+  applySettingsVisibility(settingsSection);
 }
 function setLocalStatus(message) {
   if (localStatusEl) localStatusEl.textContent = typeof message === "string" ? message : "";
@@ -2542,13 +2554,65 @@ function expandAncestorForFocus() {
     }
   }
 }
+function applyNavigationMenu() {
+  if (navMenuButtonEl) {
+    navMenuButtonEl.setAttribute("aria-expanded", navMenuOpen ? "true" : "false");
+  }
+  if (navMenuPanelEl) navMenuPanelEl.hidden = !navMenuOpen;
+}
+function updateNavigationMenu(action) {
+  const next = navigationMenuState({ open: navMenuOpen }, action);
+  navMenuOpen = next.open;
+  applyNavigationMenu();
+  if (next.restoreFocus && navMenuButtonEl) navMenuButtonEl.focus();
+  return next;
+}
+function focusRouteHeading(headingId) {
+  if (!headingId) return;
+  const heading = document.getElementById(headingId);
+  if (!heading || heading.closest("[hidden]")) return;
+  heading.focus();
+}
+function activateNavigationLink(event, target) {
+  if (event) event.preventDefault();
+  if (typeof target !== "string") return;
+  updateNavigationMenu("navigate");
+  const nextRoute = parseRoute(target);
+  if (location.hash === target || (target === "#/" && (location.hash === "" || location.hash === "#"))) {
+    pendingNavigationFocus = null;
+    route = nextRoute;
+    render();
+    focusRouteHeading(routeHeadingId(nextRoute));
+    return;
+  }
+  pendingNavigationFocus = routeHeadingId(nextRoute);
+  location.hash = target;
+}
+function applySettingsVisibility(section) {
+  if (settingsPageEl) settingsPageEl.hidden = section !== "root";
+  if (settingsDataPageEl) settingsDataPageEl.hidden = section !== "data";
+  if (settingsSyncPageEl) settingsSyncPageEl.hidden = section !== "sync";
+}
 function render() {
-  if (!businessAllowed()) return;
+  applyBusinessVisibility();
+  applyNavigationMenu();
+  if (!businessAllowed()) {
+    applyFocus();
+    return;
+  }
   subjectsEl.replaceChildren();
   expandAncestorForFocus();
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
+  if (route.view === "settings") {
+    subjectForm.hidden = true;
+    focusSuggestEl.hidden = true;
+    focusCardEl.hidden = true;
+    resumeCardEl.hidden = true;
+    applyFocus();
+    return;
+  }
   const detail = route.view !== "overview";
   subjectForm.hidden = detail;
   focusSuggestEl.hidden = detail;
@@ -2692,6 +2756,12 @@ function openSubject(subject) {
   navigate(target);
 }
 function applyFocus() {
+  if (pendingNavigationFocus) {
+    const headingId = pendingNavigationFocus;
+    pendingNavigationFocus = null;
+    focusRouteHeading(headingId);
+    return;
+  }
   if (editingItemId) {
     const input = subjectsEl.querySelector(".task-edit-title");
     if (input) { input.focus(); input.select(); return; }
@@ -3415,13 +3485,22 @@ document.addEventListener("keydown", (event) => {
     render();
     return;
   }
+  if (event.key === "Escape" && navMenuOpen) {
+    event.preventDefault();
+    updateNavigationMenu("escape");
+    return;
+  }
   if (event.key !== "Escape" || !dragState) return;
   event.preventDefault();
   cancelDrag(null);
 });
 document.addEventListener("click", (event) => {
-  if (!openMenuId) return;
   const target = event.target;
+  if (navMenuOpen && target && typeof target.closest === "function" &&
+      !target.closest("#nav-menu-panel") && !target.closest("#nav-menu-button")) {
+    updateNavigationMenu("outside");
+  }
+  if (!openMenuId) return;
   if (target && typeof target.closest === "function" &&
       (target.closest(".task-menu") || target.closest(".task-menu-button"))) {
     return;
@@ -3541,10 +3620,23 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     event.target.value = "";
   }
 });
+if (navMenuButtonEl) {
+  navMenuButtonEl.addEventListener("click", () => {
+    updateNavigationMenu("toggle");
+  });
+}
+if (navMenuPanelEl) {
+  for (const link of navMenuPanelEl.querySelectorAll("a[href]")) {
+    link.addEventListener("click", (event) => {
+      activateNavigationLink(event, link.getAttribute("href"));
+    });
+  }
+}
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
   if (isViewEntry(route, nextRoute)) expandedParents = new Set();
   openMenuId = null;
+  updateNavigationMenu("route-change");
   route = nextRoute;
   render();
 });
