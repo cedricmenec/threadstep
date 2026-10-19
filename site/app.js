@@ -574,6 +574,10 @@ async function refreshAccountBinding() {
     clearBusinessForBindingBlock();
   }
   renderWorkspacePanel();
+  // Account binding settles asynchronously after the first native pull.
+  // Update the activation banner too: the previous "OTP in progress" text
+  // must not survive a verified session with an unbound populated cache.
+  renderActivationPanel();
   applyBusinessVisibility();
   return accountBinding;
 }
