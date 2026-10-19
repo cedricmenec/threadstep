@@ -237,7 +237,7 @@ test("3.1-3.4 the manual protocol and its links keep real evidence separate from
     "hors ligne",
     "réseau intermittent",
     "propagation",
-    "export de secours",
+    "sauvegarde IndexedDB moderne",
     "threadstep.document.v1",
     "legacy:",
     "Recette Dexie réelle",
