@@ -119,8 +119,8 @@ contrôle reste **à effectuer** tant qu'aucune preuve réelle n'est consignée.
 - Les commandes d'export, d'import et de restauration sont réunies sur
   `#/parametres/donnees` ; l'accueil ne duplique plus la barre d'actions.
   Les commandes de connexion, de configuration Cloud, d'activation et de
-  gestion des espaces restent à leur emplacement actuel ; le diagnostic
-  complet est désormais sur `#/parametres/synchronisation`.
+  gestion des espaces sont réunies avec le diagnostic complet sur
+  `#/parametres/synchronisation`, chacune une seule fois.
 - Naviguer entre Mes projets et les pages de paramètres ne modifie aucune
   donnée IndexedDB, aucune configuration Cloud et ne déclenche ni requête
   réseau, ni authentification, ni pull.
@@ -179,9 +179,48 @@ restent **à effectuer** tant qu'aucune preuve réelle n'est consignée.
   44 px de « Relancer la lecture distante ». Le pull manuel conserve ses
   garde-fous ; l'ouverture ou la fermeture de la page ne le déclenche jamais.
 - Vérifier que « Configuration », « Première activation », « Connexion » et
-  « Espaces de travail » sont descriptifs, et que `#cloud-config`,
-  `#cloud-activation`, `#auth-panel` et `#workspace-panel` restent à leur
-  emplacement actuel, sans formulaire déplacé ou dupliqué.
+  « Espaces de travail » contiennent une seule fois `#cloud-config`,
+  `#cloud-activation`, `#auth-panel` et `#workspace-panel`, sans formulaire
+  dupliqué ailleurs dans le document.
+
+## Paramètres Cloud unifiés et onboarding (TS-044)
+
+À vérifier manuellement dans de vrais navigateurs de test, sur ordinateur et
+sur smartphone, avec des profils isolés et une instance Dexie Cloud de test.
+Ces scénarios restent **à effectuer** tant qu'aucune preuve réelle n'est
+consignée ; aucun test simulé ne les atteste.
+
+- Depuis un profil local vierge, vérifier le démarrage sans Cloud, l'usage
+  normal de Mes projets, puis l'accès à la configuration et à l'onboarding
+  depuis Paramètres. Soumettre une URL invalide puis une URL valide, recharger
+  et vérifier que la même URL est conservée sans copie ni OTP implicite.
+- Provoquer un OTP, quitter la page pendant la saisie, revenir : le formulaire,
+  le statut et l'erreur éventuelle restent inchangés, aucun code n'est soumis
+  ni redemandé par la navigation. Vérifier l'expiration et la reprise de
+  session selon le flux natif.
+- Démarrer une activation sur un espace local peuplé, afficher une revue de
+  plan, quitter puis revenir : la revue et la destination restent affichées et
+  la confirmation reste désactivée sans consentement explicite. Vérifier
+  qu'aucune copie, insertion ou validation n'a eu lieu avant l'opt-in et la
+  confirmation, puis tester l'annulation.
+- Avec deux navigateurs et un compte de test connecté, vérifier le même
+  espace, les tâches et les statuts de diagnostic après refresh, changement de
+  page et reconnexion. Provoquer une divergence, un état hors ligne, une erreur
+  réseau et un pull initial non vérifié : les tâches locales restent
+  accessibles, aucune base vide n'est affirmée et aucune relance n'est
+  automatique.
+- Vérifier que le lien d'accès contextuel de Mes projets apparaît uniquement
+  lorsqu'une action Cloud ou une erreur locale le justifie, qu'il reste
+  distinct du résumé non interactif et qu'il n'exécute aucune action.
+- Tester séparément « Sélectionner cet espace » (changement d'espace),
+  « Suspendre Cloud », « Se déconnecter » et « Purger la copie locale » :
+  libellés, nom de base, portée, avertissement sur les écritures non
+  transmises, sauvegarde JSON, annulation et confirmation. Vérifier qu'aucune
+  donnée distante ni aucun autre espace n'est détruit.
+- Vérifier le parcours A/B/A d'URL, la transition entre espace autonome et
+  espace synchronisé, la conservation des données et du diagnostic après
+  chaque changement, ainsi que la lisibilité à 320 px, les cibles de 44 px et
+  les annonces d'un lecteur d'écran.
 
 ## Tests utilisateur à consigner
 

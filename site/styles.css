@@ -229,6 +229,18 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .sync-summary[hidden]{display:none}
 .sync-descriptive{overflow-wrap:anywhere}
 .sync-descriptive p{max-width:100%}
+.sync-onboarding{overflow-wrap:anywhere}
+.sync-onboarding-step{margin:6px 0 0;color:#30473a;font-weight:700;font-size:.92rem}
+.sync-onboarding #sync-onboarding-next{margin:6px 0 0;color:#415748;font-size:.9rem;line-height:1.5;overflow-wrap:anywhere}
+.sync-section{overflow-wrap:anywhere;max-width:100%}
+.sync-section[hidden]{display:none}
+.sync-section .cloud-config,.sync-section .cloud-activation,.sync-section .auth-panel,.sync-section .workspace-panel{max-width:100%;margin-top:12px}
+.sync-section h3{overflow-wrap:anywhere}
+.sync-settings-access{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;max-width:100%;padding:8px 12px;margin:10px 0 0;border:1px solid #dde4d6;border-radius:10px;background:#fff;color:#30473a;font-weight:700;text-decoration:none;overflow-wrap:anywhere}
+.sync-settings-access:hover{background:#eef2e8}
+.sync-settings-access[hidden]{display:none}
+.sync-settings-access:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
+@media(max-width:620px){.sync-onboarding,.sync-section,.sync-settings-access{max-width:100%}.sync-settings-access{width:100%;padding:10px;overflow-wrap:anywhere}}
 @media(max-width:620px){.sync-diagnostic{padding:16px}.sync-diagnostic-list{grid-template-columns:1fr;gap:2px 0}.sync-diagnostic-list dd{margin-bottom:8px}.sync-diagnostic-summary,.sync-summary{padding:10px;font-size:.88rem}}
 
 .recovery-panel{margin:1.5rem 0;padding:1rem;border:1px solid #b45309;border-radius:.75rem;background:#fffbeb}

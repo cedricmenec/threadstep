@@ -72,11 +72,6 @@ const settingsSyncPage = between(
   '<section id="settings-sync-page"',
   '<div id="sync-summary"'
 );
-const descriptiveBlock = between(
-  settingsSyncPage,
-  '<section class="settings-destination sync-descriptive"',
-  '<section id="sync-diagnostic"'
-);
 
 test("1.1 the native diagnostic lives exactly once inside the sync settings page", () => {
   const diagnostic = /<section id="sync-diagnostic" class="sync-diagnostic" aria-labelledby="sync-diagnostic-title" hidden><\/section>/;
@@ -87,16 +82,21 @@ test("1.1 the native diagnostic lives exactly once inside the sync settings page
   assert.equal(occurrences(html.slice(html.indexOf('<div id="sync-summary"')), 'id="sync-diagnostic"'), 0);
 });
 
-test("1.2 the four future sections are descriptive and contain no controls", () => {
-  for (const heading of ["Configuration", "Première activation", "Connexion", "Espaces de travail"]) {
-    assert.match(descriptiveBlock, new RegExp("<h3[^>]*>" + heading + "</h3>"));
+test("1.2 the four integrated sections host their real control exactly once", () => {
+  const sections = [
+    ["Configuration", "settings-sync-configuration-title", "sync-configuration-section", "cloud-config", '<section id="sync-activation-section"'],
+    ["Première activation", "settings-sync-activation-title", "sync-activation-section", "cloud-activation", '<section id="sync-connection-section"'],
+    ["Connexion", "settings-sync-connection-title", "sync-connection-section", "auth-panel", '<section id="sync-workspaces-section"'],
+    ["Espaces de travail", "settings-sync-workspaces-title", "sync-workspaces-section", "workspace-panel", '<section id="sync-diagnostic"']
+  ];
+  for (const [heading, titleId, sectionId, controlId, end] of sections) {
+    const block = between(settingsSyncPage, '<section id="' + sectionId + '"', end);
+    assert.match(block, new RegExp("<h3[^>]*" + titleId + "[^>]*>" + heading + "</h3>"), heading);
+    assert.equal(occurrences(block, 'id="' + controlId + '"'), 1, controlId);
+    assert.equal(occurrences(html, 'id="' + controlId + '"'), 1, controlId);
   }
-  assert.match(descriptiveBlock, /emplacement actuel/);
-  assert.match(descriptiveBlock, /TS-044/);
-  assert.doesNotMatch(descriptiveBlock, /<(form|input|select|button)\b/i);
-  for (const id of ["cloud-config", "cloud-activation", "auth-panel", "workspace-panel"]) {
-    assert.doesNotMatch(descriptiveBlock, new RegExp('id="' + id + '"'), id);
-  }
+  assert.doesNotMatch(html, /sync-descriptive/);
+  assert.doesNotMatch(settingsSyncPage, /TS-044/);
 });
 
 test("1.3 the overview summary is a single non-interactive hidden status surface", () => {
@@ -121,7 +121,7 @@ test("1.5 styles cover the synthesis, summary, wrapping and the 44px retry targe
   assert.match(css, /\.sync-diagnostic-summary\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.sync-summary\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.sync-summary\[hidden\]\{display:none\}/);
-  assert.match(css, /\.sync-descriptive\{overflow-wrap:anywhere\}/);
+  assert.match(css, /\.sync-section\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /@media\(max-width:620px\)\{[^\n]*\.sync-diagnostic-summary,\.sync-summary\{padding:10px/);
   assert.match(css, /\.sync-diagnostic-retry\{[^}]*min-height:44px[^}]*min-width:44px/);
 });
@@ -233,9 +233,12 @@ test("2.3 paint preserves the diagnostic rows, errors, live status, reason and r
 test("2.4 and 2.5 summary visibility depends on the overview route and only updates hidden/text", () => {
   const visibility = between(app, "function applySyncSummaryVisibility(", "\n}\n");
   assert.match(visibility, /route\.view === "overview"/);
-  assert.match(visibility, /latestSyncSummary\.needsAttention === true/);
+  assert.match(visibility, /buildSyncDiagnostic\(readSyncDiagnosticInput\(\)\)/);
+  assert.match(visibility, /buildDiagnosticSummary\(diagnostic\)/);
   assert.match(visibility, /syncSummaryEl\.hidden = !show/);
-  assert.match(visibility, /syncSummaryEl\.textContent = latestSyncSummary\.text/);
+  assert.match(visibility, /syncSummaryEl\.textContent = summary\.text/);
+  assert.match(visibility, /overviewAccessLinkVisible\(/);
+  assert.match(visibility, /syncSettingsAccessEl\.hidden = !showLink/);
   assert.doesNotMatch(visibility, /renderSyncDiagnostic|\.refresh\(|setupSyncDiagnostics|retrySyncInitialPull|nativePullAdapter|\.open\(|fetch\(|startAuthentication|localStorage|indexedDB/);
 
   const render = between(app, "function render()", "\nfunction navigate(");
@@ -311,19 +314,19 @@ test("3.2 repeated refreshes are deterministic and install no subscription", () 
   assert.equal(occurrences(app, "createSyncDiagnosticsController("), 1);
 });
 
-test("3.5 sensitive controls stay once at their existing location with their handlers", () => {
+test("3.5 sensitive controls stay once inside the sync page with their handlers", () => {
   const syncPage = between(html, '<section id="settings-sync-page"', '<div id="sync-summary"');
   for (const id of ["cloud-config", "cloud-activation", "auth-panel", "workspace-panel"]) {
     assert.equal(occurrences(html, 'id="' + id + '"'), 1, id);
-    assert.doesNotMatch(syncPage, new RegExp('id="' + id + '"'), id);
+    assert.equal(occurrences(syncPage, 'id="' + id + '"'), 1, id);
     assert.match(app, new RegExp('querySelector\\("#' + id + '"\\)'));
   }
   const ordered = [
-    'id="workspace-panel"', 'id="cloud-activation"', 'id="auth-panel"',
-    'id="settings-page"', 'id="settings-sync-page"', 'id="cloud-config"'
+    'id="sync-onboarding"', 'id="sync-configuration-section"', 'id="sync-activation-section"',
+    'id="sync-connection-section"', 'id="sync-workspaces-section"', 'id="sync-diagnostic"'
   ];
   for (let index = 1; index < ordered.length; index += 1) {
-    assert.ok(html.indexOf(ordered[index - 1]) < html.indexOf(ordered[index]), ordered[index]);
+    assert.ok(syncPage.indexOf(ordered[index - 1]) < syncPage.indexOf(ordered[index]), ordered[index]);
   }
   assert.match(app, /cloudConfigFormEl\.addEventListener\("submit"/);
   assert.match(app, /authFormEl\.addEventListener\("submit", submitAuthForm\)/);
@@ -355,8 +358,7 @@ test("4.1 documentation describes the dedicated diagnostic page and summary boun
     assert.match(source, /diagnostic/i);
     assert.match(source, /résumé/i);
     assert.match(source, /Mes projets/);
-    assert.match(source, /descriptif/i);
-    assert.match(source, /emplacement actuel/i);
+    assert.match(source, /une seule fois|unique destination|réunies/i);
   }
   assert.match(guide, /Relancer la lecture distante/);
   assert.match(guide, /garde-fous/);

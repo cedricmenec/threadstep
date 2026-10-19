@@ -190,7 +190,7 @@ test("contextual safety backups and raw recovery exports remain in place", () =>
   const workspaceConfirmation = between(
     html,
     '<div id="workspace-confirmation"',
-    "</div>\n      <section id=\"legacy-cleanup\""
+    "</div>\n          <section id=\"legacy-cleanup\""
   );
   assert.match(workspaceConfirmation, /id="workspace-backup"/);
   const recoveryPanel = between(html, '<section id="recovery-panel"', '<section id="settings-page"');

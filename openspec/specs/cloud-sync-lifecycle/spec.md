@@ -297,10 +297,11 @@ antérieur conservé en mémoire.
 ### Requirement: Dedicated read-only diagnostic page
 
 La route `#/parametres/synchronisation` SHALL afficher en lecture seule une
-synthèse et le diagnostic natif complet. Elle MUST réutiliser les signaux et
-abonnements existants et MUST NOT ouvrir d'instance Cloud, demander un OTP,
-envoyer une requête, lancer un pull ou exposer un secret, un email, un OTP, un
-token ou un contenu métier.
+synthèse et le diagnostic natif complet, et SHALL y réunir une seule fois les
+contrôles existants de configuration, d'activation, de connexion et d'espaces.
+Le diagnostic MUST réutiliser les signaux et abonnements existants et MUST NOT
+ouvrir d'instance Cloud, demander un OTP, envoyer une requête, lancer un pull
+ou exposer un secret, un email, un OTP, un token ou un contenu métier.
 
 #### Scenario: Local workspace without configuration or network
 
@@ -322,9 +323,19 @@ token ou un contenu métier.
 #### Scenario: Diagnostic page contains no moved sensitive control
 
 - **WHEN** `#/parametres/synchronisation` est affiché
-- **THEN** les emplacements « Configuration », « Première activation », « Connexion » et « Espaces de travail » sont descriptifs
-- **AND** aucun formulaire, champ, sélection ou bouton appartenant à ces parcours n'y est déplacé, dupliqué ou activé
-- **AND** l'ouverture de la page ne déclenche ni activation, ni OTP, ni connexion, ni sélection d'espace, ni purge
+- **THEN** les sections « Configuration », « Première activation », « Connexion » et « Espaces de travail » contiennent respectivement `#cloud-config`, `#cloud-activation`, `#auth-panel` et `#workspace-panel`
+- **AND** chaque contrôle apparaît une seule fois dans le document
+- **AND** aucun formulaire, champ, sélection ou bouton de ces parcours n'est dupliqué ailleurs ou dans la surface du diagnostic
+- **AND** le diagnostic reste une surface en lecture seule distincte
+- **AND** l'ouverture ou la fermeture de la page ne déclenche ni activation, ni OTP, ni connexion, ni sélection d'espace, ni purge
+
+#### Scenario: Diagnostic controls never trigger Cloud operations
+
+- **GIVEN** la page de synchronisation est affichée
+- **WHEN** l'utilisateur lit la synthèse ou le diagnostic
+- **THEN** aucun OTP, transfert, consentement, pull automatique ou mutation n'est déclenché
+- **AND** seule une activation explicite de « Relancer la lecture distante » peut appeler le pull natif
+- **AND** cette relance conserve ses préconditions et ne produit aucune écriture métier
 
 #### Scenario: Diagnostics update from the same native events
 
@@ -346,7 +357,8 @@ La vue `#/` SHALL afficher un résumé de synchronisation non interactif lorsqu'
 état Cloud configuré nécessite une attention ou qu'une erreur locale existe. Le
 résumé MUST rester masqué pour un local non configuré sain et pour une
 synchronisation configurée entièrement en phase, et MUST NOT proposer de
-relance.
+relance. Un lien distinct vers `#/parametres/synchronisation` SHALL être visible
+lorsqu'un état Cloud configuré nécessite une action.
 
 #### Scenario: Attention state remains visible on the overview
 
@@ -354,13 +366,14 @@ relance.
 - **WHEN** la vue Mes projets `#/` est affichée
 - **THEN** un résumé minimal indique la session, la connexion, la phase et le statut ou l'erreur disponible
 - **AND** il est annoncé via une zone de statut non interactive
-- **AND** il ne contient aucune action, aucun bouton de relance et aucun secret ni contenu métier
+- **AND** le résumé lui-même ne contient aucune action et aucun bouton de relance
+- **AND** un lien distinct vers `#/parametres/synchronisation` est visible et n'exécute aucune action Cloud
 
 #### Scenario: Healthy overview has no synchronization clutter
 
 - **GIVEN** aucun espace Cloud n'est configuré et aucune erreur locale n'existe, ou un espace configuré est entièrement en phase
 - **WHEN** la vue Mes projets `#/` est affichée
-- **THEN** le résumé d'attention est masqué
+- **THEN** le résumé d'attention et le lien d'accès Cloud sont masqués
 - **AND** la page de diagnostic dédiée reste accessible depuis les paramètres
 - **AND** aucune synchronisation, connexion ou requête n'est déclenchée pour afficher l'accueil
 

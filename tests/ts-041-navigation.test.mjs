@@ -120,7 +120,7 @@ test("header menu markup exposes accessible state and the exact ordered links", 
   assert.deepEqual(links.map((match) => match[1]), NAV_MENU_ENTRIES.map((entry) => entry.fragment));
 });
 
-test("settings pages expose titles, back links and descriptive destinations", () => {
+test("settings pages expose titles, back links and destination sections", () => {
   assert.match(html, /<h2 id="settings-title" tabindex="-1">Paramètres<\/h2>/);
   assert.match(html, /<h2 id="settings-data-title" tabindex="-1">Imports \/ Exports<\/h2>/);
   assert.match(html, /<h2 id="settings-sync-title" tabindex="-1">Synchronisation Dexie Cloud<\/h2>/);
@@ -129,10 +129,10 @@ test("settings pages expose titles, back links and descriptive destinations", ()
   assert.match(html, /<h3[^>]*>Exporter<\/h3>/);
   assert.match(html, /<h3[^>]*>Importer et fusionner<\/h3>/);
   assert.match(html, /<h3[^>]*>Restaurer un état antérieur<\/h3>/);
-  assert.match(html, /réunit le diagnostic Dexie Cloud en lecture seule/i);
+  assert.match(html, /réunit la configuration, l'activation, la connexion/i);
 });
 
-test("settings pages host the data controls once and keep context panels elsewhere", () => {
+test("settings pages host the data and Cloud controls once in their destination", () => {
   const dataBlock = between(html, '<section id="settings-data-page"', '<section id="settings-sync-page"');
   for (const id of ["business-tools", "export", "import", "restore", "restore-panel"]) {
     assert.match(dataBlock, new RegExp('id="' + id + '"'), id);
@@ -144,15 +144,15 @@ test("settings pages host the data controls once and keep context panels elsewhe
     '<section id="settings-sync-page"',
     '<div id="sync-summary"'
   );
-  assert.match(syncPage, /id="sync-diagnostic"/);
-  assert.equal(html.split('id="sync-diagnostic"').length - 1, 1);
-  assert.match(html, /<div id="sync-summary"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
-  const settingsBlock = between(html, '<section id="settings-page"', '<section class="dashboard"');
-  for (const id of ["cloud-config", "auth-panel", "workspace-panel"]) {
-    assert.doesNotMatch(settingsBlock, new RegExp('id="' + id + '"'), id);
+  for (const id of ["cloud-config", "cloud-activation", "auth-panel", "workspace-panel", "sync-diagnostic"]) {
+    assert.match(syncPage, new RegExp('id="' + id + '"'), id);
     const occurrences = html.split('id="' + id + '"').length - 1;
-    assert.equal(occurrences, 1, id + " must occur exactly once");
+    assert.equal(occurrences, 1, id + " must occur exactly once in the sync page");
   }
+  const settingsBlock = between(html, '<section id="settings-page"', '<section class="dashboard"');
+  assert.equal(settingsBlock.split('id="cloud-config"').length - 1, 1);
+  assert.match(html, /<div id="sync-summary"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
+  assert.match(html, /id="sync-settings-access"[^>]*href="#\/parametres\/synchronisation"/);
 });
 
 test("menu CSS keeps 44px targets, bounded panel, focus and hidden handling", () => {
@@ -221,6 +221,6 @@ test("documentation describes navigation, settings routes and unchanged controls
     assert.match(source, /Imports \/ Exports/);
     assert.match(source, /Synchronisation Dexie Cloud/);
     assert.match(source, /#\/parametres/);
-    assert.match(source, /emplacement actuel/i);
+    assert.match(source, /une seule fois|unique destination|réunies/i);
   }
 });
