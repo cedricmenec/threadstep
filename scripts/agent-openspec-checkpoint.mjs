@@ -18,6 +18,11 @@ const PROTECTED_PREFIXES = Object.freeze([
   "backlog/", "docs/factory/",
 ]);
 
+// ASF-OPSX-07: this is PRODUCT tooling, not the factory's own scripts.
+// Only apply/publish may write here; the reviewed plan remains confined
+// to its OpenSpec change. Every other script path stays protected.
+const PRODUCT_SCRIPTS_PREFIX = "scripts/product/";
+
 const PROTECTED_FILES = new Set([
   "AGENTS.md", "ChatGPT.md", "opencode.json", "openspec/config.yaml",
   ".gitmodules", ".gitattributes", ".gitconfig", ".npmrc", ".netrc",
@@ -59,7 +64,9 @@ export function allowedCheckpointPath(phase, changeId, path) {
   // The tree may include arbitrary new product code, build tools and
   // dependency metadata, but not protected factory inputs or secrets.
   if (PROTECTED_FILES.has(path) ||
-      PROTECTED_PREFIXES.some(prefix => path.startsWith(prefix)) ||
+      PROTECTED_PREFIXES.some(prefix =>
+        path.startsWith(prefix) &&
+        !(prefix === "scripts/" && path.startsWith(PRODUCT_SCRIPTS_PREFIX))) ||
       path.split("/").some(part => UNTRACKED_OUTPUT_PARTS.has(part))) return false;
 
   if (path.startsWith("openspec/")) {
