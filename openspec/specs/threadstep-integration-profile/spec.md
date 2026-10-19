@@ -4,14 +4,14 @@
 Paramétrer les contrats génériques local-first/Dexie Cloud pour ThreadStep, sans exporter les quotas, schémas, OTP obligatoire ou formats historiques du produit dans le socle réutilisable.
 ## Requirements
 ### Requirement: ThreadStep starts from local Dexie
-ThreadStep SHALL present its business features on an autonomous local IndexedDB/Dexie workspace from first use without a Cloud URL, OTP or network. Opening that workspace MUST NOT construct or configure a synchronized instance. The initial transition from `threadstep.document.v1` SHALL preserve the historical document and SHALL remain distinct from any remote transmission or automatic conversion.
+ThreadStep SHALL present its business features on an autonomous local IndexedDB/Dexie workspace from first use without a Cloud URL, OTP or network. Opening that workspace MUST NOT construct or configure a synchronized instance. A historical `threadstep.document.v1` value MUST be treated as inert: it is neither detected as a migration source nor converted, exported or sent to the Cloud.
 #### Scenario: First launch after legacy localStorage
 - **GIVEN** un document V1 valide avec 5 sujets et 18 étapes sur ce navigateur
 - **WHEN** la nouvelle application locale démarre
-- **THEN** l'espace local IndexedDB est ouvert sans conversion automatique
-- **AND** le contenu historique reste lisible et exportable
+- **THEN** l'espace local IndexedDB est ouvert sans conversion
+- **AND** aucun panneau de migration, avertissement historique ou bouton d'export V1 n'est affiché
 - **AND** aucun enregistrement n'est envoyé à Dexie Cloud
-- **AND** la conversion vers IndexedDB reste une opération explicite distincte
+- **AND** la valeur historique reste physiquement intacte jusqu'à un nettoyage consenti
 #### Scenario: No local historical document
 - **WHEN** aucun `threadstep.document.v1` valide n'existe
 - **THEN** ThreadStep ouvre son espace local IndexedDB vide
@@ -22,41 +22,28 @@ ThreadStep SHALL present its business features on an autonomous local IndexedDB/
 - **THEN** les sujets, étapes et exports restent accessibles
 - **AND** aucun OTP, email ou identité Cloud n'est requis
 #### Scenario: Explicit local conversion is offered in local mode
-- **GIVEN** un document V1 valide et aucune configuration Cloud active
-- **WHEN** l'utilisateur ouvre la prévisualisation de conversion locale
-- **THEN** il voit la destination locale, les comptes source et cible et les insertions prévues
-- **AND** il peut confirmer ou refuser sans OTP ni URL Cloud
-- **AND** la conversion ne construit aucune instance synchronisée
-### Requirement: ThreadStep historical V1 local conversion
-ThreadStep SHALL convert a validated V1 document into its own local Dexie workspace only after an explicit local review and consent, preserving subjects, steps, substeps, relations, order, notes, priorities, `done` and the resume preference. The historical source and its JSON export MUST remain available, and the conversion MUST NOT create, configure or push to a Dexie Cloud instance.
-#### Scenario: Five subjects and eighteen steps survive reload
-- **GIVEN** un document V1 valide de 5 sujets et 18 étapes
-- **WHEN** la conversion locale est confirmée puis l'application rechargée sans Cloud
-- **THEN** les 5 sujets, les 18 étapes, les sous-étapes et leurs relations sont présents dans l'espace local
-- **AND** la source `threadstep.document.v1` et son export de secours sont inchangés
-- **AND** aucune instance Cloud, aucun OTP et aucun push n'ont été créés
-#### Scenario: Invalid, repeated or interrupted conversion is non-destructive
-- **GIVEN** une cible locale vide, partiellement peuplée ou déjà convertie
-- **WHEN** la conversion est relancée, reçoit un V1 invalide ou échoue dans sa transaction
-- **THEN** aucune duplication ni aucun écrasement n'est produit
-- **AND** la source reste lisible et exportable
-- **AND** une reprise ultérieure reconnaît les enregistrements déjà convertis
-#### Scenario: Business fields and resume tracking are preserved
-- **GIVEN** une source V1 avec notes, priorités mixtes, états `done`, ordre et une préférence de reprise
-- **WHEN** la conversion locale réussit
-- **THEN** chaque note, priorité, état et ordre est conservé
-- **AND** la préférence de reprise pointe vers la même étape convertie sans être synchronisée ni exportée
-- **AND** les identifiants déjà convertis ne reçoivent pas un second préfixe `legacy:`
+- **GIVEN** une valeur `threadstep.document.v1` existe et aucune URL Cloud n'est configurée
+- **WHEN** l'espace local est ouvert
+- **THEN** aucune conversion locale de cette valeur n'est proposée ni exécutée
+- **AND** seules l'importation d'une sauvegarde modern et la restauration explicite restent disponibles
+- **AND** aucun addon Dexie Cloud n'est construit ou configuré à cause de cette valeur
+- **AND** aucun trafic réseau n'est émis
 ### Requirement: ThreadStep business schema and relationships
-Les sujets et étapes SHALL conserver leurs identifiants, titres, ordres, notes, priorités, états `done` et hiérarchie (`subjectId`, `parentId`). Les préférences de reprise restent non synchronisées. Les quotas métier actuels font partie du profil ThreadStep.
+Les sujets et étapes SHALL conserver leurs identifiants, titres, ordres, notes, priorités, états `done` et hiérarchie (`subjectId`, `parentId`). Les préférences de reprise et métadonnées locales restent non synchronisées et sont stockées dans un espace IndexedDB local. Les quotas métier actuels font partie du profil ThreadStep.
 #### Scenario: Hierarchy preservation
-- **WHEN** un sujet contenant des étapes et sous-étapes est migré
+- **WHEN** un sujet contenant des étapes et sous-étapes est importé depuis une sauvegarde modern
 - **THEN** les relations parent et sujet pointent vers les enregistrements corrects
 - **AND** les notes, ordres, priorités et états sont conservés
 #### Scenario: Business quota is respected
 - **WHEN** un import provoquerait un dépassement de la limite ThreadStep (40 sujets ou 500 étapes par sujet)
 - **THEN** le groupe concerné est refusé avec une raison explicite
 - **AND** les groupes indépendants valides ne sont pas nécessairement bloqués
+#### Scenario: Local preferences are not replicated
+- **GIVEN** une préférence de reprise référençant un sujet et une étape
+- **WHEN** elle est enregistrée dans le store local `meta`
+- **THEN** elle n'apparaît dans aucune table synchronisée
+- **AND** elle n'est incluse dans aucune sauvegarde métier
+- **AND** elle reste attachée au workspace local concerné
 ### Requirement: Explicit ThreadStep Cloud enablement
 Après utilisation locale, ThreadStep SHALL proposer un assistant d'activation opt-in. L'URL doit être une instance `https://...dexie.cloud` valide et le parcours de connexion du projet utilise l'OTP email natif. Aucun transfert de données historiques n'a lieu sans consentement spécifique.
 #### Scenario: Local data exists before OTP
@@ -69,11 +56,12 @@ Après utilisation locale, ThreadStep SHALL proposer un assistant d'activation o
 - **THEN** il récupère les seuls enregistrements autorisés
 - **AND** les modifications bidirectionnelles sont validées par une recette E2E réelle
 ### Requirement: ThreadStep backups and reimport
-Le JSON V1 ThreadStep SHALL rester compatible avec les conversions autorisées. Réimporter un export local, historique ou Cloud MUST reconnaître les identifiants métier déjà mappés et offrir fusion/restauration comme intentions distinctes. Un export IndexedDB ThreadStep SHALL déclarer sa provenance d'identifiants afin qu'une réimportation ne produise jamais `legacy:legacy:`, et une source ambiguë SHALL exiger une décision explicite.
+ThreadStep SHALL exporter et importer un format de sauvegarde IndexedDB versionné et distinct du V1. Ce format MUST préserver les identifiants métier canoniques et permettre une réimportation sans duplication. Un fichier `version: 1` MUST être refusé sans écriture. Fusion et restauration restent des intentions distinctes, avec collision et plan périmé bloqués sans perte.
 #### Scenario: Same document reimport
-- **WHEN** un même export JSON ThreadStep est importé une seconde fois
+- **WHEN** une même sauvegarde modern ThreadStep est importée une seconde fois
 - **THEN** aucun sujet ni étape identique n'est dupliqué
-- **AND** les IDs ne reçoivent jamais une seconde fois le préfixe `legacy:`
+- **AND** les IDs ne sont jamais réécrits ou préfixés une seconde fois
+- **AND** le plan ne contient aucune opération
 #### Scenario: IndexedDB export reimport keeps canonical IDs
 - **GIVEN** un export ThreadStep produit depuis IndexedDB avec `legacy:s1`
 - **WHEN** il est réimporté dans l'espace local ou Cloud
@@ -81,43 +69,36 @@ Le JSON V1 ThreadStep SHALL rester compatible avec les conversions autorisées. 
 - **AND** les `subjectId` et `parentId` restent cohérents
 - **AND** aucun `legacy:legacy:` n'est créé
 #### Scenario: Ambiguous legacy-prefixed file
-- **GIVEN** un fichier ThreadStep non marqué contenant des identifiants `legacy:`
-- **WHEN** sa provenance n'est pas prouvée
-- **THEN** l'import est bloqué sans écriture
-- **AND** l'interface présente les interprétations possibles
-- **AND** l'utilisateur doit confirmer explicitement la provenance
+- **GIVEN** un fichier ThreadStep au format `version: 1`, même récemment produit depuis IndexedDB
+- **WHEN** l'utilisateur tente de l'importer ou de le restaurer
+- **THEN** l'import ou la restauration est refusé avec un message explicite
+- **AND** aucune donnée locale ou Cloud n'est modifiée
+- **AND** aucun support V1 permanent n'est proposé
 #### Scenario: Old backup differs from Cloud
-- **WHEN** un export ancien est présenté à une cible synchronisée plus récente
+- **WHEN** un export modern plus ancien est présenté à une cible synchronisée plus récente
 - **THEN** un inventaire de différences est présenté avant toute écriture
 - **AND** les choix de conservation ou de copie préservent les données déjà présentes
 - **AND** la restauration destructive reste une intention distincte
 ### Requirement: ThreadStep incident recovery and readiness
-La recette produit SHALL couvrir Chrome mobile, OTP, première connexion, recharge, données divergentes, deux navigateurs, mode offline et échec de migration. Les spécifications cibles MUST NOT être réputées implémentées sur la seule base d'une CI réussie.
+La recette produit SHALL couvrir Chrome mobile, OTP, première connexion, recharge, données divergentes, deux navigateurs, mode offline et échec de migration. Les spécifications cibles MUST NOT être réputées implémentées sur la seule base d'une CI réussie. La déconnexion ou une erreur Dexie native MUST rester diagnostiquée sans réafficher de panneau de migration historique.
 #### Scenario: Existing migration blocked
 - **GIVEN** l'interface affiche « Dexie Cloud n'est pas connecté »
 - **WHEN** le diagnostic natif de ThreadStep est consulté
 - **THEN** les statuts `syncState.status` et `syncState.phase` et la raison du blocage sont affichés de manière sécurisée
 - **AND** aucune base vide n'est déduite de l'absence de lecture distante
+- **AND** aucun panneau de migration V1 ni message historique périmé n'est affiché
 #### Scenario: Previously imported JSON vanished after reload
 - **WHEN** un import semble terminé puis l'application est rechargée
 - **THEN** les enregistrements commités localement sont restaurés depuis IndexedDB
 - **AND** une synchronisation distante non prouvée reste signalée en attente
-### Requirement: ThreadStep local export and legacy preservation
-ThreadStep SHALL export the committed local workspace as a V1-compatible JSON document containing business records and relations but no Cloud configuration, credential or secret. The historical `threadstep.document.v1` backup SHALL remain exportable without conversion.
-#### Scenario: Export local records without Cloud
-- **GIVEN** des sujets et étapes ont été enregistrés dans l'espace local sans Cloud
-- **WHEN** l'utilisateur télécharge une sauvegarde
-- **THEN** il obtient le format V1 du projet avec les relations et champs métier
-- **AND** l'export ne contient ni URL Cloud, ni OTP, ni credential, ni secret
-- **AND** aucune synchronisation ni création de compte n'est déclenchée
-#### Scenario: Historical V1 backup remains exportable
-- **GIVEN** un document `threadstep.document.v1` existe encore dans le navigateur
-- **WHEN** l'utilisateur exporte la sauvegarde historique depuis le mode local
-- **THEN** le JSON source est restitué sans réécriture destructive
-- **AND** la clé historique n'est ni supprimée ni renommée
-- **AND** aucune donnée historique n'est transmise à Dexie Cloud
+#### Scenario: Native Cloud error stays diagnosed
+- **GIVEN** une erreur ou une déconnexion Dexie native
+- **WHEN** le diagnostic est recalculé
+- **THEN** l'erreur native reste visible avec sa catégorie
+- **AND** elle n'est pas remplacée par un message de migration V1
+- **AND** aucune donnée métier n'est exposée dans le diagnostic
 ### Requirement: ThreadStep inconsistent workspace recovery
-ThreadStep SHALL diagnostiquer en lecture seule un workspace incohérent de 5 sujets et 19 tâches dont une orpheline, y compris les variantes `legacy:s1` et `legacy:legacy:s1`. Les 5 sujets valides SHALL rester consultables sans écriture, l'export brut SHALL inclure les 19 tâches et l'export V1 normal SHALL être désactivé ou marqué incomplet. Une réparation SHALL préserver tous les champs métier et relations.
+ThreadStep SHALL diagnostiquer en lecture seule un workspace incohérent de 5 sujets et 19 tâches dont une orpheline, y compris les variantes `legacy:s1` et `legacy:legacy:s1`. Les 5 sujets valides SHALL rester consultables sans écriture, l'export brut SHALL inclure les 19 tâches et l'export métier modern SHALL être désactivé ou marqué incomplet. Une réparation SHALL préserver tous les champs métier et relations.
 #### Scenario: Five subjects and nineteen tasks with one orphan
 - **GIVEN** un workspace ThreadStep contenant 5 sujets et 19 tâches, dont une tâche dont le `subjectId` ne correspond à aucun sujet visible
 - **WHEN** l'inventaire et la consultation dégradée sont affichés
@@ -128,12 +109,13 @@ ThreadStep SHALL diagnostiquer en lecture seule un workspace incohérent de 5 su
 - **GIVEN** le workspace incohérent de 5 sujets et 19 tâches
 - **WHEN** l'utilisateur demande l'export brut de récupération
 - **THEN** les 19 tâches accessibles sont présentes, y compris l'orpheline
-- **AND** l'export est distinct d'un export V1 métier
+- **AND** l'export est distinct de la sauvegarde métier modern
 - **AND** il ne contient aucun token, OTP, credential ou secret
 #### Scenario: Normal V1 export is gated during the anomaly
 - **GIVEN** l'inventaire signale l'orpheline ou une variante d'identité non résolue
-- **WHEN** l'utilisateur demande l'export V1 normal
-- **THEN** cet export est désactivé avec une explication ou marqué incomplet
+- **WHEN** l'utilisateur cherche un export V1
+- **THEN** aucun export V1 n'est proposé puisque ce format est retiré
+- **AND** la sauvegarde métier modern est désactivée avec une explication ou marquée incomplète
 - **AND** aucun enregistrement accessible n'est omis silencieusement
 #### Scenario: Repair preserves ThreadStep business fields
 - **GIVEN** un plan de réparation consenti et prouvé pour une tâche orpheline
@@ -147,6 +129,26 @@ ThreadStep SHALL diagnostiquer en lecture seule un workspace incohérent de 5 su
 - **THEN** le groupe est ambigu et bloqué
 - **AND** aucune variante n'est renommée ou supprimée automatiquement
 - **AND** les deux variantes restent visibles dans le diagnostic
+### Requirement: ThreadStep modern backup and retired legacy keys
+ThreadStep SHALL fournir un export et un import/restauration de sauvegarde IndexedDB modern, ainsi qu'un nettoyage facultatif des clés V1 retirées. L'export MUST contenir les enregistrements et relations métier sans configuration sensible. Le nettoyage MUST être précédé d'un inventaire, d'une sauvegarde vérifiée et d'un consentement, et ne MUST PAS être automatique.
+#### Scenario: Complete modern backup restores in a clean test profile
+- **GIVEN** un workspace IndexedDB de 5 sujets, 18 étapes et une tâche supplémentaire
+- **WHEN** une sauvegarde modern est exportée puis restaurée dans un profil de test vierge
+- **THEN** les 5 sujets, les 19 tâches, la hiérarchie et tous les attributs sont restaurés
+- **AND** une seconde importation du même fichier ne crée aucun doublon
+- **AND** une collision ou un plan périmé est bloqué sans perte
+#### Scenario: Retired keys are listed but not purged automatically
+- **GIVEN** des clés V1 retirées présentes dans le navigateur courant
+- **WHEN** l'application démarre ou affiche le panneau de nettoyage
+- **THEN** leur inventaire est visible et la portée est limitée à l'origine et au navigateur courants
+- **AND** l'option par défaut est « ne rien effacer »
+- **AND** aucune suppression n'a lieu sans confirmation
+#### Scenario: Consented cleanup is scoped
+- **GIVEN** une sauvegarde modern vérifiée et une confirmation explicite
+- **WHEN** l'utilisateur choisit de supprimer les clés V1
+- **THEN** seules les clés retirées listées sont supprimées
+- **AND** IndexedDB local, les données Cloud et les autres navigateurs restent intacts
+- **AND** une annulation ou une erreur laisse les valeurs restantes intactes
 ### Requirement: ThreadStep activates Cloud from its local IndexedDB workspace
 
 Après usage local, ThreadStep SHALL proposer l'activation Cloud depuis

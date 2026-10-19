@@ -117,59 +117,40 @@ without relying solely on the browser `storage` event.
 - **WHEN** two tabs have propagated several independent mutations
 - **THEN** both projections match the committed record set without duplicated or divergent entities
 
-### Requirement: Atomic JSON V1 import and export compatibility
-
-A JSON V1 import SHALL validate the complete document and apply it atomically; a
-rejected import MUST leave local records unchanged. Export SHALL remain
-V1-compatible and an export/import round-trip SHALL preserve subjects, steps,
-ids, `parentId`, order, `priority`, `done` and `note`.
-
-#### Scenario: A valid import replaces records atomically
-
-- **WHEN** a valid V1 document is imported
-- **THEN** the local records are replaced by the imported document in one operation set
-- **AND** a subsequent export reproduces the imported content
-
-#### Scenario: An invalid import changes nothing
-
-- **WHEN** an imported document is invalid
-- **THEN** the import fails with a message
-- **AND** no local record is added, changed, removed or partially overwritten
-
-#### Scenario: A round-trip preserves content and hierarchy
-
-- **WHEN** a document is exported and re-imported
-- **THEN** every subject, step, id, `parentId`, order, `priority`, `done` and `note` is preserved
-
 ### Requirement: Strictly local non-synchronized preferences
 
-The tracked-action preference and other UI-only preferences SHALL remain in
-origin-scoped local non-synchronized storage. They MUST NOT be written to
-synchronized tables and MUST NOT appear in the JSON export.
+The tracked-action preference and other UI/local metadata that reference business identifiers SHALL be stored in an origin-scoped, per-workspace IndexedDB store that is never synchronized or exported. They MUST NOT be written to synchronized tables, MUST NOT appear in a business backup, and MUST survive failure and reload through an idempotent migration from legacy local storage.
 
 #### Scenario: Preferences are not synchronized
 
 - **WHEN** a preference is set
 - **THEN** it is absent from every synchronized store
+- **AND** the local metadata store is declared unsynchronized with Dexie Cloud
+- **AND** no business title, note, email, OTP or token is stored in it
 
 #### Scenario: Preferences are not exported
 
-- **WHEN** the document is exported
-- **THEN** the export contains no preference field
+- **WHEN** the workspace is exported with the modern backup
+- **THEN** the export contains no preference or local metadata field
+- **AND** only business subject and item records are present
 
 #### Scenario: Preferences are restored locally
 
 - **WHEN** a preference was set and the page is reopened
-- **THEN** the preference is restored from local non-synchronized storage without a network request
+- **THEN** the preference is restored from the local non-synchronized IndexedDB store without a network request
+- **AND** a legacy local preference is migrated once and idempotently before its old key stops being read
+
+#### Scenario: Legacy preference write failure is truthful
+
+- **GIVEN** an old preference exists and the IndexedDB metadata write fails
+- **WHEN** the application attempts the migration
+- **THEN** the failure is reported as a local storage problem
+- **AND** the old value is not deleted or overwritten
+- **AND** the preference is not reported as durably stored
 
 ### Requirement: All current business operations over the store
 
-Create/edit, completion, substep creation, promotion, ordering, removal and
-undo, filters, the pending counter, the suggestion, tracking, routes, JSON
-import and JSON export SHALL be served by the transactional store in every
-persistence mode, including when no Cloud configuration exists. `site/core.js`
-SHALL stay pure and the current UI rules and observable behavior SHALL stay
-unchanged.
+Create/edit, completion, substep creation, promotion, ordering, removal and undo, filters, the pending counter, the suggestion, tracking, routes, modern backup import and modern backup export SHALL be served by the transactional store in every persistence mode, including when no Cloud configuration exists. `site/core.js` SHALL stay pure and the current UI rules and observable behavior SHALL stay unchanged.
 
 #### Scenario: Each operation persists through the store
 
@@ -187,16 +168,18 @@ unchanged.
 #### Scenario: Local JSON import is atomic
 
 - **GIVEN** local records already exist
-- **WHEN** a valid V1 document is imported and confirmed
-- **THEN** the local records are replaced by one committed operation set
-- **AND** an invalid import leaves every local record unchanged
+- **WHEN** a valid modern backup is imported and confirmed
+- **THEN** only absent records are added and existing records are never silently overwritten
+- **AND** a collision or an invalid file leaves every local record unchanged
+- **AND** a V1 document is rejected without write
 
 #### Scenario: Export reads committed IndexedDB records
 
 - **GIVEN** local records were committed without Cloud
 - **WHEN** the user exports a backup
-- **THEN** the JSON is built from the committed local records in the V1 shape
+- **THEN** the JSON is built directly from the committed local records in the modern versioned format
 - **AND** the source is not the historical `localStorage` key
+- **AND** no V1 envelope is produced
 
 #### Scenario: The domain core stays pure
 
@@ -206,42 +189,40 @@ unchanged.
 #### Scenario: Existing observable behavior is unchanged
 
 - **WHEN** the existing business interactions are exercised
-- **THEN** their rules, validations, ordering, hierarchy and export shape match the previous behavior
+- **THEN** their rules, validations, ordering, hierarchy and visible content match the previous behavior
+- **AND** only the backup/import storage contract changes
 
-### Requirement: Non-destructive compatibility guard for V1 data
+### Requirement: Versioned IndexedDB backup import and export
 
-Until the explicit local conversion (TS-033) and the explicit Cloud transfer
-consent (TS-037), the change MUST NOT make existing V1 data invisible or erase
-it, and MUST NOT transfer it to Dexie Cloud without explicit consent. The
-historical `threadstep.document.v1` key MUST NOT be purged, renamed, overwritten
-or hidden; a non-destructive compatibility guard SHALL keep the historical
-document readable and exportable.
+The application SHALL export and import a versioned IndexedDB backup that declares its format, canonical identifiers, counts and checksum and carries subject/item records directly. Import MUST validate the whole file before any plan, MUST reject V1 documents, and MUST apply only non-destructive, fingerprint-bound operations.
 
-#### Scenario: Historical V1 data stays visible
+#### Scenario: Round-trip preserves every business field
 
-- **GIVEN** a stored V1 document exists
+- **GIVEN** a workspace with subjects, nested steps, notes, priorities, `done` flags and order
+- **WHEN** it is exported with the modern format and imported into an empty test target
+- **THEN** every subject, step, id, `parentId`, order, priority, `done` and note is preserved
+- **AND** counts and checksum match the exported records
+
+#### Scenario: Invalid or legacy file changes nothing
+
+- **WHEN** an invalid, truncated, checksum-mismatched or `version: 1` file is imported
+- **THEN** the import fails with an explicit message
+- **AND** no local record is added, changed, removed or partially overwritten
+
+### Requirement: Retired V1 business data remains inert
+
+The historical `threadstep.document.v1` key MUST NOT be read as a business source by the current application. Its presence MUST NOT produce a migration offer, a compatibility guard, an export button, a business view or any synchronized write. It MUST remain physically untouched until an explicit cleanup.
+
+#### Scenario: Legacy value is not a business fallback
+
+- **GIVEN** a stored V1 document exists and the IndexedDB workspace is empty
 - **WHEN** the local-only application starts
-- **THEN** the historical subjects and steps remain readable through the compatibility guard
-- **AND** a byte-for-byte V1 export remains available
-- **AND** the new local workspace does not hide the historical key
+- **THEN** the business view is empty because IndexedDB is the only business source
+- **AND** no automatic conversion, import or display of the V1 document occurs
+- **AND** a modern backup of the empty workspace can still be produced
 
-#### Scenario: Historical data is never erased
+#### Scenario: Legacy value is never erased implicitly
 
-- **WHEN** the local store is initialized, opened or modified
-- **THEN** no historical V1 record is deleted
-- **AND** the historical key is not renamed, cleared or overwritten
+- **WHEN** the local store is initialized, opened, modified, synchronized or disconnected
+- **THEN** no historical V1 record is deleted, renamed, cleared or overwritten by the application
 - **AND** no destructive migration runs
-
-#### Scenario: No automatic conversion
-
-- **GIVEN** a valid historical V1 document exists
-- **WHEN** the local workspace starts empty
-- **THEN** no automatic conversion into IndexedDB is performed
-- **AND** the user is informed that the historical document remains preserved and exportable
-- **AND** conversion is a separate explicit operation
-
-#### Scenario: No consent-less transfer
-
-- **WHEN** historical local data exists and no explicit Cloud consent was given
-- **THEN** it is not sent to Dexie Cloud
-- **AND** no synchronized workspace is configured on its behalf
