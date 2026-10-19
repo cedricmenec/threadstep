@@ -89,10 +89,9 @@ déterministe existant vers la vue d'ensemble pour ces fragments.
 Chaque page de paramètres SHALL afficher un titre explicite et un contrôle de
 retour en français. La page Imports / Exports SHALL réunir les contrôles
 existants d'export, d'import/fusion et de restauration dans des sections
-distinctes. La page Synchronisation Dexie Cloud SHALL héberger le diagnostic en
-lecture seule, sa synthèse et des emplacements descriptifs pour
-« Configuration », « Première activation », « Connexion » et
-« Espaces de travail ».
+distinctes. La page Synchronisation Dexie Cloud SHALL héberger le diagnostic,
+sa synthèse et les contrôles existants de configuration, d'activation, de
+connexion et de gestion des espaces dans des sections nommées.
 
 #### Scenario: Settings index page
 
@@ -124,16 +123,17 @@ lecture seule, sa synthèse et des emplacements descriptifs pour
 - **THEN** la page montre le titre « Synchronisation Dexie Cloud »
 - **AND** elle affiche une synthèse de l'état courant
 - **AND** elle héberge le diagnostic technique complet `#sync-diagnostic`, une seule fois
-- **AND** elle contient les emplacements descriptifs « Configuration », « Première activation », « Connexion » et « Espaces de travail »
+- **AND** elle contient les sections « Configuration », « Première activation », « Connexion » et « Espaces de travail »
+- **AND** les contrôles existants `#cloud-config`, `#cloud-activation`, `#auth-panel` et `#workspace-panel` y sont accessibles, chacun une seule fois
 - **AND** elle propose un retour vers les paramètres
-- **AND** aucun formulaire, champ de saisie, sélection ou bouton de configuration, d'activation, de connexion ou de gestion des espaces n'est déplacé, dupliqué ou activé dans ces emplacements
+- **AND** aucun de ces contrôles n'est dupliqué ailleurs dans le document
 
 #### Scenario: Existing controls remain available
 
 - **WHEN** une page de paramètres est affichée
 - **THEN** les contrôles existants d'export, d'import et de restauration restent disponibles sur la page Imports / Exports
-- **AND** les contrôles de connexion, de configuration Cloud et d'espaces de travail restent disponibles à leur emplacement existant
-- **AND** le diagnostic natif reste disponible dans la page Synchronisation Dexie Cloud
+- **AND** les contrôles de configuration Cloud, d'activation, de connexion et d'espaces de travail sont disponibles sur la page Synchronisation Dexie Cloud
+- **AND** le diagnostic natif reste disponible dans la même page Synchronisation Dexie Cloud
 - **AND** leurs sélecteurs et handlers ne sont ni renommés, ni recréés, ni dupliqués
 
 #### Scenario: Conditional business visibility is preserved
@@ -197,7 +197,8 @@ L'ouverture, la fermeture du menu et le changement de route SHALL être des
 opérations de présentation. Elles MUST NOT écrire dans IndexedDB ou
 `localStorage`, ouvrir ou réinitialiser une base Dexie, envoyer une requête
 réseau, déclencher une authentification, lancer un pull initial ou muter le
-document métier.
+document métier. Un changement de route MUST NOT réinitialiser un OTP en cours,
+un plan d'activation, une erreur ou un consentement affiché.
 
 #### Scenario: Menu open and close do not touch data
 
@@ -219,6 +220,14 @@ document métier.
 - **THEN** la page et le résumé conservent les mêmes valeurs diagnostiques issues des mêmes signaux natifs
 - **AND** aucun abonnement natif n'est ajouté ou recréé par la navigation
 - **AND** aucune relance de pull, ouverture de base, authentification, requête réseau ou écriture n'est déclenchée
+
+#### Scenario: Route change preserves an in-progress Cloud journey
+
+- **GIVEN** un OTP est en cours de saisie ou une activation affiche une revue sans consentement
+- **WHEN** l'utilisateur navigue vers une autre page puis revient à `#/parametres/synchronisation`
+- **THEN** le formulaire, le plan, le statut et l'erreur éventuelle restent dans leur état courant
+- **AND** aucun OTP n'est soumis, annulé ou redemandé par la navigation
+- **AND** aucun transfert, consentement ou purge n'est validé ou exécuté
 
 #### Scenario: No implicit business action
 
