@@ -34,101 +34,10 @@
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
       <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>
     </header>
-    <section id="workspace-panel" class="workspace-panel" aria-labelledby="workspace-panel-title">
-      <h2 id="workspace-panel-title">Espaces de travail</h2>
-      <p id="workspace-status" class="workspace-status" role="status" aria-live="polite"></p>
-      <label for="workspace-select">Espace à sélectionner</label>
-      <select id="workspace-select"></select>
-      <div class="workspace-actions">
-        <button type="button" id="workspace-apply" class="secondary">Sélectionner cet espace</button>
-        <button type="button" id="workspace-suspend" class="secondary">Suspendre Cloud</button>
-        <button type="button" id="workspace-logout" class="secondary">Se déconnecter</button>
-        <button type="button" id="workspace-purge" class="danger">Purger la copie locale</button>
-      </div>
-      <p id="workspace-binding-status" class="workspace-binding-status" role="status" aria-live="polite"></p>
-      <button type="button" id="workspace-recover" class="secondary" hidden>Retrouver les projets Cloud dans un nouveau cache isolé</button>
-      <div id="workspace-confirmation" class="workspace-confirmation" role="alertdialog" aria-labelledby="workspace-confirmation-title" aria-describedby="workspace-confirmation-warning" hidden>
-        <h3 id="workspace-confirmation-title">Confirmer l'action locale</h3>
-        <p id="workspace-confirmation-scope"></p>
-        <p id="workspace-confirmation-warning"></p>
-        <div class="workspace-confirmation-actions">
-          <button type="button" id="workspace-backup" class="secondary">Télécharger une sauvegarde JSON</button>
-          <button type="button" id="workspace-confirmation-cancel" class="secondary">Annuler</button>
-          <button type="button" id="workspace-confirmation-continue" class="danger">Confirmer</button>
-        </div>
-        <p id="workspace-confirmation-status" class="workspace-confirmation-status" role="status" aria-live="polite"></p>
-      </div>
-      <section id="legacy-cleanup" class="legacy-cleanup" aria-labelledby="legacy-cleanup-title" hidden>
-        <h3 id="legacy-cleanup-title">Anciennes clés V1 conservées</h3>
-        <p id="legacy-cleanup-scope"></p>
-        <div id="legacy-cleanup-list"></div>
-        <p id="legacy-cleanup-backup-status"></p>
-        <label for="legacy-cleanup-confirm">
-          <input id="legacy-cleanup-confirm" type="checkbox" disabled>
-          <span>Je confirme supprimer uniquement les anciennes clés V1 listées pour cette origine et ce navigateur.</span>
-        </label>
-        <div class="legacy-cleanup-actions">
-          <button id="legacy-cleanup-keep" type="button" class="secondary">Ne rien effacer</button>
-          <button id="legacy-cleanup-delete" type="button" class="danger" disabled>Supprimer uniquement les anciennes clés V1</button>
-        </div>
-        <p id="legacy-cleanup-status" role="status" aria-live="polite"></p>
-      </section>
-    </section>
     <section id="local-panel" class="local-panel" aria-labelledby="local-panel-title" hidden>
       <h2 id="local-panel-title">Espace local IndexedDB</h2>
       <p id="local-status" class="local-status" role="status" aria-live="polite">Vos données sont lues et enregistrées dans IndexedDB sur cet appareil, sans compte Cloud.</p>
       <p id="local-storage-error" class="local-error" role="alert" hidden></p>
-    </section>
-    <section id="cloud-activation" class="cloud-activation" aria-labelledby="cloud-activation-title" hidden>
-      <h2 id="cloud-activation-title">Activer Dexie Cloud depuis mon espace local</h2>
-      <p id="cloud-activation-source" class="cloud-activation-source">Source conservée : la base autonome threadstep-local reste intacte, lisible et exportable. Elle n'est copiée vers aucune table synchronisée avant votre consentement explicite au plan affiché.</p>
-      <ol id="cloud-activation-stages" class="cloud-activation-stages" aria-label="Étapes de l'activation">
-        <li data-stage="local">Local</li>
-        <li data-stage="preparing">Préparation</li>
-        <li data-stage="connecting">Connexion OTP</li>
-        <li data-stage="discovering">Première lecture distante</li>
-        <li data-stage="review">Revue et consentement</li>
-        <li data-stage="transfer-pending">Transfert local en attente</li>
-        <li data-stage="active">Actif</li>
-      </ol>
-      <p id="cloud-activation-stage" class="cloud-activation-stage" role="status" aria-live="polite">Espace local actif : aucune configuration, authentification ou réplication Cloud n'est tentée.</p>
-      <p id="cloud-activation-status" class="cloud-activation-status" role="status" aria-live="polite"></p>
-      <p id="cloud-activation-destination" class="cloud-activation-destination"></p>
-      <div id="cloud-activation-review" class="cloud-activation-review" hidden></div>
-      <label class="cloud-activation-consent" for="cloud-activation-consent">
-        <input id="cloud-activation-consent" type="checkbox">
-        <span>Je confirme le transfert des seules insertions du plan affiché vers cette destination. La connexion OTP seule ne vaut pas consentement.</span>
-      </label>
-      <div class="cloud-activation-actions">
-        <button id="cloud-activation-start" type="button" class="primary">Activer Cloud depuis mon espace local</button>
-        <button id="cloud-activation-resume" type="button" class="secondary" hidden>Reprendre l'activation</button>
-        <button id="cloud-activation-confirm" type="button" class="primary" disabled>Confirmer le transfert affiché</button>
-        <button id="cloud-activation-cancel" type="button" class="secondary" hidden>Annuler l'activation</button>
-        <button id="cloud-activation-retry" type="button" class="secondary" hidden>Réessayer l'activation</button>
-      </div>
-    </section>
-    <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
-      <h2 id="auth-title">Connexion par code email</h2>
-      <p id="auth-help" class="auth-help">Un code à usage unique est envoyé par Dexie Cloud à votre adresse email. Aucun mot de passe n'est demandé.</p>
-      <p id="auth-status" class="auth-status" role="status" aria-live="polite"></p>
-      <form id="auth-form" class="auth-form">
-        <div id="auth-email-field" class="auth-field">
-          <label for="auth-email">Adresse email</label>
-          <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" spellcheck="false" required>
-        </div>
-        <div id="auth-otp-field" class="auth-field" hidden>
-          <label for="auth-otp">Code reçu par email</label>
-          <input id="auth-otp" name="otp" type="text" inputmode="text" autocomplete="one-time-code" maxlength="64" aria-describedby="auth-status auth-error">
-        </div>
-        <p id="auth-error" class="auth-error" role="alert" hidden></p>
-        <div class="auth-actions">
-          <button type="button" id="auth-submit" class="primary">Recevoir un code par email</button>
-          <button type="button" id="auth-resend" class="secondary" hidden>Envoyer un nouveau code</button>
-          <button type="button" id="auth-cancel" class="subtle" hidden>Annuler</button>
-        </div>
-      </form>
-      <p id="auth-offline" class="auth-offline" role="status" hidden></p>
-      <p id="auth-local-data" class="auth-help" aria-live="polite"></p>
     </section>
     <section id="recovery-panel" class="recovery-panel" aria-labelledby="recovery-title" hidden>
       <h2 id="recovery-title" tabindex="-1">Diagnostic et récupération en lecture seule</h2>
@@ -218,26 +127,134 @@
       </div>
       <span class="label">PARAMÈTRES</span>
       <h2 id="settings-sync-title" tabindex="-1">Synchronisation Dexie Cloud</h2>
-      <p>Cette page réunit le diagnostic Dexie Cloud en lecture seule. Les contrôles de configuration, d'activation, de connexion et de gestion des espaces restent à leur emplacement actuel jusqu'à TS-044.</p>
-      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-configuration-title">
+      <p>Cette page réunit la configuration, l'activation, la connexion, la gestion des espaces et le diagnostic Dexie Cloud. Elle affiche l'étape d'onboarding courante et ne déclenche aucune action par la seule navigation.</p>
+      <section id="sync-onboarding" class="settings-destination sync-onboarding" aria-labelledby="sync-onboarding-title">
+        <h3 id="sync-onboarding-title">Parcours d'onboarding</h3>
+        <p id="sync-onboarding-step" class="sync-onboarding-step" role="status" aria-live="polite"></p>
+        <p id="sync-onboarding-message"></p>
+        <p id="sync-onboarding-next"></p>
+      </section>
+      <section id="sync-configuration-section" class="settings-destination sync-section" aria-labelledby="settings-sync-configuration-title">
         <h3 id="settings-sync-configuration-title">Configuration</h3>
-        <p>La configuration de l'URL Dexie Cloud reste dans son panneau actuel. Cet emplacement est descriptif : aucun formulaire de configuration n'est déplacé, dupliqué ou activé ici avant TS-044.</p>
+        <p>Enregistrez l'URL HTTPS de votre instance Dexie Cloud. Cette configuration seule ne copie aucun enregistrement local et n'ouvre aucune session.</p>
+        <section id="cloud-config" class="cloud-config" aria-labelledby="cloud-config-title" hidden>
+          <form id="cloud-config-form" class="cloud-config-form">
+            <h2 id="cloud-config-title">Configurer la synchronisation Dexie Cloud</h2>
+            <p id="cloud-config-help">Saisissez l'URL HTTPS de votre instance Dexie Cloud. Elle reste dans ce navigateur et n'est jamais envoyée au build. La base synchronisée est distincte de l'espace local IndexedDB : aucun enregistrement local n'est copié ni envoyé par cette configuration seule.</p>
+            <label for="cloud-url">URL de l'instance Dexie Cloud</label>
+            <input id="cloud-url" name="cloudUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" required aria-describedby="cloud-config-help cloud-config-error">
+            <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
+            <button type="submit" class="primary">Enregistrer l'URL</button>
+          </form>
+        </section>
       </section>
-      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-activation-title">
+      <section id="sync-activation-section" class="settings-destination sync-section" aria-labelledby="settings-sync-activation-title">
         <h3 id="settings-sync-activation-title">Première activation</h3>
-        <p>L'activation initiale et son consentement restent à leur emplacement actuel. Cet emplacement est descriptif et ne déclenche ni activation, ni transfert, ni requête avant TS-044.</p>
+        <p>Démarrez l'activation opt-in, lisez le plan de rapprochement puis donnez explicitement votre consentement au transfert affiché.</p>
+        <section id="cloud-activation" class="cloud-activation" aria-labelledby="cloud-activation-title" hidden>
+          <h2 id="cloud-activation-title">Activer Dexie Cloud depuis mon espace local</h2>
+          <p id="cloud-activation-source" class="cloud-activation-source">Source conservée : la base autonome threadstep-local reste intacte, lisible et exportable. Elle n'est copiée vers aucune table synchronisée avant votre consentement explicite au plan affiché.</p>
+          <ol id="cloud-activation-stages" class="cloud-activation-stages" aria-label="Étapes de l'activation">
+            <li data-stage="local">Local</li>
+            <li data-stage="preparing">Préparation</li>
+            <li data-stage="connecting">Connexion OTP</li>
+            <li data-stage="discovering">Première lecture distante</li>
+            <li data-stage="review">Revue et consentement</li>
+            <li data-stage="transfer-pending">Transfert local en attente</li>
+            <li data-stage="active">Actif</li>
+          </ol>
+          <p id="cloud-activation-stage" class="cloud-activation-stage" role="status" aria-live="polite">Espace local actif : aucune configuration, authentification ou réplication Cloud n'est tentée.</p>
+          <p id="cloud-activation-status" class="cloud-activation-status" role="status" aria-live="polite"></p>
+          <p id="cloud-activation-destination" class="cloud-activation-destination"></p>
+          <div id="cloud-activation-review" class="cloud-activation-review" hidden></div>
+          <label class="cloud-activation-consent" for="cloud-activation-consent">
+            <input id="cloud-activation-consent" type="checkbox">
+            <span>Je confirme le transfert des seules insertions du plan affiché vers cette destination. La connexion OTP seule ne vaut pas consentement.</span>
+          </label>
+          <div class="cloud-activation-actions">
+            <button id="cloud-activation-start" type="button" class="primary">Activer Cloud depuis mon espace local</button>
+            <button id="cloud-activation-resume" type="button" class="secondary" hidden>Reprendre l'activation</button>
+            <button id="cloud-activation-confirm" type="button" class="primary" disabled>Confirmer le transfert affiché</button>
+            <button id="cloud-activation-cancel" type="button" class="secondary" hidden>Annuler l'activation</button>
+            <button id="cloud-activation-retry" type="button" class="secondary" hidden>Réessayer l'activation</button>
+          </div>
+        </section>
       </section>
-      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-connection-title">
+      <section id="sync-connection-section" class="settings-destination sync-section" aria-labelledby="settings-sync-connection-title">
         <h3 id="settings-sync-connection-title">Connexion</h3>
-        <p>La connexion par code email et la session restent dans leur panneau actuel. Cet emplacement est descriptif : aucun OTP n'est demandé et aucun formulaire de connexion n'est déplacé ou activé ici avant TS-044.</p>
+        <p>Connectez-vous avec le code à usage unique envoyé par Dexie Cloud. La connexion ne remplace pas le consentement d'activation.</p>
+        <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
+          <h2 id="auth-title">Connexion par code email</h2>
+          <p id="auth-help" class="auth-help">Un code à usage unique est envoyé par Dexie Cloud à votre adresse email. Aucun mot de passe n'est demandé.</p>
+          <p id="auth-status" class="auth-status" role="status" aria-live="polite"></p>
+          <form id="auth-form" class="auth-form">
+            <div id="auth-email-field" class="auth-field">
+              <label for="auth-email">Adresse email</label>
+              <input id="auth-email" name="email" type="email" autocomplete="email" inputmode="email" spellcheck="false" required>
+            </div>
+            <div id="auth-otp-field" class="auth-field" hidden>
+              <label for="auth-otp">Code reçu par email</label>
+              <input id="auth-otp" name="otp" type="text" inputmode="text" autocomplete="one-time-code" maxlength="64" aria-describedby="auth-status auth-error">
+            </div>
+            <p id="auth-error" class="auth-error" role="alert" hidden></p>
+            <div class="auth-actions">
+              <button type="button" id="auth-submit" class="primary">Recevoir un code par email</button>
+              <button type="button" id="auth-resend" class="secondary" hidden>Envoyer un nouveau code</button>
+              <button type="button" id="auth-cancel" class="subtle" hidden>Annuler</button>
+            </div>
+          </form>
+          <p id="auth-offline" class="auth-offline" role="status" hidden></p>
+          <p id="auth-local-data" class="auth-help" aria-live="polite"></p>
+        </section>
       </section>
-      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-workspaces-title">
+      <section id="sync-workspaces-section" class="settings-destination sync-section" aria-labelledby="settings-sync-workspaces-title">
         <h3 id="settings-sync-workspaces-title">Espaces de travail</h3>
-        <p>La sélection, la suspension, la déconnexion et la purge des espaces de travail restent à leur emplacement actuel. Cet emplacement est descriptif et ne déplace ni ne duplique ces contrôles avant TS-044.</p>
+        <p>Choisissez un espace, suspendez Cloud, déconnectez-vous ou purgez uniquement la copie locale identifiée. Chaque action garde son avertissement, sa sauvegarde et sa confirmation.</p>
+        <section id="workspace-panel" class="workspace-panel" aria-labelledby="workspace-panel-title">
+          <h2 id="workspace-panel-title">Espaces de travail</h2>
+          <p id="workspace-status" class="workspace-status" role="status" aria-live="polite"></p>
+          <label for="workspace-select">Espace à sélectionner</label>
+          <select id="workspace-select"></select>
+          <div class="workspace-actions">
+            <button type="button" id="workspace-apply" class="secondary">Sélectionner cet espace</button>
+            <button type="button" id="workspace-suspend" class="secondary">Suspendre Cloud</button>
+            <button type="button" id="workspace-logout" class="secondary">Se déconnecter</button>
+            <button type="button" id="workspace-purge" class="danger">Purger la copie locale</button>
+          </div>
+          <p id="workspace-binding-status" class="workspace-binding-status" role="status" aria-live="polite"></p>
+          <button type="button" id="workspace-recover" class="secondary" hidden>Retrouver les projets Cloud dans un nouveau cache isolé</button>
+          <div id="workspace-confirmation" class="workspace-confirmation" role="alertdialog" aria-labelledby="workspace-confirmation-title" aria-describedby="workspace-confirmation-warning" hidden>
+            <h3 id="workspace-confirmation-title">Confirmer l'action locale</h3>
+            <p id="workspace-confirmation-scope"></p>
+            <p id="workspace-confirmation-warning"></p>
+            <div class="workspace-confirmation-actions">
+              <button type="button" id="workspace-backup" class="secondary">Télécharger une sauvegarde JSON</button>
+              <button type="button" id="workspace-confirmation-cancel" class="secondary">Annuler</button>
+              <button type="button" id="workspace-confirmation-continue" class="danger">Confirmer</button>
+            </div>
+            <p id="workspace-confirmation-status" class="workspace-confirmation-status" role="status" aria-live="polite"></p>
+          </div>
+          <section id="legacy-cleanup" class="legacy-cleanup" aria-labelledby="legacy-cleanup-title" hidden>
+            <h3 id="legacy-cleanup-title">Anciennes clés V1 conservées</h3>
+            <p id="legacy-cleanup-scope"></p>
+            <div id="legacy-cleanup-list"></div>
+            <p id="legacy-cleanup-backup-status"></p>
+            <label for="legacy-cleanup-confirm">
+              <input id="legacy-cleanup-confirm" type="checkbox" disabled>
+              <span>Je confirme supprimer uniquement les anciennes clés V1 listées pour cette origine et ce navigateur.</span>
+            </label>
+            <div class="legacy-cleanup-actions">
+              <button id="legacy-cleanup-keep" type="button" class="secondary">Ne rien effacer</button>
+              <button id="legacy-cleanup-delete" type="button" class="danger" disabled>Supprimer uniquement les anciennes clés V1</button>
+            </div>
+            <p id="legacy-cleanup-status" role="status" aria-live="polite"></p>
+          </section>
+        </section>
       </section>
       <section id="sync-diagnostic" class="sync-diagnostic" aria-labelledby="sync-diagnostic-title" hidden></section>
     </section>
     <div id="sync-summary" class="sync-summary" role="status" aria-live="polite" hidden></div>
+    <a id="sync-settings-access" class="sync-settings-access" href="#/parametres/synchronisation" hidden>Configurer ou diagnostiquer la synchronisation</a>
     <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
       <div id="resume-card" class="resume-card" aria-live="polite" hidden></div>
       <div class="section-top">
@@ -262,16 +279,6 @@
       </label>
       <p id="reorder-note" class="reorder-note" hidden>Pour réorganiser les étapes, affichez toutes les étapes en désactivant « Masquer les étapes terminées ».</p>
       <div id="subjects" class="subjects" aria-live="polite"></div>
-    </section>
-    <section id="cloud-config" class="cloud-config" aria-labelledby="cloud-config-title" hidden>
-      <form id="cloud-config-form" class="cloud-config-form">
-        <h2 id="cloud-config-title">Configurer la synchronisation Dexie Cloud</h2>
-        <p id="cloud-config-help">Saisissez l'URL HTTPS de votre instance Dexie Cloud. Elle reste dans ce navigateur et n'est jamais envoyée au build. La base synchronisée est distincte de l'espace local IndexedDB : aucun enregistrement local n'est copié ni envoyé par cette configuration seule.</p>
-        <label for="cloud-url">URL de l'instance Dexie Cloud</label>
-        <input id="cloud-url" name="cloudUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" required aria-describedby="cloud-config-help cloud-config-error">
-        <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
-        <button type="submit" class="primary">Enregistrer l'URL</button>
-      </form>
     </section>
     <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>
   </main>

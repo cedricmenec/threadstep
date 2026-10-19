@@ -34,14 +34,15 @@ respectivement `#/`, `#/parametres`, `#/parametres/donnees` et
   les commandes d'export, d'import/fusion et de restauration dans trois
   sections distinctes. L'accueil **n'affiche plus** la barre d'actions de
   données : les commandes ne sont ni dupliquées ni recréées.
-- La page Synchronisation Dexie Cloud héberge le **diagnostic complet** en
-  lecture seule et son résumé. Les commandes de connexion, de configuration
-  Cloud, d'activation et de gestion des espaces restent à leur emplacement
-  actuel et ne sont pas déplacées par cette page. La sauvegarde de sécurité
-  proposée dans une confirmation de purge, de déconnexion ou d'action sur un
-  espace de travail, ainsi que l'export brut du diagnostic de récupération,
-  restent disponibles **dans leur contexte d'origine**, sans navigation
-  préalable vers `#/parametres/donnees`.
+- La page Synchronisation Dexie Cloud (`#/parametres/synchronisation`)
+  héberge le **diagnostic complet** en lecture seule et son résumé, ainsi que
+  les sections « Configuration », « Première activation », « Connexion » et
+  « Espaces de travail ». Chaque formulaire ou commande existant y apparaît
+  **une seule fois**, avec son identifiant et son handler d'origine. La
+  sauvegarde de sécurité proposée dans une confirmation de purge, de
+  déconnexion ou d'action sur un espace de travail, ainsi que l'export brut du
+  diagnostic de récupération, restent disponibles **dans leur contexte
+  d'origine**, sans navigation préalable vers `#/parametres/donnees`.
 - Ouvrir, fermer ou changer de page ne déclenche aucune écriture
   IndexedDB, requête réseau, authentification ni modification Cloud.
 
@@ -63,17 +64,41 @@ entièrement en phase ou qu'une erreur locale existe. Ce résumé ne propose
 aucune relance et reste masqué pour un local non configuré sain ou une
 synchronisation configurée entièrement en phase.
 
-Les emplacements « Configuration », « Première activation », « Connexion » et
-« Espaces de travail » de la page sont **descriptifs**. Les formulaires et
-contrôles sensibles restent à leur emplacement actuel jusqu'à TS-044 et ne
-sont ni déplacés, ni dupliqués, ni activés par la page.
-
 L'action « Relancer la lecture distante » reste dans le diagnostic avec ses
 **garde-fous** et son handler natif existants. Ouvrir, quitter ou recharger la
 page ne lance jamais ce pull manuel : seule son activation explicite, lorsque
 ses préconditions l'autorisent, peut le déclencher. Aucun secret, email, OTP,
 token ni contenu métier n'apparaît dans la page ni dans le résumé, et
 l'absence de preuve distante n'est jamais présentée comme une base vide.
+
+## Paramètres Cloud unifiés et onboarding contextuel (TS-044)
+
+La page `#/parametres/synchronisation` est désormais l'unique destination
+Cloud : configuration HTTPS, activation opt-in, connexion OTP, espaces de
+travail et diagnostic y sont réunis dans des sections nommées, sans doublon
+ni second formulaire. Un lien d'accès distinct, visible depuis Mes projets
+uniquement lorsqu'une session, un pull, une écriture ou une activation
+suspendue réclame une action, ouvre cette page sans lancer d'OTP, de pull, de
+transfert ou de purge.
+
+Le bandeau **« Parcours d'onboarding »** affiche l'étape la plus avancée
+réellement attestée et l'action suivante autorisée : mode local autonome,
+configuration d'une URL HTTPS, activation opt-in, connexion OTP native,
+première lecture distante, revue de plan, consentement, transfert puis
+synchronisation active. Un état hors ligne, non vérifié ou en erreur reste
+explicitement récupérable et n'est jamais présenté comme une cible vide. Une
+URL invalide est refusée sans effet ; une URL valide reste enregistrée après
+rechargement et ne copie aucune donnée locale.
+
+Ouvrir, quitter ou recharger la page ne réinitialise ni ne soumet un OTP en
+cours, une revue d'activation, une erreur ou un consentement affiché ; seule
+une action explicite peut soumettre, annuler, confirmer ou purger. Les quatre
+actions d'espace restent distinctes : « Sélectionner cet espace » pour changer
+d'espace, « Suspendre Cloud », « Se déconnecter » et « Purger la copie
+locale ». Chacune affiche l'URL, le nom effectif de la base locale, la portée
+concernée, l'avertissement sur les changements non transmis, une sauvegarde
+JSON préalable, une annulation et une confirmation explicite. Aucune purge ni
+suspension ne supprime de donnée distante ou un autre espace.
 
 ## Imports, exports et restauration (TS-042)
 

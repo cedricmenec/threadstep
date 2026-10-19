@@ -2,29 +2,29 @@
 
 ## 1. Presentation helper and deterministic scenarios
 
-- [ ] 1.1 Create `site/cloud-settings.js` with pure presentation helpers for the onboarding step, sync-page section visibility and overview access-link visibility; verify with unit tests covering local-only, configured-without-session, OTP pending, active, failed and offline inputs.
-- [ ] 1.2 Add `tests/ts-044-settings-hub.test.mjs` asserting that onboarding never announces an unreached stage and that the overview access link appears only for Cloud attention states; run `node --test tests/ts-044-settings-hub.test.mjs` and confirm it passes.
-- [ ] 1.3 Add `site/cloud-settings.js` to the `node --check` list in `package.json`; run `npm run check` and confirm the syntax check and existing tests pass.
+- [x] 1.1 Create `site/cloud-settings.js` with pure presentation helpers for the onboarding step, sync-page section visibility and overview access-link visibility; verify with unit tests covering local-only, configured-without-session, OTP pending, active, failed and offline inputs.
+- [x] 1.2 Add `tests/ts-044-settings-hub.test.mjs` asserting that onboarding never announces an unreached stage and that the overview access link appears only for Cloud attention states; run `node --test tests/ts-044-settings-hub.test.mjs` and confirm it passes.
+- [x] 1.3 Add `site/cloud-settings.js` to the `node --check` list in `package.json`; run `npm run check` and confirm the syntax check and existing tests pass.
 
 ## 2. Integrated synchronization page
 
-- [ ] 2.1 Move `#cloud-config`, `#cloud-activation`, `#auth-panel` and `#workspace-panel` once into named sections « Configuration », « Première activation », « Connexion » and « Espaces de travail » inside `#settings-sync-page`, keeping existing ids, headings and handlers; verify with a static test that each id occurs once and only within the page.
-- [ ] 2.2 Add the contextual onboarding status and next-action region inside the synchronization page, using existing activation, auth and diagnostic states; verify with a deterministic test that local, configuration, OTP, review, active and error states map to the expected step.
-- [ ] 2.3 Add a distinct `#sync-settings-access` link on the overview and wire its visibility to the helper without changing the non-interactive `#sync-summary`; verify with a static test that the summary contains no button, input, select or retry and that the link targets `#/parametres/synchronisation`.
-- [ ] 2.4 Wire route visibility so `applySettingsVisibility` hides or shows the page and its integrated controls without recreating panels; verify with a static test that the navigation paths contain no `bootstrapSyncedDatabase`, `db.open`, `db.cloud.configure`, `setupAuthentication` or `authController` reset call.
+- [x] 2.1 Move `#cloud-config`, `#cloud-activation`, `#auth-panel` and `#workspace-panel` once into named sections « Configuration », « Première activation », « Connexion » and « Espaces de travail » inside `#settings-sync-page`, keeping existing ids, headings and handlers; verify with a static test that each id occurs once and only within the page.
+- [x] 2.2 Add the contextual onboarding status and next-action region inside the synchronization page, using existing activation, auth and diagnostic states; verify with a deterministic test that local, configuration, OTP, review, active and error states map to the expected step.
+- [x] 2.3 Add a distinct `#sync-settings-access` link on the overview and wire its visibility to the helper without changing the non-interactive `#sync-summary`; verify with a static test that the summary contains no button, input, select or retry and that the link targets `#/parametres/synchronisation`.
+- [x] 2.4 Wire route visibility so `applySettingsVisibility` hides or shows the page and its integrated controls without recreating panels; verify with a static test that the navigation paths contain no `bootstrapSyncedDatabase`, `db.open`, `db.cloud.configure`, `setupAuthentication` or `authController` reset call.
 
 ## 3. Preserved journeys and existing safeguards
 
-- [ ] 3.1 Add regression assertions that an OTP interaction, an activation review and an error survive a simulated route change and return unchanged; verify with `createAuthController`, the activation reducers and a test that no submit, cancel or consent function is invoked by navigation.
-- [ ] 3.2 Add regression assertions for activation consent, stale plan, divergent target, offline state, reload reconstruction and A/B/A workspace transitions using the existing pure modules; verify with `node --test tests/ts-044-settings-hub.test.mjs` and confirm no write occurs in these scenarios.
-- [ ] 3.3 Verify that the four workspace actions keep distinct labels, scope text, confirmations, cancellation and backup by extending the static tests; confirm the existing handler bindings remain the only ones used and no destructive call is reachable from navigation.
+- [x] 3.1 Add regression assertions that an OTP interaction, an activation review and an error survive a simulated route change and return unchanged; verify with `createAuthController`, the activation reducers and a test that no submit, cancel or consent function is invoked by navigation.
+- [x] 3.2 Add regression assertions for activation consent, stale plan, divergent target, offline state, reload reconstruction and A/B/A workspace transitions using the existing pure modules; verify with `node --test tests/ts-044-settings-hub.test.mjs` and confirm no write occurs in these scenarios.
+- [x] 3.3 Verify that the four workspace actions keep distinct labels, scope text, confirmations, cancellation and backup by extending the static tests; confirm the existing handler bindings remain the only ones used and no destructive call is reachable from navigation.
 
 ## 4. Styles, documentation and existing test alignment
 
-- [ ] 4.1 Add styles for the integrated sections, onboarding region and overview access link, including 44 px minimum sizes, focus-visible rules and wrapping at 320 px; add automated tests that assert the required CSS selectors and declarations and the absence of horizontal overflow rules.
-- [ ] 4.2 Update `tests/ts-041-navigation.test.mjs` and `tests/ts-043-sync-page.test.mjs` so the expected synchronization page contains the real controls once and no longer asserts descriptive-only placeholders; run the two test files and confirm they pass.
-- [ ] 4.3 Update `docs/product/guide-utilisation.md` and `docs/product/acceptance-checklist.md` to describe the single Cloud settings destination, contextual access, preserved OTP/activation state and distinct destructive actions; verify with a documentation static test.
-- [ ] 4.4 Run `npm test`, `npm run check` and `openspec validate ts-044 --strict --no-interactive`; report the actual results and do not mark this task complete if any command fails.
+- [x] 4.1 Add styles for the integrated sections, onboarding region and overview access link, including 44 px minimum sizes, focus-visible rules and wrapping at 320 px; add automated tests that assert the required CSS selectors and declarations and the absence of horizontal overflow rules.
+- [x] 4.2 Update `tests/ts-041-navigation.test.mjs` and `tests/ts-043-sync-page.test.mjs` so the expected synchronization page contains the real controls once and no longer asserts descriptive-only placeholders; run the two test files and confirm they pass.
+- [x] 4.3 Update `docs/product/guide-utilisation.md` and `docs/product/acceptance-checklist.md` to describe the single Cloud settings destination, contextual access, preserved OTP/activation state and distinct destructive actions; verify with a documentation static test.
+- [x] 4.4 Run `npm test`, `npm run check` and `openspec validate ts-044 --strict --no-interactive`; report the actual results and do not mark this task complete if any command fails.
 
 ## Manual acceptance
 

@@ -70,6 +70,7 @@ import {
   verifyRecoverySnapshot
 } from "./data-integrity-recovery.js";
 import {
+  INITIAL_PULL,
   LOCAL_WRITE_STATE,
   buildDiagnosticSummary,
   buildDiagnosticView,
@@ -79,6 +80,12 @@ import {
   reduceLocalWriteStatus,
   retryReasonLabel
 } from "./sync-diagnostics.js";
+import {
+  localDiagnosticError,
+  onboardingView,
+  overviewAccessLinkVisible,
+  syncSectionVisibility
+} from "./cloud-settings.js";
 import {
   BINDING_STATE,
   PENDING_STATE,
@@ -187,6 +194,14 @@ const localStatusEl = document.querySelector("#local-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
 const syncSummaryEl = document.querySelector("#sync-summary");
+const syncSettingsAccessEl = document.querySelector("#sync-settings-access");
+const syncOnboardingStepEl = document.querySelector("#sync-onboarding-step");
+const syncOnboardingMessageEl = document.querySelector("#sync-onboarding-message");
+const syncOnboardingNextEl = document.querySelector("#sync-onboarding-next");
+const syncConfigurationSectionEl = document.querySelector("#sync-configuration-section");
+const syncActivationSectionEl = document.querySelector("#sync-activation-section");
+const syncConnectionSectionEl = document.querySelector("#sync-connection-section");
+const syncWorkspacesSectionEl = document.querySelector("#sync-workspaces-section");
 const recoveryPanelEl = document.querySelector("#recovery-panel");
 const recoveryInstanceEl = document.querySelector("#recovery-instance");
 const recoveryReadCodeEl = document.querySelector("#recovery-read-code");
@@ -273,7 +288,6 @@ let syncReadError = null;
 let localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
 let syncRetryBusy = false;
 let syncDiagnosticAnnouncement = "";
-let latestSyncSummary = null;
 let recoveryContext = null;
 let repairContext = null;
 let repairStatus = initialRepairStatus();
@@ -976,6 +990,7 @@ function renderActivationReview(context) {
 }
 function renderActivationPanel() {
   if (!cloudActivationEl) return;
+  renderSyncOnboarding();
   const visible = activationPanelVisible();
   cloudActivationEl.hidden = !visible;
   if (!visible) return;
@@ -2233,6 +2248,7 @@ function renderAuthPanel() {
   const authenticated = canAccessBusiness(authState);
   authPanelEl.hidden = !requiresAuthentication() || authenticated;
   applyBusinessVisibility();
+  renderSyncOnboarding();
   if (authPanelEl.hidden) return;
   if (authLocalDataEl) {
     authLocalDataEl.textContent = "L'espace de travail est masqué avant authentification. " +
@@ -2591,17 +2607,76 @@ function activateNavigationLink(event, target) {
   pendingNavigationFocus = routeHeadingId(nextRoute);
   location.hash = target;
 }
+function readCloudSettingsInput() {
+  const diagnostic = buildSyncDiagnostic(readSyncDiagnosticInput());
+  const interaction = authInteraction ||
+    (authController && authController.currentInteraction());
+  const record = activationMarker();
+  const classification = activationContext && activationContext.classification
+    ? activationContext.classification
+    : null;
+  const planReady = !!(activationContext && activationContext.displayedPlan);
+  return {
+    configured: diagnostic.configured,
+    activationStage: activationState.stage,
+    activationStatus: record ? record.status : null,
+    authStatus: authState.status,
+    otpPending: !!interaction && interaction.kind === "otp",
+    authenticated: canAccessBusiness(authState),
+    online: diagnostic.online !== false,
+    classification,
+    remoteAttested: !!classification || diagnostic.initialPull === INITIAL_PULL.COMPLETE,
+    planReady,
+    consentGiven: planReady && !!cloudActivationConsentEl && cloudActivationConsentEl.checked,
+    firstSync: activationStatus.status,
+    diagnostic,
+    activationVisible: activationPanelVisible()
+  };
+}
+function renderSyncOnboarding() {
+  if (!syncOnboardingStepEl) return;
+  const view = onboardingView(readCloudSettingsInput());
+  syncOnboardingStepEl.textContent = view.isReached
+    ? "Étape courante : " + view.title
+    : "Prochaine étape : " + view.title;
+  if (syncOnboardingMessageEl) syncOnboardingMessageEl.textContent = view.message;
+  if (syncOnboardingNextEl) syncOnboardingNextEl.textContent = view.nextAction;
+}
+function applySyncSectionVisibility() {
+  const visibility = syncSectionVisibility(readCloudSettingsInput());
+  if (syncConfigurationSectionEl) syncConfigurationSectionEl.hidden = !visibility.configuration;
+  if (syncActivationSectionEl) syncActivationSectionEl.hidden = !visibility.activation;
+  if (syncConnectionSectionEl) syncConnectionSectionEl.hidden = !visibility.connection;
+  if (syncWorkspacesSectionEl) syncWorkspacesSectionEl.hidden = !visibility.workspaces;
+}
 function applySettingsVisibility(section) {
   if (settingsPageEl) settingsPageEl.hidden = section !== "root";
   if (settingsDataPageEl) settingsDataPageEl.hidden = section !== "data";
   if (settingsSyncPageEl) settingsSyncPageEl.hidden = section !== "sync";
+  applySyncSectionVisibility();
+  renderSyncOnboarding();
 }
 function applySyncSummaryVisibility() {
-  if (!syncSummaryEl) return;
-  const show = route.view === "overview" && !!latestSyncSummary &&
-    latestSyncSummary.needsAttention === true;
-  syncSummaryEl.hidden = !show;
-  if (show) syncSummaryEl.textContent = latestSyncSummary.text;
+  if (!syncSummaryEl && !syncSettingsAccessEl) return;
+  const diagnostic = buildSyncDiagnostic(readSyncDiagnosticInput());
+  const summary = buildDiagnosticSummary(diagnostic);
+  const show = route.view === "overview" && summary.needsAttention === true;
+  if (syncSummaryEl) {
+    syncSummaryEl.hidden = !show;
+    if (show) syncSummaryEl.textContent = summary.text;
+  }
+  if (syncSettingsAccessEl) {
+    const record = activationMarker();
+    const showLink = route.view === "overview" && overviewAccessLinkVisible({
+      configured: diagnostic.configured,
+      needsAttention: summary.needsAttention === true,
+      localError: localDiagnosticError(diagnostic),
+      activationNeedsResume: !!record &&
+        (record.status === ACTIVATION_STATUS.SUSPENDED ||
+          record.status === ACTIVATION_STATUS.CANCELLED)
+    });
+    syncSettingsAccessEl.hidden = !showLink;
+  }
 }
 function render() {
   applyBusinessVisibility();
@@ -4041,7 +4116,6 @@ function paintSyncDiagnostic(diagnostic) {
   if (!syncDiagnosticEl) return;
   const view = buildDiagnosticView(diagnostic, { busy: syncRetryBusy });
   const summary = buildDiagnosticSummary(diagnostic);
-  latestSyncSummary = summary;
   syncDiagnosticEl.replaceChildren();
   const title = el("h2", null, view.title);
   title.id = "sync-diagnostic-title";
@@ -4076,6 +4150,7 @@ function paintSyncDiagnostic(diagnostic) {
   syncDiagnosticEl.append(retry, reason, status);
   syncDiagnosticEl.hidden = false;
   applySyncSummaryVisibility();
+  renderSyncOnboarding();
 }
 function renderSyncDiagnostic() {
   if (!syncDiagnosticEl) return;
