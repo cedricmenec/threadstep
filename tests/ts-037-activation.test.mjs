@@ -538,7 +538,10 @@ test("2.3 the assistant status regions never contain business content", () => {
   const app = read("site/app.js");
   const render = app.match(/function renderActivationPanel\([\s\S]*?\n\}/);
   assert.ok(render, "activation renderer present");
-  assert.match(render[0], /cloudActivationStageEl\.textContent = describeActivationStage\(/);
+  assert.match(render[0], /cloudActivationStageEl\.textContent = needsIsolatedRecovery/);
+  assert.match(render[0], /describeActivationStage\(activationState\.stage\)/);
+  assert.match(render[0], /authState\.status === AUTH_STATUS\.AUTHENTICATED/);
+  assert.match(render[0], /accountBinding\.state === BINDING_STATE\.UNVERIFIED/);
   assert.match(render[0], /setActivationStatus\(message\)/);
   assert.match(app, /describeActivationStage\(/);
   assert.match(app, /describeTargetClassification\(/);
