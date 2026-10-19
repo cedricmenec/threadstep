@@ -69,7 +69,7 @@ const ALLOWED_EVENTS = Object.freeze({
   [ACTIVATION_STAGE.LOCAL]: ["start"],
   [ACTIVATION_STAGE.PREPARING]: ["configured", "cancel", "fail"],
   [ACTIVATION_STAGE.CONNECTING]: ["authenticated", "cancel", "fail"],
-  [ACTIVATION_STAGE.DISCOVERING]: ["discovered", "cancel", "fail"],
+  [ACTIVATION_STAGE.DISCOVERING]: ["discovered", "no-transfer", "cancel", "fail"],
   [ACTIVATION_STAGE.REVIEW]: ["consent", "cancel", "fail"],
   [ACTIVATION_STAGE.TRANSFER_PENDING]: ["complete", "fail", "cancel"],
   [ACTIVATION_STAGE.FAILED]: ["retry", "cancel"],
@@ -130,6 +130,8 @@ function nextStageFor(current, type, event) {
       return ACTIVATION_STAGE.DISCOVERING;
     case "discovered":
       return ACTIVATION_STAGE.REVIEW;
+    case "no-transfer":
+      return ACTIVATION_STAGE.ACTIVE;
     case "consent":
       return ACTIVATION_STAGE.TRANSFER_PENDING;
     case "complete":
@@ -365,6 +367,19 @@ export function classifyTarget(input = {}) {
     return { classification: TARGET_CLASSIFICATION.VERIFIED_EMPTY, reason: null, blocked: false };
   }
   return { classification: TARGET_CLASSIFICATION.POPULATED, reason: null, blocked: false };
+}
+
+// Read-only activation is allowed only if the autonomous source is truly
+// empty, remote discovery is attested and the transfer plan has zero writes.
+export function canCompleteReadOnlyActivation(input = {}) {
+  const source = isPlainObject(input) ? input : {};
+  const counts = isPlainObject(source.sourceCounts) ? source.sourceCounts : null;
+  const plan = isPlainObject(source.plan) ? source.plan : null;
+  const attestation = isPlainObject(source.attestation) ? source.attestation : null;
+  return source.targetStatus === "ready" &&
+    !!attestation && attestation.attested === true &&
+    !!counts && counts.subjects === 0 && counts.items === 0 &&
+    !!plan && Array.isArray(plan.operations) && plan.operations.length === 0;
 }
 
 // First-sync evidence reducer ---------------------------------------------------------

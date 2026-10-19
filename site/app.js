@@ -8,6 +8,7 @@ import {
   classifyTarget,
   createActivationRecord,
   describeActivationStage,
+  canCompleteReadOnlyActivation,
   describeTargetClassification,
   initialActivationState,
   initialFirstSyncState,
@@ -89,6 +90,7 @@ import {
   describeBindingState,
   evaluateAccountBinding,
   initializeWorkspaceRegistry,
+  isRecoverableUnverifiedWorkspace,
   pendingChangeWarning,
   pendingStatusFromMutationTables,
   planWorkspaceLogout,
@@ -456,17 +458,17 @@ function renderWorkspacePanel() {
   if (workspaceLogoutEl) workspaceLogoutEl.disabled = !entry || workspaceBusy;
   if (workspacePurgeEl) workspacePurgeEl.disabled = workspaceBusy;
   if (workspaceRecoverEl) {
-    workspaceRecoverEl.hidden = !entry || entry.databaseName !== "threadstep" ||
-      accountBinding.state !== BINDING_STATE.UNVERIFIED;
+    workspaceRecoverEl.hidden = !isRecoverableUnverifiedWorkspace(entry, accountBinding.state);
     workspaceRecoverEl.disabled = workspaceBusy;
   }
   if (workspaceBindingStatusEl) {
     if (syncedDatabase) {
-      const extra = accountBinding.state === BINDING_STATE.MISMATCH ||
-        accountBinding.state === BINDING_STATE.UNVERIFIED ||
-        accountBinding.state === BINDING_STATE.INDETERMINATE
-        ? " Déconnectez-vous ou purgez explicitement la copie locale."
-        : "";
+      const extra = accountBinding.state === BINDING_STATE.UNVERIFIED
+        ? " OTP confirmé, cache Cloud non vérifié. Utilisez « Retrouver les projets Cloud dans un nouveau cache isolé » ; l'ancien cache restera intact."
+        : accountBinding.state === BINDING_STATE.MISMATCH ||
+          accountBinding.state === BINDING_STATE.INDETERMINATE
+          ? " Les données restent masquées. Ne purgez aucun cache sans sauvegarde vérifiée."
+          : "";
       workspaceBindingStatusEl.textContent = describeBindingState(accountBinding.state) + extra;
     } else {
       workspaceBindingStatusEl.textContent = "";
@@ -976,7 +978,14 @@ function renderActivationPanel() {
     message = describeTargetClassification(activationContext.classification) +
       (message ? " " + message : "");
   }
-  if (cloudActivationStageEl) cloudActivationStageEl.textContent = describeActivationStage(activationState.stage);
+  const needsIsolatedRecovery = activationState.stage === ACTIVATION_STAGE.CONNECTING &&
+    authState.status === AUTH_STATUS.AUTHENTICATED &&
+    accountBinding.state === BINDING_STATE.UNVERIFIED;
+  if (cloudActivationStageEl) {
+    cloudActivationStageEl.textContent = needsIsolatedRecovery
+      ? "OTP confirmé ; cache Cloud non vérifié. Dans « Espaces de travail », choisissez « Retrouver les projets Cloud dans un nouveau cache isolé ». L'ancien cache reste intact."
+      : describeActivationStage(activationState.stage);
+  }
   setActivationStatus(message);
   if (cloudActivationDestinationEl) cloudActivationDestinationEl.textContent = activationDestinationText();
   renderActivationStages();
@@ -1111,6 +1120,37 @@ async function runActivationDiscovery() {
     failActivation(classification.reason);
     notifyError(describeTargetClassification(classification.classification));
     return { status: classification.classification, classification };
+  }
+  // On a second device with no local business records, a verified native pull
+  // is sufficient: no transfer plan, fake consent or cloud mutation is needed.
+  if (canCompleteReadOnlyActivation({
+    sourceCounts: source.sourceCounts,
+    plan,
+    targetStatus: result.status,
+    attestation: result.attestation
+  })) {
+    const completeRecord = createActivationRecord({
+      status: ACTIVATION_STATUS.ACTIVE,
+      url: currentRecord.url,
+      remoteDbId: destination.remoteDbId,
+      sourceFingerprint: computeSourceRecordsFingerprint(source.records),
+      userId: expected.userId
+    });
+    const activeRegistry = updateWorkspaceStatus(
+      workspaceRegistry, currentRecord.url, WORKSPACE_STATUS.ACTIVE
+    );
+    if (!completeRecord || !activeRegistry ||
+        !writeActivationRecord(localStorage, completeRecord) ||
+        !persistWorkspaceRegistry(activeRegistry)) {
+      failActivation("activation-persistence-error");
+      notifyError("Finalisation impossible ; aucune donnée transférée ou supprimée.");
+      return { status: "activation-persistence-error" };
+    }
+    activationContext = null;
+    setActivationStage({ type: "no-transfer" });
+    renderActivationPanel();
+    notify("Cloud actif après lecture distante attestée : aucun transfert local nécessaire.");
+    return { status: "read-only-activated", classification };
   }
   const targetCounts = result.records
     ? { subjects: result.records.subjects.length, items: result.records.items.length }

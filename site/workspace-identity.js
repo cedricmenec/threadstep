@@ -560,9 +560,18 @@ export function evaluateAccountBinding(input = {}) {
   return { state: BINDING_STATE.INDETERMINATE, businessAllowed: false, bind: false, digest: null };
 }
 
-// A legacy synchronized cache with no account binding cannot be adopted by
-// merely logging in: it may contain another account's cached records. Recover
-// remote-visible data in a NEW isolated cache; leave the old IndexedDB intact.
+// The first pull may populate a new cache before account binding. Never adopt
+// an unverified populated cache: recover into a NEW account-bound base, leaving
+// the original IndexedDB and its mutations physically intact.
+export function isRecoverableUnverifiedWorkspace(entry, binding) {
+  return !!entry && entry.type === WORKSPACE_TYPE.SYNCHRONIZED &&
+    (entry.status === WORKSPACE_STATUS.ACTIVE || entry.status === WORKSPACE_STATUS.ACTIVATING) &&
+    binding === BINDING_STATE.UNVERIFIED && !nonEmptyString(entry.userDigest) &&
+    (entry.databaseName === DATABASE_NAME ||
+      entry.databaseName === workspaceDatabaseName(entry.url) ||
+      /^threadstep-recovery-[a-f0-9]{32}$/.test(entry.databaseName));
+}
+
 export function planUnverifiedCloudRecovery(input = {}) {
   const source = isPlainObject(input) ? input : {};
   const deny = (reason) => ({
@@ -573,13 +582,13 @@ export function planUnverifiedCloudRecovery(input = {}) {
   if (!registry || registry.selected === WORKSPACE_SELECTION_LOCAL) return deny("workspace-invalid");
   const entry = registry.workspaces[registry.selected];
   if (!entry || entry.type !== WORKSPACE_TYPE.SYNCHRONIZED ||
-      entry.status !== WORKSPACE_STATUS.ACTIVE) return deny("workspace-not-active");
+      (entry.status !== WORKSPACE_STATUS.ACTIVE && entry.status !== WORKSPACE_STATUS.ACTIVATING)) {
+    return deny("workspace-not-active");
+  }
   if (source.binding !== BINDING_STATE.UNVERIFIED || nonEmptyString(entry.userDigest)) {
     return deny("not-unverified");
   }
-  // Only a real old-style base can be recovered this way. New cache bases
-  // already have account binding established BEFORE any business reads.
-  if (entry.databaseName !== DATABASE_NAME) return deny("not-legacy-cache");
+  if (!isRecoverableUnverifiedWorkspace(entry, source.binding)) return deny("not-recoverable-cache");
   const attestation = isPlainObject(source.attestation) ? source.attestation : null;
   const identity = attestation && isPlainObject(attestation.identity) ? attestation.identity : null;
   if (!attestation || attestation.attested !== true || !identity ||
