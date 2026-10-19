@@ -692,6 +692,61 @@ function safeValue(value, fallback) {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
+const LOCAL_ERROR_CATEGORIES = new Set([
+  DIAGNOSTIC_ERROR.READ,
+  DIAGNOSTIC_ERROR.STORAGE
+]);
+
+export function buildDiagnosticSummary(diagnostic) {
+  const state = isPlainObject(diagnostic) ? diagnostic : {};
+  const view = buildDiagnosticView(state);
+  if (state.configured !== true || !isPlainObject(state.base) || state.base.configured !== true) {
+    const localError = view.errors.some((entry) => LOCAL_ERROR_CATEGORIES.has(entry.category)) ||
+      state.localWrites === LOCAL_WRITE_STATE.ERROR;
+    if (localError) {
+      return {
+        needsAttention: true,
+        text: "Cloud non configuré : local uniquement. Erreur locale de lecture ou d'écriture, sans état distant."
+      };
+    }
+    return {
+      needsAttention: false,
+      text: "Cloud non configuré : local uniquement, aucune synchronisation Cloud active."
+    };
+  }
+
+  const sessionNeedsAttention = state.session !== SESSION_STATE.AUTHENTICATED;
+  const connectionNeedsAttention = state.connection !== CONNECTION_STATE.CONNECTED;
+  const phaseNeedsAttention = state.phase !== SYNC_PHASE.IN_SYNC;
+  const pullNeedsAttention = state.initialPull !== INITIAL_PULL.COMPLETE;
+  const writesNeedAttention = state.localWrites !== LOCAL_WRITE_STATE.NONE &&
+    state.localWrites !== LOCAL_WRITE_STATE.SYNCED;
+  const baseMismatch = state.base.mismatch === true;
+  const needsAttention = sessionNeedsAttention || connectionNeedsAttention ||
+    phaseNeedsAttention || pullNeedsAttention || writesNeedAttention ||
+    baseMismatch || view.errors.length > 0;
+
+  const parts = [
+    "Session : " + view.sessionLabel,
+    "Connexion : " + view.connectionLabel,
+    "Phase native : " + view.phaseLabel,
+    "Preuve distante : " + view.remoteEvidenceLabel
+  ];
+  if (pullNeedsAttention) parts.push("Pull initial : " + view.initialPullLabel);
+  if (writesNeedAttention) parts.push("Écritures locales : " + view.localWritesLabel);
+  if (baseMismatch) parts.push("Base configurée incohérente avec la base persistée");
+  const remoteState = isPlainObject(state.remoteEvidence) ? state.remoteEvidence.state : null;
+  if (needsAttention && remoteState !== REMOTE_EVIDENCE.AVAILABLE) {
+    parts.push(view.remoteEvidenceMessage);
+  }
+  if (view.errors.length > 0) parts.push(view.errors[0].message);
+  const text = needsAttention
+    ? parts.join(" · ")
+    : "Synchronisation en phase · " + parts.join(" · ");
+
+  return { needsAttention, text };
+}
+
 export function buildDiagnosticView(diagnostic, options = {}) {
   const state = isPlainObject(diagnostic) ? diagnostic : {};
   const settings = isPlainObject(options) ? options : {};

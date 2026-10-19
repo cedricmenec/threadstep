@@ -71,6 +71,7 @@ import {
 } from "./data-integrity-recovery.js";
 import {
   LOCAL_WRITE_STATE,
+  buildDiagnosticSummary,
   buildDiagnosticView,
   buildSyncDiagnostic,
   createSyncDiagnosticsController,
@@ -185,6 +186,7 @@ const workspaceConfirmationStatusEl = document.querySelector("#workspace-confirm
 const localStatusEl = document.querySelector("#local-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
+const syncSummaryEl = document.querySelector("#sync-summary");
 const recoveryPanelEl = document.querySelector("#recovery-panel");
 const recoveryInstanceEl = document.querySelector("#recovery-instance");
 const recoveryReadCodeEl = document.querySelector("#recovery-read-code");
@@ -271,6 +273,7 @@ let syncReadError = null;
 let localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
 let syncRetryBusy = false;
 let syncDiagnosticAnnouncement = "";
+let latestSyncSummary = null;
 let recoveryContext = null;
 let repairContext = null;
 let repairStatus = initialRepairStatus();
@@ -2593,9 +2596,17 @@ function applySettingsVisibility(section) {
   if (settingsDataPageEl) settingsDataPageEl.hidden = section !== "data";
   if (settingsSyncPageEl) settingsSyncPageEl.hidden = section !== "sync";
 }
+function applySyncSummaryVisibility() {
+  if (!syncSummaryEl) return;
+  const show = route.view === "overview" && !!latestSyncSummary &&
+    latestSyncSummary.needsAttention === true;
+  syncSummaryEl.hidden = !show;
+  if (show) syncSummaryEl.textContent = latestSyncSummary.text;
+}
 function render() {
   applyBusinessVisibility();
   applyNavigationMenu();
+  applySyncSummaryVisibility();
   if (!businessAllowed()) {
     applyFocus();
     return;
@@ -4029,15 +4040,19 @@ function nativePullAdapter(db) {
 function paintSyncDiagnostic(diagnostic) {
   if (!syncDiagnosticEl) return;
   const view = buildDiagnosticView(diagnostic, { busy: syncRetryBusy });
+  const summary = buildDiagnosticSummary(diagnostic);
+  latestSyncSummary = summary;
   syncDiagnosticEl.replaceChildren();
   const title = el("h2", null, view.title);
   title.id = "sync-diagnostic-title";
   const readonly = el("p", "sync-diagnostic-readonly", view.readonly);
+  const pageSummary = el("p", "sync-diagnostic-summary", summary.text);
+  pageSummary.id = "sync-diagnostic-summary";
   const list = el("dl", "sync-diagnostic-list");
   for (const row of view.rows) {
     list.append(el("dt", null, row.label), el("dd", null, row.value));
   }
-  syncDiagnosticEl.append(title, readonly, list);
+  syncDiagnosticEl.append(title, readonly, pageSummary, list);
   if (view.errors.length > 0) {
     syncDiagnosticEl.append(el("h3", null, "Erreurs techniques classées"));
     const errors = el("ul", "sync-diagnostic-errors");
@@ -4060,6 +4075,7 @@ function paintSyncDiagnostic(diagnostic) {
   status.setAttribute("aria-live", "polite");
   syncDiagnosticEl.append(retry, reason, status);
   syncDiagnosticEl.hidden = false;
+  applySyncSummaryVisibility();
 }
 function renderSyncDiagnostic() {
   if (!syncDiagnosticEl) return;

@@ -130,6 +130,35 @@
       <p id="auth-offline" class="auth-offline" role="status" hidden></p>
       <p id="auth-local-data" class="auth-help" aria-live="polite"></p>
     </section>
+    <section id="recovery-panel" class="recovery-panel" aria-labelledby="recovery-title" hidden>
+      <h2 id="recovery-title" tabindex="-1">Diagnostic et récupération en lecture seule</h2>
+      <p id="recovery-instance" class="recovery-instance"></p>
+      <p id="recovery-read-code" class="recovery-status" role="status" aria-live="polite"></p>
+      <div id="recovery-degraded" class="recovery-degraded"></div>
+      <div id="recovery-anomalies" class="recovery-anomalies" role="status" aria-live="polite"></div>
+      <p id="recovery-business-status" class="recovery-business-status"></p>
+      <div class="recovery-actions">
+        <button id="recovery-raw-export" type="button" class="secondary">Exporter les enregistrements bruts de récupération</button>
+        <button id="recovery-repair-preview" type="button" class="secondary" disabled>Préparer une réparation</button>
+      </div>
+      <div id="repair-preview" class="repair-preview" hidden>
+        <h3 id="repair-preview-title">Réparation des références</h3>
+        <p id="repair-preview-summary"></p>
+        <label for="repair-source">Fichier source attestant l'identité (facultatif)</label>
+        <input id="repair-source" type="file" accept=".json,application/json">
+        <div id="repair-groups" class="repair-groups"></div>
+        <p id="repair-backup-status" class="repair-backup-status"></p>
+        <label class="repair-consent" for="repair-consent">
+          <input id="repair-consent" type="checkbox">
+          <span>Je confirme réparer uniquement les références affichées, après vérification de la sauvegarde de récupération.</span>
+        </label>
+        <div class="repair-actions">
+          <button id="repair-confirm" type="button" class="primary" disabled>Appliquer la réparation consentie</button>
+          <button id="repair-cancel" type="button" class="secondary">Annuler la réparation</button>
+        </div>
+        <p id="repair-status" class="repair-status" role="status" aria-live="polite"></p>
+      </div>
+    </section>
     <section id="settings-page" class="settings-page" aria-labelledby="settings-title" hidden>
       <div class="settings-nav">
         <a class="settings-back" href="#/">Retour à Mes projets</a>
@@ -189,12 +218,26 @@
       </div>
       <span class="label">PARAMÈTRES</span>
       <h2 id="settings-sync-title" tabindex="-1">Synchronisation Dexie Cloud</h2>
-      <p>Cette page décrit la future destination du diagnostic de synchronisation Dexie Cloud.</p>
-      <section class="settings-destination">
-        <h3>Diagnostic de synchronisation</h3>
-        <p>L'état de synchronisation, les compteurs et les actions de reprise restent pour l'instant affichés à leur emplacement actuel, sans configuration, activation ni connexion déplacée.</p>
+      <p>Cette page réunit le diagnostic Dexie Cloud en lecture seule. Les contrôles de configuration, d'activation, de connexion et de gestion des espaces restent à leur emplacement actuel jusqu'à TS-044.</p>
+      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-configuration-title">
+        <h3 id="settings-sync-configuration-title">Configuration</h3>
+        <p>La configuration de l'URL Dexie Cloud reste dans son panneau actuel. Cet emplacement est descriptif : aucun formulaire de configuration n'est déplacé, dupliqué ou activé ici avant TS-044.</p>
       </section>
+      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-activation-title">
+        <h3 id="settings-sync-activation-title">Première activation</h3>
+        <p>L'activation initiale et son consentement restent à leur emplacement actuel. Cet emplacement est descriptif et ne déclenche ni activation, ni transfert, ni requête avant TS-044.</p>
+      </section>
+      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-connection-title">
+        <h3 id="settings-sync-connection-title">Connexion</h3>
+        <p>La connexion par code email et la session restent dans leur panneau actuel. Cet emplacement est descriptif : aucun OTP n'est demandé et aucun formulaire de connexion n'est déplacé ou activé ici avant TS-044.</p>
+      </section>
+      <section class="settings-destination sync-descriptive" aria-labelledby="settings-sync-workspaces-title">
+        <h3 id="settings-sync-workspaces-title">Espaces de travail</h3>
+        <p>La sélection, la suspension, la déconnexion et la purge des espaces de travail restent à leur emplacement actuel. Cet emplacement est descriptif et ne déplace ni ne duplique ces contrôles avant TS-044.</p>
+      </section>
+      <section id="sync-diagnostic" class="sync-diagnostic" aria-labelledby="sync-diagnostic-title" hidden></section>
     </section>
+    <div id="sync-summary" class="sync-summary" role="status" aria-live="polite" hidden></div>
     <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
       <div id="resume-card" class="resume-card" aria-live="polite" hidden></div>
       <div class="section-top">
@@ -230,36 +273,6 @@
         <button type="submit" class="primary">Enregistrer l'URL</button>
       </form>
     </section>
-    <section id="recovery-panel" class="recovery-panel" aria-labelledby="recovery-title" hidden>
-      <h2 id="recovery-title" tabindex="-1">Diagnostic et récupération en lecture seule</h2>
-      <p id="recovery-instance" class="recovery-instance"></p>
-      <p id="recovery-read-code" class="recovery-status" role="status" aria-live="polite"></p>
-      <div id="recovery-degraded" class="recovery-degraded"></div>
-      <div id="recovery-anomalies" class="recovery-anomalies" role="status" aria-live="polite"></div>
-      <p id="recovery-business-status" class="recovery-business-status"></p>
-      <div class="recovery-actions">
-        <button id="recovery-raw-export" type="button" class="secondary">Exporter les enregistrements bruts de récupération</button>
-        <button id="recovery-repair-preview" type="button" class="secondary" disabled>Préparer une réparation</button>
-      </div>
-      <div id="repair-preview" class="repair-preview" hidden>
-        <h3 id="repair-preview-title">Réparation des références</h3>
-        <p id="repair-preview-summary"></p>
-        <label for="repair-source">Fichier source attestant l'identité (facultatif)</label>
-        <input id="repair-source" type="file" accept=".json,application/json">
-        <div id="repair-groups" class="repair-groups"></div>
-        <p id="repair-backup-status" class="repair-backup-status"></p>
-        <label class="repair-consent" for="repair-consent">
-          <input id="repair-consent" type="checkbox">
-          <span>Je confirme réparer uniquement les références affichées, après vérification de la sauvegarde de récupération.</span>
-        </label>
-        <div class="repair-actions">
-          <button id="repair-confirm" type="button" class="primary" disabled>Appliquer la réparation consentie</button>
-          <button id="repair-cancel" type="button" class="secondary">Annuler la réparation</button>
-        </div>
-        <p id="repair-status" class="repair-status" role="status" aria-live="polite"></p>
-      </div>
-    </section>
-    <section id="sync-diagnostic" class="sync-diagnostic" aria-labelledby="sync-diagnostic-title" hidden></section>
     <footer>ThreadStep · Simple par choix · <span id="status" role="status" aria-live="polite"></span></footer>
   </main>
   <div id="snackbar" class="snackbar" role="status" aria-live="polite" hidden></div>

@@ -193,8 +193,10 @@ test("contextual safety backups and raw recovery exports remain in place", () =>
     "</div>\n      <section id=\"legacy-cleanup\""
   );
   assert.match(workspaceConfirmation, /id="workspace-backup"/);
-  const recoveryPanel = between(html, '<section id="recovery-panel"', '<section id="sync-diagnostic"');
+  const recoveryPanel = between(html, '<section id="recovery-panel"', '<section id="settings-page"');
   assert.match(recoveryPanel, /id="recovery-raw-export"/);
+  assert.ok(html.indexOf('<section id="recovery-panel"') < html.indexOf('<section id="settings-page"'));
+  assert.ok(html.indexOf('<section id="recovery-panel"') < html.indexOf('<section id="settings-sync-page"'));
   assert.doesNotMatch(dataPage, /id="workspace-backup"/);
   assert.doesNotMatch(dataPage, /id="recovery-raw-export"/);
   assert.match(app, /workspaceBackupEl\.addEventListener\("click", \(\) => \{ downloadWorkspaceSnapshot\(\); \}\)/);
