@@ -16,6 +16,20 @@
   <main class="shell">
     <header class="hero">
       <div class="eyebrow"><span class="dot"></span> MON ESPACE DE TRAVAIL</div>
+      <div class="header-nav">
+        <button type="button" id="nav-menu-button" class="nav-menu-button" aria-expanded="false" aria-controls="nav-menu-panel">
+          <span class="nav-menu-icon" aria-hidden="true">☰</span>
+          <span class="nav-menu-label">Menu</span>
+        </button>
+        <div id="nav-menu-panel" class="nav-menu-panel" hidden>
+          <nav class="nav-menu" aria-label="Navigation principale">
+            <a href="#/">Mes projets</a>
+            <a href="#/parametres">Paramètres</a>
+            <a href="#/parametres/donnees">Imports / Exports</a>
+            <a href="#/parametres/synchronisation">Synchronisation Dexie Cloud</a>
+          </nav>
+        </div>
+      </div>
       <h1>Thread<span>Step</span></h1>
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
       <div class="toolbar" id="business-tools">
@@ -122,6 +136,50 @@
       </form>
       <p id="auth-offline" class="auth-offline" role="status" hidden></p>
       <p id="auth-local-data" class="auth-help" aria-live="polite"></p>
+    </section>
+    <section id="settings-page" class="settings-page" aria-labelledby="settings-title" hidden>
+      <div class="settings-nav">
+        <a class="settings-back" href="#/">Retour à Mes projets</a>
+      </div>
+      <span class="label">PARAMÈTRES</span>
+      <h2 id="settings-title" tabindex="-1">Paramètres</h2>
+      <p>Choisissez la section à ouvrir. Les commandes existantes restent disponibles à leur emplacement actuel.</p>
+      <ul class="settings-links">
+        <li><a href="#/parametres/donnees">Imports / Exports</a></li>
+        <li><a href="#/parametres/synchronisation">Synchronisation Dexie Cloud</a></li>
+      </ul>
+    </section>
+    <section id="settings-data-page" class="settings-page" aria-labelledby="settings-data-title" hidden>
+      <div class="settings-nav">
+        <a class="settings-back" href="#/parametres">Retour aux paramètres</a>
+      </div>
+      <span class="label">PARAMÈTRES</span>
+      <h2 id="settings-data-title" tabindex="-1">Imports / Exports</h2>
+      <p>Cette page décrit les futures commandes de données. Les commandes ci-dessous restent pour l'instant dans la barre d'outils de l'accueil.</p>
+      <section class="settings-destination">
+        <h3>Exporter</h3>
+        <p>Exporter une sauvegarde JSON de toutes vos données reste disponible avec « Exporter mes données » à son emplacement actuel.</p>
+      </section>
+      <section class="settings-destination">
+        <h3>Importer et fusionner</h3>
+        <p>Importer et fusionner un fichier JSON reste disponible via « Importer et fusionner un JSON » à son emplacement actuel, avec prévisualisation avant écriture.</p>
+      </section>
+      <section class="settings-destination">
+        <h3>Restaurer un état antérieur</h3>
+        <p>Restaurer un état antérieur reste une action distincte de l'import, disponible à son emplacement actuel après confirmation explicite.</p>
+      </section>
+    </section>
+    <section id="settings-sync-page" class="settings-page" aria-labelledby="settings-sync-title" hidden>
+      <div class="settings-nav">
+        <a class="settings-back" href="#/parametres">Retour aux paramètres</a>
+      </div>
+      <span class="label">PARAMÈTRES</span>
+      <h2 id="settings-sync-title" tabindex="-1">Synchronisation Dexie Cloud</h2>
+      <p>Cette page décrit la future destination du diagnostic de synchronisation Dexie Cloud.</p>
+      <section class="settings-destination">
+        <h3>Diagnostic de synchronisation</h3>
+        <p>L'état de synchronisation, les compteurs et les actions de reprise restent pour l'instant affichés à leur emplacement actuel, sans configuration, activation ni connexion déplacée.</p>
+      </section>
     </section>
     <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
       <div id="resume-card" class="resume-card" aria-live="polite" hidden></div>

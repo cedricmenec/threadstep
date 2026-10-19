@@ -12,6 +12,31 @@ rapidement la prochaine action de plusieurs sujets de travail.
 Elle est utilisable sur téléphone ou sur ordinateur, sans compte,
 serveur applicatif ni intelligence artificielle dans le navigateur.
 
+## Navigation, menu et paramètres (TS-041)
+
+Le bouton **« Menu »** de l'en-tête ouvre un panneau de navigation
+disponible sur téléphone comme sur ordinateur. Il contient exactement
+quatre entrées, dans cet ordre : **Mes projets**, **Paramètres**,
+**Imports / Exports** et **Synchronisation Dexie Cloud**, qui ciblent
+respectivement `#/`, `#/parametres`, `#/parametres/donnees` et
+`#/parametres/synchronisation`.
+
+- Les trois pages de paramètres affichent un titre explicite et un lien
+  de retour : « Retour à Mes projets » depuis `#/parametres`, puis
+  « Retour aux paramètres » depuis les deux pages de destination.
+- Les liens profonds, Précédent/Suivant et le rechargement restaurent la
+  page correspondant au fragment courant. La route `#/sujet/<id>` et son
+  retour vers Mes projets restent inchangés.
+- Le menu se ferme après navigation, avec **Échap** et lors d'une action
+  extérieure. Échap rend le focus au bouton ; après un lien, le focus
+  rejoint le titre de la page affichée.
+- Les pages Imports / Exports et Synchronisation Dexie Cloud sont pour
+  l'instant **descriptives**. Les commandes d'export, d'import, de
+  restauration, de connexion, de configuration Cloud et de diagnostic
+  restent à leur **emplacement actuel** sur l'accueil, sans doublon.
+- Ouvrir, fermer ou changer de page ne déclenche aucune écriture
+  IndexedDB, requête réseau, authentification ni modification Cloud.
+
 ## Sujets, actions et priorités
 
 1. Entrer un intitulé dans « Ajouter un sujet ou un projet… », puis
