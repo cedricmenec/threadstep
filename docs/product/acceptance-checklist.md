@@ -45,6 +45,20 @@ tests Node.
   push ; le statut doit annoncer une conversion locale terminée, jamais une
   synchronisation Cloud. Le transfert vers le Cloud reste TS-037.
 
+## Certification E2E local-first et Cloud (TS-039)
+
+La matrice automatisée est décrite dans [e2e-certification.md](e2e-certification.md)
+et exécutée par `node --test tests/product-e2e-matrix.test.mjs`. Elle couvre les
+parcours local-only, activation, première synchronisation, cible peuplée,
+divergence, conflits concurrents, reimport, restauration, déconnexion,
+changement d'URL ou de session, erreurs réseau et les garanties transverses.
+
+Les preuves **CI** (rapport automatique sans réseau) et la **recette Dexie
+réelle** (instance isolée, Chrome mobile, deux navigateurs, OTP réel, hors
+ligne et réseau intermittent) sont distinctes. Une CI verte ne prouve ni
+IndexedDB réel, ni propagation distante, ni accessibilité : ces observations
+restent manuelles, non cochées ici et à consigner séparément.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.
