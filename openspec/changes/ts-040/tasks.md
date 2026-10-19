@@ -38,7 +38,7 @@
 
 - [ ] 5.1 Update `docs/product/specs/dexie-data-lifecycle-target-v1.md` to record the completed transition, the modern backup format and the V1 retirement; verify with a grep test for the modern format name and the non-support statement.
 - [ ] 5.2 Update `docs/product/developer-guide.md`, `docs/product/guide-utilisation.md`, `docs/product/mvp.md` and `docs/product/acceptance-checklist.md` so they describe IndexedDB-only business storage, the modern backup and voluntary cleanup; verify with a documentation test that no current guidance instructs importing/restoring V1 backups.
-- [ ] 5.3 Update the `legacy-storage-migration` and `legacy-document-migration` Purpose text in `openspec/specs/` to describe retirement and cleanup instead of conversion; verify the main specs describe the retired behavior.
+- [ ] 5.3 Implement a deterministic Node regression test included in `npm run check`, with active-change assertions confirming that the `legacy-storage-migration` and `legacy-document-migration` OpenSpec deltas explicitly retire V1 readers, keep legacy keys inert, reject V1 imports without writes and require voluntary cleanup; its completed-change assertions MUST inspect the real canonical `## Purpose` sections of both capabilities and reject wording that still promises active V1 conversion. Select the assertions using the presence of the active change or its archived counterpart, and exercise both modes with deterministic fixtures during `apply` without editing canonical specs.
 - [ ] 5.4 Verify no archived change under `openspec/changes/archive/` is modified.
 
 ## 6. Integration verification
@@ -61,6 +61,7 @@
 ## Post-sync review
 
 - After the separate OPSX semantic sync, compare the canonical spec deltas with the intended modern backup, V1 rejection, metadata and cleanup behavior.
+- Explicitly verify the `## Purpose` sections in `openspec/specs/legacy-storage-migration/spec.md` and `openspec/specs/legacy-document-migration/spec.md` describe V1 retirement, inert historical values and voluntary cleanup, without promising an active V1 conversion. Native OPSX sync MUST NOT be presumed to rewrite Purpose. If either Purpose remains stale, correct it on the delivery branch during the post-sync review, then rerun `npm run check` (including completed-change canonical assertions) and `openspec validate --all --strict --no-interactive`; do not merge while either check fails.
 - Review the archived change and confirm archived historical changes were not modified.
 - Verify the independent GitHub `check` on the exact SHA of the implementation PR, the required protection, the merge evidence, and post-merge `main` CI and GitHub Pages.
 - Verify separately that modern backups were regenerated and checked during the transition and that the real Android/laptop acceptance was performed; do not attribute that evidence to the Node CI.
