@@ -34,15 +34,46 @@ respectivement `#/`, `#/parametres`, `#/parametres/donnees` et
   les commandes d'export, d'import/fusion et de restauration dans trois
   sections distinctes. L'accueil **n'affiche plus** la barre d'actions de
   données : les commandes ne sont ni dupliquées ni recréées.
-- La page Synchronisation Dexie Cloud reste **descriptive**. Les commandes
-  de connexion, de configuration Cloud et de diagnostic restent à leur
-  emplacement actuel. La sauvegarde de sécurité proposée dans une
-  confirmation de purge, de déconnexion ou d'action sur un espace de
-  travail, ainsi que l'export brut du diagnostic de récupération, restent
-  disponibles **dans leur contexte d'origine**, sans navigation préalable
-  vers `#/parametres/donnees`.
+- La page Synchronisation Dexie Cloud héberge le **diagnostic complet** en
+  lecture seule et son résumé. Les commandes de connexion, de configuration
+  Cloud, d'activation et de gestion des espaces restent à leur emplacement
+  actuel et ne sont pas déplacées par cette page. La sauvegarde de sécurité
+  proposée dans une confirmation de purge, de déconnexion ou d'action sur un
+  espace de travail, ainsi que l'export brut du diagnostic de récupération,
+  restent disponibles **dans leur contexte d'origine**, sans navigation
+  préalable vers `#/parametres/donnees`.
 - Ouvrir, fermer ou changer de page ne déclenche aucune écriture
   IndexedDB, requête réseau, authentification ni modification Cloud.
+
+## Diagnostic de synchronisation dédié (TS-043)
+
+La page `#/parametres/synchronisation` réunit le **diagnostic complet** Dexie
+Cloud en lecture seule, son titre « Synchronisation Dexie Cloud », une
+synthèse de l'état courant et les informations techniques déjà produites par
+les signaux natifs. Elle affiche séparément la session, la connexion, la
+phase, la base ou le cache, le pull initial, les écritures locales, les
+erreurs classées et la preuve distante disponible. Un espace local sans
+configuration indique clairement « Cloud non configuré » et « local
+uniquement », sans ouvrir d'instance Cloud, demander un OTP ni envoyer de
+requête.
+
+Mes projets ne conserve qu'un **résumé d'attention minimal**, non interactif
+et annoncé par une zone de statut, lorsqu'un état Cloud configuré n'est pas
+entièrement en phase ou qu'une erreur locale existe. Ce résumé ne propose
+aucune relance et reste masqué pour un local non configuré sain ou une
+synchronisation configurée entièrement en phase.
+
+Les emplacements « Configuration », « Première activation », « Connexion » et
+« Espaces de travail » de la page sont **descriptifs**. Les formulaires et
+contrôles sensibles restent à leur emplacement actuel jusqu'à TS-044 et ne
+sont ni déplacés, ni dupliqués, ni activés par la page.
+
+L'action « Relancer la lecture distante » reste dans le diagnostic avec ses
+**garde-fous** et son handler natif existants. Ouvrir, quitter ou recharger la
+page ne lance jamais ce pull manuel : seule son activation explicite, lorsque
+ses préconditions l'autorisent, peut le déclencher. Aucun secret, email, OTP,
+token ni contenu métier n'apparaît dans la page ni dans le résumé, et
+l'absence de preuve distante n'est jamais présentée comme une base vide.
 
 ## Imports, exports et restauration (TS-042)
 

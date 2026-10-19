@@ -89,8 +89,10 @@ déterministe existant vers la vue d'ensemble pour ces fragments.
 Chaque page de paramètres SHALL afficher un titre explicite et un contrôle de
 retour en français. La page Imports / Exports SHALL réunir les contrôles
 existants d'export, d'import/fusion et de restauration dans des sections
-distinctes. La page Synchronisation Dexie Cloud SHALL rester descriptive jusqu'à
-sa tâche dédiée.
+distinctes. La page Synchronisation Dexie Cloud SHALL héberger le diagnostic en
+lecture seule, sa synthèse et des emplacements descriptifs pour
+« Configuration », « Première activation », « Connexion » et
+« Espaces de travail ».
 
 #### Scenario: Settings index page
 
@@ -120,15 +122,18 @@ sa tâche dédiée.
 
 - **WHEN** `#/parametres/synchronisation` est affiché
 - **THEN** la page montre le titre « Synchronisation Dexie Cloud »
-- **AND** elle décrit la destination de la future page de diagnostic
+- **AND** elle affiche une synthèse de l'état courant
+- **AND** elle héberge le diagnostic technique complet `#sync-diagnostic`, une seule fois
+- **AND** elle contient les emplacements descriptifs « Configuration », « Première activation », « Connexion » et « Espaces de travail »
 - **AND** elle propose un retour vers les paramètres
-- **AND** aucun formulaire de configuration, d'activation ou de connexion n'y est déplacé
+- **AND** aucun formulaire, champ de saisie, sélection ou bouton de configuration, d'activation, de connexion ou de gestion des espaces n'est déplacé, dupliqué ou activé dans ces emplacements
 
 #### Scenario: Existing controls remain available
 
 - **WHEN** une page de paramètres est affichée
 - **THEN** les contrôles existants d'export, d'import et de restauration restent disponibles sur la page Imports / Exports
-- **AND** les contrôles de connexion, de configuration Cloud, d'espaces de travail et de diagnostic restent disponibles à leur emplacement existant
+- **AND** les contrôles de connexion, de configuration Cloud et d'espaces de travail restent disponibles à leur emplacement existant
+- **AND** le diagnostic natif reste disponible dans la page Synchronisation Dexie Cloud
 - **AND** leurs sélecteurs et handlers ne sont ni renommés, ni recréés, ni dupliqués
 
 #### Scenario: Conditional business visibility is preserved
@@ -206,6 +211,14 @@ document métier.
 - **WHEN** l'utilisateur ouvre une page de paramètres puis revient à Mes projets
 - **THEN** le même contexte Dexie et les mêmes valeurs restent en mémoire
 - **AND** aucune base n'est recréée, réinitialisée ou rouverte par la navigation
+
+#### Scenario: Diagnostic route change preserves native values
+
+- **GIVEN** un diagnostic affiché avec une session, une connexion, un pull initial, des écritures locales et une erreur
+- **WHEN** l'utilisateur ouvre `#/parametres/synchronisation`, revient à Mes projets puis utilise Précédent ou Suivant
+- **THEN** la page et le résumé conservent les mêmes valeurs diagnostiques issues des mêmes signaux natifs
+- **AND** aucun abonnement natif n'est ajouté ou recréé par la navigation
+- **AND** aucune relance de pull, ouverture de base, authentification, requête réseau ou écriture n'est déclenchée
 
 #### Scenario: No implicit business action
 

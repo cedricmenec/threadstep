@@ -118,8 +118,9 @@ contrôle reste **à effectuer** tant qu'aucune preuve réelle n'est consignée.
   clavier, sans débordement horizontal, avec des cibles d'au moins 44 × 44 px.
 - Les commandes d'export, d'import et de restauration sont réunies sur
   `#/parametres/donnees` ; l'accueil ne duplique plus la barre d'actions.
-  Les commandes de connexion, de configuration Cloud et de diagnostic
-  restent à leur emplacement actuel.
+  Les commandes de connexion, de configuration Cloud, d'activation et de
+  gestion des espaces restent à leur emplacement actuel ; le diagnostic
+  complet est désormais sur `#/parametres/synchronisation`.
 - Naviguer entre Mes projets et les pages de paramètres ne modifie aucune
   donnée IndexedDB, aucune configuration Cloud et ne déclenche ni requête
   réseau, ni authentification, ni pull.
@@ -150,6 +151,37 @@ effectuer** tant qu'aucune preuve réelle n'est consignée.
   espace de travail, vérifier que la sauvegarde de sécurité reste
   accessible dans ce même contexte. Vérifier aussi que l'export brut reste
   accessible depuis le diagnostic de récupération en lecture seule.
+
+## Diagnostic de synchronisation dédié (TS-043)
+
+À vérifier dans de vrais navigateurs de test, sur ordinateur et sur mobile,
+avec des profils isolés et des données synthétiques uniquement. Ces contrôles
+restent **à effectuer** tant qu'aucune preuve réelle n'est consignée.
+
+- Ouvrir `#/parametres/synchronisation` depuis le menu, vérifier le titre
+  « Synchronisation Dexie Cloud », la synthèse de l'état courant, les
+  informations techniques, le retour aux paramètres et l'absence de
+  débordement horizontal à 320 px. Revenir à Mes projets, puis utiliser
+  Précédent/Suivant et recharger : les mêmes valeurs diagnostiques et le même
+  contexte Dexie doivent rester visibles.
+- Avec un profil local isolé et le réseau désactivé, vérifier l'affichage
+  « Cloud non configuré » et « local uniquement », l'absence d'OTP, l'absence
+  d'ouverture d'instance Cloud et l'absence de requête réseau. Comparer avec
+  le résumé minimal de Mes projets.
+- Avec un profil Cloud de test et une session active, vérifier séparément la
+  session, la connexion, la phase, le cache ou la base, le pull initial, les
+  écritures locales, les erreurs classées et la preuve distante. Simuler une
+  erreur réseau et un rechargement : aucune base vide n'est affirmée, aucune
+  relance n'est automatique et aucun email, OTP, token, titre, note ou contenu
+  métier n'apparaît.
+- Vérifier au clavier et au lecteur d'écran le focus après navigation, les
+  annonces de statut et d'erreur, la raison de désactivation et la cible de
+  44 px de « Relancer la lecture distante ». Le pull manuel conserve ses
+  garde-fous ; l'ouverture ou la fermeture de la page ne le déclenche jamais.
+- Vérifier que « Configuration », « Première activation », « Connexion » et
+  « Espaces de travail » sont descriptifs, et que `#cloud-config`,
+  `#cloud-activation`, `#auth-panel` et `#workspace-panel` restent à leur
+  emplacement actuel, sans formulaire déplacé ou dupliqué.
 
 ## Tests utilisateur à consigner
 
