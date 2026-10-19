@@ -1203,12 +1203,12 @@ export const MATRIX = Object.freeze([
     guarantees: ["idempotence"]
   },
   {
-    id: "reference-v1-journey",
+    id: "reference-modern-backup-journey",
     domain: "persistence",
     capability: "threadstep-integration-profile",
-    requirement: "ThreadStep historical V1 local conversion",
+    requirement: "ThreadStep modern backup and retired legacy keys",
     automated: referenceChecks,
-    manual: [manual("manual-reference-v1", "Rejouer la référence de 5 sujets et 18 étapes sur Chrome mobile puis vérifier les relations après rechargement.")],
+    manual: [manual("manual-reference-modern-backup", "Exporter puis restaurer une sauvegarde IndexedDB moderne des 5 sujets et 18 étapes sur un profil Chrome mobile de test, et vérifier les relations après rechargement.")],
     limitations: [limitation(COMMON_LIMITATIONS.indexeddb), limitation(COMMON_LIMITATIONS.mobile)],
     incidents: [],
     guarantees: ["persistence", "fingerprints", "idempotence"]

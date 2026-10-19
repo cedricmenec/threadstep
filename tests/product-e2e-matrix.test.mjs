@@ -215,9 +215,9 @@ test("2.1-2.5 every required and cross-cutting journey has a passing CI scenario
   }
 });
 
-test("2.6 the reference V1 fixture of 5 subjects and 18 steps survives the deterministic path", async () => {
+test("2.6 the reference modern IndexedDB backup of 5 subjects and 18 steps survives the deterministic path", async () => {
   const report = await runAcceptanceMatrix({ specs });
-  const scenario = report.scenarios.find((candidate) => candidate.id === "reference-v1-journey");
+  const scenario = report.scenarios.find((candidate) => candidate.id === "reference-modern-backup-journey");
   assert.ok(scenario);
   assert.equal(scenario.ci.status, STATUS.PASSED);
   assert.deepEqual(scenario.ci.checks.map((check) => check.id).sort(), [

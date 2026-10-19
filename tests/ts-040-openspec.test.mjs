@@ -8,7 +8,15 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relative) => readFileSync(resolve(root, relative), "utf8");
 const activeChange = "openspec/changes/ts-040";
-const archivedChange = "openspec/changes/archive/ts-040";
+const archivedChange = "openspec/changes/archive/2026-10-19-ts-040";
+
+// A pre-sync change is active, a published change is archived. An absent or
+// ambiguous change is a genuine test failure, not an excuse to skip checks.
+function selectedChangePath(activePresent = existsSync(resolve(root, activeChange)),
+                            archivedPresent = existsSync(resolve(root, archivedChange))) {
+  assert.notEqual(activePresent, archivedPresent, "exactly one TS-040 OpenSpec change state must exist");
+  return activePresent ? activeChange : archivedChange;
+}
 
 function purposeSection(source) {
   const match = source.match(/## Purpose\n([\s\S]*?)(?=\n## |$)/);
@@ -22,11 +30,13 @@ export function assertCompletedPurposes({ legacyStorage, legacyDocument }) {
   const storagePurpose = purposeSection(legacyStorage);
   const documentPurpose = purposeSection(legacyDocument);
   for (const purpose of [storagePurpose, documentPurpose]) {
-    assert.match(purpose, /retir|inert|inactif|volontaire|nettoyage|ne sont plus pris en charge/i);
-    assert.doesNotMatch(purpose, /conver(tit|sion active)|migre automatiquement|détecte.*document V1/i);
+    assert.match(purpose, /\bV1\b/i);
+    assert.match(purpose, /retir|retired|hors service/i);
+    assert.match(purpose, /inert|inactif|sans effet/i);
+    assert.doesNotMatch(purpose, /\b(?:migrer|migrate[ds]?|converts?|convertir)\b|migre automatiquement|détecte.*document V1/i);
   }
   assert.match(storagePurpose, /nettoyage|volontaire/i);
-  assert.match(documentPurpose, /inert|retir|plus pris en charge/i);
+  assert.match(documentPurpose, /inert|retir|retired|plus pris en charge/i);
 }
 
 function assertActiveDelta(source, label) {
@@ -37,11 +47,11 @@ function assertActiveDelta(source, label) {
   assert.doesNotMatch(source, /sera converti automatiquement/i, label);
 }
 
-test("active OpenSpec deltas retire V1 readers and require voluntary cleanup", () => {
-  assert.equal(existsSync(resolve(root, activeChange)), true, "active change must exist during apply");
-  const storage = read(activeChange + "/specs/legacy-storage-migration/spec.md");
-  const documentDelta = read(activeChange + "/specs/legacy-document-migration/spec.md");
-  const backup = read(activeChange + "/specs/data-backup-import-restore/spec.md");
+test("active or archived TS-040 deltas retire V1 readers and require voluntary cleanup", () => {
+  const change = selectedChangePath();
+  const storage = read(change + "/specs/legacy-storage-migration/spec.md");
+  const documentDelta = read(change + "/specs/legacy-document-migration/spec.md");
+  const backup = read(change + "/specs/data-backup-import-restore/spec.md");
   assertActiveDelta(storage, "legacy-storage-migration");
   assertActiveDelta(documentDelta, "legacy-document-migration");
   assert.match(documentDelta, /Historical V1 document support is retired/);
@@ -50,6 +60,13 @@ test("active OpenSpec deltas retire V1 readers and require voluntary cleanup", (
   assert.match(storage, /Voluntary scoped cleanup of retired V1 keys/);
   assert.match(backup, /unsupported-v1-backup/);
   assert.match(backup, /version: 1.*refus|refus.*version: 1/is);
+});
+
+test("TS-040 state selection rejects missing or ambiguous changes", () => {
+  assert.equal(selectedChangePath(true, false), activeChange);
+  assert.equal(selectedChangePath(false, true), archivedChange);
+  assert.throws(() => selectedChangePath(false, false));
+  assert.throws(() => selectedChangePath(true, true));
 });
 
 test("completed-change assertions accept a retired Purpose but reject an active conversion Purpose", () => {
@@ -67,9 +84,9 @@ test("completed-change assertions accept a retired Purpose but reject an active 
 });
 
 test("when the change is archived, the real canonical Purposes describe retirement", () => {
-  if (!existsSync(resolve(root, archivedChange))) {
-    // During apply the active delta is authoritative; the archived branch is
-    // exercised by the synthetic fixtures in the previous test.
+  if (selectedChangePath() === activeChange) {
+    // Real canonical specs are only authoritative after native OPSX sync;
+    // synthetic completed-change cases are asserted in the fixture test.
     return;
   }
   assertCompletedPurposes({

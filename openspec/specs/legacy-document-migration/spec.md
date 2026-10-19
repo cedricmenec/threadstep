@@ -2,9 +2,7 @@
 
 ## Purpose
 
-Converts the historical `localStorage` V1 document into the synchronized Dexie
-tables only after explicit consent, atomically, idempotently and without ever
-losing, erasing or silently overwriting the user's existing data.
+Le document historique `localStorage` V1 est retiré du fonctionnement métier : il reste inerte et ne peut plus être importé, restauré ni transféré dans Dexie. Sa clé est conservée sans écriture ni effacement implicite. Seul un nettoyage volontaire, ciblé et confirmé après vérification d'une sauvegarde IndexedDB moderne peut supprimer cette ancienne valeur.
 
 ## Requirements
 

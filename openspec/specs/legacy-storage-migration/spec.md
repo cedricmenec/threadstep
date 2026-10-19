@@ -1,7 +1,8 @@
 # legacy-storage-migration Specification
 
 ## Purpose
-Migrer des formats ou supports locaux hérités (localStorage, anciens fichiers, IndexedDB versionnées) vers la base Dexie locale canonique, sans transférer par défaut leur contenu au Cloud ni détruire les originaux.
+Les anciennes sources métier V1 sont retirées : leurs valeurs `localStorage` restent inertes, conservées et sans effet sur le démarrage, les imports et les écritures IndexedDB/Dexie. Seul un nettoyage volontaire et ciblé, après sauvegarde IndexedDB moderne vérifiée et consentement explicite, peut retirer les clés historiques. Cette capacité encadre également les évolutions de schéma Dexie et les métadonnées locales non synchronisées, sans réactiver la conversion V1.
+
 ## Requirements
 ### Requirement: Validated schema evolution boundaries
 Les migrations de stores synchronisés SHALL suivre les contraintes Dexie Cloud ; une migration locale Dexie `version.upgrade()` MUST NOT être supposée sûre pour réécrire les données déjà synchronisées. L'ajout du store local de métadonnées MUST être explicitement versionné et MUST NOT être répliqué par Dexie Cloud.
