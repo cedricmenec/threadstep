@@ -377,6 +377,16 @@ node --check site/app.js
 
 La suite est basée sur `node --test tests/*.test.mjs`. Ne pas modifier `backlog/index.json` à la main : régénérer via `npm run backlog:index` après une fiche nouvelle/modifiée. Les changements UI doivent être testés sur ordinateur et mobile, avec clavier, lecteur d'écran si possible et viewport étroit : les tests Node purs ne simulent pas toute l'accessibilité du navigateur.
 
+La **certification E2E local-first et Cloud (TS-039)** est décrite dans
+[e2e-certification.md](e2e-certification.md). `scripts/product/e2e-matrix.mjs`
+produit un rapport CI déterministe sans réseau ni écriture, avec les classes de
+preuve `ci`, `real-dexie`, `limitation` et `incident`. Ce rapport automatique ne
+prouve jamais à lui seul une recette réelle : la recette sur instance Dexie
+Cloud isolée, Chrome mobile, deux navigateurs, OTP réel, hors ligne et réseau
+intermittent reste une observation manuelle distincte, consignée séparément.
+Une CI verte ne doit pas être présentée comme une propagation distante ou une
+accessibilité vérifiée.
+
 Toutes les modifications passent par une branche et PR ; les workflows CI et Pages fournissent une preuve indépendante après fusion. Les tâches produit `TS-NNN` sont spécifiées sous `backlog/tasks/` ; les spécifications canoniques OpenSpec vivent sous `openspec/specs/`, leur historique sous `openspec/changes/archive/`.
 
 ## Frontières de sécurité et évolution
@@ -397,7 +407,7 @@ sans migration et vérification explicites.
 
 ## Documentation liée
 
-[Guide utilisateur](guide-utilisation.md) · [Exigences MVP historiques](mvp.md) · [Cible Dexie Cloud](specs/dexie-cloud-local-first.md) · [Recette fonctionnelle](acceptance-checklist.md) · [Vision](vision.md) · [Architecture générale](../architecture.md) · [ASF développeur](../factory/developer-guide.md).
+[Guide utilisateur](guide-utilisation.md) · [Exigences MVP historiques](mvp.md) · [Cible Dexie Cloud](specs/dexie-cloud-local-first.md) · [Recette fonctionnelle](acceptance-checklist.md) · [Certification E2E](e2e-certification.md) · [Vision](vision.md) · [Architecture générale](../architecture.md) · [ASF développeur](../factory/developer-guide.md).
 
 
 ## Correctif de persistance et reprise TS-025 à TS-027 (18/10/2026)
