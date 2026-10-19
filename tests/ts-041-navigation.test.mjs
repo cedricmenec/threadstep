@@ -126,15 +126,21 @@ test("settings pages expose titles, back links and descriptive destinations", ()
   assert.match(html, /<h2 id="settings-sync-title" tabindex="-1">Synchronisation Dexie Cloud<\/h2>/);
   assert.match(html, /<a class="settings-back" href="#\/">Retour à Mes projets<\/a>/);
   assert.equal((html.match(/<a class="settings-back" href="#\/parametres">Retour aux paramètres<\/a>/g) || []).length, 2);
-  assert.match(html, /<h3>Exporter<\/h3>/);
-  assert.match(html, /<h3>Importer et fusionner<\/h3>/);
-  assert.match(html, /<h3>Restaurer un état antérieur<\/h3>/);
+  assert.match(html, /<h3[^>]*>Exporter<\/h3>/);
+  assert.match(html, /<h3[^>]*>Importer et fusionner<\/h3>/);
+  assert.match(html, /<h3[^>]*>Restaurer un état antérieur<\/h3>/);
   assert.match(html, /future destination du diagnostic de synchronisation Dexie Cloud/i);
 });
 
-test("settings pages do not duplicate existing business controls or ids", () => {
+test("settings pages host the data controls once and keep context panels elsewhere", () => {
+  const dataBlock = between(html, '<section id="settings-data-page"', '<section id="settings-sync-page"');
+  for (const id of ["business-tools", "export", "import", "restore", "restore-panel"]) {
+    assert.match(dataBlock, new RegExp('id="' + id + '"'), id);
+    const occurrences = html.split('id="' + id + '"').length - 1;
+    assert.equal(occurrences, 1, id + " must occur exactly once");
+  }
   const settingsBlock = between(html, '<section id="settings-page"', '<section class="dashboard"');
-  for (const id of ["export", "import", "restore", "restore-panel", "sync-diagnostic", "cloud-config", "auth-panel", "workspace-panel"]) {
+  for (const id of ["sync-diagnostic", "cloud-config", "auth-panel", "workspace-panel"]) {
     assert.doesNotMatch(settingsBlock, new RegExp('id="' + id + '"'), id);
     const occurrences = html.split('id="' + id + '"').length - 1;
     assert.equal(occurrences, 1, id + " must occur exactly once");

@@ -30,12 +30,37 @@ respectivement `#/`, `#/parametres`, `#/parametres/donnees` et
 - Le menu se ferme après navigation, avec **Échap** et lors d'une action
   extérieure. Échap rend le focus au bouton ; après un lien, le focus
   rejoint le titre de la page affichée.
-- Les pages Imports / Exports et Synchronisation Dexie Cloud sont pour
-  l'instant **descriptives**. Les commandes d'export, d'import, de
-  restauration, de connexion, de configuration Cloud et de diagnostic
-  restent à leur **emplacement actuel** sur l'accueil, sans doublon.
+- La page **Imports / Exports** (`#/parametres/donnees`) réunit désormais
+  les commandes d'export, d'import/fusion et de restauration dans trois
+  sections distinctes. L'accueil **n'affiche plus** la barre d'actions de
+  données : les commandes ne sont ni dupliquées ni recréées.
+- La page Synchronisation Dexie Cloud reste **descriptive**. Les commandes
+  de connexion, de configuration Cloud et de diagnostic restent à leur
+  emplacement actuel. La sauvegarde de sécurité proposée dans une
+  confirmation de purge, de déconnexion ou d'action sur un espace de
+  travail, ainsi que l'export brut du diagnostic de récupération, restent
+  disponibles **dans leur contexte d'origine**, sans navigation préalable
+  vers `#/parametres/donnees`.
 - Ouvrir, fermer ou changer de page ne déclenche aucune écriture
   IndexedDB, requête réseau, authentification ni modification Cloud.
+
+## Imports, exports et restauration (TS-042)
+
+La page `#/parametres/donnees`, accessible depuis le menu, distingue trois
+intentions sans changer les moteurs existants :
+
+- **Exporter** produit un fichier JSON local IndexedDB au format
+  `threadstep.indexeddb-backup`. Il contient les sujets, tâches et
+  relations, sans secret, OTP, jeton ni réglage Cloud.
+- **Importer et fusionner** est additif et non destructif : une
+  prévisualisation précède l'écriture, les enregistrements déjà présents
+  ne sont pas dupliqués et l'état courant n'est jamais supprimé. Un
+  fichier V1 ou invalide est refusé avec un message explicite, sans
+  écriture.
+- **Restaurer un état antérieur** remplace l'état actuel. La restauration
+  exige le téléchargement préalable d'une sauvegarde, la saisie exacte de
+  `RESTAURER` et un plan autorisé. Une annulation, un changement de page
+  ou un rechargement ne déclenche aucune restauration implicite.
 
 ## Sujets, actions et priorités
 
@@ -444,12 +469,14 @@ le stockage local ni l'export JSON.
 ## Enregistrement, export et import
 
 Les actions sont enregistrées automatiquement dans **IndexedDB**, dans
-ce navigateur et ce profil. Utiliser régulièrement **« Exporter mes
-données »** pour obtenir une sauvegarde au format
-`threadstep.indexeddb-backup`, puis **« Importer et fusionner un JSON »**
-pour ajouter uniquement les enregistrements absents. « Restaurer un état
-antérieur » reste une intention distincte, avec sauvegarde préalable et
-confirmation renforcée.
+ce navigateur et ce profil. Depuis `#/parametres/donnees`, utiliser
+régulièrement **« Exporter mes données »** pour obtenir une sauvegarde au
+format `threadstep.indexeddb-backup`, puis **« Importer et fusionner un
+JSON »** pour ajouter uniquement les enregistrements absents.
+**« Restaurer un état antérieur »** reste une intention distincte, avec
+sauvegarde préalable et confirmation renforcée. Les sauvegardes de
+sécurité des opérations dangereuses et l'export brut du diagnostic
+restent accessibles dans leur contexte d'origine.
 
 Les fichiers à l'ancien format V1 (`version: 1`), même récemment produits
 depuis IndexedDB, ne sont **plus acceptés** : l'application affiche un refus

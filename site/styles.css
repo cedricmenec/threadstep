@@ -18,7 +18,7 @@ h1 span{color:#95aa64}
 .primary:hover{background:#395b47}
 .secondary,.file-action{background:#fff;border:1px solid #cbd5c9;color:#30473a;display:inline-flex;align-items:center}
 .secondary:hover,.file-action:hover{background:#f0f3eb}
-#import{position:absolute;width:1px;height:1px;opacity:0}
+#import,#restore{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .privacy{font-size:.78rem!important;color:#859087!important;margin-top:12px!important}
 .dashboard{padding-top:37px}
 .section-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:23px}
@@ -248,7 +248,7 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 
 .restore-panel{margin:1.5rem 0;padding:1rem;border:2px solid #7f1d1d;border-radius:.75rem;background:#fef2f2}
 .restore-warning{font-weight:700;color:#7f1d1d}
-.restore-panel input[type="text"]{display:block;margin:.5rem 0;max-width:20rem}
+.restore-panel input[type="text"]{display:block;margin:.5rem 0;max-width:20rem;min-height:44px;padding:10px 12px;border:1px solid #d4dbcf;border-radius:9px;background:#fff;color:#24382f}
 .restore-actions{display:flex;flex-wrap:wrap;gap:.5rem}
 .restore-provenance label{display:block;margin:.25rem 0}
 
@@ -306,4 +306,12 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .settings-destination{background:#fff;border:1px solid #e1e5de;border-radius:14px;padding:14px 16px;margin-top:14px}
 .settings-destination h3{margin:0;font-size:1rem}
 .settings-destination p{margin:6px 0 0;font-size:.9rem}
-@media(max-width:620px){.nav-menu-panel{left:0;right:auto;width:min(280px,calc(100vw - 30px))}.settings-page{padding-top:26px}}
+#business-tools{display:flex;flex-direction:column;gap:14px;margin-top:18px;max-width:100%}
+#business-tools[hidden]{display:none}
+.settings-destination.data-section{display:flex;flex-direction:column;gap:10px;margin-top:0;max-width:100%;overflow-wrap:anywhere}
+.settings-destination.data-section p{margin:0}
+.settings-destination.data-section code{overflow-wrap:anywhere}
+.settings-destination.data-section .secondary,.settings-destination.data-section .file-action{min-width:44px;min-height:44px;align-self:flex-start;justify-content:center}
+.settings-destination .restore-panel{max-width:100%;margin:6px 0 0;overflow-wrap:anywhere}
+.settings-destination .restore-panel h4{margin:0;font-size:1rem}
+@media(max-width:620px){.nav-menu-panel{left:0;right:auto;width:min(280px,calc(100vw - 30px))}.settings-page{padding-top:26px}.settings-destination.data-section{padding:12px}.restore-panel{padding:.75rem}}

@@ -32,13 +32,6 @@
       </div>
       <h1>Thread<span>Step</span></h1>
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
-      <div class="toolbar" id="business-tools">
-        <button type="button" id="export" class="secondary">Exporter mes données</button>
-        <label class="secondary file-action" for="import">Importer et fusionner un JSON</label>
-        <input id="import" type="file" accept=".json,application/json" aria-label="Importer et fusionner un fichier JSON">
-        <label class="secondary file-action" for="restore">Restaurer un état antérieur</label>
-        <input id="restore" type="file" accept=".json,application/json" aria-label="Restaurer un état antérieur depuis un fichier JSON">
-      </div>
       <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>
     </header>
     <section id="workspace-panel" class="workspace-panel" aria-labelledby="workspace-panel-title">
@@ -155,19 +148,40 @@
       </div>
       <span class="label">PARAMÈTRES</span>
       <h2 id="settings-data-title" tabindex="-1">Imports / Exports</h2>
-      <p>Cette page décrit les futures commandes de données. Les commandes ci-dessous restent pour l'instant dans la barre d'outils de l'accueil.</p>
-      <section class="settings-destination">
-        <h3>Exporter</h3>
-        <p>Exporter une sauvegarde JSON de toutes vos données reste disponible avec « Exporter mes données » à son emplacement actuel.</p>
-      </section>
-      <section class="settings-destination">
-        <h3>Importer et fusionner</h3>
-        <p>Importer et fusionner un fichier JSON reste disponible via « Importer et fusionner un JSON » à son emplacement actuel, avec prévisualisation avant écriture.</p>
-      </section>
-      <section class="settings-destination">
-        <h3>Restaurer un état antérieur</h3>
-        <p>Restaurer un état antérieur reste une action distincte de l'import, disponible à son emplacement actuel après confirmation explicite.</p>
-      </section>
+      <p>Réunissez ici vos sauvegardes. L'export est un fichier JSON local IndexedDB, l'import/fusion ajoute sans détruire, et la restauration remplace l'état actuel après sauvegarde préalable et confirmation explicite.</p>
+      <div class="toolbar" id="business-tools">
+        <section class="settings-destination data-section" aria-labelledby="settings-export-title">
+          <h3 id="settings-export-title">Exporter</h3>
+          <p>« Exporter mes données » produit une sauvegarde JSON locale de vos sujets, tâches et relations au format <code>threadstep.indexeddb-backup</code>. Aucun secret, code OTP, jeton, réglage Cloud ou donnée de compte n'est inclus, et aucune requête réseau n'est envoyée.</p>
+          <button type="button" id="export" class="secondary">Exporter mes données</button>
+        </section>
+        <section class="settings-destination data-section" aria-labelledby="settings-import-title">
+          <h3 id="settings-import-title">Importer et fusionner</h3>
+          <p>L'import/fusion est additif et non destructif : il ajoute uniquement les enregistrements absents, affiche une prévisualisation avant écriture et ne supprime ni ne remplace l'état courant. Réimporter la même sauvegarde ne crée aucun doublon.</p>
+          <label class="secondary file-action" for="import">Importer et fusionner un JSON</label>
+          <input id="import" type="file" accept=".json,application/json" aria-label="Importer et fusionner un fichier JSON">
+        </section>
+        <section class="settings-destination data-section" aria-labelledby="settings-restore-title">
+          <h3 id="settings-restore-title">Restaurer un état antérieur</h3>
+          <p>La restauration remplace l'état actuel. Elle exige une sauvegarde préalable de vos données et la saisie explicite de « RESTAURER » ; elle reste distincte de l'import et n'est jamais déclenchée par une navigation, un rechargement ou une annulation.</p>
+          <label class="secondary file-action" for="restore">Restaurer un état antérieur</label>
+          <input id="restore" type="file" accept=".json,application/json" aria-label="Restaurer un état antérieur depuis un fichier JSON">
+          <section id="restore-panel" class="restore-panel" aria-labelledby="restore-title" hidden>
+            <h4 id="restore-title" tabindex="-1">Prévisualisation de la restauration</h4>
+            <p class="restore-warning">La restauration remplace l'état actuel : elle est distincte de l'import/fusion et n'est jamais un effet implicite d'un import.</p>
+            <p id="restore-scope"></p>
+            <p id="restore-backup-status"></p>
+            <button id="restore-download-backup" type="button" class="secondary">Télécharger la sauvegarde de l'état actuel</button>
+            <label for="restore-confirmation">Saisissez RESTAURER pour confirmer explicitement</label>
+            <input id="restore-confirmation" type="text" autocomplete="off" spellcheck="false">
+            <div class="restore-actions">
+              <button id="restore-confirm" type="button" class="primary" disabled>Restaurer et remplacer l'état actuel</button>
+              <button id="restore-cancel" type="button" class="secondary">Annuler</button>
+            </div>
+            <p id="restore-status" class="restore-status" role="status" aria-live="polite"></p>
+          </section>
+        </section>
+      </div>
     </section>
     <section id="settings-sync-page" class="settings-page" aria-labelledby="settings-sync-title" hidden>
       <div class="settings-nav">
@@ -215,20 +229,6 @@
         <p id="cloud-config-error" class="cloud-config-error" role="alert" hidden></p>
         <button type="submit" class="primary">Enregistrer l'URL</button>
       </form>
-    </section>
-    <section id="restore-panel" class="restore-panel" aria-labelledby="restore-title" hidden>
-      <h2 id="restore-title" tabindex="-1">Restaurer un état antérieur</h2>
-      <p class="restore-warning">La restauration remplace l'état actuel : elle est distincte de l'import/fusion et n'est jamais un effet implicite d'un import.</p>
-      <p id="restore-scope"></p>
-      <p id="restore-backup-status"></p>
-      <button id="restore-download-backup" type="button" class="secondary">Télécharger la sauvegarde de l'état actuel</button>
-      <label for="restore-confirmation">Saisissez RESTAURER pour confirmer explicitement</label>
-      <input id="restore-confirmation" type="text" autocomplete="off" spellcheck="false">
-      <div class="restore-actions">
-        <button id="restore-confirm" type="button" class="primary" disabled>Restaurer et remplacer l'état actuel</button>
-        <button id="restore-cancel" type="button" class="secondary">Annuler</button>
-      </div>
-      <p id="restore-status" class="restore-status" role="status" aria-live="polite"></p>
     </section>
     <section id="recovery-panel" class="recovery-panel" aria-labelledby="recovery-title" hidden>
       <h2 id="recovery-title" tabindex="-1">Diagnostic et récupération en lecture seule</h2>
