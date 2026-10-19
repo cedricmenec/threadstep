@@ -28,7 +28,7 @@ un artefact humain séparé : il n'est ni copié dans `tasks.md`, ni coché par
 | Cible peuplée | Classification vide, peuplée, divergente, indisponible, compte différent | Cible peuplée réelle |
 | Divergence | Conflit bloqué sans écrasement silencieux | Divergence introduite sur l'instance de test |
 | Conflits concurrents | Consentement lié au plan affiché, plan périmé refusé, rollback sans écriture partielle | Deux navigateurs concurrents |
-| Reimport JSON | Reimport brut et export IndexedDB idempotents, absence de `legacy:legacy:` | Double reimport réel |
+| Reimport JSON | Sauvegarde IndexedDB moderne réimportée sans doublon, refus sans écriture d'un document V1 | Double reimport moderne réel et refus V1 |
 | Restauration | Sauvegarde vérifiée, remplacement explicite, merge distinct | Restauration d'une sauvegarde plus ancienne |
 | Déconnexion | Logout distinct de la purge, avertissement en attente | Logout natif avec écritures en attente |
 | Changement d'URL | Isolation A/B/A et bases locales distinctes | Bascule A/B/A sur deux profils |
@@ -55,11 +55,12 @@ Les garanties transverses `states`, `persistence`, `fingerprints`, `security` et
 3. Créer un jeu synthétique : 5 sujets, 18 étapes, des sous-étapes, des notes,
    des priorités mixtes, des états `done` et des relations parent/enfant.
    Utiliser des identifiants synthétiques, par exemple `legacy:test-subject-1`.
-4. Produire un **export de secours lisible** avant toute manipulation et noter
-   sa date, son SHA de commit et son nombre de sujets/étapes.
-5. Vérifier la présence de la clé historique `threadstep.document.v1` et de son
-   export avant la recette. Aucune suppression ni réécriture destructive n'est
-   autorisée.
+4. Produire et **vérifier la restauration d'une sauvegarde IndexedDB moderne**
+   dans un profil de test vierge avant toute manipulation ; noter la date,
+   le SHA de commit, le format et le nombre de sujets/étapes.
+5. Dans un profil de test seulement, ajouter éventuellement une clé historique
+   synthétique `threadstep.document.v1` ; vérifier qu'elle reste inerte et
+   intacte. Aucun export V1, conversion ou effacement automatique ne doit être proposé.
 
 ### 2.2 Environnements et authentification
 
@@ -79,7 +80,8 @@ La recette exige :
 1. **Local-only** : sans Cloud et hors ligne, créer, modifier, terminer,
    réordonner et retirer des sujets et étapes, recharger, puis vérifier les
    mêmes enregistrements et relations sans requête Cloud et sans OTP. Vérifier
-   que la notice historique et l'export V1 restent inchangés.
+   qu'aucun panneau historique ni export V1 n'est proposé et que l'éventuelle
+   clé V1 synthétique reste intacte.
 2. **Activation** : depuis l'espace local peuplé, établir une session OTP
    réelle. Vérifier qu'aucun enregistrement local n'est transmis avant
    l'acceptation explicite du plan de réconciliation affiché.
@@ -95,11 +97,12 @@ La recette exige :
    reconnexion hors ligne et coupure intermittente, vérifier la propagation
    A→B et B→A, l'avertissement de changements en attente, la reprise sans
    doublon et la conservation des relations après rechargement.
-6. **Reimport et restauration** : importer deux fois le même JSON, puis
-   restaurer une sauvegarde de test plus ancienne. Vérifier l'idempotence,
-   l'absence de `legacy:legacy:`, l'intention explicite merge/restore et la
-   conservation des sujets, étapes, notes, priorités, ordres, états `done` et
-   relations parent/enfant.
+6. **Reimport et restauration** : importer deux fois le même JSON au format
+   `threadstep.indexeddb-backup`, puis restaurer une sauvegarde moderne de test
+   plus ancienne. Vérifier l'idempotence, l'intention explicite merge/restore
+   et la conservation des sujets, étapes, notes, priorités, ordres, états `done`
+   et relations parent/enfant. Présenter séparément un fichier `version: 1` et
+   confirmer son refus explicite **sans aucune écriture**.
 7. **Déconnexion et purge** : tester séparément le logout avec écritures en
    attente et la purge locale sur l'instance de test. Vérifier l'avertissement,
    l'annulation, l'instantané JSON, le comportement natif du logout, l'absence
@@ -139,16 +142,23 @@ reste `non exécutée` et n'est jamais présentée comme acceptée.
 - Les captures d'écran sont redacted et ne montrent ni compte, ni URL
   personnelle, ni contenu métier.
 
-## 4. Récupération de la source historique V1
+## 4. Sauvegarde moderne et clés historiques V1 retirées
 
-1. Avant la recette, exporter la clé `threadstep.document.v1` telle quelle dans
-   un fichier de secours lisible et vérifier qu'il se recharge hors ligne.
-2. Pendant la recette, ne jamais supprimer ni réécrire cette clé.
-3. En cas d'incident ou d'absence apparente de données, restaurer depuis
-   l'export historique ou une sauvegarde vérifiée, puis comparer les sujets,
-   étapes, sous-étapes, notes, priorités, ordres, états et relations.
-4. Rapporter la récupération observée séparément de la propagation Cloud : une
-   restauration locale n'est pas une preuve de synchronisation distante.
+1. Depuis l'espace IndexedDB de test, exporter le fichier de sauvegarde au
+   format `threadstep.indexeddb-backup` et confirmer sa restauration complète
+   dans un profil de test vierge. Les anciens fichiers `version: 1`, y compris
+   certains exports historiquement produits depuis IndexedDB, ne sont plus
+   acceptés.
+2. Vérifier qu'une clé synthétique `threadstep.document.v1` reste inerte et
+   qu'un import/restauration V1 est refusé **sans écriture ni effacement**.
+3. Tester les commandes de nettoyage uniquement dans un profil de test :
+   inventaire limité aux anciennes clés, option « ne rien effacer » par défaut,
+   sauvegarde moderne vérifiée, confirmation explicite et suppression ciblée.
+   L'annulation et l'échec doivent préserver les valeurs.
+4. En cas d'incident ou d'absence apparente de données, restaurer uniquement
+   une sauvegarde moderne préalablement vérifiée, dans un espace de test.
+   Ne jamais purger une base personnelle ou la base Dexie Cloud réelle. Une
+   restauration locale n'est pas une preuve de propagation distante.
 
 ## 5. Modèle de compte rendu
 
@@ -205,13 +215,14 @@ canoniques archivés n'ont pas été réécrits pour masquer un écart.
 | `dexie-cloud-configuration` | Le libellé historique concerne l'ouverture synchronisée ; aucune exigence ne fait dépendre l'accès métier local d'une URL Cloud ou d'un OTP. Aucune contradiction normative. |
 | `dexie-local-database` | Compatible avec l'espace local autonome et sa base distincte. Aucune contradiction normative. |
 | `email-otp-authentication` | L'OTP authentifie une session Cloud ; il n'est pas requis en local-only. Aucune contradiction normative. |
-| `legacy-document-migration` | La source `threadstep.document.v1` reste lue et exportée sans réécriture destructive. Aucune contradiction normative. |
+| `legacy-document-migration` | Depuis TS-040, les documents historiques V1 sont inertes ; l'import, la restauration et l'export V1 sont retirés. Seul un nettoyage local volontaire peut retirer des clés historiques après vérification d'une sauvegarde moderne. |
 | `local-first-business-persistence` | Compatible avec la persistance locale et l'activation facultative. Aucune contradiction normative. |
 | `cloud-migration-reconciliation` | Le transfert exige un consentement explicite distinct de l'authentification. Aucune contradiction normative. |
 
-Conclusion : aucune contradiction au niveau exigence n'a été trouvée. Les
-fichiers archivés et l'historique canonique restent intacts. Toute évolution
-ultérieure de ces textes devra passer par un delta normatif explicite.
+Conclusion historique pour TS-039 : les capacités applicables à cette recette
+ont évolué avec TS-040 ; les exigences canoniques actuelles font foi. Les
+archives OpenSpec restent conservées sans modification. Toute autre évolution
+doit passer par un delta normatif explicite.
 
 ## 7. Limites assumées
 

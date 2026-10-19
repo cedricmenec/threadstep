@@ -19,8 +19,7 @@ import {
   normalizedRecords,
   localError,
   isLocalError,
-  isSyncError,
-  readHistoricalDocument
+  isSyncError
 } from "../../site/persistence.js";
 import {
   STORAGE_KEY,
@@ -29,14 +28,17 @@ import {
   newItem
 } from "../../site/core.js";
 import {
-  EXPORT_KIND,
-  mapRecords
-} from "../../site/migration.js";
-import {
-  LOCAL_MIGRATION_STATUS,
-  planLocalConversion,
-  runLocalConversion
+  LOCAL_MERGE_STATUS,
+  planModernLocalImport
 } from "../../site/local-migration.js";
+import {
+  serializeIndexedDbBackup,
+  BACKUP_FORMAT
+} from "../../site/indexeddb-backup.js";
+import {
+  buildCleanupInventory,
+  runCleanup
+} from "../../site/local-recovery.js";
 import {
   RESOLUTION,
   computeSourceFingerprint,
@@ -139,8 +141,6 @@ const DESTINATION = Object.freeze({
 const URL_A = "https://e2e-alpha.dexie.cloud";
 const URL_B = "https://e2e-beta.dexie.cloud";
 const USER = "user-e2e-synthetic";
-const PROVENANCE_RAW = Object.freeze({ exportKind: EXPORT_KIND.V1_RAW });
-const SYNTHETIC_LEGACY_PREFIX = "legacy:";
 
 const COMMON_LIMITATIONS = Object.freeze({
   indexeddb: "IndexedDB réel, le rechargement navigateur et le tactile ne sont pas exécutés par le runner Node.",
@@ -243,24 +243,22 @@ function healthyNativeInput() {
 
 function buildPlan(doc, target, extra = {}) {
   return planReconciliation({
-    document: doc,
+    records: documentToRecords(doc),
     target,
     destination: DESTINATION,
     userId: USER,
     resolutions: {},
-    provenance: PROVENANCE_RAW,
     ...extra
   });
 }
 
-function revisionFor(doc, target, provenance = PROVENANCE_RAW) {
+function revisionFor(doc, target) {
   return async () => ({
     attestation: attested(),
-    document: doc,
+    records: documentToRecords(doc),
     target,
     destination: DESTINATION,
-    userId: USER,
-    provenance
+    userId: USER
   });
 }
 
@@ -330,18 +328,26 @@ const localOnlyChecks = [
     }
   },
   {
-    id: "historical-key-preserved",
-    label: "Lecture non destructive de la clé historique V1",
+    id: "retired-key-inert-and-cleanable",
+    label: "Clé V1 retirée inventoriée sans parsing et nettoyée seulement avec consentement",
     run() {
       const stored = JSON.stringify(basicDocument());
+      const values = new Map([[STORAGE_KEY, stored]]);
       const storage = {
-        getItem(key) {
-          return key === STORAGE_KEY ? stored : null;
-        }
+        getItem(key) { return values.has(key) ? values.get(key) : null; },
+        removeItem(key) { values.delete(key); }
       };
-      const historical = readHistoricalDocument(storage);
-      ensure(historical && historical.subjects.length === 2);
+      const inventory = buildCleanupInventory(storage);
+      ensure(inventory.keys.length === 1 && inventory.keys[0] === STORAGE_KEY);
       ensure(storage.getItem(STORAGE_KEY) === stored);
+      const refused = runCleanup(storage, inventory, { confirmed: false });
+      ensure(refused.removed.length === 0 && storage.getItem(STORAGE_KEY) === stored);
+      const cleaned = runCleanup(storage, inventory, {
+        confirmed: true,
+        backupVerified: true,
+        metadataMigrationComplete: true
+      });
+      ensure(cleaned.removed.length === 1 && storage.getItem(STORAGE_KEY) === null);
       return true;
     }
   }
@@ -528,15 +534,15 @@ const divergenceChecks = [
     label: "Divergence bloquée sans écrasement silencieux",
     run() {
       const target = {
-        subjects: [{ id: "legacy:synthetic-subject-a", title: "Titre divergents synthétique", order: 0 }],
+        subjects: [{ id: "synthetic-subject-a", title: "Titre divergents synthétique", order: 0 }],
         items: []
       };
       const plan = buildPlan(basicDocument(), target);
       ensure(plan.blocked.some((entry) => entry.reason === "unresolved-conflict"));
       ensure(plan.operations.every((operation) =>
-        !(operation.store === "subjects" && operation.value.id === "legacy:synthetic-subject-a")));
+        !(operation.store === "subjects" && operation.value.id === "synthetic-subject-a")));
       ensure(plan.operations.every((operation) =>
-        !(operation.store === "items" && operation.value.subjectId === "legacy:synthetic-subject-a")));
+        !(operation.store === "items" && operation.value.subjectId === "synthetic-subject-a")));
       return true;
     }
   },
@@ -545,12 +551,12 @@ const divergenceChecks = [
     label: "Un conflit exige une résolution explicite avant toute copie",
     run() {
       const target = {
-        subjects: [{ id: "legacy:synthetic-subject-a", title: "Titre divergents synthétique", order: 0 }],
-        items: [{ id: "legacy:synthetic-step-1", subjectId: "legacy:synthetic-subject-a", parentId: null, title: "Étape divergente", priority: "normal", done: false, order: 0 }]
+        subjects: [{ id: "synthetic-subject-a", title: "Titre divergents synthétique", order: 0 }],
+        items: [{ id: "synthetic-step-1", subjectId: "synthetic-subject-a", parentId: null, title: "Étape divergente", priority: "normal", done: false, order: 0 }]
       };
       const blocked = buildPlan(basicDocument(), target);
       const resolved = buildPlan(basicDocument(), target, {
-        resolutions: { "subjects:legacy:synthetic-subject-a": RESOLUTION.IMPORT_COPY }
+        resolutions: { "subjects:synthetic-subject-a": RESOLUTION.IMPORT_COPY }
       });
       ensure(blocked.blocked.length > 0);
       ensure(resolved.operations.length > 0);
@@ -638,16 +644,18 @@ const concurrentChecks = [
 
 const reimportChecks = [
   {
-    id: "raw-v1-reimport-idempotent",
-    label: "Reimport JSON V1 brut idempotent",
+    id: "modern-reimport-idempotent",
+    label: "Reimport d'une sauvegarde IndexedDB idempotent",
     run() {
-      const doc = basicDocument();
-      const first = planImport(emptyRecords(), doc);
+      const records = documentToRecords(basicDocument());
+      const backup = serializeIndexedDbBackup(records).document;
+      ensure(backup.format === BACKUP_FORMAT && backup.version === undefined);
+      const first = planImport(emptyRecords(), backup);
       const after = applyOperations(emptyRecords(), first);
-      const second = planImport(after, doc);
+      const second = planImport(after, backup);
       ensure(first.length > 0);
       ensure(second.length === 0);
-      ensure(JSON.stringify(recordsToDocument(after)) === JSON.stringify(doc));
+      ensure(JSON.stringify(recordsToDocument(after)) === JSON.stringify(basicDocument()));
       return true;
     }
   },
@@ -656,25 +664,16 @@ const reimportChecks = [
     label: "Reimport d'un export IndexedDB idempotent sans double préfixe",
     run() {
       const doc = basicDocument();
-      const records = documentToRecords(doc);
-      const exported = {
-        version: 1,
-        provenance: {
-          exportKind: EXPORT_KIND.INDEXEDDB_EXPORT,
-          format: "threadstep.v1",
-          mappingVersion: 1,
-          idsCanonical: true
-        },
-        ...recordsToDocument(records)
-      };
-      const first = planImport(emptyRecords(), exported);
+      doc.subjects[0].id = "synthetic-subject-a";
+      const backup = serializeIndexedDbBackup(documentToRecords(doc)).document;
+      const first = planImport(emptyRecords(), backup);
       const after = applyOperations(emptyRecords(), first);
-      const second = planImport(after, exported);
+      const second = planImport(after, backup);
       ensure(first.length > 0);
       ensure(second.length === 0);
-      const mapped = mapRecords(records, { provenance: PROVENANCE_RAW });
-      ensure(mapped.subjects.every((record) => !record.id.startsWith(SYNTHETIC_LEGACY_PREFIX + SYNTHETIC_LEGACY_PREFIX)));
-      ensure(mapped.items.every((record) => !record.id.startsWith(SYNTHETIC_LEGACY_PREFIX + SYNTHETIC_LEGACY_PREFIX)));
+      const ids = JSON.stringify(after);
+      ensure(!ids.includes("legacy:legacy:"));
+      ensure(after.subjects.some((record) => record.id === "synthetic-subject-a"));
       return true;
     }
   }
@@ -686,22 +685,18 @@ const restoreChecks = [
     label: "La restauration exige une sauvegarde vérifiée et un remplacement explicite",
     run() {
       const current = documentToRecords(referenceDocument());
-      const incomingDoc = basicDocument();
-      const incoming = documentToRecords(incomingDoc);
-      const backup = buildRawRecoveryExport(current, { workspace: "local" });
+      const incoming = documentToRecords(basicDocument());
+      const backup = serializeIndexedDbBackup(current).document;
       const refused = buildRestorePlan({
         current,
-        incoming,
-        document: incomingDoc,
-        provenance: PROVENANCE_RAW,
+        records: incoming,
         backup: null
       });
       const ready = buildRestorePlan({
         current,
-        incoming,
-        document: incomingDoc,
-        provenance: PROVENANCE_RAW,
-        backup
+        records: incoming,
+        backup,
+        backupExpected: { counts: { subjects: current.subjects.length, items: current.items.length } }
       });
       ensure(refused.status === "backup-required" && refused.allowed === false);
       ensure(ready.status === "ready" && ready.allowed === true && ready.replacement === true);
@@ -719,17 +714,16 @@ const restoreChecks = [
       const plan = buildPlan(basicDocument(), migrated);
       ensure(plan.status === "already-migrated");
       ensure(plan.operations.length === 0);
-      const incomingDoc = referenceDocument();
+      const incoming = documentToRecords(referenceDocument());
       const restore = buildRestorePlan({
         current,
-        incoming: documentToRecords(incomingDoc),
-        document: incomingDoc,
-        provenance: PROVENANCE_RAW,
-        backup: buildRawRecoveryExport(current, { workspace: "local" })
+        records: incoming,
+        backup: serializeIndexedDbBackup(current).document,
+        backupExpected: { counts: { subjects: current.subjects.length, items: current.items.length } }
       });
       ensure(restore.replacement === true);
       ensure(restore.counts.removed > 0);
-      ensure(allRecordsIntact(recordsToDocument(documentToRecords(incomingDoc))));
+      ensure(allRecordsIntact(recordsToDocument(incoming)));
       return true;
     }
   }
@@ -937,10 +931,11 @@ const idempotenceChecks = [
       const first = buildPlan(doc, emptyRecords());
       const second = buildPlan(doc, emptyRecords());
       ensure(first.fingerprint === second.fingerprint);
-      const once = planImport(emptyRecords(), doc);
+      const backup = serializeIndexedDbBackup(documentToRecords(doc)).document;
+      const once = planImport(emptyRecords(), backup);
       const after = applyOperations(emptyRecords(), once);
-      ensure(planImport(after, doc).length === 0);
-      ensure(JSON.stringify(after) === JSON.stringify(documentToRecords(doc)));
+      ensure(planImport(after, backup).length === 0);
+      ensure(JSON.stringify(recordsToDocument(after)) === JSON.stringify(doc));
       return true;
     }
   }
@@ -948,42 +943,29 @@ const idempotenceChecks = [
 
 const referenceChecks = [
   {
-    id: "reference-v1-survives",
-    label: "Référence V1 de 5 sujets et 18 étapes conservée par la conversion locale",
+    id: "reference-modern-backup",
+    label: "Référence de 5 sujets et 18 étapes conservée par la sauvegarde IndexedDB",
     async run() {
       const doc = referenceDocument();
       const records = documentToRecords(doc);
       ensure(records.subjects.length === 5 && records.items.length === 18);
       ensure(allRecordsIntact(recordsToDocument(records)));
-      const plan = planLocalConversion({
-        source: JSON.stringify(doc),
-        target: emptyRecords(),
-        provenance: PROVENANCE_RAW
-      });
-      ensure(plan.status === LOCAL_MIGRATION_STATUS.READY);
+      const backup = serializeIndexedDbBackup(records).document;
+      const plan = planModernLocalImport(emptyRecords(), backup);
+      ensure(plan.status === LOCAL_MERGE_STATUS.READY);
       ensure(plan.counts.subjects === 5 && plan.counts.items === 18);
       const store = createMemoryStore();
-      const adapter = {
-        readSource: async () => JSON.stringify(doc),
-        readTarget: async () => store.snapshot(),
-        commit: (operations) => store.commit(operations),
-        writeProvenance: () => true
-      };
-      const result = await runLocalConversion(adapter, plan, {
-        confirmed: true,
-        fingerprint: plan.fingerprint
-      });
-      ensure(result.status === LOCAL_MIGRATION_STATUS.LOCAL_COMPLETE);
-      const expected = mapRecords(documentToRecords(doc), { provenance: PROVENANCE_RAW });
-      ensure(JSON.stringify(store.snapshot()) === JSON.stringify(expected));
+      const result = await store.commit(plan.operations);
+      ensure(result.status === "recorded");
       const converted = recordsToDocument(store.snapshot());
+      ensure(JSON.stringify(converted) === JSON.stringify(doc));
       ensure(allRecordsIntact(converted));
       return true;
     }
   },
   {
-    id: "reference-v1-reconciliation",
-    label: "Référence V1 et relations conservées par la réconciliation planifiée",
+    id: "reference-modern-reconciliation",
+    label: "Référence modern et relations conservées par la réconciliation planifiée",
     run() {
       const doc = referenceDocument();
       const plan = buildPlan(doc, emptyRecords());
@@ -998,7 +980,7 @@ const referenceChecks = [
       projected.subjects.forEach((subject, subjectIndex) => {
         ensure(subject.title === original.subjects[subjectIndex].title);
         subject.items.forEach((item) => {
-          const sourceItem = original.items.find((record) => record.id.endsWith(item.id.replace(/^legacy:/, "")));
+          const sourceItem = original.items.find((record) => record.id === item.id);
           ensure(sourceItem && item.title === sourceItem.title && item.priority === sourceItem.priority);
           ensure(item.done === sourceItem.done && item.note === sourceItem.note);
           ensure(item.parentId === null || projected.subjects.some((candidate) =>
@@ -1221,12 +1203,12 @@ export const MATRIX = Object.freeze([
     guarantees: ["idempotence"]
   },
   {
-    id: "reference-v1-journey",
+    id: "reference-modern-backup-journey",
     domain: "persistence",
     capability: "threadstep-integration-profile",
-    requirement: "ThreadStep historical V1 local conversion",
+    requirement: "ThreadStep modern backup and retired legacy keys",
     automated: referenceChecks,
-    manual: [manual("manual-reference-v1", "Rejouer la référence de 5 sujets et 18 étapes sur Chrome mobile puis vérifier les relations après rechargement.")],
+    manual: [manual("manual-reference-modern-backup", "Exporter puis restaurer une sauvegarde IndexedDB moderne des 5 sujets et 18 étapes sur un profil Chrome mobile de test, et vérifier les relations après rechargement.")],
     limitations: [limitation(COMMON_LIMITATIONS.indexeddb), limitation(COMMON_LIMITATIONS.mobile)],
     incidents: [],
     guarantees: ["persistence", "fingerprints", "idempotence"]

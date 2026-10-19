@@ -71,43 +71,36 @@ L'assistant SHALL exposer les états local, préparation, connexion, première l
 - **THEN** l'utilisateur peut reprendre une découverte et revalidation explicites
 - **AND** les données d'origine et la destination précédemment saisie ne sont pas effacées
 ### Requirement: Retained historical source is not a migration order
-La présence de `threadstep.document.v1` SHALL distinguer la conservation de la
-source historique de la nécessité d'une migration. Une source déjà réconciliée
-avec les données canoniques, ou explicitement écartée pour une empreinte de
-source et une identité de destination données, MUST NOT déclencher
-automatiquement une demande d'import ou de nouvelles insertions. La source
-MUST rester intacte, accessible et exportable ; une différence réelle MUST
-rester observable par une vérification explicite.
+La présence de `threadstep.document.v1` SHALL être traitée comme une donnée retirée et non comme une source de migration ou d'import. Elle MUST NOT déclencher de proposition, de conversion, d'insertion, d'export V1 ou de trafic Cloud. La valeur MUST rester physiquement intacte jusqu'à un nettoyage volontaire et consenti, et une différence réelle doit être observée uniquement à partir des données IndexedDB et des sauvegardes modernes.
 #### Scenario: Restored target already contains every relevant record
 - **GIVEN** une cible restaurée contenant déjà tous les enregistrements pertinents
 - **AND** la clé `threadstep.document.v1` est encore présente
-- **WHEN** l'application réévalue la proposition après chargement, synchronisation ou rechargement
-- **THEN** aucune demande d'import n'est affichée automatiquement
+- **WHEN** l'application réévalue après chargement, synchronisation ou rechargement
+- **THEN** aucune demande d'import ou de migration n'est affichée
 - **AND** aucune insertion n'est planifiée ni exécutée
-- **AND** la source historique reste intacte et exportable
-#### Scenario: Explicit dismissal is scoped to source and destination
-- **GIVEN** un plan de réconciliation affiché pour une source et une destination
-- **WHEN** l'utilisateur refuse explicitement cette proposition
-- **THEN** ce refus est mémorisé pour l'empreinte de la source, l'URL,
-  le `remoteDbId` et l'utilisateur authentifié
-- **AND** un rechargement ou une synchronisation ultérieure ne repropose pas
-  automatiquement cette migration
-- **AND** `threadstep.document.v1` n'est ni supprimé ni modifié
-- **AND** son export reste disponible
-#### Scenario: A different source or destination reopens verification
-- **GIVEN** une proposition explicitement écartée pour une source et une destination
-- **WHEN** le contenu de la source, l'URL Cloud, la base distante ou le compte change
-- **THEN** l'ancien écartement ne s'applique plus
-- **AND** une nouvelle vérification sûre peut être proposée
-- **AND** aucune donnée n'est copiée ou insérée automatiquement vers la nouvelle identité
+- **AND** la clé reste intacte et n'est pas exportée
 #### Scenario: A real difference remains observable
-- **GIVEN** une source historique conservée et un écartement ou un résultat déjà réconcilié
-- **WHEN** l'utilisateur demande explicitement à vérifier la sauvegarde historique
-- **THEN** l'inventaire courant et toute différence réelle sont affichés
-- **AND** aucune écriture n'est effectuée sans une nouvelle confirmation explicite
+- **GIVEN** une clé V1 conservée et un workspace Cloud ou local
+- **WHEN** une réconciliation, une activation ou un import est préparé
+- **THEN** la clé V1 n'est pas lue comme source
+- **AND** aucun plan ne contient d'enregistrement dérivé d'elle
+- **AND** les compteurs et empreintes proviennent des données IndexedDB ou du fichier modern choisi
+#### Scenario: Explicit dismissal is scoped to source and destination
+- **GIVEN** une ancienne préférence d'écartement liée à une migration V1
+- **WHEN** l'application démarre
+- **THEN** cette préférence n'est plus utilisée pour décider d'une offre
+- **AND** la portée historique de l'écartement ne s'applique plus à aucun parcours courant
+- **AND** elle n'empêche ni n'autorise aucune opération métier
+- **AND** elle peut être supprimée uniquement par le nettoyage volontaire des clés retirées
+#### Scenario: A different source or destination reopens verification
+- **GIVEN** une clé V1 conservée
+- **WHEN** le contenu de la source, l'URL Cloud, la base distante ou le compte change
+- **THEN** aucune migration V1 n'est proposée
+- **AND** seules une vérification explicite d'une sauvegarde modern et les données IndexedDB peuvent rouvrir un plan
+- **AND** aucune donnée n'est copiée ou insérée automatiquement vers la nouvelle identité
 #### Scenario: Dismissal metadata is not business data
-- **WHEN** un écartement est enregistré ou relu
-- **THEN** seuls une version et des clés opaques sont conservés localement
+- **WHEN** un écartement historique est relu ou nettoyé
+- **THEN** seuls une version et des clés opaques peuvent être conservés localement
 - **AND** aucun titre, note, email, OTP, jeton ni identifiant utilisateur brut
   n'est stocké ou affiché
 - **AND** un stockage indisponible n'entraîne ni suppression de la source ni

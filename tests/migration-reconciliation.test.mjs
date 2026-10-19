@@ -739,18 +739,17 @@ test("7.2 historical and JSON imports share the attested plan and explicit conse
   assert.match(app, /runReconciliation\(/);
   assert.match(app, /reviewDisplayedPlan\(displayed, fresh\)/);
   assert.match(app, /fingerprint: displayed\.fingerprint/);
-  assert.match(app, /offerJsonReconciliation\(incoming\)/);
-  assert.match(app, /offerHistoricalMigration\(\)/);
+  assert.match(app, /offerJsonReconciliation\(parsed\.records\)/);
+  assert.doesNotMatch(app, /offerHistoricalMigration|detectHistoricalDocument|compatibilityGuard/);
   assert.match(app, /reconciliationAdapter\(\)/);
   assert.match(app, /operation\.type !== "add"/);
   assert.match(app, /La connexion OTP seule ne vaut pas consentement/);
-  assert.match(app, /Remplacer toutes les données locales par cet import \?/);
+  assert.doesNotMatch(app, /Remplacer toutes les données locales par cet import \?/);
   assert.doesNotMatch(app, /La base cible doit être vide/);
-  const historicalCall = app.indexOf("offerHistoricalMigration()");
+  const recordsCall = app.indexOf("offerJsonReconciliation(parsed.records)");
   const attestationCall = app.indexOf("readAttestedTarget()");
-  assert.notEqual(historicalCall, -1);
+  assert.notEqual(recordsCall, -1);
   assert.notEqual(attestationCall, -1);
-  assert.ok(attestationCall < app.indexOf("const plan = result.status === \"ready\"", historicalCall));
 });
 
 test("7.3 the product documentation records the TS-031 reconciliation guarantees", () => {

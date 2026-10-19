@@ -3,6 +3,7 @@
 // IndexedDB or framework access: every browser concern is injected through the
 // adapters used by `site/app.js`.
 import { documentToRecords, SUBJECTS_STORE, ITEMS_STORE, emptyRecords } from "./persistence.js";
+import { canonicalBackupRecords, validateBackupRecords, BACKUP_MAPPING_VERSION } from "./indexeddb-backup.js";
 import {
   EXPORT_KIND,
   describeProvenanceInterpretations,
@@ -172,10 +173,16 @@ export function computeTargetFingerprint(target) {
   return sha256Hex(canonicalJson(normalizedTargetProjection(target)));
 }
 
+export function computeSourceRecordsFingerprint(records) {
+  return sha256Hex(canonicalJson(canonicalBackupRecords(records)));
+}
+
 export function computePlanFingerprint(input = {}) {
   const provenance = normalizeProvenance(input.provenance);
   const fingerprints = {
-    source: computeSourceFingerprint(input.document),
+    source: input.sourceRecords
+      ? computeSourceRecordsFingerprint(input.sourceRecords)
+      : computeSourceFingerprint(input.document),
     destination: computeDestinationFingerprint(input.destination),
     user: computeUserFingerprint(input.userId),
     target: computeTargetFingerprint(input.target),
@@ -663,23 +670,39 @@ function rejectedPlan(base, status, extra = {}) {
 
 // Builds one deterministic, side-effect-free reconciliation plan.
 export function planReconciliation(input = {}) {
-  const document = input.document;
+  const modernRecords = input.records !== undefined && input.records !== null;
+  const document = modernRecords ? null : input.document;
   const destination = normalizeDestination(input.destination);
   const userId = typeof input.userId === "string" ? input.userId : null;
   const resolutions = normalizedResolutions(input.resolutions);
-  const provenance = classifyProvenance(document, { provenance: input.provenance });
+  const provenance = modernRecords
+    ? {
+      exportKind: EXPORT_KIND.INDEXEDDB_EXPORT,
+      idsCanonical: true,
+      mappingVersion: BACKUP_MAPPING_VERSION
+    }
+    : classifyProvenance(document, { provenance: input.provenance });
+  const validatedRecords = modernRecords ? validateBackupRecords(input.records) : null;
   const fingerprints = computePlanFingerprint({
     document,
+    sourceRecords: validatedRecords && validatedRecords.ok ? validatedRecords.records : null,
     target: input.target,
     destination,
     userId,
     resolutions,
     provenance
   });
-  const sourceRecords = isAmbiguousProvenance(provenance)
-    ? emptyRecords()
-    : mapSourceDocument(document, { provenance });
-  const sourceValidation = validateSourceRecords(sourceRecords);
+  const sourceRecords = modernRecords
+    ? (validatedRecords.ok ? validatedRecords.records : emptyRecords())
+    : isAmbiguousProvenance(provenance)
+      ? emptyRecords()
+      : mapSourceDocument(document, { provenance });
+  const sourceValidation = modernRecords && !validatedRecords.ok
+    ? {
+      invalid: new Set(["source:invalid"]),
+      issues: [{ code: validatedRecords.code || "invalid-source-records" }]
+    }
+    : validateSourceRecords(sourceRecords);
   const targetValidation = validateTargetRecords(input.target);
   const inventory = buildInventoryFrom(sourceRecords, sourceValidation.invalid, targetValidation);
   const base = {
@@ -710,7 +733,8 @@ export function planReconciliation(input = {}) {
       inventory.counts[ITEMS_STORE][CATEGORY.INVALID] > 0) {
     base.indeterminate = true;
   }
-  if (!isPlainObject(document) || !Array.isArray(document.subjects) || sourceRecords.subjects.length === 0) {
+  if ((!modernRecords && (!isPlainObject(document) || !Array.isArray(document.subjects))) ||
+      sourceRecords.subjects.length === 0) {
     return rejectedPlan(base, "empty-source", { indeterminate: false });
   }
 
@@ -1093,6 +1117,7 @@ export async function runReconciliation(adapter, plan, consent, revalidate) {
   }
   const next = computePlanFingerprint({
     document: fresh.document,
+    sourceRecords: fresh.records,
     target: fresh.target,
     destination: fresh.destination === undefined ? plan.destination : fresh.destination,
     userId: fresh.userId === undefined ? plan.userId : fresh.userId,

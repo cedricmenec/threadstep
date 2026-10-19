@@ -1,4 +1,4 @@
-import { STORAGE_KEY, RESUME_KEY, PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, parseDocument, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, parseResumePreference, serializeResumePreference, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, pendingCount, totalTaskCount, totalTaskCountLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -17,14 +17,13 @@ import {
   transitionActivation,
   writeActivationRecord
 } from "./cloud-activation.js";
-import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, compatibilityGuard, isLocalError, createDexieStore } from "./persistence.js";
-import { detectHistoricalDocument } from "./migration.js";
+import { documentToRecords, recordsToDocument, diffRecords, emptyRecords, normalizedRecords, isLocalError, createDexieStore } from "./persistence.js";
 import {
   CATEGORY,
   RECONCILIATION_STATUS,
   RESOLUTION,
   buildReconciliationView,
-  computeSourceFingerprint,
+  computeSourceRecordsFingerprint,
   describeAttestationReason,
   evaluateSyncAttestation,
   initialReconciliationStatus,
@@ -35,21 +34,16 @@ import {
   withAttestedTarget
 } from "./migration-reconciliation.js";
 import {
-  OFFER_ACTION,
-  computeDismissalKey,
   createGenerationGuard,
-  decideHistoricalOffer,
-  describeHistoricalOffer,
   footerMessage,
   initialFooterStatus,
-  isDismissed,
-  readDismissalStore,
-  reduceFooterStatus,
-  rememberDismissal
+  reduceFooterStatus
 } from "./migration-lifecycle.js";
 import { AUTH_MESSAGE_KINDS, AUTH_STATUS, authMessage, canAccessBusiness, classifyPermissionFailure, createAuthController, signInMethods } from "./authentication.js";
-import { availableLocalBackup } from "./local-recovery.js";
-import { LOCAL_MIGRATION_STATUS, detectLocalSource, isLocalCompletion, planLocalConversion, readLocalProvenance, runLocalConversion, writeLocalProvenance } from "./local-migration.js";
+import { CLEANUP_CODE, buildCleanupInventory, evaluateCleanup, runCleanup } from "./local-recovery.js";
+import { LOCAL_MERGE_STATUS, planModernRecordsMerge } from "./local-migration.js";
+import { createDexieMetadataStore } from "./local-metadata.js";
+import { BACKUP_FORMAT, parseIndexedDbBackup, unsupportedV1Refusal } from "./indexeddb-backup.js";
 import { readSyncedRaw, readSyncedRecords, readSyncedWorkspace } from "./synced-records.js";
 import {
   ANOMALY,
@@ -63,7 +57,7 @@ import {
   buildRepairPlan,
   buildRestorePlan,
   buildRepairRecoverySnapshot,
-  evaluateV1Export,
+  evaluateBusinessExport,
   hasBlockingAnomaly,
   initialRepairStatus,
   readWorkspaceResult,
@@ -142,12 +136,16 @@ const authResendEl = document.querySelector("#auth-resend");
 const authCancelEl = document.querySelector("#auth-cancel");
 const authOfflineEl = document.querySelector("#auth-offline");
 const authLocalDataEl = document.querySelector("#auth-local-data");
-const authLegacyExportEl = document.querySelector("#auth-export-legacy");
-const historicalBackupEl = document.querySelector("#historical-backup");
-const historicalBackupStatusEl = document.querySelector("#historical-backup-status");
-const historicalBackupDownloadEl = document.querySelector("#historical-backup-download");
-const historicalBackupVerifyEl = document.querySelector("#historical-backup-verify");
 const localPanelEl = document.querySelector("#local-panel");
+const cleanupPanelEl = document.querySelector("#legacy-cleanup");
+const cleanupListEl = document.querySelector("#legacy-cleanup-list");
+const cleanupScopeEl = document.querySelector("#legacy-cleanup-scope");
+const cleanupBackupStatusEl = document.querySelector("#legacy-cleanup-backup-status");
+const cleanupKeepEl = document.querySelector("#legacy-cleanup-keep");
+const cleanupConfirmEl = document.querySelector("#legacy-cleanup-confirm");
+const cleanupDeleteEl = document.querySelector("#legacy-cleanup-delete");
+const cleanupStatusEl = document.querySelector("#legacy-cleanup-status");
+const recoveryBusinessStatusEl = document.querySelector("#recovery-business-status");
 const cloudActivationEl = document.querySelector("#cloud-activation");
 const cloudActivationStageEl = document.querySelector("#cloud-activation-stage");
 const cloudActivationStatusEl = document.querySelector("#cloud-activation-status");
@@ -178,20 +176,6 @@ const workspaceConfirmationContinueEl = document.querySelector("#workspace-confi
 const workspaceBackupEl = document.querySelector("#workspace-backup");
 const workspaceConfirmationStatusEl = document.querySelector("#workspace-confirmation-status");
 const localStatusEl = document.querySelector("#local-status");
-const localLegacyNoticeEl = document.querySelector("#local-legacy-notice");
-const localExportLegacyEl = document.querySelector("#local-export-legacy");
-const localConvertLegacyEl = document.querySelector("#local-convert-legacy");
-const localConversionEl = document.querySelector("#local-conversion");
-const localConversionSourceEl = document.querySelector("#local-conversion-source");
-const localConversionTargetEl = document.querySelector("#local-conversion-target");
-const localConversionPlanEl = document.querySelector("#local-conversion-plan");
-const localConversionFingerprintEl = document.querySelector("#local-conversion-fingerprint");
-const localConversionStateEl = document.querySelector("#local-conversion-state");
-const localProvenanceEl = document.querySelector("#local-provenance");
-const localConversionConsentEl = document.querySelector("#local-conversion-consent");
-const localConversionConfirmEl = document.querySelector("#local-conversion-confirm");
-const localConversionRefuseEl = document.querySelector("#local-conversion-refuse");
-const localConversionStatusEl = document.querySelector("#local-conversion-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
 const recoveryPanelEl = document.querySelector("#recovery-panel");
@@ -199,13 +183,11 @@ const recoveryInstanceEl = document.querySelector("#recovery-instance");
 const recoveryReadCodeEl = document.querySelector("#recovery-read-code");
 const recoveryDegradedEl = document.querySelector("#recovery-degraded");
 const recoveryAnomaliesEl = document.querySelector("#recovery-anomalies");
-const recoveryV1StatusEl = document.querySelector("#recovery-v1-status");
 const recoveryRawExportEl = document.querySelector("#recovery-raw-export");
 const recoveryRepairPreviewEl = document.querySelector("#recovery-repair-preview");
 const repairPreviewEl = document.querySelector("#repair-preview");
 const repairPreviewSummaryEl = document.querySelector("#repair-preview-summary");
 const repairSourceEl = document.querySelector("#repair-source");
-const repairProvenanceEl = document.querySelector("#repair-provenance");
 const repairGroupsEl = document.querySelector("#repair-groups");
 const repairBackupStatusEl = document.querySelector("#repair-backup-status");
 const repairConsentEl = document.querySelector("#repair-consent");
@@ -214,7 +196,6 @@ const repairCancelEl = document.querySelector("#repair-cancel");
 const repairStatusEl = document.querySelector("#repair-status");
 const restorePanelEl = document.querySelector("#restore-panel");
 const restoreScopeEl = document.querySelector("#restore-scope");
-const restoreProvenanceEl = document.querySelector("#restore-provenance");
 const restoreBackupStatusEl = document.querySelector("#restore-backup-status");
 const restoreDownloadBackupEl = document.querySelector("#restore-download-backup");
 const restoreConfirmationEl = document.querySelector("#restore-confirmation");
@@ -275,9 +256,6 @@ let cloudReadPending = null;
 let localReadPending = null;
 let localReadFailed = false;
 let localWriteBlocked = false;
-let historicalGuard = null;
-let localConversionContext = null;
-let localImportContext = null;
 let syncDiagnosticsController = null;
 let syncDiagnosticsSubscribedFor = null;
 let syncReadError = null;
@@ -288,10 +266,11 @@ let recoveryContext = null;
 let repairContext = null;
 let repairStatus = initialRepairStatus();
 let restoreContext = null;
-// Historical destructive label kept only as a documented non-goal: the import
-// action no longer performs "Remplacer toutes les données locales par cet import ?".
-const DESTRUCTIVE_RESTORE_LABEL = "Remplacer toutes les données locales par cet import ?";
-
+let metadataStore = null;
+let metadataMigrationComplete = false;
+let modernBackupVerified = false;
+let cleanupInventory = { status: "empty", keys: [], scope: "current-origin" };
+let localImportContext = null;
 const UNDO_WINDOW_MS = 10000;
 let pendingRemoval = null;
 let removalTimer = null;
@@ -308,12 +287,6 @@ function notify(message) {
 }
 function notifyError(message) {
   publishFooter({ type: "error", message });
-}
-function notifyMigration(generation, message) {
-  publishFooter({ type: "migration", generation, message });
-}
-function clearMigrationFooter(generation) {
-  publishFooter({ type: "migration-clear", generation });
 }
 function requiresAuthentication() {
   return !!syncedDatabase;
@@ -348,6 +321,36 @@ function bootstrapSyncedDatabase(entry) {
 // local records can never be attached by merely entering a Cloud URL later.
 function bootstrapLocalDatabase() {
   return openLocalDatabase(Dexie);
+}
+function setupMetadataStore(db) {
+  const synced = !!syncedDatabase && db === syncedDatabase;
+  metadataStore = db ? createDexieMetadataStore(db, localStorage, {
+    isRefAvailable: synced
+      ? async (ref) => {
+        const subject = await db.subjects.get(ref.subjectId);
+        const item = await db.items.get(ref.itemId);
+        return !!subject && !!item && item.subjectId === subject.id;
+      }
+      : null
+  }) : null;
+  metadataMigrationComplete = false;
+}
+async function reloadMetadataPreference() {
+  if (!metadataStore) {
+    metadataMigrationComplete = false;
+    resumeRef = null;
+    return;
+  }
+  try {
+    const migration = await metadataStore.migratePreferences();
+    metadataMigrationComplete = migration && migration.migrationComplete === true;
+    resumeRef = await metadataStore.readResume();
+  } catch {
+    metadataMigrationComplete = false;
+    resumeRef = null;
+    notifyError("Métadonnées locales indisponibles : la préférence de reprise n'est pas annoncée comme durablement enregistrée.");
+  }
+  renderCleanupPanel();
 }
 // TS-038 workspace identity, binding and scoped destructive actions ----------------
 
@@ -612,7 +615,7 @@ async function diagnosePendingChanges() {
 }
 function downloadWorkspaceSnapshot() {
   const inventory = recoveryContext ? recoveryContext.inventory : null;
-  const result = buildBusinessExport(lastRecords, { inventory });
+  const result = buildBusinessExport(lastRecords, { inventory, schemaVersion: SCHEMA_VERSION });
   if (result.status !== "ready") {
     setWorkspaceConfirmationStatus(
       "Sauvegarde impossible depuis l'export métier : anomalie d'intégrité. Utilisez l'export brut de récupération, distinct et complet."
@@ -620,7 +623,9 @@ function downloadWorkspaceSnapshot() {
     return false;
   }
   downloadJsonText(JSON.stringify(result.document, null, 2), "threadstep-workspace-backup.json");
-  setWorkspaceConfirmationStatus("Sauvegarde JSON téléchargée. Aucune donnée n'a été supprimée.");
+  modernBackupVerified = true;
+  renderCleanupPanel();
+  setWorkspaceConfirmationStatus("Sauvegarde IndexedDB téléchargée. Aucune donnée n'a été supprimée.");
   return true;
 }
 async function applyWorkspaceSelection() {
@@ -1022,11 +1027,11 @@ async function readLocalActivationSource() {
   try {
     const store = createDexieStore(reader);
     const raw = await store.readRaw();
-    const projected = recordsToDocument(raw);
+    const records = normalizedRecords(raw);
     return {
       raw,
-      documentValue: { ...projected, provenance: { exportKind: "indexeddb-export" } },
-      sourceCounts: { subjects: raw.subjects.length, items: raw.items.length }
+      records,
+      sourceCounts: { subjects: records.subjects.length, items: records.items.length }
     };
   } finally {
     if (reader && typeof reader.close === "function") reader.close();
@@ -1088,12 +1093,11 @@ async function runActivationDiscovery() {
   };
   const plan = result.status === "ready"
     ? planReconciliation({
-      document: source.documentValue,
+      records: source.records,
       target: result.records,
       destination,
       userId: expected.userId,
-      resolutions: {},
-      provenance: { exportKind: "indexeddb-export" }
+      resolutions: {}
     })
     : null;
   const classification = classifyTarget({
@@ -1112,14 +1116,14 @@ async function runActivationDiscovery() {
     ? { subjects: result.records.subjects.length, items: result.records.items.length }
     : { subjects: 0, items: 0 };
   activationContext = {
-    documentValue: source.documentValue,
+    records: source.records,
     target: result.records,
     destination,
     userId: expected.userId,
     attestation: result.attestation,
     plan,
     displayedPlan: plan,
-    sourceFingerprint: computeSourceFingerprint(source.documentValue),
+    sourceFingerprint: computeSourceRecordsFingerprint(source.records),
     classification: classification.classification,
     sourceCounts: source.sourceCounts,
     targetCounts
@@ -1275,23 +1279,22 @@ async function confirmActivation() {
   const userId = result.attestation && result.attestation.identity
     ? result.attestation.identity.userId : null;
   const fresh = planReconciliation({
-    document: source.documentValue,
+    records: source.records,
     target: result.records,
     destination,
     userId,
-    resolutions: context.plan ? context.plan.resolutions : {},
-    provenance: { exportKind: "indexeddb-export" }
+    resolutions: context.plan ? context.plan.resolutions : {}
   });
   const review = reviewDisplayedPlan(displayed, fresh);
   if (!review.same) {
-    context.documentValue = source.documentValue;
+    context.records = source.records;
     context.target = result.records;
     context.destination = destination;
     context.userId = userId;
     context.attestation = result.attestation;
     context.plan = fresh;
     context.displayedPlan = fresh;
-    context.sourceFingerprint = computeSourceFingerprint(source.documentValue);
+    context.sourceFingerprint = computeSourceRecordsFingerprint(source.records);
     context.sourceCounts = source.sourceCounts;
     context.targetCounts = {
       subjects: result.records.subjects.length,
@@ -1319,17 +1322,16 @@ async function confirmActivation() {
         ? refreshed.attestation.identity.userId : null;
       const revalidatedPlan = refreshed.status === "ready" && revalidatedSource
         ? planReconciliation({
-          document: revalidatedSource.documentValue,
+          records: revalidatedSource.records,
           target: refreshed.records,
           destination: revalidatedDestination,
           userId: revalidatedUserId,
-          resolutions: context.plan ? context.plan.resolutions : {},
-          provenance: { exportKind: "indexeddb-export" }
+          resolutions: context.plan ? context.plan.resolutions : {}
         })
         : null;
       return {
         attestation: refreshed.attestation,
-        document: revalidatedSource ? revalidatedSource.documentValue : null,
+        records: revalidatedSource ? revalidatedSource.records : null,
         target: refreshed.records,
         destination: revalidatedDestination,
         userId: revalidatedUserId,
@@ -1441,11 +1443,10 @@ function currentInstanceContext() {
   return recoveryInstanceContext();
 }
 async function openRestorePreview(text) {
-  let incoming;
-  try {
-    incoming = parseDocument(text);
-  } catch {
-    notify("Restauration impossible : fichier illisible ou incompatible. Aucune écriture.");
+  const parsed = parseIndexedDbBackup(text);
+  if (!parsed.ok) {
+    const refusal = unsupportedV1Refusal(parsed.code);
+    notify(refusal.message);
     return;
   }
   const raw = await currentRawRecords();
@@ -1453,14 +1454,12 @@ async function openRestorePreview(text) {
     notify("Restauration impossible : l'état actuel n'est pas lisible, aucune sauvegarde sûre ne peut être produite.");
     return;
   }
-  const context = currentInstanceContext();
-  const snapshot = buildRawRecoveryExport(raw, context);
+  const backup = buildRestoreBackup(raw);
   restoreContext = {
-    document: incoming,
+    records: parsed.records,
     text,
     raw,
-    provenance: incoming.provenance || null,
-    snapshot,
+    backup,
     backupDownloaded: false,
     plan: null
   };
@@ -1468,14 +1467,17 @@ async function openRestorePreview(text) {
   renderRestorePanel();
   notify("Restauration en prévisualisation : aucune écriture avant sauvegarde et confirmation renforcée.");
 }
+function buildRestoreBackup(raw) {
+  const modern = buildBusinessExport(raw);
+  if (modern.status === "ready") return modern.document;
+  return buildRawRecoveryExport(raw, currentInstanceContext());
+}
 function rebuildRestorePlan() {
   if (!restoreContext) return null;
   restoreContext.plan = buildRestorePlan({
-    document: restoreContext.document,
-    incoming: documentToRecords(restoreContext.document),
+    records: restoreContext.records,
     current: restoreContext.raw,
-    provenance: restoreContext.provenance || undefined,
-    backup: restoreContext.backupDownloaded ? restoreContext.snapshot : null,
+    backup: restoreContext.backupDownloaded ? restoreContext.backup : null,
     backupExpected: {
       counts: {
         subjects: restoreContext.raw.subjects.length,
@@ -1490,54 +1492,22 @@ function renderRestorePanel() {
   const plan = restoreContext.plan;
   restorePanelEl.hidden = false;
   if (restoreScopeEl) {
-    restoreScopeEl.textContent = plan.allowed || plan.code !== "ambiguous-provenance"
-      ? "Portée : " + (plan.counts ? plan.counts.incoming.subjects + " sujet(s), " +
+    restoreScopeEl.textContent = plan && plan.counts
+      ? "Portée : " + plan.counts.incoming.subjects + " sujet(s), " +
         plan.counts.incoming.items + " tâche(s) restaurés ; " +
         plan.counts.removed + " enregistrement(s) supprimé(s), " +
-        plan.counts.added + " ajouté(s)." : "Portée indisponible.")
-      : "Provenance ambiguë : restauration bloquée tant que la provenance n'est pas explicitement choisie.";
-  }
-  if (restoreProvenanceEl) {
-    restoreProvenanceEl.replaceChildren();
-    if (plan.code === "ambiguous-provenance") {
-      const fieldset = el("fieldset");
-      fieldset.append(el("legend", null, "Provenance du fichier de restauration"));
-      for (const [value, labelText] of [
-        ["v1-raw", "Document V1 brut"],
-        ["indexeddb-export", "Export IndexedDB déjà projeté"],
-        ["legacy-double", "Export historique legacy:legacy:"]
-      ]) {
-        const id = "restore-provenance-" + value;
-        const input = el("input");
-        input.type = "radio";
-        input.name = "restore-provenance-choice";
-        input.value = value;
-        input.id = id;
-        input.addEventListener("change", () => {
-          restoreContext.provenance = { exportKind: value };
-          rebuildRestorePlan();
-          renderRestorePanel();
-        });
-        const label = el("label");
-        label.htmlFor = id;
-        label.append(input, el("span", null, " " + labelText));
-        fieldset.append(label);
-      }
-      restoreProvenanceEl.append(fieldset);
-      restoreProvenanceEl.hidden = false;
-    } else {
-      restoreProvenanceEl.hidden = true;
-    }
+        plan.counts.added + " ajouté(s)."
+      : "Portée indisponible.";
   }
   if (restoreBackupStatusEl) {
-    restoreBackupStatusEl.textContent = restoreContext.snapshot && restoreContext.snapshot.status === "ready"
+    restoreBackupStatusEl.textContent = restoreContext.backup
       ? (restoreContext.backupDownloaded
         ? "Sauvegarde de l'état actuel téléchargée et vérifiable ; la restauration reste soumise à confirmation renforcée."
         : "Une sauvegarde de l'état actuel doit être téléchargée avant toute restauration.")
       : "Sauvegarde de l'état actuel impossible : restauration interdite.";
   }
   if (restoreDownloadBackupEl) {
-    restoreDownloadBackupEl.disabled = !restoreContext.snapshot || restoreContext.snapshot.status !== "ready";
+    restoreDownloadBackupEl.disabled = !restoreContext.backup;
   }
   updateRestoreConfirmState();
 }
@@ -1548,11 +1518,11 @@ function updateRestoreConfirmState() {
     !restoreConfirmationEl || restoreConfirmationEl.value !== "RESTAURER";
 }
 function downloadRestoreBackup() {
-  if (!restoreContext || !restoreContext.snapshot || restoreContext.snapshot.status !== "ready") {
+  if (!restoreContext || !restoreContext.backup) {
     notify("Sauvegarde de l'état actuel impossible : restauration interdite.");
     return;
   }
-  downloadJsonText(JSON.stringify(restoreContext.snapshot, null, 2), "threadstep-avant-restauration.json");
+  downloadJsonText(JSON.stringify(restoreContext.backup, null, 2), "threadstep-avant-restauration.json");
   restoreContext.backupDownloaded = true;
   rebuildRestorePlan();
   renderRestorePanel();
@@ -1569,8 +1539,26 @@ async function confirmRestore() {
     notify("Restauration bloquée (" + (plan ? plan.code : "indeterminate") + "). Aucune écriture.");
     return;
   }
-  const incoming = documentToRecords(restoreContext.document);
-  const operations = diffRecords(restoreContext.raw, incoming);
+  const freshRaw = await currentRawRecords();
+  if (!freshRaw) {
+    notify("Restauration bloquée : l'état actuel n'est plus lisible. Aucune écriture.");
+    return;
+  }
+  const freshPlan = buildRestorePlan({
+    records: restoreContext.records,
+    current: freshRaw,
+    backup: restoreContext.backup,
+    backupExpected: {
+      counts: { subjects: freshRaw.subjects.length, items: freshRaw.items.length }
+    }
+  });
+  if (!freshPlan.allowed || freshPlan.fingerprint !== plan.fingerprint) {
+    restoreContext.plan = freshPlan;
+    renderRestorePanel();
+    notify("Plan de restauration périmé : la cible a changé. Relisez la portée, aucune écriture n'a été effectuée.");
+    return;
+  }
+  const operations = diffRecords(freshRaw, restoreContext.records);
   try {
     await businessStore.commit(operations);
   } catch {
@@ -1622,7 +1610,7 @@ function clearRecovery() {
     if (recoveryAnomaliesEl) recoveryAnomaliesEl.replaceChildren();
     if (recoveryReadCodeEl) recoveryReadCodeEl.textContent = "";
     if (recoveryInstanceEl) recoveryInstanceEl.textContent = "";
-    if (recoveryV1StatusEl) recoveryV1StatusEl.textContent = "";
+    if (recoveryBusinessStatusEl) recoveryBusinessStatusEl.textContent = "";
   }
 }
 function enterRecoveryMode(raw, code) {
@@ -1688,11 +1676,11 @@ function renderRecoveryPanel() {
     }
     recoveryAnomaliesEl.append(list);
   }
-  if (recoveryV1StatusEl) {
-    const gate = evaluateV1Export(inventory);
-    recoveryV1StatusEl.textContent = gate.allowed
-      ? "L'export V1 normal reste disponible."
-      : "Export V1 normal désactivé tant qu'une anomalie d'intégrité subsiste : utilisez l'export brut de récupération, distinct et complet.";
+  if (recoveryBusinessStatusEl) {
+    const gate = evaluateBusinessExport(inventory);
+    recoveryBusinessStatusEl.textContent = gate.allowed
+      ? "La sauvegarde métier IndexedDB moderne reste disponible."
+      : "Sauvegarde métier moderne désactivée tant qu'une anomalie d'intégrité subsiste : utilisez l'export brut de récupération, distinct et complet.";
   }
   if (recoveryRawExportEl) {
     recoveryRawExportEl.disabled = !recoveryContext.raw || readCode === READ_FAILURE.READ_REFUSED;
@@ -1720,16 +1708,22 @@ function exportRawRecovery() {
 }
 function exportBusinessBackup() {
   const inventory = recoveryContext ? recoveryContext.inventory : null;
-  const result = buildBusinessExport(lastRecords, { inventory });
+  const result = buildBusinessExport(lastRecords, { inventory, schemaVersion: SCHEMA_VERSION });
+  if (result.status === "disabled") {
+    notify("Export métier désactivé : une anomalie d'intégrité existe. Utilisez l'export brut de récupération, distinct et complet.");
+    return;
+  }
   if (result.status !== "ready") {
-    notify("Export V1 désactivé : une anomalie d'intégrité existe. Utilisez l'export brut de récupération, distinct et complet.");
+    notify("Export métier incomplet (" + result.code + ") : aucune sauvegarde partielle n'est produite. Utilisez l'export brut de récupération.");
     return;
   }
   downloadJsonText(JSON.stringify(result.document, null, 2), "threadstep-backup.json");
-  notify("Export JSON V1 généré depuis IndexedDB avec sa provenance d'identifiants.");
+  modernBackupVerified = true;
+  renderCleanupPanel();
+  notify("Sauvegarde IndexedDB générée au format " + BACKUP_FORMAT + " avec empreinte et compteurs vérifiés.");
 }
 function parseRepairSource(text) {
-  return parseDocument(text);
+  return parseIndexedDbBackup(text);
 }
 function repairDestination() {
   return {
@@ -1747,6 +1741,7 @@ function rebuildRepairPlan() {
   const plan = buildRepairPlan({
     raw: recoveryContext.raw,
     source: repairContext.source,
+    sourceRecords: repairContext.sourceRecords,
     provenance: repairContext.provenance,
     decisions: repairContext.decisions,
     destination: repairDestination(),
@@ -1824,6 +1819,7 @@ function openRepairPreview() {
   }
   repairContext = {
     source: null,
+    sourceRecords: null,
     provenance: null,
     decisions: {},
     plan: null,
@@ -1831,7 +1827,6 @@ function openRepairPreview() {
     backupCheck: null
   };
   rebuildRepairPlan();
-  if (repairProvenanceEl) repairProvenanceEl.hidden = !repairContext.source;
   renderRepairPreview();
   const title = repairPreviewEl ? repairPreviewEl.querySelector("#repair-preview-title") : null;
   if (title) title.focus();
@@ -1844,24 +1839,20 @@ async function loadRepairSource(file) {
     return;
   }
   try {
-    const documentValue = parseRepairSource(await file.text());
-    repairContext.source = documentValue;
-    const embedded = documentValue && documentValue.provenance;
-    repairContext.provenance = embedded || null;
+    const parsed = parseRepairSource(await file.text());
+    if (!parsed.ok) {
+      notify(unsupportedV1Refusal(parsed.code).message + " Aucune réparation préparée.");
+      return;
+    }
+    repairContext.sourceRecords = parsed.records;
+    repairContext.source = null;
+    repairContext.provenance = null;
     repairContext.decisions = {};
     rebuildRepairPlan();
-    if (repairProvenanceEl) repairProvenanceEl.hidden = !!repairContext.provenance;
     renderRepairPreview();
   } catch {
     notify("Fichier source illisible : aucune réparation préparée, la sauvegarde reste intacte.");
   }
-}
-function repairProvenanceChoice(value) {
-  if (!repairContext || !value) return;
-  repairContext.provenance = { exportKind: value };
-  repairContext.decisions = {};
-  rebuildRepairPlan();
-  renderRepairPreview();
 }
 function repairAdapter() {
   return {
@@ -1939,6 +1930,7 @@ async function runRepairAsync(context, consent) {
     return {
       raw: fresh.raw,
       source: context.source,
+      sourceRecords: context.sourceRecords,
       provenance: context.provenance,
       decisions: context.decisions,
       destination: repairDestination(),
@@ -1993,28 +1985,9 @@ function setLocalError(message) {
 }
 function renderLocalWorkspace() {
   if (!localPanelEl) return;
-  renderHistoricalBackup();
+  renderCleanupPanel();
   const local = !requiresAuthentication();
   localPanelEl.hidden = !local;
-  if (!local) {
-    if (localConversionEl) localConversionEl.hidden = true;
-    return;
-  }
-  const backup = availableLocalBackup(localStorage);
-  const provenance = readLocalProvenance(localStorage);
-  const converted = isLocalCompletion(provenance);
-  if (localLegacyNoticeEl) {
-    localLegacyNoticeEl.hidden = !backup;
-    localLegacyNoticeEl.textContent = backup
-      ? `Un document historique threadstep.document.v1 est conservé dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). Il reste lisible et exportable ci-dessous ; aucune conversion ni transmission Cloud n'est lancée automatiquement.` +
-        (converted
-          ? ` Conversion locale terminée dans IndexedDB (${provenance.subjects} sujets et ${provenance.items} étapes) ; elle ne constitue pas une synchronisation Cloud.`
-          : " Une conversion locale explicite reste disponible ci-dessous, avec revue et consentement.")
-      : "";
-  }
-  if (localExportLegacyEl) localExportLegacyEl.hidden = !backup;
-  if (localConvertLegacyEl) localConvertLegacyEl.hidden = !backup;
-  if (!backup && localConversionEl) localConversionEl.hidden = true;
 }
 function setAuthStatus(message) {
   if (authStatusEl) authStatusEl.textContent = typeof message === "string" ? message : "";
@@ -2023,15 +1996,6 @@ function setAuthError(message) {
   if (!authErrorEl) return;
   authErrorEl.textContent = typeof message === "string" ? message : "";
   authErrorEl.hidden = !authErrorEl.textContent;
-}
-function renderLocalRecovery() {
-  const backup = availableLocalBackup(localStorage);
-  if (authLegacyExportEl) authLegacyExportEl.hidden = !backup;
-  if (authLocalDataEl) {
-    authLocalDataEl.textContent = backup
-      ? `Une sauvegarde locale historique est présente dans ce navigateur (${backup.subjects} sujets et ${backup.items} étapes). L'espace de travail est masqué avant authentification ; ces données ne sont ni effacées ni envoyées au cloud automatiquement. Vous pouvez les exporter sans vous connecter.`
-      : "L'espace de travail est masqué avant authentification. Aucune sauvegarde historique V1 lisible n'a été trouvée sur cette origine ; ne réinitialisez pas ce navigateur ni votre base.";
-  }
 }
 function downloadJsonText(json, filename) {
   const blob = new Blob([json], { type: "application/json" });
@@ -2047,165 +2011,111 @@ function downloadJsonText(json, filename) {
     URL.revokeObjectURL(url);
   }
 }
-function exportLegacyBackup() {
-  const backup = availableLocalBackup(localStorage);
-  if (!backup) {
-    if (requiresAuthentication()) setAuthError("Aucune sauvegarde historique locale lisible à exporter.");
-    else setLocalError("Aucune sauvegarde historique locale lisible à exporter.");
+function cleanupBlockedMessage(code) {
+  switch (code) {
+    case CLEANUP_CODE.BACKUP_REQUIRED:
+      return "Nettoyage désactivé : générez et vérifiez d'abord une sauvegarde IndexedDB modern dans cette session.";
+    case CLEANUP_CODE.MIGRATION_REQUIRED:
+      return "Nettoyage désactivé : la migration des préférences vers IndexedDB n'est pas vérifiée.";
+    case CLEANUP_CODE.CONSENT_REQUIRED:
+      return "Nettoyage désactivé : cochez la confirmation explicite, l'option par défaut est « ne rien effacer ».";
+    case CLEANUP_CODE.EMPTY:
+      return "Aucune clé V1 retirée n'est présente sur cette origine.";
+    default:
+      return "Nettoyage indisponible : aucune clé n'a été supprimée.";
+  }
+}
+function renderCleanupPanel() {
+  if (!cleanupPanelEl) return;
+  cleanupInventory = buildCleanupInventory(localStorage);
+  const present = cleanupInventory.status === "present";
+  cleanupPanelEl.hidden = !present;
+  if (!present) {
+    if (cleanupListEl) cleanupListEl.replaceChildren();
     return;
   }
-  downloadJsonText(backup.json, "threadstep-historique-v1-sauvegarde.json");
-  if (requiresAuthentication()) {
-    setAuthStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
-  } else {
-    setLocalError("");
-    setLocalStatus("Sauvegarde JSON historique téléchargée. Aucune donnée n'a été modifiée.");
+  if (cleanupListEl) {
+    cleanupListEl.replaceChildren();
+    const list = el("ul");
+    for (const key of cleanupInventory.keys) list.append(el("li", null, key));
+    cleanupListEl.append(list);
   }
-}
-// Cloud mode: the retained historical source stays reachable and exportable in
-// every outcome, including after an explicit dismissal or an already-reconciled
-// verification. It is never an automatic import request and never rewritten.
-function renderHistoricalBackup() {
-  if (!historicalBackupEl) return;
-  const backup = requiresAuthentication() && businessAllowed()
-    ? availableLocalBackup(localStorage)
-    : null;
-  historicalBackupEl.hidden = !backup;
-  if (!backup) {
-    if (historicalBackupStatusEl) historicalBackupStatusEl.textContent = "";
-    return;
+  if (cleanupScopeEl) {
+    cleanupScopeEl.textContent = "Portée : origine et navigateur courants uniquement. Aucune base IndexedDB, aucune donnée Cloud et aucun autre navigateur ne sont touchés.";
   }
-  if (historicalBackupStatusEl) {
-    historicalBackupStatusEl.textContent =
-      "Une sauvegarde historique threadstep.document.v1 est conservée dans ce navigateur (" +
-      backup.subjects + " sujet(s) et " + backup.items + " étape(s)). Elle n'est ni supprimée ni " +
-      "envoyée automatiquement. Utilisez la vérification explicite pour observer une différence réelle.";
+  if (cleanupBackupStatusEl) {
+    cleanupBackupStatusEl.textContent = modernBackupVerified
+      ? (metadataMigrationComplete
+        ? "Sauvegarde IndexedDB vérifiée dans cette session et préférences migrées : le nettoyage peut être confirmé."
+        : "Sauvegarde vérifiée, mais la migration des préférences vers IndexedDB n'est pas terminée : nettoyage désactivé.")
+      : "Générez et vérifiez une sauvegarde IndexedDB modern dans cette session avant tout nettoyage.";
   }
+  const guardReady = modernBackupVerified && metadataMigrationComplete;
+  if (cleanupConfirmEl) cleanupConfirmEl.disabled = !guardReady;
+  if (cleanupDeleteEl) cleanupDeleteEl.disabled = !guardReady || !cleanupConfirmEl || !cleanupConfirmEl.checked;
 }
-function verifyHistoricalBackup() {
-  if (!requiresAuthentication() || !businessAllowed()) return;
-  void offerHistoricalMigration({ explicit: true });
-}
-function hideLocalConversion() {
-  localConversionContext = null;
+function hideLocalImportPanel() {
   localImportContext = null;
-  if (localConversionEl) localConversionEl.hidden = true;
-  if (localConversionConsentEl) localConversionConsentEl.checked = false;
-  if (localConversionConfirmEl) localConversionConfirmEl.disabled = true;
-  setLocalConversionStatus("");
+  if (!migrationPanelEl) return;
+  migrationPanelEl.hidden = true;
+  migrationPanelEl.replaceChildren();
 }
-function setLocalConversionStatus(message) {
-  if (localConversionStatusEl) {
-    localConversionStatusEl.textContent = typeof message === "string" ? message : "";
+function renderLocalImportPanel() {
+  const context = localImportContext;
+  if (!context) return;
+  const panel = migrationPanel();
+  const plan = context.plan;
+  panel.replaceChildren();
+  const title = el("h2", "migration-title", "Importer et fusionner une sauvegarde IndexedDB");
+  title.id = "migration-title";
+  title.tabIndex = -1;
+  const live = el("p", "migration-live", "");
+  live.setAttribute("aria-live", "polite");
+  live.setAttribute("role", "status");
+  if (plan.status === LOCAL_MERGE_STATUS.COLLISION) {
+    live.textContent = "Collision sur " + plan.collisions.length +
+      " identifiant(s) au contenu différent : aucune écriture ne sera effectuée.";
+  } else if (plan.status === LOCAL_MERGE_STATUS.ALREADY_PRESENT) {
+    live.textContent = "Les enregistrements du fichier sont déjà présents à l'identique : aucune insertion n'est nécessaire.";
+  } else {
+    live.textContent = plan.operations.length + " enregistrement(s) absent(s) seront ajoutés, sans écrasement ni suppression.";
   }
-}
-function renderLocalConversion(plan) {
-  if (!localConversionEl) return;
-  if (localImportContext) localConversionContext = { plan };
-  const source = plan.source || {};
-  const target = plan.targetCounts || { subjects: 0, items: 0 };
-  if (localConversionSourceEl) {
-    localConversionSourceEl.textContent = source.status === LOCAL_MIGRATION_STATUS.PRESENT
-      ? (localImportContext
-        ? `Source : fichier JSON importé (${plan.counts.subjects} sujet(s), ${plan.counts.items} étape(s)), conservé intact.`
-        : `Source : ${plan.counts.subjects} sujet(s) et ${plan.counts.items} étape(s) dans threadstep.document.v1, conservée telle quelle.`)
-      : "Source : aucun document historique convertible.";
+  const inventory = el("div", "migration-inventory");
+  inventory.append(el("p", null, "Source : " + plan.counts.subjects + " sujet(s), " + plan.counts.items + " tâche(s)."));
+  inventory.append(el("p", null, "Cible actuelle : " + context.target.subjects.length + " sujet(s), " + context.target.items.length + " tâche(s)."));
+  panel.append(title, live, inventory);
+  const writable = plan.status === LOCAL_MERGE_STATUS.READY && plan.operations.length > 0;
+  let consent = null;
+  if (writable) {
+    const label = el("label", "migration-consent");
+    consent = el("input");
+    consent.type = "checkbox";
+    consent.id = "local-import-consent";
+    label.append(consent, el("span", null,
+      " Je confirme la fusion de ces seuls enregistrements absents. Aucune suppression ni restauration destructive."));
+    panel.append(label);
   }
-  if (localConversionTargetEl) {
-    localConversionTargetEl.textContent =
-      `Destination : base locale IndexedDB threadstep-local, sur cet appareil, sans configuration Cloud. ` +
-      `Cible actuelle : ${target.subjects} sujet(s) et ${target.items} étape(s).`;
+  const actions = el("div", "migration-actions");
+  const accept = el("button", "primary migration-accept", "Confirmer la fusion");
+  accept.type = "button";
+  accept.id = "local-import-confirm";
+  accept.disabled = true;
+  if (writable && consent) {
+    consent.addEventListener("change", () => { accept.disabled = !consent.checked; });
+    accept.addEventListener("click", () => { void confirmLocalImport(); });
   }
-  if (localConversionPlanEl) {
-    const insertions = plan.operations.length;
-    if (plan.status === LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE) {
-      localConversionPlanEl.textContent =
-        "Provenance ambiguë : aucune conversion n'est exécutée avant une décision explicite. " +
-        "Le préfixe legacy:, la similitude de titre ou le retrait de préfixes ne servent pas de preuve.";
-    } else if (plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
-      localConversionPlanEl.textContent =
-        "Les enregistrements source sont déjà présents à l'identique : aucune insertion n'est nécessaire.";
-    } else if (plan.status === LOCAL_MIGRATION_STATUS.COLLISION) {
-      localConversionPlanEl.textContent =
-        `Collision sur ${plan.collisions.length} identifiant(s) local(aux) au contenu différent : ` +
-        "aucune écriture ne sera effectuée et les enregistrements existants restent inchangés.";
-    } else {
-      localConversionPlanEl.textContent =
-        `Insertions prévues : ${insertions} enregistrement(s) absent(s), sans écrasement des données locales existantes.`;
-    }
-  }
-  if (localConversionFingerprintEl) {
-    localConversionFingerprintEl.textContent = plan.sourceFingerprint
-      ? `Empreinte SHA-256 de la source examinée : ${plan.sourceFingerprint}.`
-      : "";
-  }
-  if (localConversionStateEl) {
-    localConversionStateEl.textContent = plan.status === LOCAL_MIGRATION_STATUS.POPULATED
-      ? "La cible locale contient déjà des données : seuls les enregistrements absents seront insérés après consentement."
-      : plan.status === LOCAL_MIGRATION_STATUS.COLLISION
-        ? "Conversion bloquée par une collision : aucune écriture, aucune donnée écrasée."
-        : plan.status === LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED
-          ? "Conversion locale déjà effectuée pour cette source."
-          : "Rien n'est écrit avant votre confirmation explicite.";
-  }
-  renderLocalProvenanceChoices(plan);
-  const writable = plan.operations.length > 0 &&
-    plan.status !== LOCAL_MIGRATION_STATUS.COLLISION &&
-    plan.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED &&
-    plan.status !== LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE;
-  if (localConversionConsentEl) {
-    localConversionConsentEl.checked = false;
-    localConversionConsentEl.disabled = !writable;
-  }
-  if (localConversionConfirmEl) {
-    localConversionConfirmEl.disabled = !writable;
-  }
-  setLocalConversionStatus("Prévisualisation locale prête : aucune donnée n'a encore été écrite.");
-  localConversionEl.hidden = false;
-}
-function renderLocalProvenanceChoices(plan) {
-  if (!localProvenanceEl) return;
-  localProvenanceEl.replaceChildren();
-  if (plan.status !== LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE) {
-    localProvenanceEl.hidden = true;
-    return;
-  }
-  const fieldset = el("fieldset");
-  fieldset.append(el("legend", null, "Provenance du fichier importé à confirmer"));
-  const choices = [
-    ["v1-raw", "Document V1 brut"],
-    ["indexeddb-export", "Export IndexedDB déjà projeté"],
-    ["legacy-double", "Export historique legacy:legacy:"]
-  ];
-  for (const [value, text] of choices) {
-    const id = "local-provenance-" + value;
-    const input = el("input");
-    input.type = "radio";
-    input.name = "local-provenance-choice";
-    input.value = value;
-    input.id = id;
-    const label = el("label", "local-provenance-option");
-    label.htmlFor = id;
-    label.append(input, el("span", null, " " + text));
-    input.addEventListener("change", () => {
-      if (!localImportContext) return;
-      localImportContext.provenance = { exportKind: value };
-      localImportContext.plan = planLocalImport(localImportContext);
-      renderLocalConversion(localImportContext.plan);
-    });
-    fieldset.append(label);
-  }
-  localProvenanceEl.append(fieldset);
-  localProvenanceEl.hidden = false;
-}
-function planLocalImport(context) {
-  return planLocalConversion({
-    source: detectSourceText(context.raw),
-    target: context.target,
-    provenance: context.provenance || undefined
+  const refuse = el("button", "secondary migration-refuse", "Ne rien importer");
+  refuse.type = "button";
+  refuse.addEventListener("click", () => {
+    hideLocalImportPanel();
+    notify("Import annulé : aucune écriture effectuée.");
   });
+  actions.append(accept, refuse);
+  panel.append(actions);
+  panel.hidden = false;
+  title.focus();
 }
-async function openLocalImportPreview(raw) {
+async function openLocalImportPreview(records) {
   let target;
   try {
     target = await businessStore.read();
@@ -2213,143 +2123,62 @@ async function openLocalImportPreview(raw) {
     setLocalError("Lecture de la cible locale impossible : import non proposé.");
     return;
   }
-  localImportContext = { raw, target, provenance: null, plan: null };
-  localImportContext.plan = planLocalImport(localImportContext);
-  localConversionContext = { plan: localImportContext.plan };
+  const plan = planModernRecordsMerge(target, records);
+  if (plan.status === LOCAL_MERGE_STATUS.INVALID) {
+    notify(unsupportedV1Refusal(plan.code).message);
+    return;
+  }
+  localImportContext = { records, target, plan };
   setLocalError("");
-  renderLocalConversion(localImportContext.plan);
-  const title = localConversionEl ? localConversionEl.querySelector("#local-conversion-title") : null;
-  if (title) {
-    title.textContent = "Importer et fusionner un fichier JSON";
-    title.focus();
-  }
+  renderLocalImportPanel();
 }
-async function openLocalConversion() {
-  if (requiresAuthentication()) return;
-  localImportContext = null;
-  if (!businessStore) {
-    setLocalError("Conversion locale indisponible : stockage IndexedDB non initialisé.");
-    return;
-  }
-  const detected = detectLocalSource(localStorage);
-  if (detected.status !== LOCAL_MIGRATION_STATUS.PRESENT) {
-    hideLocalConversion();
-    setLocalError(detected.message || "Document historique non convertible.");
-    return;
-  }
-  let target;
-  try {
-    target = await businessStore.read();
-  } catch {
-    setLocalError("Lecture de la cible locale impossible : conversion non proposée.");
-    return;
-  }
-  const plan = planLocalConversion({
-    source: detected,
-    target,
-    resumePreference: readResumePreference()
-  });
-  localConversionContext = { plan };
-  setLocalError("");
-  renderLocalConversion(plan);
-  const title = localConversionEl ? localConversionEl.querySelector("#local-conversion-title") : null;
-  if (title) title.focus();
-}
-function localConversionAdapter() {
-  return {
-    readSource() {
-      return detectLocalSource(localStorage).raw;
-    },
-    readTarget() {
-      return businessStore.read();
-    },
-    commit(operations) {
-      return businessStore.commit(operations);
-    },
-    writeProvenance(record) {
-      return writeLocalProvenance(localStorage, record);
-    },
-    writeResumePreference(value) {
-      const serialized = serializeResumePreference(value);
-      if (serialized === null) throw new Error("Préférence de reprise invalide.");
-      localStorage.setItem(RESUME_KEY, serialized);
-    }
-  };
-}
-async function confirmLocalConversion() {
-  const context = localConversionContext;
+async function confirmLocalImport() {
+  const context = localImportContext;
   if (!context) return;
-  if (requiresAuthentication() || !businessStore) {
-    setLocalConversionStatus("Conversion locale indisponible dans cet espace.");
-    return;
-  }
-  if (!localConversionConsentEl || !localConversionConsentEl.checked) {
-    setLocalConversionStatus("Consentement explicite requis avant toute écriture locale.");
+  const consent = document.querySelector("#local-import-consent");
+  if (!consent || !consent.checked) {
+    notify("Consentement explicite requis avant toute écriture d'import.");
     return;
   }
   await pendingCloudWrites;
-  if (localImportContext) {
-    const plan = localImportContext.plan;
-    if (plan.status === LOCAL_MIGRATION_STATUS.AMBIGUOUS_PROVENANCE ||
-        plan.status === LOCAL_MIGRATION_STATUS.COLLISION ||
-        plan.operations.length === 0) {
-      setLocalConversionStatus("Import non appliqué : provenance ambiguë, collision ou aucune insertion. Aucune écriture.");
-      return;
-    }
-    try {
-      await businessStore.commit(plan.operations);
-    } catch {
-      setLocalConversionStatus("Échec de la transaction d'import : aucune écriture partielle, données existantes intactes.");
-      return;
-    }
-    setLocalConversionStatus("Import fusionné localement : seuls les enregistrements absents ont été ajoutés, sans suppression ni restauration destructive.");
-    notify("Import fusionné localement ; aucune suppression ni écrasement n'a été effectué.");
-    localImportContext = null;
-    await refreshLocalDocument();
+  let fresh;
+  try {
+    fresh = await businessStore.read();
+  } catch {
+    notify("Lecture de la cible locale impossible : import non appliqué, aucune écriture.");
     return;
   }
-  const outcome = await runLocalConversion(localConversionAdapter(), context.plan, {
-    confirmed: true,
-    fingerprint: context.plan.fingerprint
-  });
-  if (outcome.status === LOCAL_MIGRATION_STATUS.LOCAL_COMPLETE) {
-    hideLocalConversion();
-    await refreshLocalDocument();
-    setLocalError("");
-    setLocalStatus(
-      `Conversion locale terminée : ${outcome.counts.subjects} sujet(s) et ${outcome.counts.items} étape(s) sont dans IndexedDB sur cet appareil. ` +
-      "La sauvegarde historique et son export restent disponibles. Aucune synchronisation Cloud n'a été configurée ni déclenchée."
-    );
-    notify("Conversion locale terminée dans IndexedDB. Aucune synchronisation Cloud n'a été effectuée.");
+  const plan = planModernRecordsMerge(fresh, context.records);
+  if (plan.status === LOCAL_MERGE_STATUS.COLLISION || plan.status === LOCAL_MERGE_STATUS.INVALID) {
+    hideLocalImportPanel();
+    notify("Import bloqué (" + plan.code + ") : aucune écriture, les données existantes restent intactes.");
     return;
   }
-  const messages = {
-    [LOCAL_MIGRATION_STATUS.REFUSED]: "Conversion refusée : la source et la cible locale restent inchangées.",
-    [LOCAL_MIGRATION_STATUS.CONSENT_MISMATCH]: "Consentement lié à un autre plan : aucune écriture. Rouvrez la prévisualisation.",
-    [LOCAL_MIGRATION_STATUS.STALE_SOURCE]: "Document historique modifié depuis la prévisualisation : aucune écriture. Rouvrez la prévisualisation.",
-    [LOCAL_MIGRATION_STATUS.STALE_PLAN]: "Cible locale modifiée depuis la prévisualisation : aucune écriture. Rouvrez la prévisualisation.",
-    [LOCAL_MIGRATION_STATUS.COLLISION]: "Collision d'identifiant : aucune écriture, aucune donnée locale écrasée.",
-    [LOCAL_MIGRATION_STATUS.READ_ERROR]: "Lecture de revalidation impossible : conversion bloquée, source et cible inchangées.",
-    [LOCAL_MIGRATION_STATUS.FAILED]: "Échec de la transaction locale : aucun demi-document écrit. La sauvegarde historique reste intacte.",
-    [LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED]: "Aucune nouvelle insertion nécessaire : les enregistrements sont déjà présents."
-  };
-  const message = messages[outcome.status] || "Conversion locale interrompue : aucune écriture confirmée.";
-  setLocalConversionStatus(message);
-  notify(message);
-  if (outcome.status !== LOCAL_MIGRATION_STATUS.ALREADY_MIGRATED) {
-    context.plan = { ...context.plan, operations: [], fingerprint: context.plan.fingerprint };
-    if (localConversionConfirmEl) localConversionConfirmEl.disabled = true;
-    if (localConversionConsentEl) localConversionConsentEl.disabled = true;
+  if (plan.operations.length === 0) {
+    hideLocalImportPanel();
+    notify("Aucune nouvelle insertion nécessaire : les enregistrements sont déjà présents.");
+    return;
   }
+  try {
+    await businessStore.commit(plan.operations);
+  } catch {
+    notify("Échec de la transaction d'import : aucune écriture partielle, données existantes intactes.");
+    return;
+  }
+  hideLocalImportPanel();
+  notify("Import fusionné localement : seuls les enregistrements absents ont été ajoutés, sans suppression.");
+  await refreshLocalDocument();
 }
-
 function renderAuthPanel() {
   if (!authPanelEl) return;
   const authenticated = canAccessBusiness(authState);
   authPanelEl.hidden = !requiresAuthentication() || authenticated;
   applyBusinessVisibility();
   if (authPanelEl.hidden) return;
-  renderLocalRecovery();
+  if (authLocalDataEl) {
+    authLocalDataEl.textContent = "L'espace de travail est masqué avant authentification. " +
+      "Aucune donnée métier n'est lue depuis un stockage historique ; les données restent dans IndexedDB.";
+  }
   const interaction = authInteraction;
   const codePhase = !!(interaction && interaction.kind === "otp");
   const alertPhase = !!(interaction && interaction.kind === "alert");
@@ -2380,7 +2209,6 @@ function renderAuthPanel() {
 }
 function handleAuthState(next) {
   authState = next && typeof next === "object" ? next : { status: AUTH_STATUS.SIGNED_OUT, kind: null, message: "" };
-  renderHistoricalBackup();
   if (canAccessBusiness(authState) || authState.status === AUTH_STATUS.REFUSED) {
     authSubmitting = false;
   }
@@ -2413,7 +2241,6 @@ function startBusiness() {
   }
   // Cloud is the single source of truth after authentication, not localStorage.
   void refreshSyncedDocument().then(() => {
-    void offerHistoricalMigration();
     void runActivationDiscovery();
   });
 }
@@ -2598,7 +2425,7 @@ async function refreshLocalDocument() {
     documentLoaded = true;
     localReadFailed = false;
     localWriteBlocked = false;
-    resumeRef = readResumePreference();
+    await reloadMetadataPreference();
     setLocalError("");
     render();
     applyBusinessVisibility();
@@ -2631,25 +2458,26 @@ function startLocalWorkspace() {
   }
   void refreshLocalDocument();
 }
-function readResumePreference() {
+async function saveResumePreference(ref) {
+  if (!metadataStore) {
+    notify("Stockage local des préférences indisponible : le suivi ne sera pas conservé.");
+    return false;
+  }
   try {
-    return parseResumePreference(localStorage.getItem(RESUME_KEY));
+    await metadataStore.writeResume(ref);
+    return true;
   } catch {
-    return null;
+    notify("Stockage local des préférences indisponible : le suivi ne sera pas conservé durablement.");
+    return false;
   }
 }
-function saveResumePreference(ref) {
+async function removeResumePreference() {
+  if (!metadataStore) return false;
   try {
-    localStorage.setItem(RESUME_KEY, serializeResumePreference(ref));
+    await metadataStore.removeResume();
+    return true;
   } catch {
-    notify("Stockage indisponible : le suivi ne sera pas conservé.");
-  }
-}
-function removeResumePreference() {
-  try {
-    localStorage.removeItem(RESUME_KEY);
-  } catch {
-    // Ignore: a missing or unavailable store leaves no orphan reference to clean.
+    return false;
   }
 }
 function reconcileResume() {
@@ -2657,7 +2485,7 @@ function reconcileResume() {
   if (view) return view;
   if (resumeRef && documentLoaded) {
     resumeRef = null;
-    removeResumePreference();
+    void removeResumePreference();
   }
   return null;
 }
@@ -2979,7 +2807,7 @@ function revealResume(view) {
 }
 function clearResume() {
   resumeRef = null;
-  removeResumePreference();
+  void removeResumePreference();
   if (pendingRemoval) pendingRemoval.trackedRef = null;
   revealItemId = null;
   render();
@@ -3054,7 +2882,7 @@ function undoRemoval() {
   const restored = restorableTrackingRef(documentState, trackedRef);
   if (restored) {
     resumeRef = restored;
-    saveResumePreference(resumeRef);
+    void saveResumePreference(resumeRef);
   }
   focusItemId = rootId;
   revealItemId = rootId;
@@ -3457,7 +3285,7 @@ function runMenuCommand(subject, item, commandId) {
     }
     case "keep-track":
       resumeRef = { subjectId: subject.id, itemId: item.id };
-      saveResumePreference(resumeRef);
+      void saveResumePreference(resumeRef);
       if (pendingRemoval) pendingRemoval.trackedRef = null;
       render();
       return;
@@ -3624,12 +3452,6 @@ if (repairSourceEl) repairSourceEl.addEventListener("change", () => {
   const file = repairSourceEl.files && repairSourceEl.files[0];
   if (file) void loadRepairSource(file);
 });
-if (repairProvenanceEl) {
-  repairProvenanceEl.addEventListener("change", (event) => {
-    const input = event.target;
-    if (input && input.name === "repair-provenance-choice") repairProvenanceChoice(input.value);
-  });
-}
 if (repairConsentEl) repairConsentEl.addEventListener("change", () => {
   if (repairConfirmEl) {
     repairConfirmEl.disabled = !repairConsentEl.checked || !repairContext ||
@@ -3641,35 +3463,24 @@ if (repairCancelEl) repairCancelEl.addEventListener("click", () => {
   hideRepairPanel();
   notify("Réparation annulée : aucune écriture effectuée.");
 });
-if (authLegacyExportEl) authLegacyExportEl.addEventListener("click", exportLegacyBackup);
-if (localExportLegacyEl) localExportLegacyEl.addEventListener("click", exportLegacyBackup);
-if (localConvertLegacyEl) localConvertLegacyEl.addEventListener("click", () => { void openLocalConversion(); });
-if (localConversionConsentEl) localConversionConsentEl.addEventListener("change", () => {
-  if (localConversionConfirmEl) {
-    const plan = localConversionContext ? localConversionContext.plan : null;
-    localConversionConfirmEl.disabled = !localConversionConsentEl.checked ||
-      !plan || plan.operations.length === 0;
-  }
-});
-if (localConversionConfirmEl) localConversionConfirmEl.addEventListener("click", () => { void confirmLocalConversion(); });
-if (localConversionRefuseEl) localConversionRefuseEl.addEventListener("click", () => {
-  hideLocalConversion();
-  notify("Conversion locale refusée : la source historique et la cible IndexedDB restent inchangées.");
-});
 document.querySelector("#import").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
     if (file.size > 1024 * 1024) throw new Error("Fichier trop volumineux (maximum 1 Mo).");
     const text = await file.text();
-    const incoming = parseDocument(text);
+    const parsed = parseIndexedDbBackup(text);
+    if (!parsed.ok) {
+      notify(unsupportedV1Refusal(parsed.code).message);
+      return;
+    }
     if (syncedDatabase) {
       if (!businessAllowed() || !documentLoaded) {
         notify("Connectez-vous et attendez la lecture IndexedDB avant tout import.");
         return;
       }
       await pendingCloudWrites;
-      await offerJsonReconciliation(incoming);
+      await offerJsonReconciliation(parsed.records);
       return;
     }
     // Import is always a non-destructive merge. A destructive restore remains a
@@ -3678,19 +3489,13 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     expandedParents = new Set();
     pendingCollapseFocus = null;
     openMenuId = null;
-    await openLocalImportPreview(text);
+    await openLocalImportPreview(parsed.records);
     notify("Import local en prévisualisation : fusion sans suppression. Aucune écriture avant votre confirmation.");
   } catch {
-    notify("Import impossible : lecture ou enregistrement refusé. Conservez votre export JSON.");
+    notify("Import impossible : lecture ou enregistrement refusé. Conservez votre fichier de sauvegarde.");
   } finally {
     event.target.value = "";
   }
-});
-window.addEventListener("storage", (event) => {
-  if (event.key === STORAGE_KEY) void offerHistoricalMigration();
-  if (event.key !== STORAGE_KEY) return;
-  invalidatePendingRemoval();
-  load();
 });
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
@@ -3698,6 +3503,47 @@ window.addEventListener("hashchange", () => {
   openMenuId = null;
   route = nextRoute;
   render();
+});
+if (cleanupKeepEl) cleanupKeepEl.addEventListener("click", () => {
+  if (cleanupConfirmEl) cleanupConfirmEl.checked = false;
+  if (cleanupStatusEl) cleanupStatusEl.textContent = "Aucune clé V1 n'a été supprimée. Les valeurs restent intactes.";
+  notify("Nettoyage annulé : aucune clé V1 n'a été supprimée.");
+});
+if (cleanupConfirmEl) cleanupConfirmEl.addEventListener("change", () => {
+  if (cleanupDeleteEl) {
+    cleanupDeleteEl.disabled = !modernBackupVerified || !metadataMigrationComplete || !cleanupConfirmEl.checked;
+  }
+});
+if (cleanupDeleteEl) cleanupDeleteEl.addEventListener("click", () => {
+  const decision = evaluateCleanup({
+    inventory: cleanupInventory,
+    backupVerified: modernBackupVerified,
+    metadataMigrationComplete,
+    confirmed: !!(cleanupConfirmEl && cleanupConfirmEl.checked)
+  });
+  if (!decision.allowed) {
+    if (cleanupStatusEl) cleanupStatusEl.textContent = cleanupBlockedMessage(decision.code);
+    notify(cleanupBlockedMessage(decision.code));
+    return;
+  }
+  const result = runCleanup(localStorage, cleanupInventory, {
+    backupVerified: modernBackupVerified,
+    metadataMigrationComplete,
+    confirmed: true
+  });
+  cleanupInventory = buildCleanupInventory(localStorage);
+  if (cleanupConfirmEl) cleanupConfirmEl.checked = false;
+  renderCleanupPanel();
+  if (cleanupStatusEl) {
+    cleanupStatusEl.textContent = result.removed.length > 0
+      ? "Clés V1 supprimées : " + result.removed.join(", ") +
+        (result.remaining.length > 0 ? ". Restent intactes : " + result.remaining.join(", ") + "." : ".")
+      : "Aucune clé V1 n'a été supprimée. " +
+        (result.remaining.length > 0 ? "Restent intactes : " + result.remaining.join(", ") + "." : "");
+  }
+  notify(result.removed.length > 0
+    ? "Nettoyage volontaire effectué sur les seules clés V1 listées pour cette origine."
+    : "Nettoyage sans suppression : les valeurs restent intactes.");
 });
 snackbarEl.addEventListener("focusin", suspendRemovalTimer);
 snackbarEl.addEventListener("focusout", (event) => {
@@ -3725,10 +3571,8 @@ if (cloudActivationConsentEl) {
     cloudActivationConfirmEl.disabled = !ready || !cloudActivationConsentEl.checked;
   });
 }
-if (historicalBackupDownloadEl) historicalBackupDownloadEl.addEventListener("click", exportLegacyBackup);
-if (historicalBackupVerifyEl) historicalBackupVerifyEl.addEventListener("click", verifyHistoricalBackup);
-window.addEventListener("online", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); void offerHistoricalMigration(); });
-window.addEventListener("offline", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); void offerHistoricalMigration(); });
+window.addEventListener("online", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); });
+window.addEventListener("offline", () => { if (authController) authController.refresh(); renderSyncDiagnostic(); updateActivationFromNative(); });
 if (cloudConfigFormEl) {
   cloudConfigFormEl.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -3767,6 +3611,7 @@ if (cloudConfigFormEl) {
     hideCloudConfigError();
     syncedDatabase = bootstrapSyncedDatabase(workspaceEntry);
     businessStore = syncedDatabase ? createDexieStore(syncedDatabase) : null;
+    setupMetadataStore(syncedDatabase);
     documentState = emptyDocument();
     documentLoaded = false;
     lastRecords = emptyRecords();
@@ -3792,10 +3637,10 @@ if (cloudConfigFormEl) {
     } else {
       if (!localDatabase) localDatabase = bootstrapLocalDatabase();
       businessStore = createDexieStore(localDatabase);
+      setupMetadataStore(localDatabase);
       startLocalWorkspace();
     }
     setupSyncDiagnostics();
-    void offerHistoricalMigration();
     notify("Instance Dexie Cloud enregistrée");
   });
 }
@@ -3863,7 +3708,7 @@ async function refreshSyncedDocument() {
       documentLoaded = true;
       cloudWriteBlocked = false;
       syncReadError = null;
-      resumeRef = readResumePreference();
+      await reloadMetadataPreference();
       render();
       applyBusinessVisibility();
       renderSyncDiagnostic();
@@ -3919,14 +3764,11 @@ function subscribeToChanges() {
       });
       renderSyncDiagnostic();
       load();
-      if (!migrationContext) void offerHistoricalMigration();
     });
   }
 }
 let migrationPanelEl = null;
-let migrationLifecycle = createGenerationGuard();
 let migrationContext = null;
-let migrationOffer = null;
 let migrationStatus = initialReconciliationStatus();
 
 const CATEGORY_LABELS = {
@@ -4111,7 +3953,6 @@ function setupSyncDiagnostics() {
         observable.subscribe(() => {
           renderSyncDiagnostic();
           updateActivationFromNative();
-          void offerHistoricalMigration();
         });
       }
     };
@@ -4146,35 +3987,12 @@ function destinationIdentity(attestation) {
     remoteDbId: attestation && attestation.identity ? attestation.identity.remoteDbId : null
   };
 }
-function migrationIdentity() {
-  const cloud = syncedDatabase && syncedDatabase.cloud;
-  const persisted = observableValue(cloud && cloud.persistedSyncState);
-  const user = observableValue(cloud && cloud.currentUser);
-  return {
-    url: migrationDestination(),
-    remoteDbId: persisted && typeof persisted.remoteDbId === "string" ? persisted.remoteDbId : null,
-    userId: user && typeof user.userId === "string" ? user.userId : null
-  };
-}
-function sameMigrationIdentity(left, right) {
-  return !!left && !!right &&
-    left.url === right.url &&
-    left.remoteDbId === right.remoteDbId &&
-    left.userId === right.userId;
-}
-function dismissalKeyFor(sourceFingerprint, identity) {
-  return computeDismissalKey({
-    sourceFingerprint,
-    destination: { url: identity ? identity.url : null, remoteDbId: identity ? identity.remoteDbId : null },
-    userId: identity ? identity.userId : null
-  });
-}
 async function readAttestedTarget() {
   return withAttestedTarget(nativeAttestationInput(), () => readSyncedRecords(syncedDatabase));
 }
 function reconciliationBlockMessage(result) {
   if (result && result.status === "read-error") {
-    return "Lecture IndexedDB impossible : migration bloquée sans conclure que le Cloud est vide. Vos sauvegardes restent intactes.";
+    return "Lecture IndexedDB impossible : import bloqué sans conclure que le Cloud est vide. Vos sauvegardes restent intactes.";
   }
   const reason = result && result.reason
     ? result.reason
@@ -4189,40 +4007,31 @@ function hideMigrationPanel() {
   migrationPanelEl.hidden = true;
   migrationPanelEl.replaceChildren();
 }
-function historicalProvenance(documentValue) {
-  const records = documentToRecords(documentValue);
-  const prefixed = [...records.subjects, ...records.items]
-    .some((record) => typeof record.id === "string" && record.id.startsWith("legacy:"));
-  return prefixed ? { exportKind: "unknown" } : { exportKind: "v1-raw" };
-}
-function openReconciliation(documentValue, target, attestation, sourceKind, provenance, options = {}) {
+function openReconciliation(records, target, attestation, options = {}) {
   const destination = destinationIdentity(attestation);
   const userId = attestation && attestation.identity ? attestation.identity.userId : null;
   const resolutions = options.resolutions && typeof options.resolutions === "object"
     ? { ...options.resolutions }
     : {};
   const plan = planReconciliation({
-    document: documentValue,
+    records,
     target,
     destination,
     userId,
-    resolutions,
-    provenance
+    resolutions
   });
   migrationContext = {
-    document: documentValue,
+    records,
     target,
     destination,
     userId,
     attestation,
     resolutions,
     plan,
-    sourceKind,
-    provenance,
-    sourceFingerprint: options.sourceFingerprint || computeSourceFingerprint(documentValue),
+    sourceKind: "json",
+    sourceChecksum: options.sourceChecksum || null,
     previewFingerprint: plan.fingerprint,
-    displayedPlan: plan,
-    generation: options.generation || null
+    displayedPlan: plan
   };
   renderMigrationPanel(migrationContext);
 }
@@ -4230,100 +4039,29 @@ function replanMigration() {
   const context = migrationContext;
   if (!context) return null;
   context.plan = planReconciliation({
-    document: context.document,
+    records: context.records,
     target: context.target,
     destination: context.destination,
     userId: context.userId,
-    resolutions: context.resolutions,
-    provenance: context.provenance
+    resolutions: context.resolutions
   });
   return context.plan;
 }
-function inventorySummary(view) {
-  const lines = [];
-  for (const store of ["subjects", "items"]) {
-    const counts = view.counts ? view.counts[store] : null;
-    if (!counts) continue;
-    const parts = Object.keys(CATEGORY_LABELS).map((category) =>
-      counts[category] + " " + CATEGORY_LABELS[category]);
-    lines.push(STORE_LABELS[store] + " : " + parts.join(", ") + ".");
-  }
-  return lines;
-}
-function renderAmbiguousProvenancePanel(context) {
-  const panel = migrationPanel();
-  if (!panel || !context) return;
-  panel.replaceChildren();
-  const title = el("h2", "migration-title", "Provenance du fichier à confirmer");
-  title.id = "migration-title";
-  title.tabIndex = -1;
-  const live = el("p", "migration-live", "");
-  live.setAttribute("aria-live", "polite");
-  live.setAttribute("role", "status");
-  live.textContent = "Provenance ambiguë : aucune écriture, aucun plan d'import n'est appliqué avant votre décision. " +
-    "Les préfixes et les titres ne servent jamais de preuve.";
-  const list = el("ul", "migration-interpretations");
-  const plan = context.plan;
-  for (const interpretation of plan.interpretations || []) {
-    list.append(el("li", null, interpretation.exportKind + " : " +
-      interpretation.counts.subjects + " sujet(s), " + interpretation.counts.items +
-      " tâche(s), " + interpretation.prefixedIdentifiers + " identifiant(s) préfixé(s), " +
-      interpretation.wouldCreateDoublePrefix + " double(s) préfixe(s) potentiel(s)."));
-  }
-  const fieldset = el("fieldset", "migration-provenance");
-  fieldset.append(el("legend", null, "Choisir la provenance réelle du fichier"));
-  const choices = [
-    ["v1-raw", "Document V1 brut (identifiants non encore projetés)"],
-    ["indexeddb-export", "Export IndexedDB déjà projeté (identifiants canoniques)"],
-    ["legacy-double", "Export historique legacy:legacy: (métadonnées explicites)"]
-  ];
-  for (const [value, labelText] of choices) {
-    const id = "migration-provenance-" + value;
-    const input = el("input");
-    input.type = "radio";
-    input.name = "migration-provenance-choice";
-    input.value = value;
-    input.id = id;
-    if (context.provenance && context.provenance.exportKind === value) input.checked = true;
-    input.addEventListener("change", () => {
-      context.provenance = { exportKind: value };
-      replanMigration();
-      renderMigrationPanel(context);
-    });
-    const label = el("label", "migration-provenance-option");
-    label.htmlFor = id;
-    label.append(input, el("span", null, " " + labelText));
-    fieldset.append(label);
-  }
-  const actions = el("div", "migration-actions");
-  const close = el("button", "secondary migration-refuse", "Fermer");
-  close.type = "button";
-  close.addEventListener("click", () => hideMigrationPanel());
-  actions.append(close);
-  panel.append(title, live, list, fieldset, actions);
-  panel.hidden = false;
-  title.focus();
-}
-
 function renderMigrationPanel(context, options = {}) {
   const panel = migrationPanel();
   if (!panel || !context) return;
   context.displayedPlan = context.plan;
   context.previewFingerprint = context.plan ? context.plan.fingerprint : null;
-  if (context.plan && context.plan.status === "ambiguous-provenance") {
-    renderAmbiguousProvenancePanel(context);
-    return;
-  }
   const view = buildReconciliationView(context.plan);
   panel.replaceChildren();
-  const title = el("h2", "migration-title", "Réconcilier mes données existantes");
+  const title = el("h2", "migration-title", "Importer et réconcilier un fichier");
   title.id = "migration-title";
   title.tabIndex = -1;
   const live = el("p", "migration-live", "");
   live.setAttribute("aria-live", "polite");
   live.setAttribute("role", "status");
   live.textContent = context.plan.status === "already-migrated"
-    ? "Tous les enregistrements historiques sont déjà présents ou résolus : aucune insertion n'est nécessaire."
+    ? "Tous les enregistrements du fichier sont déjà présents ou résolus : aucune insertion n'est nécessaire."
     : view.operationCount + " insertion(s) indépendante(s) prévue(s), " + view.blocked.length + " groupe(s) bloqué(s). Rien n'est encore écrit.";
   const destinationText = context.destination && context.destination.url
     ? "Destination effective : " + context.destination.url +
@@ -4362,7 +4100,7 @@ function renderMigrationPanel(context, options = {}) {
         label.htmlFor = inputId;
         label.append(input, el("span", null, option === RESOLUTION.KEEP_CLOUD
           ? "Conserver la version Cloud"
-          : "Importer la version historique comme copie"));
+          : "Importer la version du fichier comme copie"));
         fieldset.append(label);
       }
       fieldset.append(el("p", "migration-conflict-hint",
@@ -4403,16 +4141,8 @@ function renderMigrationPanel(context, options = {}) {
   const refuse = el("button", "secondary migration-refuse", "Conserver localement");
   refuse.type = "button";
   refuse.addEventListener("click", () => {
-    if (context.sourceKind === "historical") {
-      const sourceFingerprint = context.sourceFingerprint || computeSourceFingerprint(context.document);
-      rememberDismissal(localStorage, dismissalKeyFor(sourceFingerprint, {
-        url: context.destination ? context.destination.url : null,
-        remoteDbId: context.destination ? context.destination.remoteDbId : null,
-        userId: context.userId
-      }));
-    }
     hideMigrationPanel();
-    notify("Migration refusée : vos données locales et le Cloud restent inchangés.");
+    notify("Import refusé : vos données locales et le Cloud restent inchangés.");
   });
   actions.append(accept, refuse);
   panel.append(title, live, disclosure, inventory);
@@ -4431,12 +4161,12 @@ function renderMigrationBlocked(result) {
   const panel = migrationPanel();
   if (!panel) return;
   panel.replaceChildren();
-  const title = el("h2", "migration-title", "Migration temporairement bloquée");
+  const title = el("h2", "migration-title", "Import temporairement bloqué");
   title.id = "migration-title";
   title.tabIndex = -1;
   const body = el("p", "migration-disclosure", reconciliationBlockMessage(result));
   const detail = el("p", "migration-disclosure",
-    "Aucune écriture n'est effectuée et votre sauvegarde threadstep.document.v1 ou votre fichier JSON reste intact.");
+    "Aucune écriture n'est effectuée et votre fichier de sauvegarde modern reste intact.");
   const actions = el("div", "migration-actions");
   const close = el("button", "secondary migration-refuse", "Fermer");
   close.type = "button";
@@ -4446,201 +4176,10 @@ function renderMigrationBlocked(result) {
   panel.hidden = false;
   title.focus();
 }
-function renderMigrationAlreadyReconciled(context, options = {}) {
-  if (!options.explicit) {
-    hideMigrationPanel();
-    return;
-  }
-  const panel = migrationPanel();
-  if (!panel || !context) return;
-  const view = buildReconciliationView(context.plan);
-  panel.replaceChildren();
-  const title = el("h2", "migration-title", "Sauvegarde historique déjà réconciliée");
-  title.id = "migration-title";
-  title.tabIndex = -1;
-  const live = el("p", "migration-live", "");
-  live.setAttribute("aria-live", "polite");
-  live.setAttribute("role", "status");
-  live.textContent = "Aucune insertion n'est nécessaire pour cette source et cette destination. La vérification est en lecture seule.";
-  const inventory = el("div", "migration-inventory");
-  for (const line of inventorySummary(view)) inventory.append(el("p", null, line));
-  const actions = el("div", "migration-actions");
-  const close = el("button", "secondary migration-refuse", "Fermer");
-  close.type = "button";
-  close.addEventListener("click", () => hideMigrationPanel());
-  actions.append(close);
-  panel.append(title, live, inventory, actions);
-  panel.hidden = false;
-  title.focus();
-}
-function applyHistoricalOffer(decision, payload = {}) {
-  const generation = payload.generation;
-  if (!migrationLifecycle.isCurrent(generation)) return false;
-  const previous = migrationOffer;
-  migrationOffer = { ...decision, generation };
-  const message = describeHistoricalOffer(decision);
-  switch (decision.action) {
-    case OFFER_ACTION.BLOCKED: {
-      const unchanged = previous && previous.action === OFFER_ACTION.BLOCKED &&
-        previous.reason === decision.reason && migrationPanelEl && !migrationPanelEl.hidden;
-      if (!unchanged) renderMigrationBlocked(payload.result);
-      notifyMigration(generation, message);
-      break;
-    }
-    case OFFER_ACTION.PREVIEW: {
-      const existing = migrationContext && migrationContext.sourceKind === "historical"
-        ? migrationContext
-        : null;
-      const nextDestination = destinationIdentity(payload.result.attestation);
-      const nextUserId = payload.result.attestation && payload.result.attestation.identity
-        ? payload.result.attestation.identity.userId
-        : null;
-      const same = !!existing && existing.sourceFingerprint === payload.sourceFingerprint &&
-        reviewDisplayedPlan(existing.displayedPlan, payload.plan).same;
-      if (!same) {
-        const reusable = existing && existing.sourceFingerprint === payload.sourceFingerprint &&
-          existing.userId === nextUserId &&
-          existing.destination &&
-          existing.destination.url === nextDestination.url &&
-          existing.destination.remoteDbId === nextDestination.remoteDbId;
-        openReconciliation(
-          payload.documentValue,
-          payload.result.records,
-          payload.result.attestation,
-          "historical",
-          historicalProvenance(payload.documentValue),
-          {
-            resolutions: reusable ? existing.resolutions : {},
-            generation,
-            sourceFingerprint: payload.sourceFingerprint
-          }
-        );
-      }
-      notifyMigration(generation, message);
-      break;
-    }
-    case OFFER_ACTION.ALREADY_RECONCILED: {
-      if (payload.explicit) {
-        openReconciliation(
-          payload.documentValue,
-          payload.result.records,
-          payload.result.attestation,
-          "historical",
-          historicalProvenance(payload.documentValue),
-          { resolutions: {}, generation, sourceFingerprint: payload.sourceFingerprint }
-        );
-        renderMigrationAlreadyReconciled(migrationContext, { explicit: true });
-      } else {
-        hideMigrationPanel();
-      }
-      notifyMigration(generation, message);
-      break;
-    }
-    case OFFER_ACTION.DISMISSED:
-      hideMigrationPanel();
-      notifyMigration(generation, message);
-      break;
-    case OFFER_ACTION.CLOSED:
-    default:
-      hideMigrationPanel();
-      clearMigrationFooter(generation);
-      break;
-  }
-  renderHistoricalBackup();
-  return true;
-}
-async function offerHistoricalMigration(options = {}) {
-  const explicit = options.explicit === true;
-  const generation = migrationLifecycle.begin();
-  const detected = detectHistoricalDocument(localStorage);
-  const destination = migrationDestination();
-  const identity = migrationIdentity();
-  const authenticated = businessAllowed();
-  if (!businessAllowed()) {
-    if (!migrationLifecycle.isCurrent(generation)) return { action: "superseded" };
-    const decision = decideHistoricalOffer({
-      sourceStatus: detected.status,
-      configured: !!destination,
-      authenticated: false,
-      explicitRequest: explicit
-    });
-    applyHistoricalOffer(decision, { generation, explicit });
-    return decision;
-  }
-  if (detected.status !== "present" || !destination || !businessStore) {
-    if (!migrationLifecycle.isCurrent(generation)) return { action: "superseded" };
-    const decision = decideHistoricalOffer({
-      sourceStatus: detected.status,
-      configured: !!destination,
-      authenticated,
-      explicitRequest: explicit
-    });
-    applyHistoricalOffer(decision, { generation, explicit });
-    return decision;
-  }
-  const sourceFingerprint = computeSourceFingerprint(detected.document);
-  const dismissed = !explicit && isDismissed(
-    readDismissalStore(localStorage),
-    dismissalKeyFor(sourceFingerprint, identity)
-  );
-  if (!explicit && dismissed) {
-    if (!migrationLifecycle.isCurrent(generation)) return { action: "superseded" };
-    const decision = decideHistoricalOffer({
-      sourceStatus: "present",
-      configured: true,
-      authenticated: true,
-      explicitRequest: false,
-      dismissed: true
-    });
-    applyHistoricalOffer(decision, { generation, explicit });
-    return decision;
-  }
-  const result = await readAttestedTarget();
-  if (!migrationLifecycle.isCurrent(generation)) return { action: "superseded" };
-  const currentSource = detectHistoricalDocument(localStorage);
-  const currentIdentity = migrationIdentity();
-  if (currentSource.status !== "present" ||
-      computeSourceFingerprint(currentSource.document) !== sourceFingerprint ||
-      !sameMigrationIdentity(identity, currentIdentity)) {
-    return { action: "superseded" };
-  }
-  const plan = result.status === "ready"
-    ? planReconciliation({
-      document: currentSource.document,
-      target: result.records,
-      destination: destinationIdentity(result.attestation),
-      userId: result.attestation && result.attestation.identity
-        ? result.attestation.identity.userId
-        : null,
-      resolutions: {},
-      provenance: historicalProvenance(currentSource.document)
-    })
-    : null;
-  const decision = decideHistoricalOffer({
-    sourceStatus: "present",
-    configured: true,
-    authenticated: businessAllowed(),
-    explicitRequest: explicit,
-    dismissed,
-    attestation: result.attestation,
-    targetStatus: result.status,
-    plan
-  });
-  if (!migrationLifecycle.isCurrent(generation)) return { action: "superseded" };
-  applyHistoricalOffer(decision, {
-    generation,
-    explicit,
-    result,
-    plan,
-    sourceFingerprint,
-    documentValue: currentSource.document
-  });
-  return decision;
-}
-async function offerJsonReconciliation(documentValue) {
+async function offerJsonReconciliation(records) {
   const destination = migrationDestination();
   if (!destination || !businessStore) {
-    notify("Import Cloud indisponible : configurez une destination Dexie Cloud. Votre fichier JSON est intact.");
+    notify("Import Cloud indisponible : configurez une destination Dexie Cloud. Votre fichier est intact.");
     return;
   }
   const result = await readAttestedTarget();
@@ -4649,7 +4188,7 @@ async function offerJsonReconciliation(documentValue) {
     notify(reconciliationBlockMessage(result));
     return;
   }
-  openReconciliation(documentValue, result.records, result.attestation, "json");
+  openReconciliation(records, result.records, result.attestation);
 }
 function reconciliationAdapter() {
   return {
@@ -4664,7 +4203,7 @@ function reconciliationAdapter() {
 async function confirmReconciliation(context) {
   const consentBox = document.querySelector("#migration-consent");
   if (!consentBox || !consentBox.checked) {
-    notify("Consentement explicite requis avant toute écriture de migration.");
+    notify("Consentement explicite requis avant toute écriture d'import.");
     return;
   }
   const displayed = context.displayedPlan || context.plan;
@@ -4678,27 +4217,16 @@ async function confirmReconciliation(context) {
     notifyError(reconciliationBlockMessage(result));
     return;
   }
-  let documentValue = context.document;
-  if (context.sourceKind === "historical") {
-    const detected = detectHistoricalDocument(localStorage);
-    if (detected.status !== "present") {
-      notify("Migration interrompue : sauvegarde source non disponible ou modifiée. Votre export JSON reste intact.");
-      return;
-    }
-    documentValue = detected.document;
-  }
   const destination = destinationIdentity(result.attestation);
   const userId = result.attestation && result.attestation.identity
     ? result.attestation.identity.userId : null;
   const fresh = planReconciliation({
-    document: documentValue,
+    records: context.records,
     target: result.records,
     destination,
     userId,
-    resolutions: context.resolutions,
-    provenance: context.provenance
+    resolutions: context.resolutions
   });
-  context.document = documentValue;
   context.target = result.records;
   context.destination = destination;
   context.userId = userId;
@@ -4713,27 +4241,21 @@ async function confirmReconciliation(context) {
   const consent = { confirmed: true, fingerprint: displayed.fingerprint };
   const outcome = await runReconciliation(reconciliationAdapter(), displayed, consent, async () => {
     const refreshed = await readAttestedTarget();
-    let revalidatedDocument = documentValue;
-    if (context.sourceKind === "historical") {
-      const detected = detectHistoricalDocument(localStorage);
-      revalidatedDocument = detected.status === "present" ? detected.document : null;
-    }
     const revalidatedDestination = destinationIdentity(refreshed.attestation);
     const revalidatedUserId = refreshed.attestation && refreshed.attestation.identity
       ? refreshed.attestation.identity.userId : null;
     const revalidatedPlan = refreshed.status === "ready"
       ? planReconciliation({
-        document: revalidatedDocument,
+        records: context.records,
         target: refreshed.records,
         destination: revalidatedDestination,
         userId: revalidatedUserId,
-        resolutions: context.resolutions,
-        provenance: context.provenance
+        resolutions: context.resolutions
       })
       : null;
     return {
       attestation: refreshed.attestation,
-      document: revalidatedDocument,
+      records: refreshed.records,
       target: refreshed.records,
       destination: revalidatedDestination,
       userId: revalidatedUserId,
@@ -4747,37 +4269,31 @@ async function confirmReconciliation(context) {
     });
     hideMigrationPanel();
     await refreshSyncedDocument();
-    renderHistoricalBackup();
     notify(migrationStatus.status === RECONCILIATION_STATUS.OFFLINE_PENDING
       ? "Écrit localement ; synchronisation Cloud en attente hors ligne. Aucun push distant n'est confirmé."
       : "Écrit localement dans IndexedDB ; synchronisation Cloud en attente. Aucun push distant n'est confirmé.");
   } else if (outcome.status === "already-migrated" || outcome.status === "up-to-date") {
     hideMigrationPanel();
     await refreshSyncedDocument();
-    renderHistoricalBackup();
     notify("Aucune nouvelle insertion nécessaire : les éléments déjà présents ou copiés sont reconnus.");
   } else if (outcome.status === "stale-plan") {
     context.displayedPlan = null;
     context.previewFingerprint = null;
-    if (context.sourceKind === "historical") {
-      void offerHistoricalMigration({ explicit: true });
-    } else {
-      renderMigrationPanel(context);
-    }
+    renderMigrationPanel(context);
     notify("Plan périmé : source, destination, session ou cible modifiée. Nouvelle revue nécessaire, aucune écriture.");
   } else if (outcome.status === "refused" || outcome.status === "consent-mismatch") {
-    notify("Migration refusée : consentement absent ou lié à un autre plan. Aucune écriture.");
+    notify("Import refusé : consentement absent ou lié à un autre plan. Aucune écriture.");
   } else if (outcome.status === "sync-blocked") {
     notifyError(describeAttestationReason(outcome.reason));
   } else if (outcome.status === "read-error") {
-    notifyError("Lecture de revalidation impossible : migration bloquée, cible et source inchangées.");
+    notifyError("Lecture de revalidation impossible : import bloqué, cible et source inchangées.");
   } else if (outcome.status === "failed") {
     migrationStatus = reduceReconciliationStatus(migrationStatus, { type: "transaction-error" });
     notifyError("Échec de la transaction : aucun groupe partiel écrit, cible et source inchangées.");
   } else if (outcome.status === "invalid-plan") {
     notify("Plan invalide : seules des insertions add sont autorisées. Aucune écriture.");
   } else {
-    notify("Migration interrompue : aucune écriture confirmée.");
+    notify("Import interrompu : aucune écriture confirmée.");
   }
 }
 
@@ -4816,21 +4332,23 @@ if (activationStartup.reason === ACTIVATION_STATUS.ACTIVATING) {
 }
 syncedDatabase = null;
 if (workspaceStartup.workspace === "synced") syncedDatabase = bootstrapSyncedDatabase(workspaceEntry);
-historicalGuard = compatibilityGuard(localStorage);
 renderCloudConfig();
 renderLocalWorkspace();
 renderActivationPanel();
 renderWorkspacePanel();
 if (syncedDatabase) {
   businessStore = createDexieStore(syncedDatabase);
+  setupMetadataStore(syncedDatabase);
   setupAuthentication();
 } else {
   try {
     localDatabase = bootstrapLocalDatabase();
     businessStore = createDexieStore(localDatabase);
+    setupMetadataStore(localDatabase);
   } catch {
     localDatabase = null;
     businessStore = null;
+    setupMetadataStore(null);
   }
   startLocalWorkspace();
 }

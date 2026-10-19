@@ -5,6 +5,14 @@ import { recordsToDocument } from "./persistence.js";
 import { documentToRecords } from "./persistence.js";
 import { sha256Hex } from "./fingerprint.js";
 import {
+  BACKUP_FORMAT,
+  canonicalBackupRecords,
+  computeBackupChecksum,
+  parseIndexedDbBackup,
+  serializeIndexedDbBackup,
+  validateBackupRecords
+} from "./indexeddb-backup.js";
+import {
   EXPORT_KIND,
   classifyProvenance,
   describeProvenanceInterpretations,
@@ -47,7 +55,6 @@ export const BLOCKING_ANOMALIES = Object.freeze([
 ]);
 
 export const RAW_RECOVERY_FORMAT = "threadstep.raw-recovery.v1";
-export const BUSINESS_EXPORT_FORMAT = "threadstep.v1";
 const LEGACY_PREFIX = "legacy:";
 
 const SUBJECT_FIELDS = Object.freeze(["id", "title", "order"]);
@@ -478,7 +485,7 @@ export function buildDegradedView(raw, inventory) {
   }
   return {
     editable: false,
-    document: { version: 1, subjects: placedSubjects },
+    document: { subjects: placedSubjects },
     displayed: { subjects: placedSubjects.length, items: placedTasks },
     anomalies: anomalous,
     inventory: report,
@@ -573,56 +580,89 @@ export function buildRepairRecoverySnapshot(raw, context = {}) {
   return buildRawRecoveryExport(raw, context);
 }
 
-// A normal V1 export is gated as soon as an integrity anomaly exists. The raw
-// recovery export stays available and distinct.
-export function evaluateV1Export(inventory) {
+// The normal modern business backup is gated as soon as an integrity anomaly
+// exists. The raw recovery export stays available and distinct.
+export function evaluateBusinessExport(inventory) {
   if (hasBlockingAnomaly(inventory)) {
     return {
       allowed: false,
-      code: "v1-export-disabled",
+      code: "business-export-disabled",
       reason: "integrity-anomaly",
       rawRecoveryRequired: true
     };
   }
-  return { allowed: true, code: "v1-export-ready", rawRecoveryRequired: false };
+  return { allowed: true, code: "business-export-ready", rawRecoveryRequired: false };
 }
 
 export function buildBusinessExport(records, options = {}) {
-  const gate = evaluateV1Export(options.inventory);
+  const gate = evaluateBusinessExport(options.inventory);
   if (!gate.allowed) {
-    return { status: "disabled", ...gate, document: null };
+    return { status: "disabled", ...gate, document: null, records: null };
+  }
+  const serialized = serializeIndexedDbBackup(records, {
+    schemaVersion: options.schemaVersion
+  });
+  if (!serialized.ok) {
+    return {
+      status: "incomplete",
+      allowed: false,
+      code: serialized.code,
+      reason: "invalid-records",
+      document: null,
+      records: null,
+      message: serialized.message
+    };
   }
   return {
     status: "ready",
     allowed: true,
-    document: {
-      version: 1,
-      provenance: {
-        exportKind: EXPORT_KIND.INDEXEDDB_EXPORT,
-        format: BUSINESS_EXPORT_FORMAT,
-        mappingVersion: PROVENANCE_MAPPING_VERSION,
-        idsCanonical: true
-      },
-      ...recordsToDocument(records)
-    }
+    code: serialized.code,
+    document: serialized.document,
+    records: serialized.records,
+    counts: serialized.counts,
+    checksum: serialized.checksum
   };
 }
 
+function verifyRestoreBackup(snapshot, expected = {}) {
+  if (isPlainObject(snapshot) && snapshot.format === BACKUP_FORMAT) {
+    const parsed = parseIndexedDbBackup(snapshot);
+    if (!parsed.ok) return { valid: false, code: parsed.code };
+    if (isPlainObject(expected.counts) &&
+        (expected.counts.subjects !== parsed.counts.subjects ||
+         expected.counts.items !== parsed.counts.items)) {
+      return { valid: false, code: "backup-count-mismatch" };
+    }
+    if (typeof expected.checksum === "string" && expected.checksum !== parsed.checksum) {
+      return { valid: false, code: "backup-checksum-mismatch" };
+    }
+    return { valid: true, code: "backup-valid", counts: parsed.counts, checksum: parsed.checksum };
+  }
+  return verifyRecoverySnapshot(snapshot, expected);
+}
+
 // Restoring is a distinct, explicit intention, never an effect of import/merge.
-// This pure helper exposes the scope and the potential losses before any write.
+// This pure helper exposes the scope, the potential losses and a fingerprint
+// bound to both the modern source records and the current target.
 export function buildRestorePlan(input = {}) {
   const current = isPlainObject(input.current) ? input.current : { subjects: [], items: [] };
-  const incoming = isPlainObject(input.incoming) ? input.incoming : null;
-  if (!incoming || !Array.isArray(incoming.subjects) || !Array.isArray(incoming.items)) {
-    return { status: "invalid-source", allowed: false, code: "invalid-source" };
+  const incoming = isPlainObject(input.records) && Array.isArray(input.records.subjects) &&
+    Array.isArray(input.records.items)
+    ? input.records
+    : isPlainObject(input.incoming) && Array.isArray(input.incoming.subjects) &&
+      Array.isArray(input.incoming.items) ? input.incoming : null;
+  if (!incoming) {
+    return { status: "invalid-source", allowed: false, code: "invalid-source", operations: [] };
   }
-  const provenance = classifyProvenance(input.document, { provenance: input.provenance });
-  if (isAmbiguousProvenance(provenance)) {
+  const validation = validateBackupRecords({ subjects: current.subjects, items: current.items });
+  const incomingValidation = validateBackupRecords({ subjects: incoming.subjects, items: incoming.items });
+  if (!incomingValidation.ok) {
     return {
-      status: "ambiguous-provenance",
+      status: "invalid-source",
       allowed: false,
-      code: "ambiguous-provenance",
-      interpretations: describeProvenanceInterpretations(input.document)
+      code: incomingValidation.code,
+      message: incomingValidation.message,
+      operations: []
     };
   }
   const currentKeys = new Set([
@@ -639,7 +679,15 @@ export function buildRestorePlan(input = {}) {
   const backup = input.backup === undefined ? null : input.backup;
   const backupCheck = backup === null
     ? { valid: false, code: "backup-missing" }
-    : verifyRecoverySnapshot(backup, input.backupExpected);
+    : verifyRestoreBackup(backup, input.backupExpected);
+  const sourceChecksum = computeBackupChecksum(incomingValidation.records);
+  const targetChecksum = validation.ok ? computeBackupChecksum(validation.records) : null;
+  const fingerprint = sha256Hex(canonical({
+    version: 1,
+    sourceChecksum,
+    targetChecksum,
+    backupChecksum: backupCheck.valid ? backupCheck.checksum : null
+  }));
   return {
     status: backupCheck.valid ? "ready" : "backup-required",
     allowed: backupCheck.valid,
@@ -655,7 +703,9 @@ export function buildRestorePlan(input = {}) {
     added,
     removed,
     backupCheck,
-    provenance
+    sourceChecksum,
+    targetChecksum,
+    fingerprint
   };
 }
 
@@ -685,6 +735,15 @@ function destinationIdentity(destination) {
 
 export function computeDestinationIdentityFingerprint(destination) {
   return sha256Hex(canonical(destinationIdentity(destination)));
+}
+
+function recordsCandidates(records) {
+  const normalized = canonicalBackupRecords(records);
+  const subjects = new Map();
+  const items = new Map();
+  for (const record of normalized.subjects) subjects.set(record.id, record);
+  for (const record of normalized.items) items.set(record.id, record);
+  return { subjects, items, ambiguity: false };
 }
 
 function sourceCandidates(source, provenance) {
@@ -718,8 +777,12 @@ function groupKey(store, id, field) {
 export function buildRepairPlan(input = {}) {
   const raw = isPlainObject(input.raw) ? input.raw : { subjects: [], items: [] };
   const inventory = input.inventory || buildIntegrityInventory(raw, input.context || {});
-  const provenance = classifyProvenance(input.source, { provenance: input.provenance });
-  const candidates = sourceCandidates(input.source, provenance);
+  const provenance = input.sourceRecords
+    ? { exportKind: EXPORT_KIND.INDEXEDDB_EXPORT, idsCanonical: true, mappingVersion: PROVENANCE_MAPPING_VERSION }
+    : classifyProvenance(input.source, { provenance: input.provenance });
+  const candidates = input.sourceRecords
+    ? recordsCandidates(input.sourceRecords)
+    : sourceCandidates(input.source, provenance);
   const decisions = isPlainObject(input.decisions) ? input.decisions : {};
   const targetSubjectIds = new Set(rawArrays(raw).subjects
     .filter((record) => isPlainObject(record) && typeof record.id === "string")
@@ -867,7 +930,9 @@ export function buildRepairPlan(input = {}) {
   const planBody = {
     version: 1,
     target: sha256Hex(canonical(raw)),
-    source: input.source ? sha256Hex(canonical(input.source)) : null,
+    source: input.sourceRecords
+      ? sha256Hex(canonical(canonicalBackupRecords(input.sourceRecords)))
+      : input.source ? sha256Hex(canonical(input.source)) : null,
     provenance: normalizeProvenance(provenance),
     decisions: clone(decisions),
     interpretations: isAmbiguousProvenance(provenance)

@@ -215,14 +215,14 @@ test("2.1-2.5 every required and cross-cutting journey has a passing CI scenario
   }
 });
 
-test("2.6 the reference V1 fixture of 5 subjects and 18 steps survives the deterministic path", async () => {
+test("2.6 the reference modern IndexedDB backup of 5 subjects and 18 steps survives the deterministic path", async () => {
   const report = await runAcceptanceMatrix({ specs });
-  const scenario = report.scenarios.find((candidate) => candidate.id === "reference-v1-journey");
+  const scenario = report.scenarios.find((candidate) => candidate.id === "reference-modern-backup-journey");
   assert.ok(scenario);
   assert.equal(scenario.ci.status, STATUS.PASSED);
   assert.deepEqual(scenario.ci.checks.map((check) => check.id).sort(), [
-    "reference-v1-reconciliation",
-    "reference-v1-survives"
+    "reference-modern-backup",
+    "reference-modern-reconciliation"
   ]);
   assert.equal(scenario.ci.checks.every((check) => check.status === STATUS.PASSED), true);
 });
@@ -237,7 +237,7 @@ test("3.1-3.4 the manual protocol and its links keep real evidence separate from
     "hors ligne",
     "réseau intermittent",
     "propagation",
-    "export de secours",
+    "sauvegarde IndexedDB moderne",
     "threadstep.document.v1",
     "legacy:",
     "Recette Dexie réelle",
@@ -305,5 +305,5 @@ test("4.1 the check chain covers the module and keeps runtime dependencies and s
     "dexie-cloud-addon": "4.4.15"
   });
   assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10" });
-  assert.equal(SCHEMA_VERSION, 2);
+  assert.equal(SCHEMA_VERSION, 3);
 });

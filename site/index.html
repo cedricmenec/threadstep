@@ -51,32 +51,26 @@
         </div>
         <p id="workspace-confirmation-status" class="workspace-confirmation-status" role="status" aria-live="polite"></p>
       </div>
+      <section id="legacy-cleanup" class="legacy-cleanup" aria-labelledby="legacy-cleanup-title" hidden>
+        <h3 id="legacy-cleanup-title">Anciennes clés V1 conservées</h3>
+        <p id="legacy-cleanup-scope"></p>
+        <div id="legacy-cleanup-list"></div>
+        <p id="legacy-cleanup-backup-status"></p>
+        <label for="legacy-cleanup-confirm">
+          <input id="legacy-cleanup-confirm" type="checkbox" disabled>
+          <span>Je confirme supprimer uniquement les anciennes clés V1 listées pour cette origine et ce navigateur.</span>
+        </label>
+        <div class="legacy-cleanup-actions">
+          <button id="legacy-cleanup-keep" type="button" class="secondary">Ne rien effacer</button>
+          <button id="legacy-cleanup-delete" type="button" class="danger" disabled>Supprimer uniquement les anciennes clés V1</button>
+        </div>
+        <p id="legacy-cleanup-status" role="status" aria-live="polite"></p>
+      </section>
     </section>
     <section id="local-panel" class="local-panel" aria-labelledby="local-panel-title" hidden>
       <h2 id="local-panel-title">Espace local IndexedDB</h2>
       <p id="local-status" class="local-status" role="status" aria-live="polite">Vos données sont lues et enregistrées dans IndexedDB sur cet appareil, sans compte Cloud.</p>
-      <p id="local-legacy-notice" class="local-legacy" role="status" aria-live="polite" hidden></p>
-      <button id="local-export-legacy" type="button" class="secondary" hidden>Exporter ma sauvegarde locale historique (JSON)</button>
-      <button id="local-convert-legacy" type="button" class="secondary" hidden>Convertir ma sauvegarde locale historique vers IndexedDB</button>
       <p id="local-storage-error" class="local-error" role="alert" hidden></p>
-    </section>
-    <section id="local-conversion" class="local-conversion" aria-labelledby="local-conversion-title" hidden>
-      <h2 id="local-conversion-title" tabindex="-1">Convertir le document historique en base locale</h2>
-      <p id="local-conversion-source"></p>
-      <p id="local-conversion-target"></p>
-      <p id="local-conversion-plan"></p>
-      <p id="local-conversion-fingerprint" class="local-conversion-fingerprint"></p>
-      <p id="local-conversion-state"></p>
-      <div id="local-provenance" class="local-provenance" hidden></div>
-      <label class="local-conversion-consent" for="local-conversion-consent">
-        <input id="local-conversion-consent" type="checkbox">
-        <span>Je confirme la conversion locale vers IndexedDB, sans configuration Cloud et sans supprimer ma sauvegarde historique.</span>
-      </label>
-      <div class="local-conversion-actions">
-        <button id="local-conversion-confirm" type="button" class="primary" disabled>Confirmer la conversion locale</button>
-        <button id="local-conversion-refuse" type="button" class="secondary">Refuser</button>
-      </div>
-      <p id="local-conversion-status" class="local-status" role="status" aria-live="polite"></p>
     </section>
     <section id="cloud-activation" class="cloud-activation" aria-labelledby="cloud-activation-title" hidden>
       <h2 id="cloud-activation-title">Activer Dexie Cloud depuis mon espace local</h2>
@@ -128,15 +122,6 @@
       </form>
       <p id="auth-offline" class="auth-offline" role="status" hidden></p>
       <p id="auth-local-data" class="auth-help" aria-live="polite"></p>
-      <button id="auth-export-legacy" type="button" class="secondary" hidden>Exporter ma sauvegarde locale historique (JSON)</button>
-    </section>
-    <section id="historical-backup" class="historical-backup" aria-labelledby="historical-backup-title" hidden>
-      <h2 id="historical-backup-title">Sauvegarde historique conservée</h2>
-      <p id="historical-backup-status" class="historical-backup-status"></p>
-      <div class="historical-backup-actions">
-        <button id="historical-backup-download" type="button" class="secondary">Exporter la sauvegarde historique (JSON)</button>
-        <button id="historical-backup-verify" type="button" class="secondary">Vérifier la sauvegarde historique</button>
-      </div>
     </section>
     <section class="dashboard" id="dashboard" aria-labelledby="dashboard-title">
       <div id="resume-card" class="resume-card" aria-live="polite" hidden></div>
@@ -177,7 +162,6 @@
       <h2 id="restore-title" tabindex="-1">Restaurer un état antérieur</h2>
       <p class="restore-warning">La restauration remplace l'état actuel : elle est distincte de l'import/fusion et n'est jamais un effet implicite d'un import.</p>
       <p id="restore-scope"></p>
-      <div id="restore-provenance" class="restore-provenance" hidden></div>
       <p id="restore-backup-status"></p>
       <button id="restore-download-backup" type="button" class="secondary">Télécharger la sauvegarde de l'état actuel</button>
       <label for="restore-confirmation">Saisissez RESTAURER pour confirmer explicitement</label>
@@ -194,7 +178,7 @@
       <p id="recovery-read-code" class="recovery-status" role="status" aria-live="polite"></p>
       <div id="recovery-degraded" class="recovery-degraded"></div>
       <div id="recovery-anomalies" class="recovery-anomalies" role="status" aria-live="polite"></div>
-      <p id="recovery-v1-status" class="recovery-v1-status"></p>
+      <p id="recovery-business-status" class="recovery-business-status"></p>
       <div class="recovery-actions">
         <button id="recovery-raw-export" type="button" class="secondary">Exporter les enregistrements bruts de récupération</button>
         <button id="recovery-repair-preview" type="button" class="secondary" disabled>Préparer une réparation</button>
@@ -204,14 +188,6 @@
         <p id="repair-preview-summary"></p>
         <label for="repair-source">Fichier source attestant l'identité (facultatif)</label>
         <input id="repair-source" type="file" accept=".json,application/json">
-        <div id="repair-provenance" class="repair-provenance" hidden>
-          <fieldset>
-            <legend>Provenance de la source de réparation</legend>
-            <label><input type="radio" name="repair-provenance-choice" value="v1-raw"> Document V1 brut</label>
-            <label><input type="radio" name="repair-provenance-choice" value="indexeddb-export"> Export IndexedDB déjà projeté</label>
-            <label><input type="radio" name="repair-provenance-choice" value="legacy-double"> Export historique legacy:legacy:</label>
-          </fieldset>
-        </div>
         <div id="repair-groups" class="repair-groups"></div>
         <p id="repair-backup-status" class="repair-backup-status"></p>
         <label class="repair-consent" for="repair-consent">

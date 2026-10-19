@@ -119,9 +119,9 @@ d'ensemble comme dans la vue de détail, la commande
 - Il n'existe pas de bouton inverse « rétrograder ». Le bouton est
   utilisable au clavier, à la souris et au toucher, avec un libellé
   explicite, une cible d'au moins 44 × 44 px et un focus visible.
-- Le format JSON V1, la clé `threadstep.document.v1` et les règles
+- Le format de sauvegarde `threadstep.indexeddb-backup` et les règles
   existantes d'édition, de note, de retrait/annulation et de
-  réordonnancement restent inchangés.
+  réordonnancement restent inchangés. Un fichier V1 est refusé.
 
 ## Ajouter une note facultative à une action (TS-019)
 
@@ -147,12 +147,11 @@ en texte libre**, utile pour un contexte trop long pour le titre
   vue d'ensemble et dans la vue de détail.
 - Les notes survivent aux opérations habituelles (terminer, changer la
   priorité, réordonner, replier, retirer puis annuler) et au
-  rechargement. L'**export JSON** les inclut ; un **import** reste
-  compatible avec les anciennes sauvegardes sans note et refuse
-  entièrement un fichier dont une note n'est pas du texte ou dépasse
-  2 000 caractères, sans écraser les données locales.
-- Aucune migration, nouvelle clé de stockage ni nouvelle version du
-  document : `note` est un champ **facultatif** du document V1.
+  rechargement. La sauvegarde `threadstep.indexeddb-backup` les inclut ;
+  un **import** refuse entièrement un fichier dont une note n'est pas du
+  texte ou dépasse 2 000 caractères, sans écraser les données locales.
+- Aucune migration ni nouvelle clé de stockage : `note` reste un champ
+  **facultatif** des enregistrements d'étape.
 
 ## Ouvrir un projet dans une vue dédiée (TS-016)
 
@@ -419,11 +418,21 @@ le stockage local ni l'export JSON.
 
 ## Enregistrement, export et import
 
-Les actions sont enregistrées automatiquement dans le stockage
-local de **ce navigateur et ce profil**. Utiliser régulièrement
-**« Exporter mes données »** pour obtenir un fichier JSON de secours,
-puis « Importer JSON » pour le restaurer. Un import demande
-confirmation avant de remplacer le document courant.
+Les actions sont enregistrées automatiquement dans **IndexedDB**, dans
+ce navigateur et ce profil. Utiliser régulièrement **« Exporter mes
+données »** pour obtenir une sauvegarde au format
+`threadstep.indexeddb-backup`, puis **« Importer et fusionner un JSON »**
+pour ajouter uniquement les enregistrements absents. « Restaurer un état
+antérieur » reste une intention distincte, avec sauvegarde préalable et
+confirmation renforcée.
+
+Les fichiers à l'ancien format V1 (`version: 1`), même récemment produits
+depuis IndexedDB, ne sont **plus acceptés** : l'application affiche un refus
+explicite sans rien importer ni effacer. Les anciennes clés V1 conservées
+dans le navigateur sont inertes. Un panneau « Anciennes clés V1 conservées »
+permet, seulement si vous le confirmez et après une sauvegarde IndexedDB
+vérifiée, de supprimer uniquement ces clés pour l'origine et le navigateur
+courants ; l'option par défaut est **« Ne rien effacer »**.
 
 La sauvegarde locale **n'est pas une synchronisation entre
 appareils** : autre téléphone, navigateur, profil ou mode privé

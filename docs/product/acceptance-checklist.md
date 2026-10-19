@@ -16,34 +16,34 @@ IndexedDB réel, ni le hors ligne, ni le tactile, ni le lecteur d'écran.
 
 - [ ] Au premier lancement sans Cloud, la vue métier est disponible sans OTP ni formulaire de configuration bloquant ; aucun appel réseau métier n'est visible dans l'onglet Réseau.
 - [ ] Créer des sujets, des étapes et une sous-tâche, les modifier, en supprimer, puis recharger : les mêmes données et relations reviennent depuis l'espace local IndexedDB `threadstep-local`.
-- [ ] Vérifier dans les outils du navigateur que l'ancienne clé `threadstep.document.v1` reste intacte, que la notice de préservation est visible et que l'export historique restitue le JSON d'origine.
-- [ ] Bloquer ou saturer IndexedDB : un message d'erreur local explicite apparaît, aucun faux succès n'est annoncé et l'export historique encore lisible reste possible après rechargement.
-- [ ] Parcourir au clavier et au lecteur d'écran la notice locale, le bouton d'export historique et les états d'erreur ; vérifier le focus, les noms accessibles et les cibles tactiles.
+- [ ] Vérifier dans les outils du navigateur que l'ancienne clé `threadstep.document.v1`, si elle existe, reste intacte et n'affiche aucune notice de migration ni bouton d'export V1.
+- [ ] Exporter une sauvegarde `threadstep.indexeddb-backup`, recharger, puis la restaurer dans un profil de test vierge en vérifiant sujets, étapes, hiérarchie, notes, priorités, ordres et états.
+- [ ] Bloquer ou saturer IndexedDB : un message d'erreur local explicite apparaît, aucun faux succès n'est annoncé et l'export brut de récupération reste distinct de la sauvegarde métier.
+- [ ] Présenter un fichier V1 : l'import et la restauration affichent un refus explicite et n'effacent rien.
+- [ ] Sur un profil de test, choisir « Ne rien effacer », puis confirmer une sauvegarde vérifiée et vérifier que seul le nettoyage explicitement consenti supprime les clés V1 listées pour l'origine courante.
+- [ ] Parcourir au clavier et au lecteur d'écran le panneau de nettoyage, les états d'erreur et les contrôles d'export ; vérifier le focus, les noms accessibles et les cibles tactiles.
 - [ ] Après avoir configuré une URL Cloud, vérifier que la base synchronisée est distincte et qu'aucune donnée locale n'a été copiée ou envoyée par cette seule configuration.
 
-## Conversion locale V1 sans Cloud (TS-033)
+## Sauvegarde IndexedDB modern et retrait V1 (TS-040)
 
-À vérifier manuellement sur Chrome mobile, dans un profil de test, après avoir
-conservé un export JSON de secours. Ces contrôles ne sont pas prouvés par les
-tests Node.
+À vérifier manuellement sur Chrome mobile et sur un second navigateur, dans des
+profils de test, après avoir conservé une sauvegarde moderne de secours. Ces
+contrôles ne sont pas prouvés par les tests Node. La conversion V1 n'existe plus :
+aucun document `threadstep.document.v1` n'est proposé, converti, importé ou
+restauré.
 
-- Avec un document V1 réel de 5 sujets et 18 étapes, ouvrir la prévisualisation
-  de conversion locale : vérifier la destination `threadstep-local`, les comptes
-  source et cible, les insertions prévues et l'empreinte de source, sans OTP ni
-  URL Cloud.
-- Refuser une première fois, puis confirmer explicitement : la source et la
-  cible restent inchangées après refus ; après confirmation, recharger et
-  comparer sujets, étapes, sous-étapes, notes, priorités, ordres et états
-  terminés.
-- Vérifier que `threadstep.document.v1` et l'export historique restent
-  non destructifs et identiques, et que `threadstep.migration.v1` ne contient
-  aucune donnée métier.
-- Relancer la même conversion : aucun doublon ni écrasement. Tester un V1
-  invalide, une cible partiellement peuplée, une collision et un échec de
-  transaction sans demi-document.
-- Dans l'onglet Réseau, confirmer l'absence d'instance Dexie Cloud, d'OTP et de
-  push ; le statut doit annoncer une conversion locale terminée, jamais une
-  synchronisation Cloud. Le transfert vers le Cloud reste TS-037.
+- Exporter depuis un espace local et depuis un espace Cloud de test, recharger,
+  puis restaurer dans un profil vierge : vérifier 5 sujets, 18 étapes plus une
+  tâche supplémentaire, la hiérarchie, les notes, priorités, ordres et états.
+- Importer deux fois la même sauvegarde : aucun doublon. Provoquer une collision
+  et un plan modifié avant confirmation : aucune perte et aucune écriture.
+- Simuler une clé `threadstep.document.v1` : aucun panneau historique, aucun
+  export V1 et aucun trafic Cloud ne réapparaissent. Présenter un fichier V1 :
+  refus explicite, rien n'est effacé.
+- Sur un profil de test uniquement, choisir « Ne rien effacer », puis vérifier
+  qu'une sauvegarde moderne et la migration des préférences sont requises avant
+  de supprimer les seules clés V1 listées pour l'origine courante. Tester
+  l'annulation et une erreur : les valeurs restent intactes.
 
 ## Certification E2E local-first et Cloud (TS-039)
 

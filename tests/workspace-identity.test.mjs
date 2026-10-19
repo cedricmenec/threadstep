@@ -786,7 +786,7 @@ test("3.6 purge closes the base and deletes only the planned physical name", () 
 test("3.7 pending warning and snapshot are wired before confirmation", () => {
   const app = read("site/app.js");
   assert.match(app, /pendingChangeWarning\(pending\)/);
-  assert.match(app, /buildBusinessExport\(lastRecords, \{ inventory \}\)/);
+  assert.match(app, /buildBusinessExport\(lastRecords, \{ inventory, schemaVersion: SCHEMA_VERSION \}\)/);
   assert.match(app, /threadstep-workspace-backup\.json/);
   assert.match(app, /showWorkspaceConfirmation\("logout", entry, pending\)/);
   assert.match(app, /showWorkspaceConfirmation\("purge", entry, pending\)/);

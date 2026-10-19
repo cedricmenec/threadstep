@@ -114,7 +114,12 @@ test("2.2 shouldOpenSyncedDatabase gates on a valid configuration", () => {
 
 test("2.2 cloudConfigureOptions wires Dexie native interaction to custom OTP GUI", () => {
   const options = cloudConfigureOptions("https://demo.dexie.cloud");
-  assert.deepEqual(options, { databaseUrl: "https://demo.dexie.cloud", requireAuth: true, customLoginGui: true });
+  assert.deepEqual(options, {
+    databaseUrl: "https://demo.dexie.cloud",
+    requireAuth: true,
+    customLoginGui: true,
+    unsyncedTables: ["meta"]
+  });
   assert.equal(Object.prototype.hasOwnProperty.call(options, "nameSuffix"), false);
   assert.notEqual(options.nameSuffix, false);
 });
@@ -155,18 +160,20 @@ test("3.1 schema has an explicit integer version and no ++id store", () => {
   const schema = dexieSchema();
   assert.equal(Number.isInteger(schema.version), true);
   assert.equal(schema.version, SCHEMA_VERSION);
-  const definitions = Object.values(schema.stores);
+  const definitions = Object.entries(schema.stores);
   assert.ok(definitions.length > 0);
-  for (const definition of definitions) {
+  for (const [name, definition] of definitions) {
     assert.doesNotMatch(definition, /\+\+id/);
-    assert.equal(definition, "id");
+    assert.equal(definition, name === "meta" ? "key" : "id");
   }
+  assert.equal(schema.stores.meta, "key");
+  assert.deepEqual(cloudConfigureOptions("https://demo.dexie.cloud").unsyncedTables, ["meta"]);
 });
 
 test("3.2 validateSynchronizedStores rejects ++id and accepts explicit id or @id", () => {
   assert.equal(validateSynchronizedStores({ subjects: "@id" }), true);
   assert.equal(validateSynchronizedStores({ subjects: "id" }), true);
-  assert.equal(SCHEMA_VERSION, 2);
+  assert.equal(SCHEMA_VERSION, 3);
   assert.equal(validateSynchronizedStores({ subjects: "++id, title" }), false);
   assert.equal(validateSynchronizedStores({ subjects: "title" }), false);
   assert.equal(validateSynchronizedStores({}), false);
@@ -233,9 +240,9 @@ test("3.4 the autonomous local workspace has a distinct stable schema", () => {
   assert.equal(local.version, synced.version);
   assert.equal(local.version, SCHEMA_VERSION);
   assert.deepEqual(local.stores, synced.stores);
-  assert.deepEqual(Object.keys(local.stores).sort(), ["items", "subjects"]);
-  for (const definition of Object.values(local.stores)) {
-    assert.equal(definition, "id");
+  assert.deepEqual(Object.keys(local.stores).sort(), ["items", "meta", "subjects"]);
+  for (const [name, definition] of Object.entries(local.stores)) {
+    assert.equal(definition, name === "meta" ? "key" : "id");
     assert.doesNotMatch(definition, /\+\+id/);
   }
 });
@@ -266,7 +273,7 @@ test("3.5 the local bootstrap installs no Dexie Cloud addon, configuration or ne
   assert.equal(construct.options, undefined);
   assert.equal(calls.some((call) => call.type === "configure"), false);
   assert.equal(calls.find((call) => call.type === "version").value, SCHEMA_VERSION);
-  assert.deepEqual(calls.find((call) => call.type === "stores").value, { ...SYNCHRONIZED_STORES });
+  assert.deepEqual(calls.find((call) => call.type === "stores").value, { ...SYNCHRONIZED_STORES, meta: "key" });
 
   const source = read("site/dexie-foundation.js");
   const start = source.indexOf("export function openLocalDatabase");

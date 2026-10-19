@@ -3,7 +3,7 @@ import { sha256Hex } from "./fingerprint.js";
 export const CLOUD_CONFIG_KEY = "threadstep.cloud.config.v1";
 export const DATABASE_NAME = "threadstep";
 export const LOCAL_DATABASE_NAME = "threadstep-local";
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const CLOUD_HOST_SUFFIX = "dexie.cloud";
 export const SYNCHRONIZED_STORES = Object.freeze({
   // Ordinary string primary keys accept current UUIDs and legacy: IDs.
@@ -11,6 +11,11 @@ export const SYNCHRONIZED_STORES = Object.freeze({
   subjects: "id",
   items: "id"
 });
+
+// Local-only metadata (preferences, migration markers). Declared in both
+// schemas but never synchronized by Dexie Cloud.
+export const META_STORE = "meta";
+export const LOCAL_META_STORES = Object.freeze({ [META_STORE]: "key" });
 
 function rejection(reason, message) {
   return { valid: false, url: null, reason, message };
@@ -71,7 +76,7 @@ export function cloudConfigureOptions(databaseUrl) {
   // ThreadStep renders the native Dexie Cloud userInteraction prompts in its
   // own DOM. Without customLoginGui the addon uses its default GUI instead,
   // so our email/OTP form is never wired to that authentication dialog.
-  return { databaseUrl, requireAuth: true, customLoginGui: true };
+  return { databaseUrl, requireAuth: true, customLoginGui: true, unsyncedTables: [META_STORE] };
 }
 
 export function upgradeSchema() {
@@ -82,7 +87,7 @@ export function dexieSchema() {
   return {
     name: DATABASE_NAME,
     version: SCHEMA_VERSION,
-    stores: { ...SYNCHRONIZED_STORES },
+    stores: { ...SYNCHRONIZED_STORES, ...LOCAL_META_STORES },
     upgrade: upgradeSchema
   };
 }
@@ -91,7 +96,7 @@ export function localDexieSchema() {
   return {
     name: LOCAL_DATABASE_NAME,
     version: SCHEMA_VERSION,
-    stores: { ...SYNCHRONIZED_STORES },
+    stores: { ...SYNCHRONIZED_STORES, ...LOCAL_META_STORES },
     upgrade: upgradeSchema
   };
 }
