@@ -25,6 +25,7 @@ import {
   evaluateAccountBinding,
   hashWorkspaceUser,
   initializeWorkspaceRegistry,
+  isRecoverableUnverifiedWorkspace,
   migrateLegacyWorkspace,
   parseWorkspaceRegistry,
   pendingChangeWarning,
@@ -342,6 +343,81 @@ test("1.4 unverified historical Cloud cache can recover via an isolated fresh ba
     entry: plan.registry.workspaces[URL_A],
     userId: "account-b", authenticated: true, cacheHasRecords: true
   }).state, BINDING_STATE.MISMATCH);
+});
+
+test("1.4 a fresh Android first pull may populate the cache before account binding", () => {
+  const fresh = entry(URL_A, WORKSPACE_STATUS.ACTIVATING);
+  const registry = selectWorkspaceInRegistry(registryWith(fresh), URL_A);
+  const blocked = evaluateAccountBinding({
+    entry: registry.workspaces[URL_A],
+    authenticated: true, userId: "account-a", cacheHasRecords: true
+  });
+  assert.equal(blocked.state, BINDING_STATE.UNVERIFIED);
+  assert.equal(blocked.businessAllowed, false);
+  assert.equal(isRecoverableUnverifiedWorkspace(fresh, blocked.state), true);
+  const candidate = "threadstep-recovery-" + "e".repeat(32);
+  const attestation = {
+    attested: true,
+    identity: { databaseUrl: URL_A, remoteDbId: "remote-a", userId: "account-a" }
+  };
+  const good = {
+    registry, binding: blocked.state, attestation,
+    pending: { status: PENDING_STATE.NONE, count: 0 },
+    newDatabaseName: candidate
+  };
+  const plan = planUnverifiedCloudRecovery(good);
+  assert.equal(plan.allowed, true);
+  assert.equal(plan.registry.workspaces[URL_A].databaseName, candidate);
+  assert.equal(plan.registry.workspaces[URL_A].status, WORKSPACE_STATUS.ACTIVATING);
+  assert.equal(plan.registry.workspaces[URL_A].userDigest, hashWorkspaceUser("account-a"));
+  assert.equal(registry.workspaces[URL_A].userDigest, undefined);
+  assert.deepEqual(plan.operations, []);
+  assert.deepEqual(plan.deletedBases, []);
+  assert.deepEqual(plan.remoteDeletes, []);
+  assert.equal(plan.copy, false);
+  assert.equal(plan.merge, false);
+  assert.equal(evaluateAccountBinding({
+    entry: plan.registry.workspaces[URL_A],
+    authenticated: true, userId: "account-a", cacheHasRecords: true
+  }).state, BINDING_STATE.BOUND);
+  for (const [patch, reason] of [
+    [{ pending: { status: PENDING_STATE.UNKNOWN } }, "pending-or-unknown"],
+    [{ pending: { status: PENDING_STATE.PENDING, count: 2 } }, "pending-or-unknown"],
+    [{ attestation: { attested: false } }, "remote-not-attested"],
+    [{ attestation: { attested: true, identity: {
+      databaseUrl: URL_B, remoteDbId: "remote-a", userId: "account-a"
+    } } }, "remote-not-attested"],
+    [{ attestation: { attested: true, identity: {
+      databaseUrl: URL_A, remoteDbId: "remote-a", userId: null
+    } } }, "remote-not-attested"]
+  ]) {
+    const rejected = planUnverifiedCloudRecovery({ ...good, ...patch });
+    assert.equal(rejected.allowed, false, reason);
+    assert.equal(rejected.reason, reason);
+    assert.deepEqual(rejected.operations, []);
+  }
+  assert.equal(isRecoverableUnverifiedWorkspace({
+    ...fresh, databaseName: "unknown-cache"
+  }, blocked.state), false);
+  assert.equal(isRecoverableUnverifiedWorkspace(fresh, BINDING_STATE.MISMATCH), false);
+  assert.equal(isRecoverableUnverifiedWorkspace({
+    ...fresh, status: WORKSPACE_STATUS.SUSPENDED
+  }, blocked.state), false);
+  assert.equal(isRecoverableUnverifiedWorkspace({
+    ...fresh, userDigest: hashWorkspaceUser("account-b")
+  }, blocked.state), false);
+});
+
+test("1.4 a modern cache recovery is discoverable without weakening account checks", () => {
+  const app = read("site/app.js");
+  assert.match(app, /isRecoverableUnverifiedWorkspace\(entry, accountBinding\.state\)/);
+  assert.match(app, /OTP confirmé ; cache Cloud non vérifié/);
+  assert.match(app, /showWorkspaceConfirmation\("recover"/);
+  const recovery = app.slice(
+    app.indexOf("async function unusedCloudRecoveryBase"),
+    app.indexOf("async function requestWorkspacePurge")
+  );
+  assert.doesNotMatch(recovery, /Dexie\.delete|\.cloud\.logout|\.put\(|\.add\(|\.clear\(/);
 });
 
 test("1.4 remote cache recovery fails closed for unknown accounts, offline or pending writes", () => {
