@@ -116,12 +116,40 @@ contrôle reste **à effectuer** tant qu'aucune preuve réelle n'est consignée.
   `aria-expanded` et l'état masqué restent cohérents.
 - Le menu et les pages de paramètres restent utilisables à 320 px et au
   clavier, sans débordement horizontal, avec des cibles d'au moins 44 × 44 px.
-- Les commandes d'export, d'import, de restauration, de connexion, de
-  configuration Cloud et de diagnostic restent à leur emplacement actuel ;
-  les pages de paramètres ne les dupliquent pas.
+- Les commandes d'export, d'import et de restauration sont réunies sur
+  `#/parametres/donnees` ; l'accueil ne duplique plus la barre d'actions.
+  Les commandes de connexion, de configuration Cloud et de diagnostic
+  restent à leur emplacement actuel.
 - Naviguer entre Mes projets et les pages de paramètres ne modifie aucune
   donnée IndexedDB, aucune configuration Cloud et ne déclenche ni requête
   réseau, ni authentification, ni pull.
+
+## Imports / Exports sur une page dédiée (TS-042)
+
+À vérifier dans de vrais navigateurs de test, sur ordinateur et sur mobile,
+avec des données synthétiques uniquement. Ces contrôles restent **à
+effectuer** tant qu'aucune preuve réelle n'est consignée.
+
+- Depuis le menu, ouvrir `#/parametres/donnees` au clavier et au toucher ;
+  vérifier les sections « Exporter », « Importer et fusionner » et
+  « Restaurer un état antérieur », les libellés visibles, le focus, les
+  cibles d'au moins 44 × 44 px et l'absence de débordement à 320 px.
+  Vérifier que l'accueil n'affiche plus la barre d'actions de données.
+- Comparer un export `threadstep.indexeddb-backup` produit avant et après
+  le déplacement : mêmes sujets, tâches, relations, compteurs et empreinte,
+  sans secret, OTP, jeton, configuration Cloud ni donnée de compte.
+- Importer deux fois une sauvegarde moderne : aucun doublon. Provoquer une
+  collision et une référence invalide : elles sont bloquées. Présenter un
+  fichier V1 et un JSON invalide : message explicite, aucune écriture et
+  fichier source intact.
+- Démarrer une restauration : vérifier la portée affichée, l'obligation de
+  télécharger la sauvegarde de l'état actuel et la saisie exacte de
+  `RESTAURER`. Tester annulation, changement de page, rechargement et
+  hors-ligne : aucune restauration ni perte implicite.
+- Dans une confirmation réelle de purge, de déconnexion ou d'action sur un
+  espace de travail, vérifier que la sauvegarde de sécurité reste
+  accessible dans ce même contexte. Vérifier aussi que l'export brut reste
+  accessible depuis le diagnostic de récupération en lecture seule.
 
 ## Tests utilisateur à consigner
 
