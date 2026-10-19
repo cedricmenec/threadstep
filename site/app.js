@@ -98,6 +98,7 @@ import {
   pendingChangeWarning,
   pendingStatusFromMutationTables,
   planWorkspaceLogout,
+  planUnverifiedCloudRecovery,
   planWorkspacePurge,
   planWorkspaceResume,
   planWorkspaceSelection,
@@ -167,6 +168,7 @@ const workspaceSuspendEl = document.querySelector("#workspace-suspend");
 const workspaceLogoutEl = document.querySelector("#workspace-logout");
 const workspacePurgeEl = document.querySelector("#workspace-purge");
 const workspaceBindingStatusEl = document.querySelector("#workspace-binding-status");
+const workspaceRecoverEl = document.querySelector("#workspace-recover");
 const workspaceConfirmationEl = document.querySelector("#workspace-confirmation");
 const workspaceConfirmationTitleEl = document.querySelector("#workspace-confirmation-title");
 const workspaceConfirmationScopeEl = document.querySelector("#workspace-confirmation-scope");
@@ -450,6 +452,11 @@ function renderWorkspacePanel() {
   if (workspaceSuspendEl) workspaceSuspendEl.disabled = !entry || suspended || workspaceBusy;
   if (workspaceLogoutEl) workspaceLogoutEl.disabled = !entry || workspaceBusy;
   if (workspacePurgeEl) workspacePurgeEl.disabled = workspaceBusy;
+  if (workspaceRecoverEl) {
+    workspaceRecoverEl.hidden = !entry || entry.databaseName !== "threadstep" ||
+      accountBinding.state !== BINDING_STATE.UNVERIFIED;
+    workspaceRecoverEl.disabled = workspaceBusy;
+  }
   if (workspaceBindingStatusEl) {
     if (syncedDatabase) {
       const extra = accountBinding.state === BINDING_STATE.MISMATCH ||
@@ -477,26 +484,39 @@ function showWorkspaceConfirmation(kind, entry, pending) {
   if (!workspaceConfirmationEl) return;
   workspaceConfirmationEl.hidden = false;
   if (workspaceConfirmationTitleEl) {
-    workspaceConfirmationTitleEl.textContent = kind === "logout"
-      ? "Confirmer la déconnexion"
-      : "Confirmer la purge locale";
+    workspaceConfirmationTitleEl.textContent = kind === "recover"
+      ? "Récupérer le Cloud dans un cache isolé"
+      : kind === "logout" ? "Confirmer la déconnexion" : "Confirmer la purge locale";
   }
   if (workspaceConfirmationScopeEl) {
-    workspaceConfirmationScopeEl.textContent = entry
-      ? "Espace synchronisé : " + entry.url + ". Base locale effective : " + entry.databaseName +
-        ". La copie distante n'est pas supprimée."
-      : "Espace local autonome. Base locale effective : " + LOCAL_DATABASE_NAME + ".";
+    workspaceConfirmationScopeEl.textContent = kind === "recover"
+      ? "L'ancien cache IndexedDB sera conservé intact. Une nouvelle base locale isolée " +
+        "sera créée pour relire uniquement les données autorisées sur le serveur Dexie Cloud. " +
+        "Aucune donnée n'est copiée depuis le cache non vérifié."
+      : entry
+        ? "Espace synchronisé : " + entry.url + ". Base locale effective : " + entry.databaseName +
+          ". La copie distante n'est pas supprimée."
+        : "Espace local autonome. Base locale effective : " + LOCAL_DATABASE_NAME + ".";
   }
   if (workspaceConfirmationWarningEl) {
-    workspaceConfirmationWarningEl.textContent = pendingChangeWarning(pending);
+    workspaceConfirmationWarningEl.textContent = kind === "recover"
+      ? "La connexion et la destination ont été vérifiées, et aucune mutation native en attente " +
+        "n'a été détectée. Cela ne prouve pas que toutes les données du cache historique " +
+        "sont présentes sur le serveur. L'ancien cache reste accessible pour récupération. " +
+        "Une nouvelle connexion par code peut être nécessaire."
+      : pendingChangeWarning(pending);
   }
   if (workspaceConfirmationContinueEl) {
-    workspaceConfirmationContinueEl.textContent = kind === "logout"
-      ? "Confirmer la déconnexion"
-      : "Purger cette copie locale";
+    workspaceConfirmationContinueEl.textContent = kind === "recover"
+      ? "Créer la nouvelle copie Cloud"
+      : kind === "logout" ? "Confirmer la déconnexion" : "Purger cette copie locale";
     workspaceConfirmationContinueEl.disabled = false;
+    workspaceConfirmationContinueEl.classList.toggle("danger", kind !== "recover");
   }
-  if (workspaceBackupEl) workspaceBackupEl.disabled = false;
+  if (workspaceBackupEl) {
+    workspaceBackupEl.hidden = kind === "recover";
+    workspaceBackupEl.disabled = kind === "recover";
+  }
   setWorkspaceConfirmationStatus("");
   if (workspaceConfirmationCancelEl) workspaceConfirmationCancelEl.focus();
 }
@@ -737,6 +757,86 @@ async function executeWorkspacePurge() {
   location.reload();
   return true;
 }
+// TS-038 remediation: do not silently associate a populated, unverified cache
+// with a newly logged-in account. A fresh Cloud cache never reads the old one.
+async function unusedCloudRecoveryBase(baseName) {
+  // No existing database is ever re-used for a recovery. A random name avoids
+  // renaming or mutating the legacy cache, including its mutation stores.
+  if (!indexedDB || typeof indexedDB.databases !== "function") return false;
+  try {
+    const bases = await indexedDB.databases();
+    return Array.isArray(bases) &&
+      !bases.some((item) => item && typeof item.name === "string" &&
+        (item.name === baseName || item.name.startsWith(baseName + "-")));
+  } catch {
+    return false;
+  }
+}
+function cloudRecoveryPlan(candidate, pending) {
+  return planUnverifiedCloudRecovery({
+    registry: workspaceRegistry,
+    binding: accountBinding.state,
+    attestation: evaluateSyncAttestation(nativeAttestationInput()),
+    pending,
+    newDatabaseName: candidate
+  });
+}
+async function requestWorkspaceRecovery() {
+  if (workspaceBusy || accountBinding.state !== BINDING_STATE.UNVERIFIED) return;
+  workspaceBusy = true;
+  try {
+    const candidate = "threadstep-recovery-" + crypto.randomUUID().replace(/-/g, "");
+    const pending = await diagnosePendingChanges();
+    const plan = cloudRecoveryPlan(candidate, pending);
+    if (!plan.allowed || !(await unusedCloudRecoveryBase(candidate))) {
+      notifyError("Récupération Cloud non autorisée (" +
+        (plan.allowed ? "nouvelle-base-indisponible" : plan.reason) +
+        "). L'ancien cache reste intact. Ne le purgez pas.");
+      return;
+    }
+    showWorkspaceConfirmation("recover", selectedSyncedEntry(), pending);
+    if (workspaceConfirmation) {
+      workspaceConfirmation.recovery = {
+        url: plan.url,
+        previousBase: plan.oldDatabaseName,
+        remoteDbId: plan.remoteDbId,
+        userDigest: plan.userDigest,
+        candidate
+      };
+    }
+  } finally {
+    workspaceBusy = false;
+    renderWorkspacePanel();
+  }
+}
+async function confirmWorkspaceRecovery() {
+  const request = workspaceConfirmation && workspaceConfirmation.recovery;
+  if (!request || accountBinding.state !== BINDING_STATE.UNVERIFIED) return;
+  const pending = await diagnosePendingChanges();
+  const plan = cloudRecoveryPlan(request.candidate, pending);
+  if (!plan.allowed || plan.url !== request.url ||
+      plan.oldDatabaseName !== request.previousBase ||
+      plan.remoteDbId !== request.remoteDbId ||
+      plan.userDigest !== request.userDigest ||
+      !(await unusedCloudRecoveryBase(request.candidate))) {
+    setWorkspaceConfirmationStatus(
+      "Les preuves d'identité, de synchronisation ou les mutations ont changé : " +
+      "récupération annulée. Aucun cache supprimé ni remplacé."
+    );
+    return;
+  }
+  if (!persistWorkspaceRegistry(plan.registry)) {
+    setWorkspaceConfirmationStatus(
+      "Enregistrement du nouvel espace impossible ; l'ancien cache reste inchangé."
+    );
+    return;
+  }
+  persistActivationMarkerFor(plan.registry, plan.url);
+  // Only the registry pointer changes. Dexie Cloud will authenticate and
+  // perform its native pull into the new empty local database after reload.
+  location.reload();
+}
+
 async function requestWorkspacePurge() {
   if (workspaceBusy) return;
   const entry = selectedSyncedEntry();
@@ -749,16 +849,22 @@ async function confirmWorkspaceAction() {
   if (workspaceConfirmationContinueEl) workspaceConfirmationContinueEl.disabled = true;
   if (workspaceBackupEl) workspaceBackupEl.disabled = true;
   const kind = workspaceConfirmation.kind;
-  if (kind === "logout") {
-    const entry = selectedSyncedEntry();
-    if (entry) await executeWorkspaceLogout(entry.url);
-  } else {
-    await executeWorkspacePurge();
+  try {
+    if (kind === "recover") {
+      await confirmWorkspaceRecovery();
+    } else if (kind === "logout") {
+      const entry = selectedSyncedEntry();
+      if (entry) await executeWorkspaceLogout(entry.url);
+    } else if (kind === "purge") {
+      await executeWorkspacePurge();
+    }
+  } finally {
+    workspaceBusy = false;
+    if (workspaceConfirmationContinueEl) workspaceConfirmationContinueEl.disabled = false;
+    if (workspaceBackupEl) workspaceBackupEl.disabled = false;
+    renderWorkspacePanel();
   }
-  workspaceBusy = false;
-  if (workspaceConfirmationContinueEl) workspaceConfirmationContinueEl.disabled = false;
-  if (workspaceBackupEl) workspaceBackupEl.disabled = false;
-  renderWorkspacePanel();
+  return;
 }
 
 // TS-037 activation assistant: the marker decides whether startup opens the
@@ -3478,11 +3584,13 @@ if (workspaceApplyEl) workspaceApplyEl.addEventListener("click", () => { void ap
 if (workspaceSuspendEl) workspaceSuspendEl.addEventListener("click", () => { void suspendCurrentWorkspace(); });
 if (workspaceLogoutEl) workspaceLogoutEl.addEventListener("click", () => { void requestWorkspaceLogout(); });
 if (workspacePurgeEl) workspacePurgeEl.addEventListener("click", () => { void requestWorkspacePurge(); });
+if (workspaceRecoverEl) workspaceRecoverEl.addEventListener("click", () => { void requestWorkspaceRecovery(); });
 if (workspaceConfirmationCancelEl) workspaceConfirmationCancelEl.addEventListener("click", () => {
   const kind = workspaceConfirmation ? workspaceConfirmation.kind : null;
   hideWorkspaceConfirmation();
   notify("Action annulée : la session, la base locale et la destination restent inchangées.");
   if (kind === "logout" && workspaceLogoutEl) workspaceLogoutEl.focus();
+  else if (kind === "recover" && workspaceRecoverEl) workspaceRecoverEl.focus();
   else if (workspacePurgeEl) workspacePurgeEl.focus();
 });
 if (workspaceBackupEl) workspaceBackupEl.addEventListener("click", () => { downloadWorkspaceSnapshot(); });
