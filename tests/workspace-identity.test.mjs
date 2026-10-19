@@ -30,6 +30,7 @@ import {
   pendingChangeWarning,
   pendingStatusFromMutationTables,
   planWorkspaceLogout,
+  planUnverifiedCloudRecovery,
   planWorkspacePurge,
   planWorkspaceResume,
   planWorkspaceSelection,
@@ -300,6 +301,110 @@ test("1.4 legacy activation digests still match the same account", () => {
   assert.equal(workspaceUserDigestMatches(legacyEntry.userDigest, "user-b"), false);
   const rebound = bindWorkspaceAccount(registryWith(legacyEntry), URL_A, "user-a");
   assert.equal(rebound.workspaces[URL_A].userDigest, hashWorkspaceUser("user-a"));
+});
+
+test("1.4 unverified historical Cloud cache can recover via an isolated fresh base", () => {
+  const legacy = migrateLegacyWorkspace({
+    config: { databaseUrl: URL_A },
+    record: { status: WORKSPACE_STATUS.ACTIVE, remoteDbId: "remote-a" },
+    schemaVersion: SCHEMA_VERSION
+  });
+  const candidate = "threadstep-recovery-" + "a".repeat(32);
+  const source = {
+    registry: legacy,
+    binding: BINDING_STATE.UNVERIFIED,
+    attestation: {
+      attested: true,
+      identity: { databaseUrl: URL_A, remoteDbId: "remote-a", userId: "account-a" }
+    },
+    pending: { status: PENDING_STATE.NONE, count: 0 },
+    newDatabaseName: candidate
+  };
+  const plan = planUnverifiedCloudRecovery(source);
+  assert.equal(plan.allowed, true);
+  assert.equal(plan.oldDatabaseName, DATABASE_NAME);
+  assert.equal(plan.newDatabaseName, candidate);
+  assert.equal(plan.userDigest, hashWorkspaceUser("account-a"));
+  assert.equal(plan.registry.workspaces[URL_A].databaseName, candidate);
+  assert.equal(legacy.workspaces[URL_A].databaseName, DATABASE_NAME);
+  assert.equal(legacy.workspaces[URL_A].userDigest, undefined);
+  assert.deepEqual(plan.operations, []);
+  assert.deepEqual(plan.deletedBases, []);
+  assert.deepEqual(plan.remoteDeletes, []);
+  assert.equal(plan.copy, false);
+  assert.equal(plan.merge, false);
+  assert.ok(parseWorkspaceRegistry(plan.registry));
+  assert.equal(evaluateAccountBinding({
+    entry: plan.registry.workspaces[URL_A],
+    userId: "account-a", authenticated: true, cacheHasRecords: true
+  }).state, BINDING_STATE.BOUND);
+  assert.equal(evaluateAccountBinding({
+    entry: plan.registry.workspaces[URL_A],
+    userId: "account-b", authenticated: true, cacheHasRecords: true
+  }).state, BINDING_STATE.MISMATCH);
+});
+
+test("1.4 remote cache recovery fails closed for unknown accounts, offline or pending writes", () => {
+  const legacy = migrateLegacyWorkspace({
+    config: { databaseUrl: URL_A },
+    record: { status: WORKSPACE_STATUS.ACTIVE, remoteDbId: "remote-a" },
+    schemaVersion: SCHEMA_VERSION
+  });
+  const good = {
+    registry: legacy,
+    binding: BINDING_STATE.UNVERIFIED,
+    attestation: {
+      attested: true,
+      identity: { databaseUrl: URL_A, remoteDbId: "remote-a", userId: "account-a" }
+    },
+    pending: { status: PENDING_STATE.NONE, count: 0 },
+    newDatabaseName: "threadstep-recovery-" + "b".repeat(32)
+  };
+  for (const [change, reason] of [
+    [{ binding: BINDING_STATE.BOUND }, "not-unverified"],
+    [{ binding: BINDING_STATE.MISMATCH }, "not-unverified"],
+    [{ pending: { status: PENDING_STATE.UNKNOWN } }, "pending-or-unknown"],
+    [{ pending: { status: PENDING_STATE.PENDING, count: 2 } }, "pending-or-unknown"],
+    [{ attestation: { attested: false, identity: good.attestation.identity } }, "remote-not-attested"],
+    [{ attestation: { attested: true, identity: { ...good.attestation.identity, userId: null } } }, "remote-not-attested"],
+    [{ attestation: { attested: true, identity: { ...good.attestation.identity, databaseUrl: URL_B } } }, "remote-not-attested"],
+    [{ attestation: { attested: true, identity: { ...good.attestation.identity, remoteDbId: "remote-b" } } }, "remote-mismatch"],
+    [{ newDatabaseName: DATABASE_NAME }, "invalid-new-base"],
+    [{ newDatabaseName: "threadstep-recovery-" + "xyz" }, "invalid-new-base"],
+    [{ registry: selectWorkspaceInRegistry(legacy, WORKSPACE_SELECTION_LOCAL) }, "workspace-invalid"],
+    [{ registry: registerWorkspace(legacy, {
+      url: URL_A, databaseName: DATABASE_NAME,
+      schemaVersion: SCHEMA_VERSION, status: WORKSPACE_STATUS.SUSPENDED
+    }) }, "workspace-not-active"],
+    [{ registry: registerWorkspace(legacy, {
+      url: URL_A, databaseName: DATABASE_NAME,
+      schemaVersion: SCHEMA_VERSION, status: WORKSPACE_STATUS.ACTIVE,
+      userDigest: hashWorkspaceUser("account-a")
+    }) }, "not-unverified"]
+  ]) {
+    const result = planUnverifiedCloudRecovery({ ...good, ...change });
+    assert.equal(result.allowed, false, reason);
+    assert.equal(result.reason, reason);
+    assert.deepEqual(result.operations, []);
+  }
+});
+
+test("1.4 recovery UI requires explicit confirmation and never mutates cached business rows", () => {
+  const html = read("site/index.html");
+  const app = read("site/app.js");
+  assert.match(html, /id="workspace-recover"[^>]*hidden/);
+  assert.match(app, /planUnverifiedCloudRecovery\(/);
+  assert.match(app, /showWorkspaceConfirmation\("recover"/);
+  assert.match(app, /if \(kind === "recover"\)/);
+  const recovery = app.slice(
+    app.indexOf("async function unusedCloudRecoveryBase"),
+    app.indexOf("async function requestWorkspacePurge")
+  );
+  assert.match(recovery, /await diagnosePendingChanges\(\)/);
+  assert.match(recovery, /evaluateSyncAttestation\(nativeAttestationInput\(\)\)/);
+  assert.match(recovery, /unusedCloudRecoveryBase\(request.candidate\)/);
+  assert.match(recovery, /location.reload\(\)/);
+  assert.doesNotMatch(recovery, /Dexie\.delete|\.cloud\.logout|\.put\(|\.add\(|\.delete\(|\.clear\(/);
 });
 
 test("1.5 suspension is not logout and keeps destination and binding", () => {
