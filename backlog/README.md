@@ -1,5 +1,17 @@
 # Backlog ThreadStep
 
+## Interface et paramètres : TS-041 à TS-044 (20 octobre 2026)
+
+Nouveau besoin : menu hamburger et pages dédiées aux sauvegardes et à Dexie Cloud, sans modifier les mécanismes métier déjà livrés. **Cette PR est documentaire : aucun écran n'est encore implémenté et aucun appel OpenRouter n'est déclenché.**
+
+- **[TS-041](tasks/TS-041.md)** : menu hamburger, navigation accessible et routes de paramètres. `ready / allowed / low`, priorité haute ; tâche sélectionnable par Backlog Orchestrator V1 après fusion et vérifications.
+- **[TS-042](tasks/TS-042.md)** : déplacer les contrôles existants d'export, import/fusion et restauration vers une page dédiée, sans toucher aux protections de données. `ready / allowed / low`, dépend de TS-041.
+- **[TS-043](tasks/TS-043.md)** : page dédiée au diagnostic Dexie Cloud en lecture seule, conservant le pull manuel natif et ses garde-fous. `ready / allowed / low`, dépend de TS-041.
+- **[TS-044](tasks/TS-044.md)** : centraliser sur la page de synchronisation configuration, activation, OTP, sélection d'espace, déconnexion et purge locale. `ready / manual / medium`, dépend de TS-043 ; la sécurité des opérations nécessite revue manuelle.
+
+**Orchestration :** V1 sélectionne uniquement les tâches produit `ready / allowed / low` dont les dépendances sont livrées et les autres précontrôles satisfaits. TS-041 peut être candidate d'abord ; TS-042 et TS-043 deviennent candidates après sa livraison vérifiée. TS-044 **n'est pas éligible** automatiquement. Un dry-run sur `main` est nécessaire pour confirmer la sélection effective : les autres tâches et l'état GitHub peuvent influer sur l'ordre. L'ajout des fiches ne constitue ni autorisation de dépense, ni exécution, ni preuve de livraison. La PR ne modifie aucun workflow ASF.
+
+
 ## Cible approuvée : IndexedDB local par défaut, Dexie Cloud facultatif (18 octobre 2026)
 
 Les [huit spécifications OpenSpec cibles](../docs/product/specs/dexie-data-lifecycle-target-v1.md) sont désormais versionnées sous `openspec/specs/` : sept capacités génériques réutilisables (persistance, activation, synchronisation, migration, réconciliation, import/restauration, isolation) et **un profil spécifique ThreadStep**. Elles constituent le **contrat cible approuvé**, pas une preuve que le site actuel l'implémente déjà. Les anciennes spécifications restent traçables et seront réconciliées via les changements OpenSpec de chaque implémentation. [Source de cadrage Notion](https://app.notion.com/p/3fd12ac9163681769406d0e98180b7ef).
