@@ -551,5 +551,59 @@
     ],
     "created_at": "2026-10-18",
     "content_sha256": "cfe19a4f709efa96bff5d7f160d67884ce22826d052095f28387e63250bee536"
+  },
+  {
+    "id": "TS-041",
+    "path": "backlog/tasks/TS-041.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "high",
+    "automation": "allowed",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-10-20",
+    "content_sha256": "3c45bd206526853d83e5c94faf733cdbfbdcb63588880513c861df3266926bed"
+  },
+  {
+    "id": "TS-042",
+    "path": "backlog/tasks/TS-042.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "allowed",
+    "risk": "low",
+    "depends_on": [
+      "TS-041"
+    ],
+    "created_at": "2026-10-20",
+    "content_sha256": "a9255504088d3c05a0bb386bc9318ed1aee7ce5036cddd037240b16071bdc094"
+  },
+  {
+    "id": "TS-043",
+    "path": "backlog/tasks/TS-043.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "allowed",
+    "risk": "low",
+    "depends_on": [
+      "TS-041"
+    ],
+    "created_at": "2026-10-20",
+    "content_sha256": "145cb315a42691e98eb2b6946b0b58560d691960b7707a920edd3a25b921c68a"
+  },
+  {
+    "id": "TS-044",
+    "path": "backlog/tasks/TS-044.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [
+      "TS-043"
+    ],
+    "created_at": "2026-10-20",
+    "content_sha256": "770b5ea3184dae25e964e8d84d1735587b705d2848ec37f9c425361360059339"
   }
 ]
