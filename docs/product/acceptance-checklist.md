@@ -59,6 +59,35 @@ ligne et réseau intermittent) sont distinctes. Une CI verte ne prouve ni
 IndexedDB réel, ni propagation distante, ni accessibilité : ces observations
 restent manuelles, non cochées ici et à consigner séparément.
 
+## Récupération non destructive d'un cache Cloud historique non vérifié (correctif TS-038)
+
+À vérifier sur **deux profils de test** et une instance Dexie Cloud de test :
+le correctif n'effectue pas automatiquement de rattachement d'un cache peuplé
+à une identité récente. Il permet de relire le serveur dans une **nouvelle base
+IndexedDB isolée** ; la base historique n'est ni supprimée, ni fusionnée.
+
+- Se connecter à un espace Cloud historique `threadstep-<suffixe>` prérempli,
+  sans `userDigest` dans le registre. Vérifier le diagnostic `UNVERIFIED`
+  et que les données métier cachées ne deviennent pas visibles.
+- Cliquer sur « Retrouver les projets Cloud dans un nouveau cache isolé » :
+  avant confirmation, aucune base n'est créée, aucune mutation locale ni
+  distante n'est émise. Confirmer puis ouvrir à nouveau la session native
+  Dexie Cloud pour le même compte, et comparer les projets récupérés depuis
+  le serveur sur les deux appareils.
+- Dans Application > IndexedDB, vérifier que l'ancien cache, son contenu et
+  ses tables `*_mutations` n'ont pas été supprimés/renommés, et que la
+  nouvelle base contient uniquement des données reçues de Dexie Cloud.
+- Simuler une mutation en attente, un état de mutation indéterminé, une phase
+  offline, un `remoteDbId` différent, un changement d'utilisateur ou
+  d'instance entre prévisualisation et confirmation, et une base de destination
+  déjà existante : le correctif refuse la récupération **sans écriture**.
+- Se connecter avec un autre compte après l'ouverture du nouveau cache :
+  les données métier restent masquées. Tester l'annulation, reload, focus
+  clavier, bouton tactile et lecture par lecteur d'écran.
+- Ne jamais effectuer ce test en purgeant les bases personnelles : les
+  enregistrements historiques peuvent contenir des modifications non poussées,
+  même si la phase native Dexie indique `in-sync`.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.

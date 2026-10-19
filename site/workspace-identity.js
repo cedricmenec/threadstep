@@ -560,6 +560,69 @@ export function evaluateAccountBinding(input = {}) {
   return { state: BINDING_STATE.INDETERMINATE, businessAllowed: false, bind: false, digest: null };
 }
 
+// A legacy synchronized cache with no account binding cannot be adopted by
+// merely logging in: it may contain another account's cached records. Recover
+// remote-visible data in a NEW isolated cache; leave the old IndexedDB intact.
+export function planUnverifiedCloudRecovery(input = {}) {
+  const source = isPlainObject(input) ? input : {};
+  const deny = (reason) => ({
+    allowed: false, reason, registry: null, operations: [],
+    deletedBases: [], remoteDeletes: [], copy: false, merge: false
+  });
+  const registry = parseWorkspaceRegistry(source.registry);
+  if (!registry || registry.selected === WORKSPACE_SELECTION_LOCAL) return deny("workspace-invalid");
+  const entry = registry.workspaces[registry.selected];
+  if (!entry || entry.type !== WORKSPACE_TYPE.SYNCHRONIZED ||
+      entry.status !== WORKSPACE_STATUS.ACTIVE) return deny("workspace-not-active");
+  if (source.binding !== BINDING_STATE.UNVERIFIED || nonEmptyString(entry.userDigest)) {
+    return deny("not-unverified");
+  }
+  // Only a real old-style base can be recovered this way. New cache bases
+  // already have account binding established BEFORE any business reads.
+  if (entry.databaseName !== DATABASE_NAME) return deny("not-legacy-cache");
+  const attestation = isPlainObject(source.attestation) ? source.attestation : null;
+  const identity = attestation && isPlainObject(attestation.identity) ? attestation.identity : null;
+  if (!attestation || attestation.attested !== true || !identity ||
+      !nonEmptyString(identity.userId) || !nonEmptyString(identity.remoteDbId) ||
+      normalizeWorkspaceUrl(identity.databaseUrl) !== entry.url) {
+    return deny("remote-not-attested");
+  }
+  if (nonEmptyString(entry.remoteDbId) && entry.remoteDbId !== identity.remoteDbId) {
+    return deny("remote-mismatch");
+  }
+  if (normalizePendingState(source.pending).status !== PENDING_STATE.NONE) {
+    return deny("pending-or-unknown");
+  }
+  const nextBase = source.newDatabaseName;
+  // An application-generated cryptographic random suffix, never derived
+  // from a raw email or user identifier. The browser also checks existence.
+  if (typeof nextBase !== "string" ||
+      !/^threadstep-recovery-[a-f0-9]{32}$/.test(nextBase) ||
+      Object.values(registry.workspaces).some((value) => value.databaseName === nextBase)) {
+    return deny("invalid-new-base");
+  }
+  const nextEntry = {
+    ...entry,
+    databaseName: nextBase,
+    remoteDbId: identity.remoteDbId,
+    userDigest: hashWorkspaceUser(identity.userId)
+  };
+  return {
+    allowed: true, reason: null,
+    registry: {
+      ...registry,
+      workspaces: { ...registry.workspaces, [entry.url]: nextEntry }
+    },
+    url: entry.url,
+    userDigest: nextEntry.userDigest,
+    remoteDbId: nextEntry.remoteDbId,
+    oldDatabaseName: entry.databaseName,
+    newDatabaseName: nextBase,
+    operations: [], deletedBases: [], remoteDeletes: [],
+    copy: false, merge: false
+  };
+}
+
 export function planWorkspaceSelection(input = {}) {
   const source = isPlainObject(input) ? input : {};
   const plan = { ...planBase(), action: "select" };

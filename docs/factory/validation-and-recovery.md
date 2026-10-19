@@ -1,5 +1,15 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-039 (19 octobre 2026) : exception limitée aux scripts produit
+
+**Constat vérifié.** Le [run TS-039 #39169388706](https://github.com/cedricmenec/threadstep/actions/runs/39169388706) a exécuté les tests produit puis échoué au checkpoint pré-OPSX : `Checkpoint has forbidden paths: scripts/product/e2e-matrix.mjs`. Le [plan TS-039](https://github.com/cedricmenec/threadstep/blob/agent/openspec/TS-039/openspec/changes/ts-039/tasks.md) prévoit ce module, mais le vérificateur de checkpoint applique `PROTECTED_PREFIXES` à tout `scripts/`. Cette interdiction trop large contredit l'intention d'ASF-OPSX-06 de permettre le tooling produit.
+
+**Correction ASF-OPSX-07 :** [tâche/revue dédiée](tasks/ASF-OPSX-07.md). Seul `scripts/product/` est exempté de l'interdiction générique `scripts/`, et uniquement pour `apply` et `publish`. `plan` reste bornée aux artefacts `openspec/changes/ts-039/`. Tous les autres scripts (sous `scripts/asf/`, le vérificateur de checkpoint, la garde OPSX et les utilitaires factory), `.github/`, `backlog/`, `docs/factory/`, les autres changes, secrets et traversées de chemin restent interdits. Les contrôles sont évalués **avant et après staging** puis avant PR. Les tests de non-régression couvrent l'autorisation positive et la denylist négative.
+
+**Reprise sûre, distincte de la PR de correction :** le dernier checkpoint distant attesté de `agent/openspec/TS-039` est le **plan** au SHA `7a895bd5110544fcc45780b98e42ea2914f4317d` ; il n'existe pas de checkpoint durable d'implémentation pour ce run. Vérifier à nouveau ce SHA et l'absence d'une PR finale ou d'un run plus récent **après** la fusion de la PR factory. Le workflow charge son vérificateur de confiance depuis `origin/main` : le nouveau comportement ne s'appliquera qu'après livraison sur `main`. Reprendre uniquement avec une nouvelle autorisation propriétaire `task_id=TS-039`, `phase=apply`, **pas `phase=auto`** et jamais via le bouton de relance d'un job échoué. Une nouvelle phase payante est nécessaire car les modifications du runner précédent n'ont pas été checkpointées. Conserver les artefacts OpenSpec du plan, ne pas forcer la branche et ne pas contourn­er la protection `check` de `main`.
+
+**Preuve et limites :** une CI réussie sur la PR factory prouve le garde-fou et ses tests. Elle ne prouve **pas** que TS-039 sera livrée ni que la synchronisation réelle Dexie est validée sur Android et laptop ; cette recette restera manuelle.
+
 ## Incident TS-024 bis (17 octobre 2026) : denylist plutôt que whitelist de fichiers produit
 
 Le [nouveau run #39073690462](https://github.com/cedricmenec/threadstep/actions/runs/39073690462),
