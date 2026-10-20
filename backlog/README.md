@@ -1,5 +1,11 @@
 # Backlog ThreadStep
 
+## Incident : TS-048, projets invisibles malgré un compte lié (20 octobre 2026)
+
+- **[TS-048](tasks/TS-048.md)** : correctif prioritaire de reprise du chargement des projets après un changement transitoire de liaison, avec protection contre les lectures asynchrones périmées et suppression des faux diagnostics « données masquées ». `ready / manual / high`, priorité critique. Le mot `recovery` dans la base indique une copie locale isolée, pas une nouvelle base distante.
+- La régression est **reproductible dans le code**, mais la cause exacte de l'incident observé sur Android et laptop reste à confirmer par vérification des tables locales `subjects` et `items`. Le statut `in-sync` ne constitue pas une preuve de convergence des projets.
+- Aucun effacement, transfert ou récupération automatique n'est autorisé ; la recette Android/laptop et la comparaison avec la base Dexie Cloud de test restent obligatoires avant de considérer l'incident résolu.
+
 ## Confiance dans les données : TS-045 à TS-047 (20 octobre 2026)
 
 Après deux incidents de cache Cloud non vérifié (Android puis laptop), la récupération explicite dans un nouveau cache isolé a permis de retrouver les projets, mais **la cause de réapparition de l'état non vérifié n'est pas démontrée**. Le nom d'un cache `threadstep-ws-*` ou `threadstep-recovery-*` désigne une IndexedDB **locale** ; ce n'est pas la création d'une nouvelle base distante Dexie Cloud. La synchronisation utilise une copie locale IndexedDB et une instance distante, dont l'état et la présence des données ne se prouvent pas par le seul statut natif `in-sync`.

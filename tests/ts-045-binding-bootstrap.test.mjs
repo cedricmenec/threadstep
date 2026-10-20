@@ -412,11 +412,19 @@ test("2.3 diagnostics exposes binding/bootstrap separately and never claims conv
   assert.notDeepEqual(diagnostic.bootstrap, diagnostic.remoteEvidence);
   const view = buildDiagnosticView(diagnostic);
   const byKey = (key) => view.rows.find((row) => row.key === key);
-  assert.equal(byKey("bootstrap-cause").value, classification.label);
-  assert.equal(byKey("bootstrap-origin").value, classification.originLabel);
+  // A historical bootstrap hint cannot claim "data masked" with a bound account.
+  assert.equal(byKey("bootstrap-cause"), undefined);
+  assert.equal(byKey("bootstrap-origin"), undefined);
   assert.equal(byKey("remote-evidence").value, "Synchronisation initiale attestée");
   const summary = buildDiagnosticSummary(diagnostic).text;
-  assert.match(summary, /Liaison\/bootstrap/);
+  assert.doesNotMatch(summary, /Liaison\/bootstrap/);
+  const blockedView = buildDiagnosticView(buildSyncDiagnostic({
+    ...input, binding: BINDING_DIAGNOSTIC_STATE.UNVERIFIED
+  }));
+  assert.equal(blockedView.rows.find((row) => row.key === "bootstrap-cause").value, classification.label);
+  assert.match(buildDiagnosticSummary(buildSyncDiagnostic({
+    ...input, binding: BINDING_DIAGNOSTIC_STATE.UNVERIFIED
+  })).text, /Liaison\/bootstrap/);
   for (const forbidden of [
     "convergence métier", "convergence inter-appareils", "présents sur un autre appareil",
     "propagé sur un autre appareil", SAMPLE_EMAIL, SAMPLE_OTP, SAMPLE_TOKEN
