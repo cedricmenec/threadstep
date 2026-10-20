@@ -101,10 +101,10 @@ test("an outside click closes the open menu", () => {
   assert.match(outsideBody, /openMenuId = null/);
 });
 
-test("a view change, a load and an import reset the open menu", () => {
+test("a view change, a load and a successful import reset the open menu", () => {
   assert.match(hashchangeBody, /openMenuId = null/);
-  assert.match(app, /function load\(\) \{\s*\n\s*expandedParents = new Set\(\);\s*\n\s*openMenuId = null;/);
-  assert.match(app, /expandedParents = new Set\(\);\s*\n\s*pendingCollapseFocus = null;\s*\n\s*openMenuId = null;/);
+  assert.match(app, /function load\(\) \{[\s\S]*?openMenuId = null;/);
+  assert.match(app, /resetExpandedViewState\(\);\s*\n\s*openMenuId = null;/);
 });
 
 test("the app never interpolates untrusted strings with innerHTML", () => {

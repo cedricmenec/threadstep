@@ -38,6 +38,7 @@ function simulateOldTablet({ view = "overview", subjects = [{ id: "s1" }], autho
     subjectForm: { hidden: false }, focusSuggestEl: { hidden: false },
     focusCardEl: { hidden: false }, resumeCardEl: { hidden: false },
     counterEl: { textContent: "" }, documentState: { subjects },
+    applyExpandedIdentityBoundary: () => {},
     captureUxContinuity: () => authorized ? { context: { view }, scrollY: 7100 } : null,
     applyBusinessVisibility: () => {}, applyNavigationMenu: () => {},
     applySyncSummaryVisibility: () => {}, businessAllowed: () => authorized,

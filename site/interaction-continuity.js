@@ -42,3 +42,31 @@ export function shouldRestoreInteraction(before, after) {
     before.subjectId === after.subjectId &&
     before.generation === after.generation && before.allowed && after.allowed);
 }
+
+/**
+ * Effective authorized workspace identity for transient collapse state.
+ * Missing evidence is unavailable (null), never a different identity.
+ */
+export function authorizedWorkspaceIdentityKey(identity) {
+  if (!identity || typeof identity !== "object") return null;
+  const type = identity.type === "local" || identity.type === "synchronized" || identity.type === "synced"
+    ? (identity.type === "local" ? "local" : "synced")
+    : null;
+  if (type === "local") return "local";
+  if (type !== "synced") return null;
+  const databaseName = typeof identity.databaseName === "string" ? identity.databaseName.trim() : "";
+  if (!databaseName) return null;
+  const userDigest = typeof identity.userDigest === "string" ? identity.userDigest : "";
+  return "synced:" + databaseName + ":" + userDigest;
+}
+
+/**
+ * Only a different, available authorized identity resets the expansion.
+ * An unavailable identity keeps the last attested key and never resets.
+ */
+export function shouldResetExpandedParents(previousKey, nextIdentity) {
+  const nextKey = authorizedWorkspaceIdentityKey(nextIdentity);
+  if (nextKey === null) return false;
+  if (typeof previousKey !== "string" || previousKey.length === 0) return false;
+  return previousKey !== nextKey;
+}
