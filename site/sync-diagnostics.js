@@ -2,6 +2,14 @@
 // No DOM, network, IndexedDB or secret access: browser signals are injected by
 // `site/app.js`, and every output is an allowlisted, redacted representation.
 import { describeAttestationReason, evaluateSyncAttestation } from "./migration-reconciliation.js";
+import {
+  BOOTSTRAP_CAUSE,
+  BOOTSTRAP_CAUSE_LABELS,
+  BOOTSTRAP_ORIGIN,
+  BOOTSTRAP_ORIGIN_LABELS,
+  isBootstrapCause,
+  isBootstrapOrigin
+} from "./bootstrap-diagnostics.js";
 
 export const SESSION_STATE = Object.freeze({
   AUTHENTICATED: "authenticated",
@@ -81,6 +89,7 @@ export const BINDING_DIAGNOSTIC_STATE = Object.freeze({
   UNBOUND: "unbound",
   UNVERIFIED: "unverified",
   MISMATCH: "mismatch",
+  DESTINATION_MISMATCH: "destination-mismatch",
   UNAUTHENTICATED: "unauthenticated",
   INDETERMINATE: "indeterminate"
 });
@@ -95,6 +104,7 @@ export const BINDING_DIAGNOSTIC_LABELS = Object.freeze({
   [BINDING_DIAGNOSTIC_STATE.UNBOUND]: "Espace lié au compte courant (cache vide)",
   [BINDING_DIAGNOSTIC_STATE.UNVERIFIED]: "Cache local non vérifié : déconnexion ou purge explicite requise",
   [BINDING_DIAGNOSTIC_STATE.MISMATCH]: "Compte différent de la liaison : données métier masquées",
+  [BINDING_DIAGNOSTIC_STATE.DESTINATION_MISMATCH]: "Base distante différente de la liaison : données métier masquées",
   [BINDING_DIAGNOSTIC_STATE.UNAUTHENTICATED]: "Aucune session authentifiée",
   [BINDING_DIAGNOSTIC_STATE.INDETERMINATE]: "Liaison de compte indéterminée"
 });
@@ -514,6 +524,27 @@ function safeDiagnosticString(value) {
     : null;
 }
 
+function sanitizeBootstrapClassification(value) {
+  if (!isPlainObject(value)) return null;
+  const cause = isBootstrapCause(value.cause) ? value.cause : BOOTSTRAP_CAUSE.INDETERMINATE;
+  const origin = isBootstrapOrigin(value.origin) ? value.origin : BOOTSTRAP_ORIGIN.INDETERMINATE;
+  return {
+    cause,
+    origin,
+    label: BOOTSTRAP_CAUSE_LABELS[cause],
+    originLabel: BOOTSTRAP_ORIGIN_LABELS[origin]
+  };
+}
+
+function defaultBootstrapClassification() {
+  return {
+    cause: BOOTSTRAP_CAUSE.INDETERMINATE,
+    origin: BOOTSTRAP_ORIGIN.INDETERMINATE,
+    label: BOOTSTRAP_CAUSE_LABELS[BOOTSTRAP_CAUSE.INDETERMINATE],
+    originLabel: BOOTSTRAP_ORIGIN_LABELS[BOOTSTRAP_ORIGIN.INDETERMINATE]
+  };
+}
+
 export function buildSyncDiagnostic(input = {}) {
   const source = isPlainObject(input) ? input : {};
   const configured = source.configured === true;
@@ -574,7 +605,8 @@ export function buildSyncDiagnostic(input = {}) {
     workspace: sanitizeWorkspaceDiagnostic(source.workspace),
     binding: BINDING_VALUES.has(source.binding)
       ? source.binding
-      : BINDING_DIAGNOSTIC_STATE.INDETERMINATE
+      : BINDING_DIAGNOSTIC_STATE.INDETERMINATE,
+    bootstrap: sanitizeBootstrapClassification(source.bootstrap) || defaultBootstrapClassification()
   };
 }
 
@@ -735,6 +767,7 @@ export function buildDiagnosticSummary(diagnostic) {
   if (pullNeedsAttention) parts.push("Pull initial : " + view.initialPullLabel);
   if (writesNeedAttention) parts.push("Écritures locales : " + view.localWritesLabel);
   if (baseMismatch) parts.push("Base configurée incohérente avec la base persistée");
+  if (view.bootstrapLabel) parts.push("Liaison/bootstrap : " + view.bootstrapLabel);
   const remoteState = isPlainObject(state.remoteEvidence) ? state.remoteEvidence.state : null;
   if (needsAttention && remoteState !== REMOTE_EVIDENCE.AVAILABLE) {
     parts.push(view.remoteEvidenceMessage);
@@ -827,6 +860,17 @@ export function buildDiagnosticView(diagnostic, options = {}) {
     });
     rows.splice(1, 0, ...workspaceRows);
   }
+  const bootstrap = sanitizeBootstrapClassification(state.bootstrap) || defaultBootstrapClassification();
+  rows.push({
+    key: "bootstrap-cause",
+    label: "Liaison et bootstrap",
+    value: bootstrap.label
+  });
+  rows.push({
+    key: "bootstrap-origin",
+    label: "Origine bootstrap",
+    value: bootstrap.originLabel
+  });
   rows.push({ key: "remote-message", label: "État du Cloud", value: safeValue(remote.message, REMOTE_NOT_EMPTY) });
 
   const statusMessage = errors.length > 0
@@ -845,6 +889,9 @@ export function buildDiagnosticView(diagnostic, options = {}) {
     localWritesLabel: LOCAL_WRITE_LABELS[localWrites],
     workspaceTypeLabel: workspace ? WORKSPACE_TYPE_LABELS[workspace.type] : null,
     bindingLabel: workspace ? BINDING_DIAGNOSTIC_LABELS[binding] : null,
+    bootstrapLabel: bootstrap.label,
+    bootstrapOriginLabel: bootstrap.originLabel,
+    bootstrap,
     remoteEvidenceLabel: REMOTE_EVIDENCE_LABELS[remoteState],
     remoteEvidenceMessage: safeValue(remote.message, REMOTE_NOT_EMPTY),
     remoteNotEmpty: true,

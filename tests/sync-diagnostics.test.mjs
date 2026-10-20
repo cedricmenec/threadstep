@@ -415,8 +415,12 @@ test("6.2 view model exposes labelled rows, errors, retry and live status", () =
     "remote-db",
     "local-writes",
     "remote-evidence",
+    "bootstrap-cause",
+    "bootstrap-origin",
     "remote-message"
   ]);
+  assert.equal(view.bootstrap.cause, "indeterminate");
+  assert.equal(view.bootstrap.origin, "indeterminate");
   assert.ok(view.rows.every((row) => typeof row.label === "string" && typeof row.value === "string"));
   assert.ok(view.errors.some((entry) => entry.category === DIAGNOSTIC_ERROR.NETWORK));
   assert.ok(view.errors.every((entry) => entry.message.length > 0));
