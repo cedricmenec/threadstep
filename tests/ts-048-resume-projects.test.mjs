@@ -152,8 +152,8 @@ test("TS-048 a stale asynchronous read cannot render projects after account iden
   };
   isolatedHandler("async function refreshSyncedDocument() {", "function ensureChangeChannel() {", state);
   const pending = state.refreshSyncedDocument();
-  await Promise.resolve();
-  await Promise.resolve();
+  // vm promises can be scheduled across realms; let the async read reach its first await.
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(typeof releaseRead, "function");
   state.accountBinding = { userDigest: "user-b", businessAllowed: true };
   releaseRead({ code: "ok", records: { subjects: [1], items: [2] } });
