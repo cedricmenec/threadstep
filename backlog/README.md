@@ -1,5 +1,15 @@
 # Backlog ThreadStep
 
+## Confiance dans les données : TS-045 à TS-047 (20 octobre 2026)
+
+Après deux incidents de cache Cloud non vérifié (Android puis laptop), la récupération explicite dans un nouveau cache isolé a permis de retrouver les projets, mais **la cause de réapparition de l'état non vérifié n'est pas démontrée**. Le nom d'un cache `threadstep-ws-*` ou `threadstep-recovery-*` désigne une IndexedDB **locale** ; ce n'est pas la création d'une nouvelle base distante Dexie Cloud. La synchronisation utilise une copie locale IndexedDB et une instance distante, dont l'état et la présence des données ne se prouvent pas par le seul statut natif `in-sync`.
+
+- **[TS-045](tasks/TS-045.md)** : reproduire et corriger les régressions d'identité de cache, reprise OTP/session et visibilité multi-appareils, tout en conservant les caches historiques. `ready / manual / high`, priorité critique.
+- **[TS-046](tasks/TS-046.md)** : guide utilisateur clair du modèle local-first, de toutes les copies de données, des transitions local↔Cloud, sauvegardes et scénarios d'incident. `ready / allowed / low`, priorité haute, documentaire uniquement.
+- **[TS-047](tasks/TS-047.md)** : interface de confiance de synchronisation, vue immédiate du stockage actif, état authentification/réplication, date fiable d'observation (ou absence de preuve), aides naturelles et actions guidées sans automatisme destructeur. `ready / manual / medium`, priorité haute, après TS-045 et TS-046.
+
+**Découpage et exécution :** TS-045 sécurise la liaison et traite la cause racine avant de masquer la complexité ; TS-046 peut être mené en parallèle, en restant fidèle au code effectivement livré ; TS-047 exploite leurs garanties. Seul TS-046 peut être candidat à Backlog Orchestrator V1 après fusion et précontrôles, **sans autorisation implicite de coût ni de lancement**. TS-045 et TS-047 restent manuels, avec revues et recette réelle Dexie Cloud sur base de test. Cette PR ne modifie que le backlog.
+
 ## Interface et paramètres : TS-041 à TS-044 (20 octobre 2026)
 
 Nouveau besoin : menu hamburger et pages dédiées aux sauvegardes et à Dexie Cloud, sans modifier les mécanismes métier déjà livrés. **Cette PR est documentaire : aucun écran n'est encore implémenté et aucun appel OpenRouter n'est déclenché.**
