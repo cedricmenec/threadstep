@@ -26,7 +26,7 @@ on:
         description: 'OpenRouter model'
         required: true
         type: choice
-        default: 'openrouter/deepseek/deepseek-v4.1-flash'
+        default: 'openrouter/deepseek/deepseek-v4.1-flash-1017'
         options:
           - 'openrouter/deepseek/deepseek-v4.1-flash'
           - 'openrouter/deepseek/deepseek-v4.1-flash-1017'
