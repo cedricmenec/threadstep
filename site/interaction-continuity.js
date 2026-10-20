@@ -33,7 +33,7 @@ export function readingScrollDelta(previousTop, currentTop, viewportHeight) {
   // A validated anchor may be thousands of pixels below the viewport after
   // replaceChildren() temporarily shrinks a long list and resets scrollY.
   // Never cap that recovery by viewport height: the browser clamps to the
-  // document's actual available scroll range.
+  // actual available page scroll range.
   return difference;
 }
 
