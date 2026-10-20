@@ -35,6 +35,43 @@ navigation complète pour une simple modification locale.
 - **WHEN** une action ne concerne qu'un élément
 - **THEN** les états de présentation des éléments non concernés restent inchangés
 
+### Requirement: Stable scroll geometry throughout in-place rendering
+
+Lors d'un rendu dans la même vue, l'interface SHALL préserver une hauteur
+défilable cohérente pendant le remplacement des éléments. Elle MUST NOT exposer
+une liste transitoirement vide ou fortement raccourcie qui oblige le navigateur
+à ramener le viewport au début. Le contrat porte sur le comportement observable
+et n'impose ni framework ni technique DOM particulière. Les réductions réelles
+de contenu dues au filtre ou à la suppression restent permises.
+
+#### Scenario: Create a task after a long scroll
+
+- **GIVEN** une liste longue est affichée et l'utilisateur travaille à plusieurs écrans du haut
+- **WHEN** il crée une tâche sans changer de vue
+- **THEN** aucune phase intermédiaire du rendu ne ramène le viewport au début du document
+- **AND** le formulaire de création et les tâches voisines restent accessibles au même emplacement logique
+
+#### Scenario: Complete a task in a long list
+
+- **GIVEN** une tâche est visible après un défilement important, sur une liste qui contient encore d'autres tâches
+- **WHEN** l'utilisateur coche ou décoche cette tâche
+- **THEN** la zone défilable ne s'effondre pas temporairement pendant la mise à jour
+- **AND** l'utilisateur conserve un repère de lecture pertinent sans saut vers le haut
+
+#### Scenario: Filter removes the current visual anchor
+
+- **GIVEN** une tâche terminée est proche du repère de lecture et le filtre masque les tâches terminées
+- **WHEN** la tâche disparaît effectivement de la liste
+- **THEN** le viewport se repositionne au plus près d'un élément restant pertinent lorsque cela est possible
+- **AND** le navigateur peut limiter naturellement le scroll à la nouvelle hauteur réelle du contenu
+- **AND** aucune hauteur artificielle ne persiste une fois le rendu terminé
+
+#### Scenario: Real navigation must not retain an old list height
+
+- **GIVEN** l'utilisateur quitte une longue liste vers une autre vue
+- **WHEN** la nouvelle vue est affichée
+- **THEN** la hauteur et la position propres à l'ancienne liste ne sont pas imposées à cette nouvelle vue
+
 ### Requirement: Predictable focus after an update
 
 À l'issue d'une action, le focus clavier SHALL rester sur un élément réellement
@@ -138,6 +175,21 @@ la recette navigateur réelle SHALL être distinguée de la preuve CI.
 - **WHEN** une évolution modifie le rendu ou les handlers d'interaction
 - **THEN** elle couvre les invariants UX concernés par des tests déterministes lorsque réalisables
 - **AND** les scénarios dépendant du véritable viewport, du clavier mobile ou du lecteur d'écran sont consignés en recette manuelle sans résultat inventé
+
+#### Scenario: Long-list regression simulates a scroll clamp
+
+- **GIVEN** une suite de tests de rendu reproduit une liste longue déjà défilée
+- **WHEN** une mise à jour remplace des tâches et qu'un navigateur simulé ramènerait le scroll à zéro si le contenu vivant était vidé
+- **THEN** la suite démontre l'absence d'un état intermédiaire raccourci ou la préservation effective de l'ancrage
+- **AND** elle couvre création, coche et vue de détail sans se limiter à la présence de chaînes dans le code
+
+#### Scenario: Tablet and phone viewports are checked separately
+
+- **GIVEN** une interface susceptible d'afficher de longues listes
+- **WHEN** une régression de défilement est qualifiée sur les appareils réels
+- **THEN** la recette distingue téléphone et tablette, avec portrait et paysage lorsque disponibles
+- **AND** elle couvre création, coche et éventuel clavier virtuel, en relevant appareil, navigateur, version et résultat connu ou non vérifié
+- **AND** une CI verte sur un simulateur ne vaut pas certification des moteurs de navigateur réels
 
 #### Scenario: No hidden data side effects
 
