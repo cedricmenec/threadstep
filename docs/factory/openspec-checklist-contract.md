@@ -19,6 +19,22 @@ des cases non exécutables avant tout appel payant `apply`.
 La sauvegarde du travail non publié reste hors périmètre
 (**ASF-OPSX-03**).
 
+## Autocorrection pendant apply (ASF-OPSX-08)
+
+Le run TS-049 #39483274048 montre un banc de tests simulé incomplet,
+plusieurs corrections tentées sans validation finale, puis une interruption
+du runner. Le prompt `apply` demande désormais d'investiguer, corriger et
+relancer les tests ciblés et `npm run check` **dans le même appel OpenCode**.
+
+La consigne ne crée ni retry payant automatique, ni extension de délai.
+Si le modèle rencontre une ambiguïté, des fichiers interdits ou un budget
+insuffisant, il doit s'arrêter explicitement sans cocher les tâches non
+vérifiées. Le checkpoint exige toujours les tests et validations verts.
+La cause du signal d'arrêt TS-049 reste inconnue.
+
+Les tests statiques prouvent la formulation versionnée, pas la performance
+réelle du modèle lors d'une exécution payante.
+
 ## Structure normative de tasks.md
 
 ### 1. Implementation checklist (pré-sync, cases autorisées)

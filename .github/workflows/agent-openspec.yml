@@ -383,7 +383,16 @@ jobs:
           Do not alter proposal.md, design.md, delta specs or the canonical specs.
           Do not edit workflows, AGENTS.md, backlog, secrets or execution configuration.
           Do not archive, commit, push, merge or open a PR: the workflow performs these steps.
-          If requirements are ambiguous or tests fail, stop and report the blocker.
+          When an implementation or test fails, investigate the actual error,
+          repair the implementation or the test harness (including missing mocks
+          and fixtures), rerun targeted tests, then rerun npm run check in the
+          SAME apply invocation. Iterate as needed within the runner's execution
+          budget; do not stop merely because an initial test run failed.
+          Stop and report the blocker if requirements are genuinely ambiguous,
+          a fix requires disallowed files or unsafe changes, or time remains
+          insufficient to implement AND verify safely. Do not claim success or
+          check off any unverified task. Never bypass failing tests, weaken
+          validation or trigger a new paid model invocation or workflow retry.
           PROMPT
             printf '\nChange ID: %s\nBacklog task: %s\n' "$CHANGE_ID" "$TASK_ID"
             cat "backlog/tasks/$TASK_ID.md"
