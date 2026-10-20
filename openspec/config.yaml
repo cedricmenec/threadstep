@@ -10,13 +10,22 @@ context: |
   not by historical MVP non-goals. Do not introduce unrequested features,
   publish secrets or weaken the task's security and consent constraints.
   Agent delivery is by reviewed pull request only, never directly to main.
+  For UI-facing changes, read openspec/specs/ux-interaction-continuity/spec.md
+  alongside the feature specs. Preserve focus, relevant scroll anchors and
+  transient view state on in-place actions and background data refreshes,
+  except for explicit navigation, import and account/security boundaries.
 
 rules:
   proposal:
     - State user value, non-goals and unresolved decisions explicitly.
+    - For UI changes, identify affected focus, scrolling and transient-state invariants and justified exceptions.
   specs:
     - Describe observable behaviors with WHEN/THEN scenarios.
+    - For UI changes, include the applicable continuity scenarios or reference the canonical UX contract without duplicating unrelated rules.
+  design:
+    - For UI changes, explain whether the solution preserves focus, scroll anchors, expanded groups and view-local state across rerenders and refreshes.
   tasks:
+    - For UI changes, cover applicable UX invariants with executable deterministic tests when feasible; place manual browser, keyboard and mobile checks in Manual acceptance without checkboxes.
     - The checkbox checklist is exclusively for implementation and automated tests executable and verifiable in the runner during apply BEFORE OPSX sync and archive.
     - Cover relevant acceptance criteria with deterministic pre-sync tests when feasible; preserve human-only criteria as plain text in a Manual acceptance section WITHOUT checkboxes.
     - Put post-sync semantic comparison, archive, independent PR CI, merge and Pages verification in a Post-sync review section WITHOUT checkboxes.
