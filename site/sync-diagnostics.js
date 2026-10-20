@@ -861,16 +861,18 @@ export function buildDiagnosticView(diagnostic, options = {}) {
     rows.splice(1, 0, ...workspaceRows);
   }
   const bootstrap = sanitizeBootstrapClassification(state.bootstrap) || defaultBootstrapClassification();
-  rows.push({
-    key: "bootstrap-cause",
-    label: "Liaison et bootstrap",
-    value: bootstrap.label
-  });
-  rows.push({
-    key: "bootstrap-origin",
-    label: "Origine bootstrap",
-    value: bootstrap.originLabel
-  });
+  // The classifier describes a possible historical origin, not a current block.
+  // Never advertise "données masquées" when the account is already authorized.
+  const bindingBlocked = state.configured === true && [
+    BINDING_DIAGNOSTIC_STATE.UNVERIFIED,
+    BINDING_DIAGNOSTIC_STATE.MISMATCH,
+    BINDING_DIAGNOSTIC_STATE.DESTINATION_MISMATCH,
+    BINDING_DIAGNOSTIC_STATE.INDETERMINATE
+  ].includes(binding);
+  if (bindingBlocked) {
+    rows.push({ key: "bootstrap-cause", label: "Cause possible du blocage", value: bootstrap.label });
+    rows.push({ key: "bootstrap-origin", label: "Origine du blocage", value: bootstrap.originLabel });
+  }
   rows.push({ key: "remote-message", label: "État du Cloud", value: safeValue(remote.message, REMOTE_NOT_EMPTY) });
 
   const statusMessage = errors.length > 0
@@ -889,8 +891,8 @@ export function buildDiagnosticView(diagnostic, options = {}) {
     localWritesLabel: LOCAL_WRITE_LABELS[localWrites],
     workspaceTypeLabel: workspace ? WORKSPACE_TYPE_LABELS[workspace.type] : null,
     bindingLabel: workspace ? BINDING_DIAGNOSTIC_LABELS[binding] : null,
-    bootstrapLabel: bootstrap.label,
-    bootstrapOriginLabel: bootstrap.originLabel,
+    bootstrapLabel: bindingBlocked ? bootstrap.label : null,
+    bootstrapOriginLabel: bindingBlocked ? bootstrap.originLabel : null,
     bootstrap,
     remoteEvidenceLabel: REMOTE_EVIDENCE_LABELS[remoteState],
     remoteEvidenceMessage: safeValue(remote.message, REMOTE_NOT_EMPTY),
