@@ -55,7 +55,8 @@ test("TS-049 a route, subject, generation or blocked binding invalidates capture
 
 test("TS-049 restoration is connected to render before the DOM is replaced", () => {
   const render = app.slice(app.indexOf("function render() {"), app.indexOf("function navigate("));
-  assert.match(render, /const uxSnapshot = captureUxContinuity\(\)/);
+  assert.match(render, /captureUxContinuity\(\)/);
+  assert.match(render, /focusItemId === revealItemId/);
   assert.match(render, /subjectsEl\.replaceChildren\(\);\s*\n\s*expandAncestorForFocus\(\);/);
   assert.match(render, /finishUxRender\(uxSnapshot, explicitUxFocus\)/);
   assert.match(app, /shouldRestoreInteraction\(snapshot\.context, context\)/);
