@@ -39,3 +39,9 @@ Avec autorisation explicite d'une **future** exécution OpenRouter et sur une t�
 - Ce contrôle corrige **le mécanisme identifié de titrage et la sélection par défaut de petit modèle**. La CI statique ne prouve pas à elle seule l'absence universelle de tout autre appel LLM dans des versions futures d'OpenCode.
 - **Évolution distincte recommandée :** épingler puis tester une version précise d'OpenCode plutôt que `@latest`, et instaurer une télémétrie agrégée des coûts par run sans informations sensibles. Ne pas annoncer un plafond USD inexistant.
 - Ne jamais mettre de clé OpenRouter ni de contenu de prompt métier dans des artefacts publics ou des tests. Aucun changement à GitHub Apps, permissions, secrets ou `main` sans PR.
+
+## Preuves indépendantes disponibles au 20 octobre 2026
+
+- CI initiale [#39446584380](https://github.com/cedricmenec/threadstep/actions/runs/39446584380) : échec isolé d'un test de lecture de la syntaxe des choix YAML de l'orchestrateur (apostrophes/guillemets). Le blocage est intervenu avant la fin de la chaîne de vérification ; aucune phase OpenRouter.
+- CI après correction du test [#39446798846](https://github.com/cedricmenec/threadstep/actions/runs/39446798846) : `check=success` sur `6710efe5a59fac2ba0d804f2f36b2a03276f73de`, incluant les tests négatifs, la vérification des workflows et la validation OpenSpec. Toute modification ultérieure de PR exige son propre `check` indépendant au SHA final.
+- **Aucune preuve E2E OpenRouter sur runner post-correctif** : ne pas lancer de tests payants sans nouvel accord du propriétaire. Vérifier ultérieurement les factures réelles pour confirmer qu'aucune génération de titre n'a eu lieu.
