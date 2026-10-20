@@ -81,6 +81,13 @@ import {
   retryReasonLabel
 } from "./sync-diagnostics.js";
 import {
+  buildSyncObservationRecord,
+  buildTrustGuidance,
+  resolveObservedSync,
+  shouldRecordSyncObservation,
+  writeSyncObservation
+} from "./sync-trust-guidance.js";
+import {
   localDiagnosticError,
   onboardingView,
   overviewAccessLinkVisible,
@@ -199,6 +206,9 @@ const workspaceConfirmationStatusEl = document.querySelector("#workspace-confirm
 const localStatusEl = document.querySelector("#local-status");
 const localStorageErrorEl = document.querySelector("#local-storage-error");
 const syncDiagnosticEl = document.querySelector("#sync-diagnostic");
+const syncTrustLocationBodyEl = document.querySelector("#sync-trust-location-body");
+const syncTrustEvidenceBodyEl = document.querySelector("#sync-trust-evidence-body");
+const syncTrustActionsBodyEl = document.querySelector("#sync-trust-actions-body");
 const syncSummaryEl = document.querySelector("#sync-summary");
 const syncSettingsAccessEl = document.querySelector("#sync-settings-access");
 const syncOnboardingStepEl = document.querySelector("#sync-onboarding-step");
@@ -4083,6 +4093,7 @@ function subscribeToChanges() {
   if (syncedDatabase && bindingAllowsBusiness() &&
       syncedDatabase.cloud.events.syncComplete) {
     syncedDatabase.cloud.events.syncComplete.subscribe(() => {
+      recordSyncObservationFromNative();
       const attestation = evaluateSyncAttestation(nativeAttestationInput());
       migrationStatus = reduceReconciliationStatus(migrationStatus, {
         type: "sync-complete",
@@ -4221,6 +4232,216 @@ function readSyncDiagnosticInput() {
 function nativePullAdapter(db) {
   return db.cloud.sync({ purpose: "pull", wait: true });
 }
+function currentObservedUserDigest() {
+  const entry = selectedSyncedEntry();
+  if (entry && typeof entry.userDigest === "string" && entry.userDigest.length > 0) {
+    return entry.userDigest;
+  }
+  return accountBinding && typeof accountBinding.userDigest === "string"
+    ? accountBinding.userDigest
+    : null;
+}
+function syncObservationEvidence(eventReceived) {
+  const entry = selectedSyncedEntry();
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const phase = normalizeSyncState(observableValue(cloud && cloud.syncState)).phase;
+  const url = entry ? entry.url : migrationDestination();
+  const databaseName = syncedDatabase && typeof syncedDatabase.name === "string"
+    ? syncedDatabase.name
+    : null;
+  const remoteDbId = persisted && typeof persisted.remoteDbId === "string"
+    ? persisted.remoteDbId
+    : null;
+  const userDigest = currentObservedUserDigest();
+  return {
+    eventReceived: eventReceived === true,
+    session: diagnosticSessionCategory(),
+    binding: accountBinding.state,
+    url,
+    databaseName,
+    remoteDbId,
+    userDigest,
+    phase,
+    persistedSyncState: persisted,
+    eventUrl: url,
+    eventDatabaseName: databaseName,
+    eventRemoteDbId: remoteDbId,
+    eventUserDigest: userDigest
+  };
+}
+function recordSyncObservationFromNative() {
+  // Purely passive: a storage failure never blocks the native synchronization
+  // nor any business write. Unattributable events leave no record behind.
+  try {
+    const input = syncObservationEvidence(true);
+    if (!shouldRecordSyncObservation(input)) return;
+    const record = buildSyncObservationRecord(input, Date.now());
+    if (record) writeSyncObservation(localStorage, record);
+  } catch {
+    // The interface keeps "Date non disponible" when nothing was recorded.
+  }
+}
+function currentObservedSync() {
+  const entry = selectedSyncedEntry();
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  return resolveObservedSync({
+    storage: localStorage,
+    binding: accountBinding.state,
+    url: entry ? entry.url : migrationDestination(),
+    databaseName: syncedDatabase && typeof syncedDatabase.name === "string"
+      ? syncedDatabase.name
+      : null,
+    remoteDbId: persisted && typeof persisted.remoteDbId === "string"
+      ? persisted.remoteDbId
+      : null,
+    userDigest: currentObservedUserDigest()
+  });
+}
+function revealExistingControl(targetId) {
+  if (typeof targetId !== "string") return;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const disclosure = target.closest("details");
+  if (disclosure) disclosure.open = true;
+  const section = target.closest(".sync-section");
+  if (section) section.hidden = false;
+  if (typeof target.scrollIntoView === "function") {
+    target.scrollIntoView({ block: "nearest" });
+  }
+  if (typeof target.focus === "function") target.focus();
+}
+function trustHelp(container, id, guidance) {
+  const button = el("button", "sync-help-toggle", "Pourquoi ?");
+  button.type = "button";
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", id);
+  const panel = el("div", "sync-help-panel");
+  panel.id = id;
+  panel.hidden = true;
+  panel.append(
+    el("p", null, guidance.state.meaning),
+    el("p", null, "Données accessibles : " + guidance.state.accessibleData),
+    el("p", null, "Données masquées : " + guidance.state.maskedData),
+    el("p", null, "Risque : " + guidance.state.risk),
+    el("p", null, "Action sûre : " + guidance.state.safeAction),
+    el("p", null, "Actions interdites : " + guidance.state.forbiddenActions.join(" ; ") + ".")
+  );
+  button.addEventListener("click", () => {
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", expanded ? "false" : "true");
+    panel.hidden = expanded;
+  });
+  container.append(button, panel);
+}
+function paintSyncTrustLocation(guidance) {
+  if (!syncTrustLocationBodyEl) return;
+  syncTrustLocationBodyEl.replaceChildren();
+  const status = el("p", "sync-trust-primary", guidance.locationLabel);
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.setAttribute("data-state", guidance.state.key);
+  syncTrustLocationBodyEl.append(status);
+  syncTrustLocationBodyEl.append(el("p", "sync-trust-secondary",
+    "Mode actif : " + (guidance.mode === "synchronized"
+      ? "espace synchronisé Dexie Cloud"
+      : "espace local autonome") + "."));
+  const base = el("p", "sync-trust-secondary");
+  base.append(el("strong", null, "Base locale IndexedDB : "));
+  base.append(el("code", null, guidance.databaseName || "indisponible"));
+  syncTrustLocationBodyEl.append(base);
+  if (guidance.destination) {
+    syncTrustLocationBodyEl.append(el("p", "sync-trust-secondary",
+      "Destination Cloud : " + (guidance.destination.url || "URL indisponible")));
+    if (guidance.destination.remoteDbId) {
+      syncTrustLocationBodyEl.append(el("p", "sync-trust-secondary",
+        "Identifiant distant : " + guidance.destination.remoteDbId));
+    }
+    syncTrustLocationBodyEl.append(el("p", "sync-trust-secondary",
+      guidance.sessionLabel + " · " + guidance.connectionLabel + " · " + guidance.phaseLabel));
+  } else {
+    syncTrustLocationBodyEl.append(el("p", "sync-trust-secondary",
+      "Aucune destination Cloud n'est configurée pour cet appareil."));
+  }
+  trustHelp(syncTrustLocationBodyEl, "sync-help-location", guidance);
+}
+function paintSyncTrustEvidence(guidance) {
+  if (!syncTrustEvidenceBodyEl) return;
+  syncTrustEvidenceBodyEl.replaceChildren();
+  const status = el("p", "sync-trust-primary", guidance.evidence.cloud.label);
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.setAttribute("data-state", guidance.state.key);
+  syncTrustEvidenceBodyEl.append(status);
+  const list = el("ul", "sync-trust-evidence-list");
+  for (const item of [guidance.evidence.local, guidance.evidence.pending, guidance.evidence.cloud]) {
+    const entry = el("li", "sync-trust-evidence-item");
+    entry.append(el("strong", null, item.key === "local" ? "Local : "
+      : item.key === "pending" ? "Envoi : " : "Cloud : "));
+    entry.append(document.createTextNode(item.label));
+    list.append(entry);
+  }
+  const other = el("li", "sync-trust-evidence-item sync-trust-other-device");
+  other.append(el("strong", null, "Autre appareil : "));
+  other.append(document.createTextNode(guidance.evidence.otherDevice.label));
+  list.append(other);
+  syncTrustEvidenceBodyEl.append(list);
+  const date = el("p", "sync-trust-secondary", guidance.observation.label);
+  date.setAttribute("data-observation", guidance.observation.available ? "available" : "unavailable");
+  syncTrustEvidenceBodyEl.append(date);
+  if (guidance.observation.available) {
+    syncTrustEvidenceBodyEl.append(el("p", "sync-trust-scope",
+      guidance.observation.provenance + ". " + guidance.observation.scope));
+  }
+  trustHelp(syncTrustEvidenceBodyEl, "sync-help-evidence", guidance);
+}
+function paintSyncTrustActions(guidance) {
+  if (!syncTrustActionsBodyEl) return;
+  syncTrustActionsBodyEl.replaceChildren();
+  for (const intent of guidance.intents) {
+    if (intent.available !== true) continue;
+    const details = el("details", "sync-intent");
+    details.setAttribute("data-intent", intent.id);
+    const summary = el("summary", null, intent.label);
+    details.append(summary);
+    const list = el("ol", "sync-intent-steps");
+    for (const step of intent.steps) {
+      const item = el("li", null);
+      item.append(document.createTextNode(step.text));
+      if (step.control) {
+        const button = el("button", "sync-intent-link", "Consulter");
+        button.type = "button";
+        button.setAttribute("aria-controls", step.control);
+        button.addEventListener("click", () => { revealExistingControl(step.control); });
+        item.append(document.createTextNode(" "), button);
+      }
+      list.append(item);
+    }
+    details.append(list);
+    syncTrustActionsBodyEl.append(details);
+  }
+}
+function renderTrustGuidance() {
+  if (!syncTrustLocationBodyEl && !syncTrustEvidenceBodyEl && !syncTrustActionsBodyEl) return;
+  const diagnostic = buildSyncDiagnostic(readSyncDiagnosticInput());
+  const entry = selectedSyncedEntry();
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const guidance = buildTrustGuidance({
+    diagnostic,
+    workspace: workspaceDiagnosticInput(),
+    onboarding: onboardingView(readCloudSettingsInput()),
+    observedSync: currentObservedSync(),
+    url: entry ? entry.url : migrationDestination(),
+    remoteDbId: persisted && typeof persisted.remoteDbId === "string" ? persisted.remoteDbId : null,
+    localEmpty: documentLoaded && lastRecords.subjects.length === 0 && lastRecords.items.length === 0,
+    isolatedRecovery: accountBinding.adopt === true
+  });
+  paintSyncTrustLocation(guidance);
+  paintSyncTrustEvidence(guidance);
+  paintSyncTrustActions(guidance);
+}
 function paintSyncDiagnostic(diagnostic) {
   if (!syncDiagnosticEl) return;
   const view = buildDiagnosticView(diagnostic, { busy: syncRetryBusy });
@@ -4262,6 +4483,7 @@ function paintSyncDiagnostic(diagnostic) {
   renderSyncOnboarding();
 }
 function renderSyncDiagnostic() {
+  renderTrustGuidance();
   if (!syncDiagnosticEl) return;
   if (!syncDiagnosticsController) {
     paintSyncDiagnostic(buildSyncDiagnostic(readSyncDiagnosticInput()));
