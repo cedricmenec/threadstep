@@ -299,6 +299,7 @@ let lastRecords = emptyRecords();
 let pendingCloudWrites = Promise.resolve();
 let cloudWriteBlocked = false;
 let cloudReadPending = null;
+let cloudReadReplayRequested = false;
 let localReadPending = null;
 let localReadFailed = false;
 let localWriteBlocked = false;
@@ -621,6 +622,8 @@ async function readCacheHasBusinessRecords() {
   }
 }
 function clearBusinessForBindingBlock() {
+  // A blocked view cannot remain marked as started: restored trust must restart its read.
+  businessStarted = false;
   documentState = emptyDocument();
   lastRecords = emptyRecords();
   documentLoaded = false;
@@ -717,6 +720,9 @@ async function refreshAccountBinding() {
   renderActivationPanel();
   applyBusinessVisibility();
   renderSyncDiagnostic();
+  // Native identity/sync events can restore trust without another login callback.
+  // Resume the business read here, not only in continueAuthenticatedWorkspace().
+  if (authenticated && accountBinding.businessAllowed === true) startBusiness();
   return accountBinding;
 }
 async function continueAuthenticatedWorkspace() {
@@ -2420,7 +2426,11 @@ function handleAuthInteraction(interaction) {
   renderAuthPanel();
 }
 function startBusiness() {
-  if (businessStarted) return;
+  if (businessStarted) {
+    // A previous guarded read may have been hidden during transient identity checks.
+    if (!documentLoaded && businessAllowed()) void refreshSyncedDocument();
+    return;
+  }
   if (requiresAuthentication() && !bindingAllowsBusiness()) return;
   businessStarted = true;
   documentLoaded = false;
@@ -4027,7 +4037,15 @@ function commitOperations(records) {
 async function refreshSyncedDocument() {
   if (!syncedDatabase || !businessAllowed() || !bindingAllowsBusiness()) return;
   // Await previously submitted writes before replacing the DOM from IndexedDB.
-  if (cloudReadPending) return cloudReadPending;
+  if (cloudReadPending) {
+    // Merge concurrent resume/sync events into at most one subsequent read.
+    cloudReadReplayRequested = true;
+    return cloudReadPending;
+  }
+  const readDatabase = syncedDatabase;
+  const readDigest = accountBinding.userDigest || accountBinding.digest || null;
+  const stillAuthorized = () => syncedDatabase === readDatabase && businessAllowed() &&
+    (accountBinding.userDigest || accountBinding.digest || null) === readDigest;
   cloudReadPending = (async () => {
     let writesSnapshot;
     let result;
@@ -4038,7 +4056,10 @@ async function refreshSyncedDocument() {
       await writesSnapshot;
       result = await readSyncedWorkspace(syncedDatabase);
     } while (writesSnapshot !== pendingCloudWrites);
+    if (!stillAuthorized()) return;
     if (result.code === "ok") {
+      await reloadMetadataPreference();
+      if (!stillAuthorized()) return;
       recordBootstrap({ code: BOOTSTRAP_EVENT.BUSINESS_READ, ok: true });
       clearRecovery();
       const nextDocument = recordsToDocument(result.records);
@@ -4047,7 +4068,6 @@ async function refreshSyncedDocument() {
       documentLoaded = true;
       cloudWriteBlocked = false;
       syncReadError = null;
-      await reloadMetadataPreference();
       render();
       applyBusinessVisibility();
       renderSyncDiagnostic();
@@ -4064,13 +4084,21 @@ async function refreshSyncedDocument() {
       ? "Projection métier invalide : consultation en lecture seule, aucune donnée n'est masquée sans explication."
       : "Lecture IndexedDB non aboutie (" + result.code + ") : aucune conclusion de base vide ni de synchronisation confirmée.");
   })().catch((error) => {
+    if (!stillAuthorized()) return;
     documentLoaded = false;
     syncReadError = { name: "ReadError", code: READ_FAILURE.INDETERMINATE };
     cloudWriteBlocked = true;
     applyBusinessVisibility();
     renderSyncDiagnostic();
     notifyError("État de lecture indéterminé : aucune base vide ni synchronisation confirmée n'est affirmée.");
-  }).finally(() => { cloudReadPending = null; });
+  }).finally(() => {
+    cloudReadPending = null;
+    const replay = cloudReadReplayRequested;
+    cloudReadReplayRequested = false;
+    if (replay && businessStarted && businessAllowed() && !documentLoaded && !syncReadError) {
+      void refreshSyncedDocument();
+    }
+  });
   return cloudReadPending;
 }
 function ensureChangeChannel() {
