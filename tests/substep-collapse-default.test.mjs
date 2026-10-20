@@ -11,8 +11,9 @@ const toggleBody = app.slice(app.indexOf("function renderSubstepToggle("), app.i
 const renderBody = app.slice(app.indexOf("function render() {"), app.indexOf("function navigate("));
 const navigateBody = app.slice(app.indexOf("function navigate("), app.indexOf("function renderDetail("));
 const hashchangeBody = app.slice(app.indexOf('window.addEventListener("hashchange"'), app.indexOf('snackbarEl.addEventListener'));
-const loadBody = app.slice(app.indexOf("function load() {"), app.indexOf("function readResumePreference("));
-const importBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf('window.addEventListener("storage"'));
+const loadBody = app.slice(app.indexOf("function load() {"), app.indexOf("async function refreshLocalDocument("));
+const importBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf("if (navMenuButtonEl)"));
+const localImportConfirmBody = app.slice(app.indexOf("async function confirmLocalImport("), app.indexOf("function renderAuthPanel("));
 
 test("the app keeps a transient expanded-parents set defaulting to empty", () => {
   assert.match(app, /let expandedParents = new Set\(\);/);
@@ -38,13 +39,14 @@ test("render applies any pending focus expansion before building the view", () =
 
 test("a change of parsed route resets the expanded parents in the hashchange handler", () => {
   assert.match(hashchangeBody, /const nextRoute = parseRoute\(location\.hash\)/);
-  assert.match(hashchangeBody, /if \(isViewEntry\(route, nextRoute\)\) expandedParents = new Set\(\)/);
+  assert.match(hashchangeBody, /if \(isViewEntry\(route, nextRoute\)\) resetExpandedViewState\(\)/);
   assert.match(hashchangeBody, /route = nextRoute/);
 });
 
-test("load and a successful import reset the expanded parents", () => {
-  assert.match(loadBody, /function load\(\) \{\s*\n\s*expandedParents = new Set\(\);/);
-  assert.match(importBody, /expandedParents = new Set\(\);/);
+test("asynchronous load keeps expansion while a successful import resets it", () => {
+  assert.doesNotMatch(loadBody, /expandedParents|resetExpandedViewState/);
+  assert.doesNotMatch(importBody, /expandedParents|resetExpandedViewState/);
+  assert.match(localImportConfirmBody, /resetExpandedViewState\(\)/);
 });
 
 test("same-route navigation and ordinary re-renders keep the voluntary expansion", () => {

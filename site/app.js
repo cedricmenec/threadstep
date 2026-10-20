@@ -129,7 +129,7 @@ import {
   writeBootstrapTrace
 } from "./bootstrap-diagnostics.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
-import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction } from "./interaction-continuity.js";
+import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction, authorizedWorkspaceIdentityKey, shouldResetExpandedParents } from "./interaction-continuity.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -282,6 +282,7 @@ let pendingMoveFocus = null;
 let pendingCollapseFocus = null;
 let pendingPriorityFocus = null;
 let expandedParents = new Set();
+let expandedParentIdentityKey = null;
 let dragState = null;
 let route = parseRoute(location.hash);
 let renamingSubject = false;
@@ -2353,6 +2354,8 @@ async function confirmLocalImport() {
     return;
   }
   if (plan.operations.length === 0) {
+    resetExpandedViewState();
+    openMenuId = null;
     hideLocalImportPanel();
     notify("Aucune nouvelle insertion nécessaire : les enregistrements sont déjà présents.");
     return;
@@ -2363,6 +2366,8 @@ async function confirmLocalImport() {
     notify("Échec de la transaction d'import : aucune écriture partielle, données existantes intactes.");
     return;
   }
+  resetExpandedViewState();
+  openMenuId = null;
   hideLocalImportPanel();
   notify("Import fusionné localement : seuls les enregistrements absents ont été ajoutés, sans suppression.");
   await refreshLocalDocument();
@@ -2580,8 +2585,34 @@ function persist() {
   render();
   return commitOperations(records);
 }
-function load() {
+function resetExpandedViewState() {
   expandedParents = new Set();
+  pendingCollapseFocus = null;
+}
+function currentAuthorizedWorkspaceIdentity() {
+  if (!businessAllowed()) return null;
+  if (!syncedDatabase) return { type: WORKSPACE_TYPE.LOCAL };
+  const entry = selectedSyncedEntry();
+  return {
+    type: WORKSPACE_TYPE.SYNCHRONIZED,
+    databaseName: typeof syncedDatabase.name === "string"
+      ? syncedDatabase.name
+      : (entry && entry.databaseName) || null,
+    userDigest: (entry && typeof entry.userDigest === "string" && entry.userDigest) ||
+      (accountBinding && (accountBinding.userDigest || accountBinding.digest)) || null
+  };
+}
+function applyExpandedIdentityBoundary() {
+  const identity = currentAuthorizedWorkspaceIdentity();
+  const nextKey = authorizedWorkspaceIdentityKey(identity);
+  if (shouldResetExpandedParents(expandedParentIdentityKey, identity)) {
+    resetExpandedViewState();
+  }
+  if (nextKey !== null) expandedParentIdentityKey = nextKey;
+}
+function load() {
+  // Async refreshes keep the user's transient expansion. Only explicit view
+  // entries, reloads, new tabs, successful imports and identity changes reset it.
   openMenuId = null;
   if (!businessAllowed()) return;
   if (syncedDatabase) {
@@ -2959,6 +2990,7 @@ function replaceSubjectsInCurrentView(nextSubjects, snapshot) {
   }
 }
 function render() {
+  applyExpandedIdentityBoundary();
   // An intentional reveal/navigation must not be undone by scroll restoration.
   const uxSnapshot = pendingNavigationFocus || focusDetailHeading || focusOpenSubjectId ||
     (focusItemId && focusItemId === revealItemId) ? null : captureUxContinuity();
@@ -3989,9 +4021,6 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     // Import is always a non-destructive merge. A destructive restore remains a
     // distinct intention and is never an implicit effect of this action.
     invalidatePendingRemoval();
-    expandedParents = new Set();
-    pendingCollapseFocus = null;
-    openMenuId = null;
     await openLocalImportPreview(parsed.records);
     notify("Import local en prévisualisation : fusion sans suppression. Aucune écriture avant votre confirmation.");
   } catch {
@@ -4014,7 +4043,7 @@ if (navMenuPanelEl) {
 }
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
-  if (isViewEntry(route, nextRoute)) expandedParents = new Set();
+  if (isViewEntry(route, nextRoute)) resetExpandedViewState();
   openMenuId = null;
   updateNavigationMenu("route-change");
   route = nextRoute;
@@ -5038,6 +5067,7 @@ async function confirmReconciliation(context) {
     };
   });
   if (outcome.status === "local-written") {
+    resetExpandedViewState();
     migrationStatus = reduceReconciliationStatus(migrationStatus, {
       type: "committed",
       online: typeof navigator === "undefined" || navigator.onLine !== false
@@ -5048,6 +5078,7 @@ async function confirmReconciliation(context) {
       ? "Écrit localement ; synchronisation Cloud en attente hors ligne. Aucun push distant n'est confirmé."
       : "Écrit localement dans IndexedDB ; synchronisation Cloud en attente. Aucun push distant n'est confirmé.");
   } else if (outcome.status === "already-migrated" || outcome.status === "up-to-date") {
+    resetExpandedViewState();
     hideMigrationPanel();
     await refreshSyncedDocument();
     notify("Aucune nouvelle insertion nécessaire : les éléments déjà présents ou copiés sont reconnus.");
