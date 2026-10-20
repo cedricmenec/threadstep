@@ -19,8 +19,9 @@ Voir [la sécurité GitHub](github-autonomy-and-security.md) et
 [ASF-WF-002](tasks/ASF-WF-002.md).
 
 **Valeurs pré-sélectionnées dans le formulaire** : phase `auto`, modèle
-`openrouter/deepseek/deepseek-v4.1-flash`. Le modèle
-`openrouter/z-ai/glm-5.3-flash` reste disponible et les phases `plan`,
+`openrouter/deepseek/deepseek-v4.1-flash-1017` (depuis la PR #160). Les modèles
+`openrouter/deepseek/deepseek-v4.1-flash` et
+`openrouter/z-ai/glm-5.3-flash` restent disponibles et les phases `plan`,
 `apply`, `finalize` restent sélectionnables. Le formulaire ne déclenche
 rien sans action sur « Run workflow ». Avec `auto`, **trois appels OpenCode**
 sont prévus (plan, implémentation, sync), sans plafond USD automatique.
