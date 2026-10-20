@@ -30,8 +30,10 @@ export function readingScrollDelta(previousTop, currentTop, viewportHeight) {
   if (![previousTop, currentTop, viewportHeight].every(Number.isFinite) ||
       viewportHeight <= 0) return null;
   const difference = currentTop - previousTop;
-  // Avoid a massive jump when the structure has changed beyond recognition.
-  if (Math.abs(difference) > viewportHeight * 3) return null;
+  // A validated anchor may be thousands of pixels below the viewport after
+  // replaceChildren() temporarily shrinks a long list and resets scrollY.
+  // Never cap that recovery by viewport height: the browser clamps to the
+  // actual available page scroll range.
   return difference;
 }
 
