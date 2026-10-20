@@ -16,9 +16,10 @@ test('OpenSpec pilot needs explicit manual phase and task', () => {
   assert.match(agent, /if: github.actor == github.repository_owner/);
 });
 
-test('OpenSpec manual dispatch defaults to auto and DeepSeek V4.1 Flash', () => {
-  assert.ok(agent.includes('default: auto\n        options:\n          - auto'.replaceAll('\\n', '\n')));
-  assert.ok(agent.includes("default: 'openrouter/deepseek/deepseek-v4.1-flash'"));
+test('OpenSpec manual dispatch defaults to auto and DeepSeek V4.1 Flash 1017', () => {
+  assert.ok(agent.includes('default: auto\n        options:\n          - auto'));
+  assert.ok(agent.includes("default: 'openrouter/deepseek/deepseek-v4.1-flash-1017'"));
+  assert.ok(agent.includes("- 'openrouter/deepseek/deepseek-v4.1-flash'"));
   assert.ok(agent.includes("- 'openrouter/z-ai/glm-5.3-flash'"));
   assert.ok(agent.includes('auto is default: 3 paid OpenCode calls'));
 });
