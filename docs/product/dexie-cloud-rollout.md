@@ -6,6 +6,12 @@
 
 La [spécification complète et normative](specs/dexie-cloud-local-first.md) est fournie par le propriétaire. Ses SHALL/MUST et scénarios guident les tâches TS-024 à TS-030.
 
+Pour la lecture utilisateur des copies, des preuves de synchronisation et
+des procédures sûres, voir le
+[Guide de la persistance et de la synchronisation](guide-persistance-et-synchronisation.md).
+Ce guide est la référence non technique ; le présent document reste la
+référence d'architecture et de livraison.
+
 Contrairement à l'hypothèse « IndexedDB existante », la version de `main` à la préparation utilise `localStorage` : clé `threadstep.document.v1` dans `site/app.js`. `site/core.js` maintient un document JSON V1 avec sujets et items. Les préférences de reprise sont également locales mais séparées. `site/index.html` impose `connect-src 'none'`.
 
 Les exclusions de cloud, d'authentification et de bibliothèques tierces
