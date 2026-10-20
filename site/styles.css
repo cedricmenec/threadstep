@@ -332,3 +332,31 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .settings-destination .restore-panel{max-width:100%;margin:6px 0 0;overflow-wrap:anywhere}
 .settings-destination .restore-panel h4{margin:0;font-size:1rem}
 @media(max-width:620px){.nav-menu-panel{left:0;right:auto;width:min(280px,calc(100vw - 30px))}.settings-page{padding-top:26px}.settings-destination.data-section{padding:12px}.restore-panel{padding:.75rem}}
+.sync-trust-block{background:#fff;border:1px solid #e1e5de;border-radius:14px;padding:14px 16px;margin-top:14px;max-width:100%;overflow-wrap:anywhere}
+.sync-trust-block h3{margin:0;font-size:1.05rem;color:#24382f}
+.sync-trust-body{display:flex;flex-direction:column;gap:8px;margin-top:8px;max-width:100%}
+.sync-trust-primary{margin:0;padding:8px 10px;border-radius:10px;background:#f3f6ec;border-left:4px solid #34543f;color:#24382f;font-weight:700;font-size:.95rem;line-height:1.4;overflow-wrap:anywhere}
+.sync-trust-primary[data-state="observed"]{border-left-color:#34543f}
+.sync-trust-primary[data-state="pending"],.sync-trust-primary[data-state="initial-pull"],.sync-trust-primary[data-state="offline"]{border-left-color:#8a6d1f;background:#fbf6e6}
+.sync-trust-primary[data-state="unverified"],.sync-trust-primary[data-state="mismatch"],.sync-trust-primary[data-state="destination-mismatch"],.sync-trust-primary[data-state="historical-cache"]{border-left-color:#6d4a3f;background:#fff7f4}
+.sync-trust-primary[data-state="storage-error"],.sync-trust-primary[data-state="network-error"],.sync-trust-primary[data-state="permission"],.sync-trust-primary[data-state="session"],.sync-trust-primary[data-state="sync-error"]{border-left-color:#8c2f2f;background:#fdf0ee}
+.sync-trust-secondary,.sync-trust-scope{margin:0;color:#415748;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere}
+.sync-trust-secondary code{overflow-wrap:anywhere;word-break:break-word}
+.sync-trust-evidence-list{margin:0;padding-left:20px;color:#415748;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere}
+.sync-trust-evidence-item{margin:4px 0}
+.sync-trust-other-device{color:#5c4a43}
+.sync-help-toggle,.sync-intent-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:8px 12px;border:1px solid #cbd5c9;border-radius:10px;background:#fff;color:#30473a;font-weight:700;cursor:pointer}
+.sync-help-toggle:focus-visible,.sync-intent-link:focus-visible,.sync-business-details summary:focus-visible,.sync-technical-info summary:focus-visible,.sync-intent summary:focus-visible{outline:3px solid #a9ba69;outline-offset:2px}
+.sync-help-panel{margin:0;padding:10px 12px;border:1px solid #dde4d6;border-radius:10px;background:#f9faf5}
+.sync-help-panel[hidden]{display:none}
+.sync-help-panel p{margin:4px 0;font-size:.86rem;color:#415748;line-height:1.5;overflow-wrap:anywhere}
+.sync-business-details>summary,.sync-technical-info>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;color:#24382f;font-weight:700;overflow-wrap:anywhere}
+.sync-business-details>summary h3{margin:0}
+.sync-intent{border:1px solid #e1e5de;border-radius:10px;padding:4px 10px;background:#fbfcf8}
+.sync-intent>summary{display:flex;align-items:center;min-height:44px;cursor:pointer;font-weight:700;color:#30473a;overflow-wrap:anywhere}
+.sync-intent-steps{margin:4px 0 8px;padding-left:20px;color:#415748;font-size:.86rem;line-height:1.5;overflow-wrap:anywhere}
+.sync-intent-steps li{margin:6px 0}
+.sync-technical-info{margin-top:22px;max-width:720px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;padding:10px 14px}
+.sync-technical-info>summary{color:#30473a}
+@media(max-width:620px){.sync-trust-block,.sync-technical-info{padding:10px 12px}.sync-trust-primary{font-size:.9rem}.sync-trust-secondary,.sync-trust-scope,.sync-trust-evidence-list,.sync-intent-steps{font-size:.84rem}}
+@media(max-width:320px){.sync-trust-block,.sync-technical-info{padding:8px}.sync-trust-primary{padding:6px 8px}.sync-help-toggle,.sync-intent-link,.sync-business-details>summary,.sync-technical-info>summary,.sync-intent>summary{width:100%;min-width:44px;min-height:44px}}
