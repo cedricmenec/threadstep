@@ -644,5 +644,20 @@
     ],
     "created_at": "2026-10-20",
     "content_sha256": "8f1a4742f56381d43a8038c896dcdea59eae2d1d0aefd1ecc65009b60fac204f"
+  },
+  {
+    "id": "TS-048",
+    "path": "backlog/tasks/TS-048.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "critical",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-045",
+      "TS-047"
+    ],
+    "created_at": "2026-10-20",
+    "content_sha256": "f945cd050afa2b92d00ecff6683dda7fc81007f481df524220509093f47f3f51"
   }
 ]
