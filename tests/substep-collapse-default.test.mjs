@@ -32,8 +32,8 @@ test("the disclosure control toggles the expanded set without persisting", () =>
 });
 
 test("render applies any pending focus expansion before building the view", () => {
-  assert.match(renderBody, /expandAncestorForFocus\\(\\)/);
-  assert.match(renderBody, /replaceSubjectsInCurrentView\\(nextSubjects, uxSnapshot\\)/);
+  assert.ok(renderBody.includes("expandAncestorForFocus();"));
+  assert.ok(renderBody.includes("replaceSubjectsInCurrentView(nextSubjects, uxSnapshot)"));
 });
 
 test("a change of parsed route resets the expanded parents in the hashchange handler", () => {
