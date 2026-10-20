@@ -19,6 +19,8 @@ Open the page and immediately know what to resume next for each active subject.
 - Local-first storage remains central. The future Dexie Cloud synchronization is configured explicitly, with authentication and consent before transmitting historical local data.
 - Explicit JSON export/import for portable backups. Cross-device sync was outside the original MVP, but is in scope for the separately specified evolution.
 
+- Continuité des interactions : une modification locale ou une actualisation asynchrone préserve le focus, le défilement et les états de présentation encore pertinents. Référence : [contrat UX transversal](../../openspec/specs/ux-interaction-continuity/spec.md).
+
 ## Non-goals
 Collaboration, project accounting and AI in the browser. Authentication, synchronization and hosted storage were excluded from the historical MVP only and are now in scope for the Dexie Cloud evolution.
 
