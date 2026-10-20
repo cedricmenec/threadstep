@@ -111,7 +111,7 @@ test("ASF-MODEL-001 allowed models match all workflow entry-point choices", () =
   for (const [name, workflow] of [
     ["manual", direct], ["openspec", openspec], ["orchestrator", orchestrator]
   ]) {
-    const selections = [...workflow.matchAll(/- '(openrouter\/[a-z0-9-]+\/[a-z0-9.-]+)'/g)]
+    const selections = [...workflow.matchAll(/- ['"](openrouter\/[a-z0-9-]+\/[a-z0-9.-]+)['"]/g)]
       .map((match) => match[1]);
     assert.ok(selections.length > 0, name + " exposes model options");
     for (const model of selections) {
