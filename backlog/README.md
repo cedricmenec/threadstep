@@ -2,7 +2,7 @@
 
 ## Continuité UX : TS-049 et TS-050 (20 octobre 2026)
 
-- **[TS-049](tasks/TS-049.md)** : stabiliser le scroll et le focus pendant création, complétion, édition et réordonnancement, sans navigation ni saut intempestif. `ready / allowed / low`, priorité haute.
+- **[TS-049](tasks/TS-049.md)** : stabiliser le scroll et le focus pendant création, complétion, édition et réordonnancement, sans navigation ni saut intempestif. `on_hold / manual / low`, priorité haute ; PR de code #161 et #163 fusionnées, recette Android/scroll réelle et réconciliation OpenSpec restantes. Ne pas relancer l'agent automatiquement.
 - **[TS-050](tasks/TS-050.md)** : préserver les sous-tâches volontairement ouvertes lors des mises à jour locales, événements Dexie Cloud et inter-onglets, avec reset uniquement sur vraie entrée de vue/reload/import. `ready / manual / medium`, priorité haute, à coordonner avec TS-048.
 - **Contrat cible :** `openspec/specs/ux-interaction-continuity/spec.md` (PR documentaire distincte). La présente PR décrit les travaux, **ne change aucun code produit**, ne déclenche aucun run payant et n'atteste aucune recette navigateur.
 
