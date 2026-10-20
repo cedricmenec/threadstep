@@ -226,6 +226,35 @@ consignée ; aucun test simulé ne les atteste.
   chaque changement, ainsi que la lisibilité à 320 px, les cibles de 44 px et
   les annonces d'un lecteur d'écran.
 
+## Continuité des interactions dans les listes longues (TS-049)
+
+Le contrat transversal applicable est
+[`ux-interaction-continuity`](../../openspec/specs/ux-interaction-continuity/spec.md).
+Ne jamais déduire la conformité sur une tablette de la seule réussite d'un
+téléphone ou d'une simulation Node. Vérifier que la liste ne se contracte pas
+temporairement lors d'un rendu et que le focus reste sur un contrôle monté.
+
+- [ ] Dans une longue liste, à plusieurs écrans du haut, créer une étape puis
+  en créer une deuxième : ni saut en haut, ni perte de saisie/focus.
+- [ ] Au même endroit, cocher et décocher une étape avec et sans le filtre
+  « Masquer les étapes terminées » : ancrage conservé ou repli cohérent
+  sur un élément voisin quand l'étape disparaît.
+- [ ] Répéter création et complétion sur **tablette Android en portrait et
+  paysage**, puis sur **téléphone Android** et sur ordinateur. Noter appareil,
+  version du navigateur, orientation, état du clavier virtuel et SHA/Pages.
+- [ ] Vérifier que navigation explicite et changement de compte ne retiennent
+  pas artificiellement l'ancienne hauteur ou le focus métier.
+
+**Historique utilisateur communiqué (21 octobre 2026, heure de Paris) :**
+sur Huawei MediaPad M5 10 pouces Android, le saut était reproduit en portrait
+et en paysage après la PR #163 alors que le Samsung A40 Android fonctionnait.
+Après le correctif de rendu atomique
+[PR #165](https://github.com/cedricmenec/threadstep/pull/165), l'utilisateur
+a confirmé « Ça fonctionne » sur la tablette. Version du navigateur, orientation
+de cette dernière confirmation, cas clavier/Cloud et preuve instrumentée :
+**non fournis**. Cette remontée ne valide pas automatiquement toutes les
+cases ci-dessus ni TS-050.
+
 ## Tests utilisateur à consigner
 
 Cocher les cases **uniquement après observation réelle** ; noter navigateur, appareil, date, SHA et anomalie éventuelle dans le rapport ASF.
