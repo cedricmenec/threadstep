@@ -58,10 +58,10 @@ test("TS-049 restoration is connected to render before the DOM is replaced", () 
   const render = app.slice(app.indexOf("function render() {"), app.indexOf("function navigate("));
   assert.match(render, /captureUxContinuity\(\)/);
   assert.match(render, /focusItemId === revealItemId/);
-  assert.match(render, /expandAncestorForFocus\\(\\)/);
-  assert.match(render, /document\\.createDocumentFragment\\(\\)/);
-  assert.match(render, /replaceSubjectsInCurrentView\\(nextSubjects, uxSnapshot\\)/);
-  assert.doesNotMatch(render, /subjectsEl\\.replaceChildren\\(\\);\\s*\\n\\s*expandAncestorForFocus\\(\\)/);
+  assert.ok(render.includes("expandAncestorForFocus();"));
+  assert.ok(render.includes("document.createDocumentFragment()"));
+  assert.ok(render.includes("replaceSubjectsInCurrentView(nextSubjects, uxSnapshot)"));
+  assert.ok(!render.includes("subjectsEl.replaceChildren();\n  expandAncestorForFocus();"));
   assert.match(render, /finishUxRender\(uxSnapshot, explicitUxFocus\)/);
   assert.match(app, /shouldRestoreInteraction\(snapshot\.context, context\)/);
   assert.match(app, /window\.scrollTo\(\{ top: target, left: 0, behavior: "instant" \}\)/);
