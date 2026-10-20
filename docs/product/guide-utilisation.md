@@ -525,7 +525,12 @@ le stockage local ni l'export JSON.
 ## Enregistrement, export et import
 
 Les actions sont enregistrées automatiquement dans **IndexedDB**, dans
-ce navigateur et ce profil. Depuis `#/parametres/donnees`, utiliser
+ce navigateur et ce profil. Pour comprendre les copies locales et
+distantes, les niveaux de preuve de synchronisation et les procédures
+sûres avant une action risquée, consultez le
+[Guide de la persistance et de la synchronisation](guide-persistance-et-synchronisation.md).
+
+Depuis `#/parametres/donnees`, utiliser
 régulièrement **« Exporter mes données »** pour obtenir une sauvegarde au
 format `threadstep.indexeddb-backup`, puis **« Importer et fusionner un
 JSON »** pour ajouter uniquement les enregistrements absents.

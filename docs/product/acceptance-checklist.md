@@ -6,6 +6,10 @@ Version de la checklist : Version testée à noter : `main` et commit `97d326c5b
 
 ## Préparation sans perte de données
 
+Les copies locales et distantes, les preuves de synchronisation et les
+procédures sûres à relire avant une action risquée sont décrites dans le
+[Guide de la persistance et de la synchronisation](guide-persistance-et-synchronisation.md).
+
 Avant de tester, **exporter le JSON réel**. Utiliser de préférence un navigateur/profil de test. Dans le produit, créer deux sujets A et B, plusieurs actions de même priorité, une action parente P avec trois sous-tâches (dont une terminée) et un autre parent Q. Ne pas vider le stockage de son profil habituel : l'import demande confirmation et remplace le document courant.
 
 ## Mode local IndexedDB sans Cloud (TS-032)
