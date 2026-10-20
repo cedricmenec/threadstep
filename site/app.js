@@ -2938,6 +2938,26 @@ function finishUxRender(snapshot, skipFocus = false) {
     });
   }
 }
+// Build the replacement tree detached from the live document. Huawei M5's
+// Android browser can clamp the page position as soon as an emptied grid loses
+// its height, before a later scrollTo() can recover it. A single atomic swap
+// with the previous height reserved avoids the transient empty-page state.
+function replaceSubjectsInCurrentView(nextSubjects, snapshot) {
+  const oldMinHeight = subjectsEl.style.minHeight;
+  let guarded = false;
+  if (snapshot) {
+    const height = subjectsEl.getBoundingClientRect().height;
+    if (Number.isFinite(height) && height > 0) {
+      subjectsEl.style.minHeight = Math.ceil(height) + "px";
+      guarded = true;
+    }
+  }
+  try {
+    subjectsEl.replaceChildren(nextSubjects);
+  } finally {
+    if (guarded) subjectsEl.style.minHeight = oldMinHeight;
+  }
+}
 function render() {
   // An intentional reveal/navigation must not be undone by scroll restoration.
   const uxSnapshot = pendingNavigationFocus || focusDetailHeading || focusOpenSubjectId ||
@@ -2954,12 +2974,13 @@ function render() {
     finishUxRender(null, true);
     return;
   }
-  subjectsEl.replaceChildren();
   expandAncestorForFocus();
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
   if (route.view === "settings") {
+    // Real navigation: do not retain an unrelated list's height.
+    subjectsEl.replaceChildren();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
     focusCardEl.hidden = true;
@@ -2971,22 +2992,22 @@ function render() {
   const detail = route.view !== "overview";
   subjectForm.hidden = detail;
   focusSuggestEl.hidden = detail;
+  const nextSubjects = document.createDocumentFragment();
   if (detail) {
     focusCardEl.hidden = true;
     resumeCardEl.hidden = true;
-    renderDetail();
-    applyFocus();
-    finishUxRender(uxSnapshot, explicitUxFocus);
-    return;
+    renderDetail(nextSubjects);
+  } else {
+    renderSuggestion();
+    renderResumeCard();
+    if (!documentState.subjects.length) {
+      nextSubjects.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
+    } else {
+      for (const subject of documentState.subjects) nextSubjects.append(renderSubject(subject));
+    }
   }
-  renderSuggestion();
-  renderResumeCard();
-  if (!documentState.subjects.length) {
-    subjectsEl.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
-    finishUxRender(uxSnapshot, explicitUxFocus);
-    return;
-  }
-  for (const subject of documentState.subjects) subjectsEl.append(renderSubject(subject));
+  // No intermediate blank grid or multi-step append to the live scroll tree.
+  replaceSubjectsInCurrentView(nextSubjects, uxSnapshot);
   applyFocus();
   finishUxRender(uxSnapshot, explicitUxFocus);
 }
@@ -2998,17 +3019,17 @@ function navigate(hash) {
   }
   location.hash = hash;
 }
-function renderDetail() {
+function renderDetail(target = subjectsEl) {
   if (route.view === "invalid") {
-    subjectsEl.append(renderDetailFallback());
+    target.append(renderDetailFallback());
     return;
   }
   const subject = findSubject(documentState, route.subjectId);
   if (!subject) {
-    subjectsEl.append(renderDetailFallback());
+    target.append(renderDetailFallback());
     return;
   }
-  subjectsEl.append(renderDetailView(subject));
+  target.append(renderDetailView(subject));
 }
 function renderDetailView(subject) {
   const card = el("section", "subject detail");
