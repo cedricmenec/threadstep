@@ -117,6 +117,7 @@ test("TS-048 a native identity event restarts projects after trust returns, with
 test("TS-048 a stale asynchronous read cannot render projects after account identity changes", async () => {
   const db = {};
   let releaseRead;
+  let releaseReplay;
   let rendered = 0;
   let reads = 0;
   const state = {
@@ -134,6 +135,7 @@ test("TS-048 a stale asynchronous read cannot render projects after account iden
     readSyncedWorkspace: () => {
       reads += 1;
       if (reads === 1) return new Promise((resolve) => { releaseRead = resolve; });
+      if (reads === 2) return new Promise((resolve) => { releaseReplay = resolve; });
       return Promise.resolve({ code: "ok", records: { subjects: [], items: [] } });
     },
     recordsToDocument: (records) => records,
@@ -156,12 +158,17 @@ test("TS-048 a stale asynchronous read cannot render projects after account iden
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(typeof releaseRead, "function");
   state.accountBinding = { userDigest: "user-b", businessAllowed: true };
+  const overlapping = state.refreshSyncedDocument();
   releaseRead({ code: "ok", records: { subjects: [1], items: [2] } });
   await pending;
+  await overlapping;
   assert.equal(rendered, 0, "a read for account A cannot draw under account B");
-  await state.refreshSyncedDocument();
-  assert.equal(reads, 2);
-  assert.equal(rendered, 1, "a fresh read for the current account succeeds");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(reads, 2, "concurrent resume requests coalesce into one replay");
+  assert.equal(typeof releaseReplay, "function");
+  releaseReplay({ code: "ok", records: { subjects: [3], items: [4] } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(rendered, 1, "the replay loads projects for the current account");
 });
 
 test("TS-048 bound account never gets a false 'masked data' bootstrap diagnosis", () => {
