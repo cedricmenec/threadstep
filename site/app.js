@@ -129,6 +129,7 @@ import {
   writeBootstrapTrace
 } from "./bootstrap-diagnostics.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
+import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction } from "./interaction-continuity.js";
 
 const subjectsEl = document.querySelector("#subjects");
 const counterEl = document.querySelector("#counter");
@@ -291,6 +292,8 @@ let openMenuId = null;
 let pendingMenuFocus = null;
 let navMenuOpen = false;
 let pendingNavigationFocus = null;
+let pendingTaskCreationFocus = null;
+let lastRenderedUxContext = null;
 
 const CHANGE_CHANNEL = "threadstep.changes.v1";
 let businessStore = null;
@@ -2804,12 +2807,126 @@ function applySyncSummaryVisibility() {
     syncSettingsAccessEl.hidden = !showLink;
   }
 }
+// Transient viewport/focus continuity, scoped to one authorized view only.
+// A full view transition or an account-binding change invalidates the capture.
+function uxContext() {
+  return {
+    view: route.view,
+    subjectId: route.subjectId || null,
+    generation: bindingGeneration,
+    allowed: businessAllowed()
+  };
+}
+function uxSubject(id) {
+  return [...subjectsEl.querySelectorAll(".subject")].find((node) => node.dataset.subject === id) || null;
+}
+function uxAnchorIdentity(node) {
+  const subject = node.closest(".subject");
+  if (!subject) return null;
+  if (node.classList.contains("task-form")) return "form:" + subject.dataset.subject;
+  if (node.classList.contains("task")) return "task:" + subject.dataset.subject + ":" + node.dataset.item;
+  return "subject:" + subject.dataset.subject;
+}
+function uxVisibleAnchors() {
+  if (typeof window.innerHeight !== "number" || window.innerHeight <= 0) return [];
+  const nodes = [...subjectsEl.querySelectorAll(".task-form, .task")];
+  // A subject card is a fallback when it has no visible task/form.
+  if (!nodes.length) nodes.push(...subjectsEl.querySelectorAll(".subject"));
+  return nodes.flatMap((node) => {
+    if (typeof node.getBoundingClientRect !== "function") return [];
+    const rect = node.getBoundingClientRect();
+    const key = uxAnchorIdentity(node);
+    return key ? [{ key, top: rect.top, bottom: rect.bottom, node }] : [];
+  });
+}
+function uxFocusIdentity(node) {
+  if (!node || typeof node.closest !== "function" || !subjectsEl.contains(node)) return null;
+  const subject = node.closest(".subject");
+  if (!subject) return null;
+  const subjectId = subject.dataset.subject;
+  const task = node.closest(".task");
+  const form = node.closest(".task-form");
+  if (form) {
+    return { kind: "create", subjectId,
+      control: node.tagName === "INPUT" ? "input" : node.tagName === "SELECT" ? "select" : "button" };
+  }
+  const selectors = [
+    ".task-check", ".priority-control", ".task-menu-button", ".task-handle",
+    ".task-toggle", ".task-edit", ".task-edit-title", ".task-menu-command"
+  ];
+  const control = selectors.find((selector) => node.matches && node.matches(selector)) || null;
+  if (task) return { kind: "task", subjectId, itemId: task.dataset.item, control };
+  return { kind: "subject", subjectId,
+    control: [".subject-open", ".subject-rename", ".subject-rename-input"].find(
+      (selector) => node.matches && node.matches(selector)) || null };
+}
+function uxFindFocus(identity) {
+  if (!identity) return null;
+  const subject = uxSubject(identity.subjectId);
+  if (!subject) return null;
+  if (identity.kind === "create") {
+    return subject.querySelector(".task-form " + identity.control) || subject;
+  }
+  if (identity.kind === "subject") {
+    return (identity.control && subject.querySelector(identity.control)) || subject;
+  }
+  const task = [...subject.querySelectorAll(".task")].find(
+    (node) => node.dataset.item === identity.itemId);
+  // A filtered or removed task cannot regain focus.
+  if (!task) return subject.querySelector(".task-form input") || subject;
+  return (identity.control && task.querySelector(identity.control)) ||
+    task.querySelector(".task-check, .task-menu-button") || subject;
+}
+function captureUxContinuity() {
+  const context = uxContext();
+  if (!shouldRestoreInteraction(lastRenderedUxContext, context)) return null;
+  const anchors = uxVisibleAnchors();
+  const visible = selectReadingAnchor(anchors, window.innerHeight);
+  const active = document.activeElement;
+  return {
+    context,
+    anchors: anchors.map(({ key, top }) => ({ key, top })),
+    anchorKey: visible && visible.key,
+    focus: uxFocusIdentity(active),
+    focusedNode: active
+  };
+}
+function finishUxRender(snapshot, skipFocus = false) {
+  const context = uxContext();
+  lastRenderedUxContext = context.allowed ? context : null;
+  if (pendingTaskCreationFocus) {
+    const subject = uxSubject(pendingTaskCreationFocus);
+    pendingTaskCreationFocus = null;
+    const field = subject && subject.querySelector(".task-form input");
+    if (field && context.allowed) field.focus({ preventScroll: true });
+  } else if (snapshot && snapshot.focus && !skipFocus &&
+      (!snapshot.focusedNode.isConnected || document.activeElement === document.body)) {
+    const target = uxFindFocus(snapshot.focus);
+    if (target) target.focus({ preventScroll: true });
+  }
+  if (!snapshot || !shouldRestoreInteraction(snapshot.context, context)) return;
+  const now = uxVisibleAnchors();
+  const selected = resolveReadingAnchor(snapshot.anchors, snapshot.anchorKey, now.map((x) => x.key));
+  if (!selected) return;
+  const replacement = now.find((x) => x.key === selected.key);
+  if (!replacement) return;
+  const delta = readingScrollDelta(selected.top, replacement.top, window.innerHeight);
+  if (delta !== null && Math.abs(delta) >= 1 && typeof window.scrollBy === "function") {
+    window.scrollBy({ top: delta, left: 0, behavior: "instant" });
+  }
+}
 function render() {
+  const uxSnapshot = captureUxContinuity();
+  const explicitUxFocus = Boolean(pendingNavigationFocus || focusDetailHeading ||
+    focusOpenSubjectId || focusItemId || focusSubjectId || focusRenameControl ||
+    pendingCollapseFocus || pendingPriorityFocus || pendingMenuFocus ||
+    pendingMoveFocus || editingItemId || renamingSubject);
   applyBusinessVisibility();
   applyNavigationMenu();
   applySyncSummaryVisibility();
   if (!businessAllowed()) {
     applyFocus();
+    finishUxRender(null, true);
     return;
   }
   subjectsEl.replaceChildren();
@@ -2823,6 +2940,7 @@ function render() {
     focusCardEl.hidden = true;
     resumeCardEl.hidden = true;
     applyFocus();
+    finishUxRender(uxSnapshot, explicitUxFocus);
     return;
   }
   const detail = route.view !== "overview";
@@ -2833,16 +2951,19 @@ function render() {
     resumeCardEl.hidden = true;
     renderDetail();
     applyFocus();
+    finishUxRender(uxSnapshot, explicitUxFocus);
     return;
   }
   renderSuggestion();
   renderResumeCard();
   if (!documentState.subjects.length) {
     subjectsEl.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
+    finishUxRender(uxSnapshot, explicitUxFocus);
     return;
   }
   for (const subject of documentState.subjects) subjectsEl.append(renderSubject(subject));
   applyFocus();
+  finishUxRender(uxSnapshot, explicitUxFocus);
 }
 function navigate(hash) {
   if (location.hash === hash) {
@@ -3288,6 +3409,7 @@ function renderSeeMore(subject) {
 function renderTaskArea(subject, { preview = false } = {}) {
   const area = el("div", "task-area");
   const form = el("form", "task-form");
+  form.dataset.subject = subject.id;
   const input = el("input");
   input.required = true;
   input.maxLength = 300;
@@ -3309,8 +3431,8 @@ function renderTaskArea(subject, { preview = false } = {}) {
     if (!input.value.trim() || subject.items.length >= 500) return;
     subject.items.push(newItem(input.value, select.value, crypto.randomUUID()));
     input.value = "";
+    pendingTaskCreationFocus = subject.id;
     persist();
-    input.focus();
   });
   area.append(form);
 
