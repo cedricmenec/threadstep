@@ -11,6 +11,7 @@ import {
 import { hashActivationUser } from "../site/cloud-activation.js";
 import { sha256Hex } from "../site/fingerprint.js";
 import {
+  BINDING_EVIDENCE,
   BINDING_STATE,
   PENDING_STATE,
   WORKSPACE_REGISTRY_KEY,
@@ -26,6 +27,7 @@ import {
   hashWorkspaceUser,
   initializeWorkspaceRegistry,
   isRecoverableUnverifiedWorkspace,
+  mergeWorkspaceBinding,
   migrateLegacyWorkspace,
   parseWorkspaceRegistry,
   pendingChangeWarning,
@@ -39,6 +41,7 @@ import {
   readWorkspaceRegistry,
   readWorkspaceRegistryState,
   registerWorkspace,
+  resolveBindingEvidence,
   resolveWorkspaceStartup,
   selectWorkspaceInRegistry,
   serializeWorkspaceRegistry,
@@ -891,4 +894,49 @@ test("4.1 the check chain covers the new runtime module and no dependency change
   const version = /export const SCHEMA_VERSION = (\d+);/.exec(foundation);
   assert.ok(version);
   assert.equal(Number(version[1]), SCHEMA_VERSION);
+});
+
+test("TS-045 destination coherence and binding merge keep transitions non-destructive", () => {
+  const boundEntry = {
+    ...entry(URL_A),
+    remoteDbId: "remote-a",
+    userDigest: hashWorkspaceUser("user-a")
+  };
+  const mismatch = evaluateAccountBinding({
+    entry: boundEntry,
+    userId: "user-a",
+    authenticated: true,
+    cacheHasRecords: true,
+    observedRemoteDbId: "remote-b"
+  });
+  assert.equal(mismatch.state, BINDING_STATE.DESTINATION_MISMATCH);
+  assert.equal(mismatch.businessAllowed, false);
+  const offline = evaluateAccountBinding({
+    entry: boundEntry,
+    userId: "user-a",
+    authenticated: true,
+    cacheHasRecords: true
+  });
+  assert.equal(offline.state, BINDING_STATE.BOUND);
+  assert.equal(offline.businessAllowed, true);
+
+  const rehydrated = resolveBindingEvidence({
+    entry: entry(URL_A),
+    attestation: {
+      url: URL_A,
+      remoteDbId: "remote-a",
+      userDigest: hashWorkspaceUser("user-a")
+    }
+  });
+  assert.equal(rehydrated.state, BINDING_EVIDENCE.ATTESTATION);
+  assert.equal(rehydrated.adopt, true);
+  const merged = mergeWorkspaceBinding(
+    registryWith(entry(URL_A), entry(URL_B, WORKSPACE_STATUS.SUSPENDED)),
+    URL_A,
+    { userDigest: rehydrated.userDigest, remoteDbId: rehydrated.remoteDbId }
+  );
+  assert.equal(merged.workspaces[URL_A].userDigest, hashWorkspaceUser("user-a"));
+  assert.equal(merged.workspaces[URL_A].remoteDbId, "remote-a");
+  assert.equal(merged.workspaces[URL_B].status, WORKSPACE_STATUS.SUSPENDED);
+  assert.equal(mergeWorkspaceBinding(merged, URL_A, { userDigest: hashWorkspaceUser("user-b") }), null);
 });

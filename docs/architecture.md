@@ -26,3 +26,37 @@
 
 ## Future generic factory
 Extract reusable workflows and policies into their own versioned repository or reusable GitHub workflows after validating one real delivery. Keep business logic separate from factory orchestration.
+
+## Matrice de régression TS-045 (liaison Cloud et reprise)
+
+Cette matrice documente les scénarios déterministes couverts par les tests et
+les vérifications qui restent une **recette humaine** sur une instance Dexie
+Cloud isolée. Une CI verte ne prouve ni une session OTP réelle, ni une
+convergence métier entre appareils.
+
+| Scénario | Attendu | Preuve |
+| --- | --- | --- |
+| Profil neuf | Cache vide lié au compte courant, aucun cache de récupération | tests unitaires de liaison |
+| Profil historique | Cache peuplé sans attestation reste masqué, récupération isolée explicite | tests de classification et de récupération |
+| Android et laptop | Même compte et même URL relisent la même base locale, sans copie | recette réelle sur deux appareils |
+| Local vers Cloud | Activation explicite, source autonome intacte | tests d'activation existants |
+| Cloud vers local | Aucun transfert implicite, cache Cloud conservé | tests de transition |
+| A/B/A | Chaque espace retrouve sa base et sa liaison, aucune fusion | tests d'identité d'espace |
+| Compte ou URL différents | Données métier masquées, aucune copie ni purge | tests de liaison |
+| Rechargement | Liaison attestée relue avant toute lecture métier | tests de bootstrap |
+| Onglets concurrents | Fusion relue, aucun écrasement d'une empreinte attestée | tests de fusion de registre |
+| Hors ligne | Liaison locale attestée lisible, preuve distante indéterminée | tests de diagnostic |
+| Mutations en attente | Conservées, avertissement et confirmation explicites | tests existants de purge/déconnexion |
+| Session expirée | Même base après reconnexion, données masquées sans session valide | tests de liaison |
+
+### Règles d'investigation et d'expurgation
+
+- Trace expurgée : la trace de bootstrap ne contient que des codes d'étape, catégories,
+  compteurs, booléens et horodatages relatifs, avec un nombre d'événements
+  borné ; une trace absente ou illisible ne bloque pas le démarrage.
+- Ne jamais journaliser email, OTP, jeton, identifiant utilisateur brut, URL
+  brute, titre, note ou message d'erreur brut.
+- Une cause non reproduite reste `indéterminée` : le cache reste masqué et
+  récupérable, aucune cause racine n'est inventée.
+- Un état natif `in-sync`, un pull attesté ou une lecture locale ne constitue
+  pas une preuve de convergence métier ni une présence sur un autre appareil.

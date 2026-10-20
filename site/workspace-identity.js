@@ -35,8 +35,16 @@ export const BINDING_STATE = Object.freeze({
   UNBOUND: "unbound",
   UNVERIFIED: "unverified",
   MISMATCH: "mismatch",
+  DESTINATION_MISMATCH: "destination-mismatch",
   UNAUTHENTICATED: "unauthenticated",
   INDETERMINATE: "indeterminate"
+});
+
+export const BINDING_EVIDENCE = Object.freeze({
+  REGISTRY: "registry",
+  ATTESTATION: "attestation",
+  MISSING: "missing",
+  DIVERGENCE: "divergence"
 });
 
 export const PENDING_STATE = Object.freeze({
@@ -81,6 +89,140 @@ export function workspaceUserDigestMatches(userDigest, userId) {
   if (!nonEmptyString(userDigest) || !nonEmptyString(userId)) return false;
   if (!DIGEST_PATTERN.test(userDigest)) return false;
   return userDigest === sha256Hex(userId) || userDigest === hashActivationUser(userId);
+}
+
+function validDigest(value) {
+  return nonEmptyString(value) && DIGEST_PATTERN.test(value);
+}
+
+// Deterministic binding evidence resolution. The registry is authoritative;
+// a prior activation attestation is only a rehydration source for the same
+// normalized URL and effective base, and only when remote identifiers are
+// absent or identical. Any divergence fails closed.
+export function resolveBindingEvidence(input = {}) {
+  const source = isPlainObject(input) ? input : {};
+  const entry = isPlainObject(source.entry) ? source.entry : null;
+  const url = entry ? normalizeWorkspaceUrl(entry.url) : null;
+  if (!entry || entry.type !== WORKSPACE_TYPE.SYNCHRONIZED || !url) {
+    return { state: BINDING_EVIDENCE.MISSING, adopt: false, userDigest: null, remoteDbId: null };
+  }
+  const entryDigest = validDigest(entry.userDigest) ? entry.userDigest : null;
+  const entryRemote = nonEmptyString(entry.remoteDbId) ? entry.remoteDbId : null;
+  if (entryDigest) {
+    return {
+      state: BINDING_EVIDENCE.REGISTRY,
+      adopt: false,
+      userDigest: entryDigest,
+      remoteDbId: entryRemote
+    };
+  }
+  const attestation = isPlainObject(source.attestation) ? source.attestation : null;
+  const attestationDigest = attestation && validDigest(attestation.userDigest)
+    ? attestation.userDigest
+    : null;
+  if (!attestation || !attestationDigest) {
+    return { state: BINDING_EVIDENCE.MISSING, adopt: false, userDigest: null, remoteDbId: entryRemote };
+  }
+  const attestationUrl = normalizeWorkspaceUrl(attestation.url);
+  const expectedBase = nonEmptyString(source.baseName)
+    ? source.baseName
+    : entry.databaseName;
+  const attestationBase = nonEmptyString(attestation.databaseName)
+    ? attestation.databaseName
+    : null;
+  const attestationRemote = nonEmptyString(attestation.remoteDbId)
+    ? attestation.remoteDbId
+    : null;
+  const urlDiverges = attestationUrl !== url;
+  const baseDiverges = !!attestationBase && attestationBase !== expectedBase;
+  const remoteDiverges = !!entryRemote && !!attestationRemote && entryRemote !== attestationRemote;
+  if (urlDiverges || baseDiverges || remoteDiverges) {
+    return {
+      state: BINDING_EVIDENCE.DIVERGENCE,
+      adopt: false,
+      userDigest: null,
+      remoteDbId: entryRemote,
+      reason: urlDiverges ? "url" : baseDiverges ? "base" : "remote-db-id"
+    };
+  }
+  return {
+    state: BINDING_EVIDENCE.ATTESTATION,
+    adopt: true,
+    userDigest: attestationDigest,
+    remoteDbId: entryRemote || attestationRemote
+  };
+}
+
+function mergeBindingEntry(entry, binding) {
+  if (!entry || entry.type !== WORKSPACE_TYPE.SYNCHRONIZED) return null;
+  const desired = isPlainObject(binding) ? binding : {};
+  const nextDigest = validDigest(desired.userDigest) ? desired.userDigest : null;
+  const nextRemote = nonEmptyString(desired.remoteDbId) ? desired.remoteDbId : null;
+  const currentDigest = validDigest(entry.userDigest) ? entry.userDigest : null;
+  const currentRemote = nonEmptyString(entry.remoteDbId) ? entry.remoteDbId : null;
+  if (currentDigest && nextDigest && currentDigest !== nextDigest) {
+    return { entry: null, reason: "digest-divergence" };
+  }
+  if (currentRemote && nextRemote && currentRemote !== nextRemote) {
+    return { entry: null, reason: "remote-divergence" };
+  }
+  const merged = { ...entry };
+  if (currentDigest || nextDigest) merged.userDigest = currentDigest || nextDigest;
+  if (currentRemote || nextRemote) merged.remoteDbId = currentRemote || nextRemote;
+  return { entry: merged, reason: null };
+}
+
+// Pure idempotent merge over a registry: it never erases an attested field
+// and refuses a divergent overwrite instead of replacing an identity.
+export function mergeWorkspaceBinding(registry, url, binding) {
+  const current = parseWorkspaceRegistry(registry);
+  const normalized = normalizeWorkspaceUrl(url);
+  if (!current || !normalized) return null;
+  const entry = current.workspaces[normalized];
+  if (!entry) return null;
+  const merged = mergeBindingEntry(entry, binding);
+  if (!merged.entry) return null;
+  return {
+    ...current,
+    workspaces: { ...current.workspaces, [normalized]: merged.entry }
+  };
+}
+
+// Re-read, merge, write and read back. The caller receives `ok: false` when
+// the durable binding cannot be attested, so business reads stay masked.
+export function writeWorkspaceBinding(storage, url, binding) {
+  const store = storage || (typeof globalThis !== "undefined" ? globalThis.localStorage : undefined);
+  const normalized = normalizeWorkspaceUrl(url);
+  if (!store || !normalized) return { ok: false, reason: "storage-unavailable", registry: null };
+  const state = readWorkspaceRegistryState(store);
+  if (state.state !== "ok" || !state.registry) {
+    return { ok: false, reason: "registry-" + state.state, registry: null };
+  }
+  if (!state.registry.workspaces[normalized]) {
+    return { ok: false, reason: "workspace-unknown", registry: state.registry };
+  }
+  const merged = mergeWorkspaceBinding(state.registry, normalized, binding);
+  if (!merged) return { ok: false, reason: "binding-divergence", registry: state.registry };
+  if (!writeWorkspaceRegistry(store, merged)) {
+    return { ok: false, reason: "write-failed", registry: state.registry };
+  }
+  const readBack = readWorkspaceRegistryState(store);
+  if (readBack.state !== "ok" || !readBack.registry) {
+    return { ok: false, reason: "read-back-failed", registry: null };
+  }
+  const persisted = readBack.registry.workspaces[normalized];
+  const desiredDigest = validDigest(binding && binding.userDigest) ? binding.userDigest : null;
+  const desiredRemote = nonEmptyString(binding && binding.remoteDbId)
+    ? binding.remoteDbId
+    : null;
+  if (!persisted) return { ok: false, reason: "read-back-failed", registry: readBack.registry };
+  if (desiredDigest && persisted.userDigest !== desiredDigest) {
+    return { ok: false, reason: "read-back-failed", registry: readBack.registry };
+  }
+  if (desiredRemote && persisted.remoteDbId !== desiredRemote) {
+    return { ok: false, reason: "read-back-failed", registry: readBack.registry };
+  }
+  return { ok: true, reason: null, registry: readBack.registry };
 }
 
 // Deterministic application-level discriminator added to the native Dexie
@@ -236,6 +378,7 @@ export function registerWorkspace(registry, input = {}) {
     schemaVersion: existing ? existing.schemaVersion : entry.schemaVersion
   };
   if (!entry.userDigest && existing && existing.userDigest) next.userDigest = existing.userDigest;
+  if (!entry.remoteDbId && existing && existing.remoteDbId) next.remoteDbId = existing.remoteDbId;
   return {
     version: WORKSPACE_REGISTRY_VERSION,
     selected: current.selected,
@@ -539,25 +682,102 @@ export function pendingStatusFromMutationTables(input = {}) {
 export function evaluateAccountBinding(input = {}) {
   const source = isPlainObject(input) ? input : {};
   if (source.authenticated !== true || !nonEmptyString(source.userId)) {
-    return { state: BINDING_STATE.UNAUTHENTICATED, businessAllowed: false, bind: false, digest: null };
+    return {
+      state: BINDING_STATE.UNAUTHENTICATED,
+      businessAllowed: false,
+      bind: false,
+      adopt: false,
+      digest: null,
+      evidence: BINDING_EVIDENCE.MISSING
+    };
   }
   const entry = isPlainObject(source.entry) ? source.entry : null;
   if (!entry || entry.type !== WORKSPACE_TYPE.SYNCHRONIZED) {
-    return { state: BINDING_STATE.INDETERMINATE, businessAllowed: false, bind: false, digest: null };
+    return {
+      state: BINDING_STATE.INDETERMINATE,
+      businessAllowed: false,
+      bind: false,
+      adopt: false,
+      digest: null,
+      evidence: BINDING_EVIDENCE.MISSING
+    };
   }
-  if (nonEmptyString(entry.userDigest)) {
-    return workspaceUserDigestMatches(entry.userDigest, source.userId)
-      ? { state: BINDING_STATE.BOUND, businessAllowed: true, bind: false, digest: null }
-      : { state: BINDING_STATE.MISMATCH, businessAllowed: false, bind: false, digest: null };
+  const evidence = resolveBindingEvidence({
+    entry,
+    attestation: source.attestation,
+    baseName: source.baseName
+  });
+  const entryRemote = nonEmptyString(entry.remoteDbId) ? entry.remoteDbId : null;
+  const effectiveRemote = entryRemote || evidence.remoteDbId || null;
+  const observedRemote = nonEmptyString(source.observedRemoteDbId)
+    ? source.observedRemoteDbId
+    : null;
+  // Only an actually observed remote identifier can block an attested local
+  // binding: missing fresh evidence never degrades an offline workspace.
+  if (effectiveRemote && observedRemote && effectiveRemote !== observedRemote) {
+    return {
+      state: BINDING_STATE.DESTINATION_MISMATCH,
+      businessAllowed: false,
+      bind: false,
+      adopt: false,
+      digest: null,
+      evidence: evidence.state,
+      reason: "remote-db-id"
+    };
+  }
+  const userDigest = validDigest(entry.userDigest)
+    ? entry.userDigest
+    : (evidence.adopt ? evidence.userDigest : null);
+  if (userDigest) {
+    return workspaceUserDigestMatches(userDigest, source.userId)
+      ? {
+          state: BINDING_STATE.BOUND,
+          businessAllowed: true,
+          bind: false,
+          adopt: evidence.adopt,
+          digest: null,
+          userDigest,
+          remoteDbId: effectiveRemote,
+          evidence: evidence.state
+        }
+      : {
+          state: BINDING_STATE.MISMATCH,
+          businessAllowed: false,
+          bind: false,
+          adopt: false,
+          digest: null,
+          evidence: evidence.state
+        };
   }
   const digest = hashWorkspaceUser(source.userId);
   if (source.cacheHasRecords === true) {
-    return { state: BINDING_STATE.UNVERIFIED, businessAllowed: false, bind: false, digest };
+    return {
+      state: BINDING_STATE.UNVERIFIED,
+      businessAllowed: false,
+      bind: false,
+      adopt: false,
+      digest,
+      evidence: evidence.state
+    };
   }
   if (source.cacheHasRecords === false) {
-    return { state: BINDING_STATE.UNBOUND, businessAllowed: true, bind: true, digest };
+    return {
+      state: BINDING_STATE.UNBOUND,
+      businessAllowed: true,
+      bind: true,
+      adopt: false,
+      digest,
+      evidence: evidence.state
+    };
   }
-  return { state: BINDING_STATE.INDETERMINATE, businessAllowed: false, bind: false, digest: null };
+  return {
+    state: BINDING_STATE.INDETERMINATE,
+    businessAllowed: false,
+    bind: false,
+    adopt: false,
+    digest: null,
+    evidence: evidence.state
+  };
 }
 
 // The first pull may populate a new cache before account binding. Never adopt
@@ -831,6 +1051,7 @@ const BINDING_LABELS = Object.freeze({
   [BINDING_STATE.UNBOUND]: "Espace lié au compte courant (cache vide)",
   [BINDING_STATE.UNVERIFIED]: "Cache local non vérifié : déconnexion ou purge explicite requise",
   [BINDING_STATE.MISMATCH]: "Compte différent de la liaison : données métier masquées",
+  [BINDING_STATE.DESTINATION_MISMATCH]: "Base distante différente de la liaison : données métier masquées",
   [BINDING_STATE.UNAUTHENTICATED]: "Aucune session authentifiée",
   [BINDING_STATE.INDETERMINATE]: "Liaison de compte indéterminée"
 });

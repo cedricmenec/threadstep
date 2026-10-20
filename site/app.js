@@ -93,7 +93,6 @@ import {
   WORKSPACE_STATUS,
   WORKSPACE_TYPE,
   activationRecordForWorkspace,
-  bindWorkspaceAccount,
   buildWorkspaceDiagnostic,
   describeBindingState,
   evaluateAccountBinding,
@@ -113,8 +112,15 @@ import {
   selectWorkspaceInRegistry,
   updateWorkspaceStatus,
   workspaceDatabaseName,
+  writeWorkspaceBinding,
   writeWorkspaceRegistry
 } from "./workspace-identity.js";
+import {
+  BOOTSTRAP_EVENT,
+  classifyBootstrapCause,
+  createBootstrapTrace,
+  writeBootstrapTrace
+} from "./bootstrap-diagnostics.js";
 import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 
 const subjectsEl = document.querySelector("#subjects");
@@ -234,6 +240,10 @@ let workspaceRegistryInvalid = false;
 let workspaceStartup = null;
 let workspaceEntry = null;
 let accountBinding = { state: BINDING_STATE.INDETERMINATE, businessAllowed: false };
+let bindingCacheHasRecords = null;
+let bindingIdentityPending = false;
+let bindingWriteFailed = false;
+let bootstrapTrace = createBootstrapTrace();
 let workspaceConfirmation = null;
 let workspaceBusy = false;
 let bindingGeneration = 0;
@@ -380,6 +390,48 @@ async function reloadMetadataPreference() {
 }
 // TS-038 workspace identity, binding and scoped destructive actions ----------------
 
+function recordBootstrap(event) {
+  if (!event || typeof event.code !== "string") return false;
+  const added = bootstrapTrace.add(event);
+  // The trace is overwritten at each bootstrap and stays bounded; a storage
+  // failure never blocks startup or authorizes any action.
+  writeBootstrapTrace(localStorage, bootstrapTrace.snapshot());
+  return added;
+}
+function activationAttestationFor(entry) {
+  const record = activationMarker();
+  if (!record || !entry) return null;
+  const sameUrl = typeof record.url === "string" && record.url === entry.url;
+  if (!sameUrl || typeof record.userDigest !== "string") return null;
+  return { ...record, databaseName: entry.databaseName };
+}
+function currentBootstrapClassification() {
+  const entry = selectedSyncedEntry();
+  const record = activationAttestationFor(entry);
+  const cloud = syncedDatabase && syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const observedRemote = persisted && typeof persisted.remoteDbId === "string"
+    ? persisted.remoteDbId : null;
+  const entryRemote = entry && typeof entry.remoteDbId === "string"
+    ? entry.remoteDbId : null;
+  const hasPriorDigest = (!!record && !!record.userDigest) ||
+    !!(entry && typeof entry.userDigest === "string" && entry.userDigest.length > 0);
+  const classification = classifyBootstrapCause({
+    destinationChanged: accountBinding.state === BINDING_STATE.DESTINATION_MISMATCH ||
+      (!!entryRemote && !!observedRemote && entryRemote !== observedRemote),
+    accountChanged: accountBinding.state === BINDING_STATE.MISMATCH,
+    bindingWriteFailed: bindingWriteFailed === true,
+    identityPending: bindingIdentityPending === true,
+    recovered: accountBinding.adopt === true,
+    firstPullCompleted: !hasPriorDigest &&
+      bindingCacheHasRecords === true &&
+      !!entry && entry.databaseName === workspaceDatabaseName(entry.url) &&
+      !!persisted && persisted.initiallySynced === true,
+    cacheHasRecords: bindingCacheHasRecords === true,
+    attestationPresent: hasPriorDigest
+  });
+  return classification;
+}
 function persistWorkspaceRegistry(next) {
   if (!next) return false;
   if (!writeWorkspaceRegistry(localStorage, next)) return false;
@@ -574,25 +626,76 @@ async function refreshAccountBinding() {
   const cloud = syncedDatabase && syncedDatabase.cloud;
   const user = observableValue(cloud && cloud.currentUser);
   const userId = user && typeof user.userId === "string" ? user.userId : null;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const observedRemoteDbId = persisted && typeof persisted.remoteDbId === "string"
+    ? persisted.remoteDbId : null;
   let cacheHasRecords = null;
   if (authenticated && userId && syncedDatabase) {
     cacheHasRecords = await readCacheHasBusinessRecords();
   }
+  // A later evaluation always wins: an older async cache read or native event
+  // must not restore a stale block after a newer binding was attested.
   if (generation !== bindingGeneration) return accountBinding;
-  accountBinding = evaluateAccountBinding({
+  bindingCacheHasRecords = cacheHasRecords;
+  bindingIdentityPending = authenticated && !userId;
+  const attestation = activationAttestationFor(entry);
+  let next = evaluateAccountBinding({
     entry,
     userId,
     authenticated,
-    cacheHasRecords
+    cacheHasRecords,
+    attestation,
+    baseName: entry ? entry.databaseName : null,
+    observedRemoteDbId
   });
-  if (accountBinding.bind && entry && userId) {
-    const next = bindWorkspaceAccount(workspaceRegistry, entry.url, userId);
-    if (next) {
-      persistWorkspaceRegistry(next);
-      persistActivationMarkerFor(next, entry.url);
+  bindingWriteFailed = false;
+  if (entry && (next.bind || next.adopt)) {
+    const bindingDigest = next.userDigest || next.digest;
+    const bindingRemote = next.remoteDbId || observedRemoteDbId;
+    const written = writeWorkspaceBinding(localStorage, entry.url, {
+      userDigest: bindingDigest,
+      remoteDbId: bindingRemote
+    });
+    if (written.ok) {
+      workspaceRegistry = written.registry;
+      workspaceEntry = written.registry.selected === WORKSPACE_SELECTION_LOCAL
+        ? null
+        : written.registry.workspaces[written.registry.selected] || null;
+      persistActivationMarkerFor(written.registry, entry.url);
+    } else {
+      // A binding that is not durably read back must never authorize reads.
+      bindingWriteFailed = true;
+      next = {
+        ...next,
+        state: next.state === BINDING_STATE.UNVERIFIED
+          ? BINDING_STATE.UNVERIFIED
+          : BINDING_STATE.INDETERMINATE,
+        businessAllowed: false,
+        bind: false,
+        adopt: false,
+        reason: "binding-write-failed"
+      };
     }
   }
+  accountBinding = next;
+  recordBootstrap({
+    code: BOOTSTRAP_EVENT.IDENTITY_OBSERVED,
+    authenticated,
+    identityObserved: !!userId
+  });
+  recordBootstrap({
+    code: BOOTSTRAP_EVENT.CACHE_READ,
+    ok: cacheHasRecords !== null,
+    hasRecords: cacheHasRecords === true
+  });
+  recordBootstrap({
+    code: BOOTSTRAP_EVENT.BINDING_EVALUATED,
+    generation,
+    ok: accountBinding.businessAllowed === true,
+    present: !!entry
+  });
   if (entry && (accountBinding.state === BINDING_STATE.MISMATCH ||
+      accountBinding.state === BINDING_STATE.DESTINATION_MISMATCH ||
       accountBinding.state === BINDING_STATE.UNVERIFIED ||
       accountBinding.state === BINDING_STATE.INDETERMINATE)) {
     clearBusinessForBindingBlock();
@@ -603,6 +706,7 @@ async function refreshAccountBinding() {
   // must not survive a verified session with an unbound populated cache.
   renderActivationPanel();
   applyBusinessVisibility();
+  renderSyncDiagnostic();
   return accountBinding;
 }
 async function continueAuthenticatedWorkspace() {
@@ -2289,9 +2393,11 @@ function handleAuthState(next) {
   }
   if (canAccessBusiness(authState)) {
     authInteraction = null;
+    recordBootstrap({ code: BOOTSTRAP_EVENT.SESSION_RESTORED, authenticated: true });
     void continueAuthenticatedWorkspace();
     return;
   }
+  recordBootstrap({ code: BOOTSTRAP_EVENT.SESSION_RESTORED, authenticated: false });
   accountBinding = { state: BINDING_STATE.UNAUTHENTICATED, businessAllowed: false };
   renderAuthPanel();
 }
@@ -3923,6 +4029,7 @@ async function refreshSyncedDocument() {
       result = await readSyncedWorkspace(syncedDatabase);
     } while (writesSnapshot !== pendingCloudWrites);
     if (result.code === "ok") {
+      recordBootstrap({ code: BOOTSTRAP_EVENT.BUSINESS_READ, ok: true });
       clearRecovery();
       const nextDocument = recordsToDocument(result.records);
       documentState = nextDocument;
@@ -3937,6 +4044,7 @@ async function refreshSyncedDocument() {
       notify("Données chargées depuis IndexedDB ; synchronisation Cloud à confirmer.");
       return;
     }
+    recordBootstrap({ code: BOOTSTRAP_EVENT.BUSINESS_READ, ok: false });
     documentLoaded = result.code === READ_FAILURE.PROJECTION_INVALID;
     syncReadError = { name: "ReadError", code: result.code };
     cloudWriteBlocked = true;
@@ -4106,7 +4214,8 @@ function readSyncDiagnosticInput() {
     authLoading: !!syncedDatabase && authState.status === AUTH_STATUS.LOADING,
     authExpired: !!syncedDatabase && authState.status === AUTH_STATUS.EXPIRED,
     workspace: workspaceDiagnosticInput(),
-    binding: accountBinding.state
+    binding: accountBinding.state,
+    bootstrap: currentBootstrapClassification()
   };
 }
 function nativePullAdapter(db) {
@@ -4178,8 +4287,12 @@ function setupSyncDiagnostics() {
     const subscribe = (observable) => {
       if (observable && typeof observable.subscribe === "function") {
         observable.subscribe(() => {
+          recordNativeBootstrapEvidence();
           renderSyncDiagnostic();
           updateActivationFromNative();
+          if (requiresAuthentication() && authState.status === AUTH_STATUS.AUTHENTICATED) {
+            void refreshAccountBinding();
+          }
         });
       }
     };
@@ -4187,7 +4300,24 @@ function setupSyncDiagnostics() {
     subscribe(cloud.persistedSyncState);
     subscribe(cloud.currentUser);
   }
+  recordNativeBootstrapEvidence();
   renderSyncDiagnostic();
+}
+function recordNativeBootstrapEvidence() {
+  if (!syncedDatabase) return;
+  const cloud = syncedDatabase.cloud;
+  const persisted = observableValue(cloud && cloud.persistedSyncState);
+  const syncState = normalizeSyncState(observableValue(cloud && cloud.syncState));
+  recordBootstrap({
+    code: BOOTSTRAP_EVENT.INITIAL_PULL,
+    pullCompleted: !!(persisted && persisted.initiallySynced === true &&
+      persisted.serverRevision !== undefined && persisted.serverRevision !== null),
+    present: syncState.phase === "in-sync"
+  });
+  recordBootstrap({
+    code: BOOTSTRAP_EVENT.REMOTE_EVIDENCE,
+    attested: evaluateSyncAttestation(nativeAttestationInput()).attested === true
+  });
 }
 async function retrySyncInitialPull() {
   if (!syncDiagnosticsController || syncRetryBusy) return;
@@ -4524,9 +4654,16 @@ async function confirmReconciliation(context) {
   }
 }
 
+bootstrapTrace = createBootstrapTrace();
 const workspaceLegacyConfig = readCloudConfig();
+recordBootstrap({ code: BOOTSTRAP_EVENT.CONFIGURATION, present: !!workspaceLegacyConfig });
 const workspaceLegacyRecord = activationMarker();
 const workspaceRegistryState = readWorkspaceRegistryState(localStorage);
+recordBootstrap({
+  code: BOOTSTRAP_EVENT.REGISTRY_READ,
+  ok: workspaceRegistryState.state !== "invalid",
+  present: workspaceRegistryState.state === "ok"
+});
 const initializedRegistry = initializeWorkspaceRegistry({
   state: workspaceRegistryState,
   config: workspaceLegacyConfig,
@@ -4559,6 +4696,7 @@ if (activationStartup.reason === ACTIVATION_STATUS.ACTIVATING) {
 }
 syncedDatabase = null;
 if (workspaceStartup.workspace === "synced") syncedDatabase = bootstrapSyncedDatabase(workspaceEntry);
+recordBootstrap({ code: BOOTSTRAP_EVENT.BASE_OPEN, present: !!syncedDatabase });
 renderCloudConfig();
 renderLocalWorkspace();
 renderActivationPanel();
