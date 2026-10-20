@@ -200,6 +200,19 @@ jobs:
           test -s "$RUNNER_TEMP/agent-openspec-checkpoint.mjs"
           node --check "$RUNNER_TEMP/agent-openspec-checkpoint.mjs"
 
+      # A resumed agent branch can predate this security fix. Always load the
+      # model allowlist from trusted main, never from the editable task branch.
+      # This sets OPENCODE_CONFIG_CONTENT for ALL later OpenCode plan/apply/sync
+      # calls. The hidden title agent is disabled and small_model is pinned.
+      - name: Enforce trusted OpenCode model policy before paid calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/main:scripts/asf/opencode-model-policy.mjs > "$RUNNER_TEMP/opencode-model-policy.mjs"
+          test -s "$RUNNER_TEMP/opencode-model-policy.mjs"
+          node --check "$RUNNER_TEMP/opencode-model-policy.mjs"
+          node "$RUNNER_TEMP/opencode-model-policy.mjs"
+
       - name: Install pinned OpenSpec
         shell: bash
         run: |

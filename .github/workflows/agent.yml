@@ -85,6 +85,17 @@ jobs:
           fi
           npm install --global opencode-ai@latest
           opencode --version
+      # Reused agent branches may contain stale/edited files. Take this cost
+      # policy ONLY from reviewed main, before granting the model API key.
+      - name: Enforce trusted OpenCode model policy before paid call
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git show origin/main:scripts/asf/opencode-model-policy.mjs > "$RUNNER_TEMP/opencode-model-policy.mjs"
+          test -s "$RUNNER_TEMP/opencode-model-policy.mjs"
+          node --check "$RUNNER_TEMP/opencode-model-policy.mjs"
+          node "$RUNNER_TEMP/opencode-model-policy.mjs"
       - name: Run bounded OpenCode task
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

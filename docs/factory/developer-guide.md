@@ -1,5 +1,13 @@
 # Guide développeur — Autonomous Software Factory (ASF V2)
 
+## Choix du modèle OpenCode et appels invisibles
+
+**Incident ASF-MODEL-001 (20 octobre 2026).** Le seul argument `opencode run --model` ne borne pas les appels de l'agent interne `title` : sans `small_model`, OpenCode peut choisir un modèle OpenRouter non sélectionné, y compris Google Nano Banana. Voir [fiche et preuves ASF-MODEL-001](tasks/ASF-MODEL-001.md).
+
+Les workflows `Agent OpenSpec` (plan/apply/OPSX sync, y compris sous l'orchestrateur V1) et `Agent` direct doivent **avant toute phase payante** charger `scripts/asf/opencode-model-policy.mjs` depuis `origin/main`, non depuis une branche `agent/*`. Cette politique échoue si le modèle n'est pas dans la liste contrôlée des entrées GitHub Actions, configure `OPENCODE_CONFIG_CONTENT` avec `model` et `small_model` identiques, et désactive `agent.title`. Elle évite la génération automatique de titres et tout choix implicite du modèle auxiliaire.
+
+Lors d'un ajout de modèle dans l'UI GitHub Actions, mettre à jour simultanément l'allowlist du script et les **trois** workflows d'entrée, puis exécuter `npm run check`. Ne jamais exposer `OPENROUTER_API_KEY`, ni autoriser un modèle depuis une branche agent non vérifiée. Cette politique ne remplace pas le contrôle financier du fournisseur ni la future épingle d'une version d'OpenCode ; aucun run OpenRouter n'est lancé par les tests de cette correction.
+
 **Clôture ASF V2 : 16 octobre 2026, périmètre V1 borné.** Le programme ASF-V2-001 à ASF-V2-011 est livré ; vrais pilotes 1/2 tâches, vrai blocage GitHub du `check` rouge (PR #61), protections vérifiées par API et permissions App/recette produit attestées par le propriétaire. Pas d'injection de panne réelle dans un agent payant. Voir [rapport de clôture](closeout-2026-10-16.md), [validation/reprise](validation-and-recovery.md) et [preuves](current-state.md).
 
 ## Démarrage rapide
