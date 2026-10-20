@@ -2916,7 +2916,9 @@ function finishUxRender(snapshot, skipFocus = false) {
   }
 }
 function render() {
-  const uxSnapshot = captureUxContinuity();
+  // An intentional reveal/navigation must not be undone by scroll restoration.
+  const uxSnapshot = pendingNavigationFocus || focusDetailHeading || focusOpenSubjectId ||
+    (focusItemId && focusItemId === revealItemId) ? null : captureUxContinuity();
   const explicitUxFocus = Boolean(pendingNavigationFocus || focusDetailHeading ||
     focusOpenSubjectId || focusItemId || focusSubjectId || focusRenameControl ||
     pendingCollapseFocus || pendingPriorityFocus || pendingMenuFocus ||
