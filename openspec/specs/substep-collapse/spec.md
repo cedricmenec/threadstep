@@ -231,11 +231,12 @@ completion or trigger any other action control.
 
 ### Requirement: Transient tab-local state
 
-The collapse state SHALL be local to the current tab and start collapsed. At
-document load, on a direct detail entry and on every entry into a view, every
-parent with at least one visible substep SHALL be collapsed. The state SHALL
-survive ordinary re-renders within the current view and SHALL reset to collapsed
-on a change of view, a reload, a new tab and a JSON import. It MUST NOT be
+The collapse state SHALL be tab-local, start collapsed at document load, on
+direct detail entry and on every view entry for every parent with at least one
+visible substep, and reset on a change of view, reload, new tab, successful JSON
+import or authorized identity change. It SHALL survive local mutations and
+asynchronous data refreshes in the current view, including Cloud sync completion
+and inter-tab notifications, under the same authorized identity. It MUST NOT be
 persisted.
 
 #### Scenario: Starts collapsed in the overview after load
@@ -272,6 +273,35 @@ persisted.
   notification
 - **THEN** that parent stays expanded
 
+#### Scenario: Checking a subtask keeps the group open
+
+- **GIVEN** two parent groups are expanded in the current view
+- **WHEN** a direct substep of the first parent is checked or unchecked
+- **THEN** both parents remain expanded
+- **AND** the first parent still shows its remaining visible substeps and its
+  control keeps an exact `aria-expanded="true"`
+
+#### Scenario: Cloud sync completion is not a view entry
+
+- **GIVEN** a parent is expanded and the current workspace identity is authorized
+- **WHEN** Dexie Cloud signals a sync completion and refreshes the same view
+- **THEN** that parent remains expanded if it still has a visible substep
+- **AND** no reload or view-entry reset is triggered by that event alone
+
+#### Scenario: Inter-tab notification is not a view entry
+
+- **GIVEN** several parents are voluntarily expanded in the current tab
+- **WHEN** another tab changes data and the current tab receives the notification
+- **THEN** the parents that are still present and visible keep their expansion
+- **AND** no collapse or expansion preference is written to storage
+
+#### Scenario: Refresh after removing the last visible child
+
+- **GIVEN** a parent is expanded and the completion filter is active
+- **WHEN** a data refresh leaves that parent without any visible direct substep
+- **THEN** its disclosure control is absent
+- **AND** the expansion state of the other visible parents is unchanged
+
 #### Scenario: Reset after reload
 
 - **GIVEN** a parent is expanded
@@ -289,6 +319,30 @@ persisted.
 - **GIVEN** a parent is expanded
 - **WHEN** a JSON document is imported successfully
 - **THEN** every parent is displayed collapsed
+
+#### Scenario: Cancelled or failed import keeps expansion
+
+- **GIVEN** a parent is expanded
+- **WHEN** a JSON import is previewed but cancelled, refused, collides or fails
+  without writing
+- **THEN** the parent remains expanded and no data or expansion state is written
+
+#### Scenario: Authorized identity change resets expansion
+
+- **GIVEN** a parent is expanded in an authorized workspace
+- **WHEN** a different workspace identity or account becomes authorized and its
+  data is displayed
+- **THEN** every parent of the displayed view starts collapsed
+- **AND** no expansion state from the previous workspace is reused or exposed
+
+#### Scenario: Transient binding re-evaluation preserves expansion
+
+- **GIVEN** a parent is expanded under an authorized workspace
+- **WHEN** the same identity is re-evaluated or temporarily hidden during a
+  binding check and then displayed again
+- **THEN** that parent remains expanded
+- **AND** business data stays masked for as long as the binding does not
+  authorize it
 
 ### Requirement: Childless parents stay collapsed when a substep is added
 
