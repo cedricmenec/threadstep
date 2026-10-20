@@ -294,6 +294,7 @@ let navMenuOpen = false;
 let pendingNavigationFocus = null;
 let pendingTaskCreationFocus = null;
 let lastRenderedUxContext = null;
+let uxRenderVersion = 0;
 
 const CHANGE_CHANNEL = "threadstep.changes.v1";
 let businessStore = null;
@@ -2887,11 +2888,31 @@ function captureUxContinuity() {
     context,
     anchors: anchors.map(({ key, top }) => ({ key, top })),
     anchorKey: visible && visible.key,
+    scrollY: Number.isFinite(window.scrollY) ? window.scrollY : 0,
     focus: uxFocusIdentity(active),
     focusedNode: active
   };
 }
+// Explicitly restore after the DOM has been reconstructed. DOM removal can
+// clamp window.scrollY to zero before the browser paints the replacement list.
+function restoreUxScroll(snapshot) {
+  if (!snapshot || !shouldRestoreInteraction(snapshot.context, uxContext())) return;
+  const now = uxVisibleAnchors();
+  const selected = resolveReadingAnchor(snapshot.anchors, snapshot.anchorKey, now.map((x) => x.key));
+  const replacement = selected && now.find((x) => x.key === selected.key);
+  const currentY = Number.isFinite(window.scrollY) ? window.scrollY : 0;
+  const delta = replacement
+    ? readingScrollDelta(selected.top, replacement.top, window.innerHeight)
+    : null;
+  // When the anchor itself was removed, retain the old absolute scroll
+  // position, naturally bounded by the new document height.
+  const target = Math.max(0, delta === null ? snapshot.scrollY : currentY + delta);
+  if (Math.abs(target - currentY) >= 1 && typeof window.scrollTo === "function") {
+    window.scrollTo({ top: target, left: 0, behavior: "instant" });
+  }
+}
 function finishUxRender(snapshot, skipFocus = false) {
+  const version = ++uxRenderVersion;
   const context = uxContext();
   lastRenderedUxContext = context.allowed ? context : null;
   if (pendingTaskCreationFocus) {
@@ -2905,14 +2926,16 @@ function finishUxRender(snapshot, skipFocus = false) {
     if (target) target.focus({ preventScroll: true });
   }
   if (!snapshot || !shouldRestoreInteraction(snapshot.context, context)) return;
-  const now = uxVisibleAnchors();
-  const selected = resolveReadingAnchor(snapshot.anchors, snapshot.anchorKey, now.map((x) => x.key));
-  if (!selected) return;
-  const replacement = now.find((x) => x.key === selected.key);
-  if (!replacement) return;
-  const delta = readingScrollDelta(selected.top, replacement.top, window.innerHeight);
-  if (delta !== null && Math.abs(delta) >= 1 && typeof window.scrollBy === "function") {
-    window.scrollBy({ top: delta, left: 0, behavior: "instant" });
+  restoreUxScroll(snapshot);
+  // Layout/scroll anchoring can settle on the next frame, especially on
+  // Chromium Android with the virtual keyboard. Re-apply only for the current
+  // render and authorized view; never restore into a newer navigation.
+  if (typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(() => {
+      if (version !== uxRenderVersion ||
+          !shouldRestoreInteraction(snapshot.context, uxContext())) return;
+      restoreUxScroll(snapshot);
+    });
   }
 }
 function render() {
