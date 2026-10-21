@@ -36,7 +36,7 @@ const rule=(id,ref,types,bypass=[])=>({
 function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
  patchLost=false,patchConflict=false,spoofPatch=false,
  driftAfterSecond=false,corruptReadback=false,
- wrongAckParent=false,wrongGitCommit=false,
+ wrongAckParent=false,ackMultipleParents=false,wrongGitCommit=false,
  missingWaveRules=false,wrongWaveApp=false,immutableWaveBypass=false,
  waveRulesChangeDuringCheck=false}={}){
  const manifest=createV3Manifest({
@@ -125,7 +125,9 @@ function fixture({wrongApp=false,wrongRun=false,corruptGlobal=false,
   if(path.startsWith(BASE+"/git/commits/")){
    const sha=path.split("/").at(-1);
    const d=state.commits.get(sha);
-   return d?{ok:true,data:wrongAckParent&&sha===ACK?
+   return d?{ok:true,data:sha===ACK&&ackMultipleParents?
+    {...d,parents:[{sha:RESERVATION},{sha:RACE}]}:
+    wrongAckParent&&sha===ACK?
     {...d,parents:[{sha:RACE}]}:d}:{ok:false,status:404};
   }
   return {ok:false,status:404};
@@ -307,4 +309,67 @@ test("unsafe phase, missing ports and forged reservation stop before any writer"
   assert.notEqual(r.status,"persisted_simulation");
   assert.equal(f.state.writes.length,0);noRights(r);
  }
+});
+
+test("CLAIM rejects an ACK merge commit even with the correct reservation as first parent",async()=>{
+ const f=fixture({ackMultipleParents:true});
+ const ack=await attemptV3GithubChildWaveCAS({phase:"ACK",...f});
+ assert.equal(ack.status,"persisted_simulation");
+ const claim=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
+ assert.equal(claim.status,"rejected");
+ assert.equal(f.state.patches,1);
+ assert.equal(f.state.tip,ACK);
+ noRights(claim);
+});
+test("CLAIM rechecks ACK ancestry and refuses Git proof drift before any second PATCH",async()=>{
+ const f=fixture();
+ assert.equal((await attemptV3GithubChildWaveCAS({phase:"ACK",...f})).status,
+  "persisted_simulation");
+ const original=f.readClient.get;
+ let parentReads=0;
+ f.readClient.get=async path=>{
+  const reply=await original(path);
+  if(path===BASE+"/git/commits/"+ACK&&++parentReads>=2)
+   return {...reply,data:{...reply.data,parents:[{sha:RACE}]}};
+  return reply;
+ };
+ const claim=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
+ assert.notEqual(claim.status,"persisted_simulation");
+ assert.equal(parentReads,2);
+ assert.equal(f.state.patches,1);
+ noRights(claim);
+});
+test("CLAIM refuses protection removal after a persisted ACK",async()=>{
+ const f=fixture();
+ assert.equal((await attemptV3GithubChildWaveCAS({phase:"ACK",...f})).status,
+  "persisted_simulation");
+ const original=f.readClient.get;
+ f.readClient.get=async path=>path===BASE+"/rulesets/4"?
+  {ok:false,status:404}:original(path);
+ const claim=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
+ assert.equal(claim.status,"uncertain");
+ assert.equal(claim.code,"wave_creation_update_or_immutability_not_verified");
+ assert.equal(f.state.patches,1);
+ noRights(claim);
+});
+test("CLAIM refuses a wave App bypass mutation after its second journal proof",async()=>{
+ const f=fixture();
+ assert.equal((await attemptV3GithubChildWaveCAS({phase:"ACK",...f})).status,
+  "persisted_simulation");
+ const before=f.state.rulesetListReads;
+ const original=f.readClient.get;
+ f.readClient.get=async path=>{
+  const reply=await original(path);
+  if(path===BASE+"/rulesets/4"&&
+     f.state.rulesetListReads>=before+3)
+   return {...reply,data:{...reply.data,bypass_actors:[
+    {actor_type:"Integration",actor_id:5321746,bypass_mode:"always"}
+   ]}};
+  return reply;
+ };
+ const claim=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
+ assert.notEqual(claim.status,"persisted_simulation");
+ assert.equal(f.state.patches,1);
+ assert.equal(f.state.tip,ACK);
+ noRights(claim);
 });
