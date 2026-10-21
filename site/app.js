@@ -81,6 +81,15 @@ import {
   retryReasonLabel
 } from "./sync-diagnostics.js";
 import {
+  SHARE_MESSAGES,
+  SHARE_STATUS,
+  buildSyncDiagnosticReport,
+  createDiagnosticSharingController
+} from "./sync-diagnostic-report.js";
+import {
+  createSyncLifecycleInstrumentation
+} from "./sync-lifecycle-instrumentation.js";
+import {
   buildSyncObservationRecord,
   buildTrustGuidance,
   resolveObservedSync,
@@ -314,6 +323,15 @@ let syncReadError = null;
 let localWriteStatus = LOCAL_WRITE_STATE.NOT_APPLICABLE;
 let syncRetryBusy = false;
 let syncDiagnosticAnnouncement = "";
+let syncSharingController = null;
+let syncSharingState = {
+  status: { kind: SHARE_STATUS.IDLE, message: SHARE_MESSAGES[SHARE_STATUS.IDLE] },
+  previewOpen: false,
+  hasReport: false,
+  text: null
+};
+let lastSyncDiagnostic = null;
+const syncLifecycle = createSyncLifecycleInstrumentation();
 let recoveryContext = null;
 let repairContext = null;
 let repairStatus = initialRepairStatus();
@@ -1603,7 +1621,24 @@ function renderCloudConfig() {
 function createCloudAuthAdapter(db) {
   return {
     login(options) {
-      return db.cloud.login({ ...options, grant_type: "otp" });
+      syncLifecycle.otpRequested();
+      let pending;
+      try {
+        pending = Promise.resolve(db.cloud.login({ ...options, grant_type: "otp" }));
+      } catch (error) {
+        syncLifecycle.otpFailed();
+        throw error;
+      }
+      return pending.then(
+        (value) => {
+          syncLifecycle.otpSucceeded();
+          return value;
+        },
+        (error) => {
+          syncLifecycle.otpFailed();
+          throw error;
+        }
+      );
     },
     subscribeUser(listener) {
       return db.cloud.currentUser.subscribe(listener);
@@ -2470,7 +2505,11 @@ function setupAuthentication() {
   renderAuthPanel();
   // Opening IndexedDB starts restoration of the persisted native login.
   // A reloaded page must not require a new OTP when the session is valid.
-  void syncedDatabase.open().catch(() => {
+  syncLifecycle.dbOpenStarted();
+  void syncedDatabase.open().then(() => {
+    syncLifecycle.dbOpenResolved();
+  }).catch(() => {
+    syncLifecycle.dbOpenFailed();
     notify("Impossible d'ouvrir IndexedDB ou de restaurer la session Dexie Cloud. Vos données locales restent intactes.");
     if (authState.status === AUTH_STATUS.AUTHENTICATED) {
       if (dashboardEl) dashboardEl.hidden = true;
@@ -2558,6 +2597,7 @@ function resendOtp() {
 function cancelOtp() {
   if (!authController) return;
   authController.cancelInteraction();
+  syncLifecycle.otpCancelled();
   authInteraction = null;
   authSubmitting = false;
   setAuthError("");
@@ -4667,8 +4707,19 @@ function renderTrustGuidance() {
   paintSyncTrustEvidence(guidance);
   paintSyncTrustActions(guidance);
 }
-function paintSyncDiagnostic(diagnostic) {
+function paintSyncDiagnostic(diagnostic, options = {}) {
   if (!syncDiagnosticEl) return;
+  const preserveShareReport = options && options.preserveShareReport === true;
+  lastSyncDiagnostic = diagnostic;
+  ensureSyncSharingController();
+  if (!preserveShareReport && syncSharingController.getState().previewOpen) {
+    syncSharingController.refreshPreview();
+  }
+  const activeElement = document.activeElement;
+  const activeShareId = activeElement && syncDiagnosticEl.contains(activeElement) &&
+    typeof activeElement.id === "string" && SYNC_SHARE_CONTROL_IDS.has(activeElement.id)
+    ? activeElement.id
+    : null;
   const view = buildDiagnosticView(diagnostic, { busy: syncRetryBusy });
   const summary = buildDiagnosticSummary(diagnostic);
   syncDiagnosticEl.replaceChildren();
@@ -4702,8 +4753,14 @@ function paintSyncDiagnostic(diagnostic) {
   status.id = "sync-diagnostic-status";
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
-  syncDiagnosticEl.append(retry, reason, status);
+  syncDiagnosticEl.append(retry, reason, status, buildSyncSharingPanel());
   syncDiagnosticEl.hidden = false;
+  if (activeShareId) {
+    const target = document.getElementById(activeShareId);
+    if (target && typeof target.focus === "function") {
+      target.focus({ preventScroll: true });
+    }
+  }
   applySyncSummaryVisibility();
   renderSyncOnboarding();
 }
@@ -4715,6 +4772,92 @@ function renderSyncDiagnostic() {
     return;
   }
   syncDiagnosticsController.refresh();
+}
+const SYNC_SHARE_CONTROL_IDS = new Set([
+  "sync-diagnostic-copy",
+  "sync-diagnostic-preview-toggle",
+  "sync-diagnostic-preview-text"
+]);
+function currentLocalBaseDiagnosticValue() {
+  if (!documentLoaded) return "unknown";
+  return lastRecords.subjects.length === 0 && lastRecords.items.length === 0
+    ? "empty"
+    : "non-empty";
+}
+function diagnosticClipboardWriter() {
+  if (typeof window === "undefined" || window.isSecureContext !== true) return null;
+  if (typeof navigator === "undefined" || !navigator.clipboard ||
+    typeof navigator.clipboard.writeText !== "function") {
+    return null;
+  }
+  const clipboard = navigator.clipboard;
+  return (text) => clipboard.writeText(text);
+}
+function ensureSyncSharingController() {
+  if (syncSharingController) return syncSharingController;
+  syncSharingController = createDiagnosticSharingController({
+    buildReport: () => buildSyncDiagnosticReport({
+      diagnostic: lastSyncDiagnostic || buildSyncDiagnostic(readSyncDiagnosticInput()),
+      now: new Date(),
+      userAgent: typeof navigator !== "undefined" && typeof navigator.userAgent === "string"
+        ? navigator.userAgent
+        : "",
+      lifecycle: syncLifecycle.snapshot(Date.now()),
+      localBase: currentLocalBaseDiagnosticValue()
+    }),
+    getWriteText: () => diagnosticClipboardWriter(),
+    onChange: (state) => { syncSharingState = state; }
+  });
+  return syncSharingController;
+}
+function buildSyncSharingPanel() {
+  const state = syncSharingController ? syncSharingController.getState() : syncSharingState;
+  const container = el("div", "sync-diagnostic-share");
+  const copy = el("button", "secondary sync-diagnostic-copy", "Copier le diagnostic pour assistance");
+  copy.type = "button";
+  copy.id = "sync-diagnostic-copy";
+  copy.setAttribute("aria-describedby", "sync-diagnostic-share-status");
+  copy.addEventListener("click", () => { void copySyncDiagnosticForAssistance(); });
+  const previewToggle = el("button", "secondary sync-diagnostic-preview-toggle",
+    state.previewOpen ? "Masquer l'aperçu du diagnostic" : "Afficher l'aperçu du diagnostic");
+  previewToggle.type = "button";
+  previewToggle.id = "sync-diagnostic-preview-toggle";
+  previewToggle.setAttribute("aria-expanded", state.previewOpen ? "true" : "false");
+  previewToggle.setAttribute("aria-controls", "sync-diagnostic-preview");
+  previewToggle.addEventListener("click", toggleSyncDiagnosticPreview);
+  const preview = el("div", "sync-diagnostic-preview");
+  preview.id = "sync-diagnostic-preview";
+  preview.hidden = !state.previewOpen;
+  if (state.previewOpen && typeof state.text === "string") {
+    const label = el("label", "sync-diagnostic-preview-label", "Aperçu du rapport (texte brut sélectionnable)");
+    label.htmlFor = "sync-diagnostic-preview-text";
+    const textarea = document.createElement("textarea");
+    textarea.id = "sync-diagnostic-preview-text";
+    textarea.className = "sync-diagnostic-preview-text";
+    textarea.readOnly = true;
+    textarea.rows = 16;
+    textarea.spellcheck = false;
+    textarea.value = state.text;
+    textarea.setAttribute("aria-label", "Aperçu du diagnostic pour assistance");
+    preview.append(label, textarea);
+  }
+  const shareStatus = el("p", "sync-diagnostic-share-status", state.status.message);
+  shareStatus.id = "sync-diagnostic-share-status";
+  shareStatus.setAttribute("role", "status");
+  shareStatus.setAttribute("aria-live", "polite");
+  shareStatus.setAttribute("aria-atomic", "true");
+  container.append(copy, previewToggle, preview, shareStatus);
+  return container;
+}
+async function copySyncDiagnosticForAssistance() {
+  if (!syncSharingController) return;
+  await syncSharingController.copy();
+  paintSyncDiagnostic(lastSyncDiagnostic, { preserveShareReport: true });
+}
+function toggleSyncDiagnosticPreview() {
+  if (!syncSharingController) return;
+  syncSharingController.togglePreview();
+  paintSyncDiagnostic(lastSyncDiagnostic, { preserveShareReport: true });
 }
 function setupSyncDiagnostics() {
   syncDiagnosticsController = createSyncDiagnosticsController({
@@ -4733,7 +4876,15 @@ function setupSyncDiagnostics() {
     const cloud = syncedDatabase.cloud;
     const subscribe = (observable) => {
       if (observable && typeof observable.subscribe === "function") {
+        const name = observable === cloud.syncState
+          ? "syncState"
+          : observable === cloud.persistedSyncState
+            ? "persistedSyncState"
+            : observable === cloud.currentUser
+              ? "currentUser"
+              : null;
         observable.subscribe(() => {
+          syncLifecycle.observeObservable(name);
           recordNativeBootstrapEvidence();
           renderSyncDiagnostic();
           updateActivationFromNative();
@@ -4753,6 +4904,9 @@ function setupSyncDiagnostics() {
 function recordNativeBootstrapEvidence() {
   if (!syncedDatabase) return;
   const cloud = syncedDatabase.cloud;
+  syncLifecycle.observeInitial("currentUser");
+  syncLifecycle.observeInitial("syncState");
+  syncLifecycle.observeInitial("persistedSyncState");
   const persisted = observableValue(cloud && cloud.persistedSyncState);
   const syncState = normalizeSyncState(observableValue(cloud && cloud.syncState));
   recordBootstrap({
