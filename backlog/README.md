@@ -1,5 +1,10 @@
 # Backlog ThreadStep
 
+## Assistance au diagnostic de synchronisation : TS-051 (21 octobre 2026)
+
+- **[TS-051](tasks/TS-051.md)** : ajouter dans Paramètres > Synchronisation un bouton pour copier un rapport structuré et expurgé, utilisable même pendant une restauration de session bloquée. `ready / allowed / low`, priorité haute ; dépend de TS-043. Le rapport est local, sur action explicite, sans email, OTP, jeton ni contenu métier ; la correction de la restauration demeure suivie par TS-045/TS-048.
+- Le cas Android du 21 octobre (session loading, connexion en cours, pull en attente, preuve distante bloquée) est un scénario de recette obligatoire. La présente PR reste documentaire, sans appel LLM, sans diagnostic à distance et sans modification de la synchronisation.
+
 ## Continuité UX : TS-049 et TS-050 (20 octobre 2026)
 
 - **[TS-049](tasks/TS-049.md)** : stabiliser le scroll et le focus pendant création, complétion, édition et réordonnancement, sans navigation ni saut intempestif. `on_hold / manual / low`, priorité haute ; PR de code #161 et #163 fusionnées, recette Android/scroll réelle et réconciliation OpenSpec restantes. Ne pas relancer l'agent automatiquement.
