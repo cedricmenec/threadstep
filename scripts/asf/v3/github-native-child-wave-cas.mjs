@@ -15,7 +15,8 @@ import { ADMISSION_REGISTRY_REF } from "./global-admission.mjs";
 import { observeV3GithubWaveRulesetPolicy }
  from "./github-native-wave-ruleset.mjs";
 const REPO="cedricmenec/threadstep",BASE="repos/"+REPO;
-const SHA=/^[0-9a-f]{40}$/,WAVE=/^[a-z0-9][a-z0-9._-]{2,63}$/;
+const SHA=/^[0-9a-f]{40}$/,HASH=/^[0-9a-f]{64}$/;
+const WAVE=/^[a-z0-9][a-z0-9._-]{2,63}$/;
 const no=(status,code,evidence=null)=>Object.freeze({status,code,
  authorized:false,canAck:false,canClaim:false,canWrite:false,
  canDispatch:false,canSpend:false,canRetry:false,evidence});
@@ -34,15 +35,24 @@ const observe=(phase,input)=>phase==="ACK"?
 const matching=(r,phase,runner,event)=>r?.status===
  (phase==="ACK"?"child_ack_candidate_not_authorized":
  "child_claim_candidate_not_authorized")&&r.authorized===false&&
- r.canWrite===false&&r.canSpend===false&&r.canRetry===false&&
+ r.canAck===false&&r.canClaim===false&&
+ r.canWrite===false&&r.canDispatch===false&&
+ r.canSpend===false&&r.canRetry===false&&
  r.evidence?.waveId===event.inputs.wave_id&&
  r.evidence?.taskId===event.inputs.task_id&&
  r.evidence?.childRunId===runner.runId&&
  r.evidence?.reservationSha===event.inputs.reservation_sha&&
  SHA.test(r.evidence?.waveHeadSha??"")&&
  SHA.test(r.evidence?.globalHeadSha??"")&&
+ HASH.test(r.evidence?.journalHash??"")&&
+ HASH.test(r.evidence?.manifestHash??"")&&
+ HASH.test(r.evidence?.globalRegistryHash??"")&&
  r.evidence?.proposedEvent?.type===
- (phase==="ACK"?"ACK_CHILD":"CLAIM_CHILD");
+ (phase==="ACK"?"ACK_CHILD":"CLAIM_CHILD")&&
+ r.evidence.proposedEvent.taskId===event.inputs.task_id&&
+ r.evidence.proposedEvent.childRunId===runner.runId&&
+ r.evidence.proposedEvent.runAttempt===1&&
+ r.evidence.proposedEvent.workflowRef===runner.workflowRef;
 const compare=(a,b)=>["waveId","taskId","reservationSha",
  "waveHeadSha","journalHash","globalHeadSha","globalRegistryHash",
  "manifestHash","childRunId"].every(k=>a[k]===b[k])&&
@@ -126,6 +136,10 @@ export async function attemptV3GithubChildWaveCAS({
      saved.headSha!==written.newHeadSha||
      contentSha256(saved.journal)!==contentSha256(next)||
      contentSha256(saved.manifest)!==e.manifestHash||
+     saved.journal.status!==(phase==="ACK"?"CHILD_ACKNOWLEDGED":"EXECUTING")||
+     saved.journal.active?.childRunId!==runner.runId||
+     saved.journal.events?.at(-1)?.type!==
+       (phase==="ACK"?"ACK_CHILD":"CLAIM_CHILD")||
      pin(g,ADMISSION_REGISTRY_REF)!==e.globalHeadSha||
      pin(main,"refs/heads/main")!==runner.sha)
    return no("uncertain","pinned_wave_readback_unconfirmed");
