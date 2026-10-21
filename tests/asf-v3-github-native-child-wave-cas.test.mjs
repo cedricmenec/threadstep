@@ -347,7 +347,7 @@ test("CLAIM refuses protection removal after a persisted ACK",async()=>{
  f.readClient.get=async path=>path===BASE+"/rulesets/4"?
   {ok:false,status:404}:original(path);
  const claim=await attemptV3GithubChildWaveCAS({phase:"CLAIM",...f});
- assert.equal(claim.status,"rejected");
+ assert.equal(claim.status,"uncertain");
  assert.equal(claim.code,"wave_creation_update_or_immutability_not_verified");
  assert.equal(f.state.patches,1);
  noRights(claim);
