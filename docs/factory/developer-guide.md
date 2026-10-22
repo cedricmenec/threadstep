@@ -1,12 +1,20 @@
 # Guide développeur — Autonomous Software Factory (ASF V2)
 
+## Fiabilité de l'installation OpenCode (ASF-OPENCODE-001)
+
+Le 22 octobre 2026, le run [TS-052 #39783720926](https://github.com/cedricmenec/threadstep/actions/runs/39783720926) a échoué **avant tout appel modèle**, sur `npm install --global opencode-ai@latest` : la version 1.19.4 du wrapper npm demandait des binaires Linux absents (`ETARGET`/`E404`). Aucun plan ni checkpoint distant TS-052 n'a été publié.
+
+Les trois workflows `agent-openspec.yml`, `agent.yml` et `agent-asf.yml` installent dorénavant **`opencode-ai@1.19.0` exactement**. Cette version était déjà observée sur un pilote OpenSpec réussi (voir `openspec-manual-pilot.md` et `current-state.md`). Après l'installation, chaque workflow compare `opencode --version` à `1.19.0` et échoue avant tout appel payant si la version diffère. Le job indépendant `CI / check` exécute aussi un **smoke test d'installation npm et de binaire sur `ubuntu-latest`**, sans clé API ni requête OpenRouter. `npm run check` vérifie statiquement la cohérence des quatre emplacements et refuse le retour à `@latest`.
+
+Si l'installation échoue, **ne pas réessayer automatiquement** avec une version flottante. Vérifier la publication du wrapper et du binaire, contrôler les journaux npm et proposer une nouvelle PR factory pour faire évoluer l'épingle avec CI verte. La mise à jour de cette version nécessite une revue du comportement OpenCode, de la politique de modèles approuvés (`small_model`, titre désactivé) et du cycle OpenSpec. Pour reprendre TS-052 après fusion et CI/PAGES contrôlées, relancer manuellement `phase=auto` : le run en échec n'a aucun checkpoint et ne peut pas reprendre en `apply` ou `finalize`.
+
 ## Choix du modèle OpenCode et appels invisibles
 
 **Incident ASF-MODEL-001 (20 octobre 2026).** Le seul argument `opencode run --model` ne borne pas les appels de l'agent interne `title` : sans `small_model`, OpenCode peut choisir un modèle OpenRouter non sélectionné, y compris Google Nano Banana. Voir [fiche et preuves ASF-MODEL-001](tasks/ASF-MODEL-001.md).
 
 Les workflows `Agent OpenSpec` (plan/apply/OPSX sync, y compris sous l'orchestrateur V1) et `Agent` direct doivent **avant toute phase payante** charger `scripts/asf/opencode-model-policy.mjs` depuis `origin/main`, non depuis une branche `agent/*`. Cette politique échoue si le modèle n'est pas dans la liste contrôlée des entrées GitHub Actions, configure `OPENCODE_CONFIG_CONTENT` avec `model` et `small_model` identiques, et désactive `agent.title`. Elle évite la génération automatique de titres et tout choix implicite du modèle auxiliaire.
 
-Lors d'un ajout de modèle dans l'UI GitHub Actions, mettre à jour simultanément l'allowlist du script et les **trois** workflows d'entrée, puis exécuter `npm run check`. Ne jamais exposer `OPENROUTER_API_KEY`, ni autoriser un modèle depuis une branche agent non vérifiée. Cette politique ne remplace pas le contrôle financier du fournisseur ni la future épingle d'une version d'OpenCode ; aucun run OpenRouter n'est lancé par les tests de cette correction.
+Lors d'un ajout de modèle dans l'UI GitHub Actions, mettre à jour simultanément l'allowlist du script et les **trois** workflows d'entrée, puis exécuter `npm run check`. Ne jamais exposer `OPENROUTER_API_KEY`, ni autoriser un modèle depuis une branche agent non vérifiée. Cette politique ne remplace pas le contrôle financier du fournisseur. Depuis ASF-OPENCODE-001 (22 octobre 2026), OpenCode est épinglé à `opencode-ai@1.19.0` sur les trois exécuteurs de la factory et sa version effective est vérifiée ; aucun run OpenRouter n'est lancé par ces tests.
 
 **Clôture ASF V2 : 16 octobre 2026, périmètre V1 borné.** Le programme ASF-V2-001 à ASF-V2-011 est livré ; vrais pilotes 1/2 tâches, vrai blocage GitHub du `check` rouge (PR #61), protections vérifiées par API et permissions App/recette produit attestées par le propriétaire. Pas d'injection de panne réelle dans un agent payant. Voir [rapport de clôture](closeout-2026-10-16.md), [validation/reprise](validation-and-recovery.md) et [preuves](current-state.md).
 

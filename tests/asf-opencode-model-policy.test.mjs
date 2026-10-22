@@ -87,7 +87,7 @@ test("ASF-MODEL-001 both paid workflows load trusted main policy before OpenRout
     ["Agent direct", direct]
   ]) {
     const scriptLoad = workflow.indexOf('git show origin/main:scripts/asf/opencode-model-policy.mjs');
-    const install = workflow.indexOf('npm install --global opencode-ai@latest');
+    const install = workflow.indexOf('npm install --global opencode-ai@1.19.0');
     const firstCall = workflow.indexOf('opencode run --auto --model "$OPENCODE_MODEL"');
     assert.ok(scriptLoad > 0, name + " loads trusted main");
     assert.ok(scriptLoad < firstCall, name + " protects before paid call");

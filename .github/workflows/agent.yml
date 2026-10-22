@@ -83,8 +83,11 @@ jobs:
           if [ -z "${OPENROUTER_API_KEY:-}" ]; then
             echo "::error::OPENROUTER_API_KEY secret missing"; exit 1
           fi
-          npm install --global opencode-ai@latest
-          opencode --version
+          npm install --global opencode-ai@1.19.0
+          installed_version="$(opencode --version)"
+          if [[ "$installed_version" != "1.19.0" ]]; then
+            echo "::error::OpenCode version mismatch: expected 1.19.0, got $installed_version"; exit 1
+          fi
       # Reused agent branches may contain stale/edited files. Take this cost
       # policy ONLY from reviewed main, before granting the model API key.
       - name: Enforce trusted OpenCode model policy before paid call
