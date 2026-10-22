@@ -232,14 +232,18 @@ test("2.3 paint preserves the diagnostic rows, errors, live status, reason and r
 
 test("2.4 and 2.5 summary visibility depends on the overview route and only updates hidden/text", () => {
   const visibility = between(app, "function applySyncSummaryVisibility(", "\n}\n");
-  assert.match(visibility, /route\.view === "overview"/);
-  assert.match(visibility, /buildSyncDiagnostic\(readSyncDiagnosticInput\(\)\)/);
-  assert.match(visibility, /buildDiagnosticSummary\(diagnostic\)/);
-  assert.match(visibility, /syncSummaryEl\.hidden = !show/);
-  assert.match(visibility, /syncSummaryEl\.textContent = summary\.text/);
-  assert.match(visibility, /overviewAccessLinkVisible\(/);
-  assert.match(visibility, /syncSettingsAccessEl\.hidden = !showLink/);
-  assert.doesNotMatch(visibility, /renderSyncDiagnostic|\.refresh\(|setupSyncDiagnostics|retrySyncInitialPull|nativePullAdapter|\.open\(|fetch\(|startAuthentication|localStorage|indexedDB/);
+  assert.match(visibility, /applyOverviewSurfaces\(refreshOverviewPresentation\(\)\)/);
+  assert.doesNotMatch(visibility, /buildDiagnosticSummary/);
+  const surfaces = between(app, "function applyOverviewSurfaces(", "\n}\n");
+  assert.match(surfaces, /route\.view === "overview"/);
+  assert.match(surfaces, /presentation\.summaryVisible/);
+  assert.match(surfaces, /syncSummaryEl\.hidden = !show/);
+  assert.match(surfaces, /syncSummaryEl\.textContent = presentation\.summaryText/);
+  assert.match(surfaces, /overviewAccessLinkVisible\(/);
+  assert.match(surfaces, /syncSettingsAccessEl\.hidden = !showLink/);
+  for (const block of [visibility, surfaces]) {
+    assert.doesNotMatch(block, /renderSyncDiagnostic|\.refresh\(|setupSyncDiagnostics|retrySyncInitialPull|nativePullAdapter|\.open\(|fetch\(|startAuthentication|localStorage|indexedDB/);
+  }
 
   const render = between(app, "function render()", "\nfunction navigate(");
   assert.match(render, /applySyncSummaryVisibility\(\)/);
