@@ -1,5 +1,10 @@
 # Backlog ThreadStep
 
+## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
+
+- **[TS-052](tasks/TS-052.md)** : éviter le clignotement des états transitoires Dexie sur Overview. Diagnostic natif conservé en arrière-plan ; loader discret uniquement si les projets ne peuvent pas encore être lus ; message stable et lien Synchronisation pour une anomalie réellement actionnable. `ready / manual / medium`, priorité haute ; dépend de TS-043 et préserve les protections de TS-045/TS-048. Le clignotement provient plausiblement de `buildDiagnosticSummary()`/`applySyncSummaryVisibility()` ; reproduction sur appareil encore à confirmer.
+- La tâche ne modifie pas Dexie, le contrôle d'accès ou la factory. Son implémentation exige un lancement OpenSpec manuel, une CI indépendante et une recette Chrome Android.
+
 ## Assistance au diagnostic de synchronisation : TS-051 (21 octobre 2026)
 
 - **[TS-051](tasks/TS-051.md)** : ajouter dans Paramètres > Synchronisation un bouton pour copier un rapport structuré et expurgé, utilisable même pendant une restauration de session bloquée. `ready / allowed / low`, priorité haute ; dépend de TS-043. Le rapport est local, sur action explicite, sans email, OTP, jeton ni contenu métier ; la correction de la restauration demeure suivie par TS-045/TS-048.
