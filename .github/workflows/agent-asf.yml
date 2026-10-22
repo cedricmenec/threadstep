@@ -90,8 +90,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --global opencode-ai@latest
-          opencode --version
+          npm install --global opencode-ai@1.19.0
+          installed_version="$(opencode --version)"
+          if [[ "$installed_version" != "1.19.0" ]]; then
+            echo "::error::OpenCode version mismatch: expected 1.19.0, got $installed_version"; exit 1
+          fi
       - name: Implement selected factory task with OpenRouter
         shell: bash
         env:
