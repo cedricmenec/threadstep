@@ -149,18 +149,28 @@ page SHALL restaurer l'état courant sans écriture ni transmission.
 
 ### Requirement: Contextual access from the projects overview
 
-La vue Mes projets SHALL proposer un lien non destructif vers
-`#/parametres/synchronisation` lorsqu'un état Cloud configuré ou une session
-nécessite une action. Le résumé de synchronisation MUST rester non interactif et
-aucune action Cloud ne MUST être déclenchée par son affichage.
+La vue SHALL proposer un lien non destructif vers
+`#/parametres/synchronisation` uniquement lorsqu'une erreur confirmée, une
+reconnexion requise, un blocage de liaison ou une attente durablement non
+résolue demande une action. Le lien MUST rester masqué pendant les transitions
+ordinaires et les synchronisations de fond. Le résumé MUST rester non interactif
+sans déclencher d'action Cloud.
 
 #### Scenario: Action required exposes a settings link
 
-- **GIVEN** un espace Cloud configuré présente une session absente ou expirée, une erreur, un pull initial en attente ou en échec, une écriture locale en attente ou un espace bloqué
+- **GIVEN** un espace Cloud configuré présente une erreur confirmée de lecture ou de stockage, une session expirée ou refusée nécessitant une reconnexion, une liaison de compte bloquée ou une attente durablement non résolue
 - **WHEN** Mes projets est affiché
 - **THEN** un lien libellé en français vers `#/parametres/synchronisation` est visible
 - **AND** il est atteignable au clavier et au toucher
 - **AND** son activation ouvre la page de synchronisation sans lancer d'OTP, de pull, de transfert ou de purge
+
+#### Scenario: Ordinary initialization exposes no settings alert link
+
+- **GIVEN** un espace Cloud configuré traverse une restauration saine
+- **WHEN** la session est `loading`, la connexion `connecting`, la phase `initial` ou le pull initial en attente sans erreur confirmée
+- **THEN** le lien d'accès contextuel et le résumé d'attention restent masqués
+- **AND** les projets apparaissent dès que leur lecture autorisée est achevée
+- **AND** aucun événement natif transitoire ne fait clignoter le lien
 
 #### Scenario: Healthy local overview has no Cloud link
 
@@ -169,6 +179,14 @@ aucune action Cloud ne MUST être déclenchée par son affichage.
 - **THEN** le résumé d'attention et le lien Cloud sont masqués
 - **AND** la page de synchronisation reste accessible depuis le menu
 - **AND** aucune ouverture d'instance Cloud n'est effectuée pour produire cet affichage
+
+#### Scenario: Available projects with background sync keep no alert link
+
+- **GIVEN** les projets sont consultables sous la liaison autorisée courante
+- **WHEN** une synchronisation de fond change transitoirement la phase native
+- **THEN** le lien contextuel et le résumé d'attention restent masqués
+- **AND** la liste n'est ni masquée ni remplacée par un chargement
+- **AND** aucune action Cloud n'est déclenchée
 
 #### Scenario: Summary stays non-interactive
 

@@ -40,6 +40,7 @@ function simulateOldTablet({ view = "overview", subjects = [{ id: "s1" }], autho
     counterEl: { textContent: "" }, documentState: { subjects },
     applyExpandedIdentityBoundary: () => {},
     captureUxContinuity: () => authorized ? { context: { view }, scrollY: 7100 } : null,
+    overviewPresentationSnapshot: null,
     applyBusinessVisibility: () => {}, applyNavigationMenu: () => {},
     applySyncSummaryVisibility: () => {}, businessAllowed: () => authorized,
     expandAncestorForFocus: () => events.push(["expand"]),

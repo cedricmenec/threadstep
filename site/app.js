@@ -81,6 +81,13 @@ import {
   retryReasonLabel
 } from "./sync-diagnostics.js";
 import {
+  OVERVIEW_DURABLE_WAIT_MS,
+  OVERVIEW_LOADER_DELAY_MS,
+  OVERVIEW_LOADER_TEXT,
+  OVERVIEW_PRESENTATION_STATE,
+  buildOverviewReadPresentation
+} from "./overview-read-state.js";
+import {
   SHARE_MESSAGES,
   SHARE_STATUS,
   buildSyncDiagnosticReport,
@@ -141,6 +148,7 @@ import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction, authorizedWorkspaceIdentityKey, shouldResetExpandedParents } from "./interaction-continuity.js";
 
 const subjectsEl = document.querySelector("#subjects");
+const projectsLoadingEl = document.querySelector("#projects-loading");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
@@ -305,6 +313,13 @@ let pendingNavigationFocus = null;
 let pendingTaskCreationFocus = null;
 let lastRenderedUxContext = null;
 let uxRenderVersion = 0;
+let overviewPresentationSnapshot = null;
+let overviewPendingSince = null;
+let overviewPresentationBoundary = null;
+let overviewPresentationTimer = null;
+let overviewPresentationTimerGeneration = 0;
+let overviewSummaryKey = "";
+let overviewLoaderBusy = null;
 
 const CHANGE_CHANNEL = "threadstep.changes.v1";
 let businessStore = null;
@@ -2192,7 +2207,145 @@ async function reloadRawAfterRepair() {
   }
 }
 
+function overviewPresentationBoundaryKey() {
+  const identity = syncedDatabase
+    ? [
+      syncedDatabase.name || "synced",
+      accountBinding.state || "",
+      accountBinding.userDigest || accountBinding.digest || ""
+    ]
+    : ["local"];
+  return [route.view, route.subjectId || "", ...identity].join("|");
+}
+function overviewPresentationNow() {
+  return Date.now();
+}
+function cancelOverviewPresentationTimer() {
+  overviewPresentationTimerGeneration += 1;
+  if (overviewPresentationTimer !== null) {
+    clearTimeout(overviewPresentationTimer);
+    overviewPresentationTimer = null;
+  }
+}
+function syncOverviewPresentationBoundary(boundaryKey) {
+  if (boundaryKey === overviewPresentationBoundary) return;
+  overviewPresentationBoundary = boundaryKey;
+  overviewPendingSince = null;
+  cancelOverviewPresentationTimer();
+}
+function overviewPresentationElapsed(boundaryKey) {
+  syncOverviewPresentationBoundary(boundaryKey);
+  if (overviewPendingSince === null) return 0;
+  return Math.max(0, overviewPresentationNow() - overviewPendingSince);
+}
+function observeOverviewPresentation(presentation, boundaryKey) {
+  syncOverviewPresentationBoundary(boundaryKey);
+  if (route.view !== "overview") {
+    cancelOverviewPresentationTimer();
+    return;
+  }
+  const pending = presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ ||
+    presentation.state === OVERVIEW_PRESENTATION_STATE.INITIALIZING;
+  if (!pending) {
+    if (presentation.state === OVERVIEW_PRESENTATION_STATE.AVAILABLE ||
+        (presentation.actionRequired && presentation.reason !== "durable-wait")) {
+      overviewPendingSince = null;
+    }
+    cancelOverviewPresentationTimer();
+    return;
+  }
+  if (overviewPendingSince === null) overviewPendingSince = overviewPresentationNow();
+  const elapsed = Math.max(0, overviewPresentationNow() - overviewPendingSince);
+  const target = presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ &&
+    elapsed < OVERVIEW_LOADER_DELAY_MS
+    ? OVERVIEW_LOADER_DELAY_MS
+    : OVERVIEW_DURABLE_WAIT_MS;
+  const wait = Math.max(0, target - elapsed);
+  cancelOverviewPresentationTimer();
+  const generation = overviewPresentationTimerGeneration;
+  const scheduledBoundary = overviewPresentationBoundary;
+  overviewPresentationTimer = setTimeout(() => {
+    overviewPresentationTimer = null;
+    if (generation !== overviewPresentationTimerGeneration) return;
+    if (scheduledBoundary !== overviewPresentationBoundaryKey()) return;
+    if (route.view !== "overview") return;
+    render();
+  }, wait);
+}
+function overviewPresentationSignals(diagnostic, elapsedMs) {
+  const configured = requiresAuthentication();
+  return {
+    configured,
+    session: diagnostic.session,
+    binding: diagnostic.binding,
+    documentLoaded,
+    readError: configured ? !!syncReadError : localReadFailed,
+    writeError: localWriteStatus === LOCAL_WRITE_STATE.ERROR,
+    localWrites: diagnostic.localWrites,
+    baseMismatch: !!(diagnostic.base && diagnostic.base.mismatch),
+    elapsedMs
+  };
+}
+function refreshOverviewPresentation() {
+  const diagnostic = buildSyncDiagnostic(readSyncDiagnosticInput());
+  const boundary = overviewPresentationBoundaryKey();
+  const elapsedMs = overviewPresentationElapsed(boundary);
+  const presentation = buildOverviewReadPresentation(
+    overviewPresentationSignals(diagnostic, elapsedMs)
+  );
+  observeOverviewPresentation(presentation, boundary);
+  overviewPresentationSnapshot = { diagnostic, presentation };
+  return overviewPresentationSnapshot;
+}
+function updateOverviewLoader(presentation) {
+  if (!projectsLoadingEl) return;
+  const active = route.view === "overview" && presentation.loaderVisible;
+  const busy = active ? "true" : "false";
+  if (overviewLoaderBusy !== busy) {
+    projectsLoadingEl.setAttribute("aria-busy", busy);
+    overviewLoaderBusy = busy;
+  }
+  if (projectsLoadingEl.hidden !== !active) {
+    projectsLoadingEl.hidden = !active;
+  }
+  if (projectsLoadingEl.textContent !== OVERVIEW_LOADER_TEXT) {
+    projectsLoadingEl.textContent = OVERVIEW_LOADER_TEXT;
+  }
+}
+function applyOverviewSurfaces(snapshot) {
+  const presentation = snapshot.presentation;
+  updateOverviewLoader(presentation);
+  if (route.view !== "overview" && overviewSummaryKey !== "") {
+    overviewSummaryKey = "";
+  }
+  if (syncSummaryEl) {
+    const show = route.view === "overview" && presentation.summaryVisible;
+    if (syncSummaryEl.hidden !== !show) syncSummaryEl.hidden = !show;
+    if (show && overviewSummaryKey !== presentation.summaryKey) {
+      syncSummaryEl.textContent = presentation.summaryText;
+      overviewSummaryKey = presentation.summaryKey;
+    }
+  }
+  if (syncSettingsAccessEl) {
+    const record = activationMarker();
+    const localError = !requiresAuthentication() &&
+      (localReadFailed || localWriteStatus === LOCAL_WRITE_STATE.ERROR);
+    const showLink = route.view === "overview" && overviewAccessLinkVisible({
+      configured: requiresAuthentication(),
+      needsAttention: presentation.actionRequired,
+      localError,
+      activationNeedsResume: !!record &&
+        (record.status === ACTIVATION_STATUS.SUSPENDED ||
+          record.status === ACTIVATION_STATUS.CANCELLED)
+    });
+    if (syncSettingsAccessEl.hidden !== !showLink) {
+      syncSettingsAccessEl.hidden = !showLink;
+    }
+  }
+}
+
 function applyBusinessVisibility() {
+  const presentation = refreshOverviewPresentation().presentation;
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
   const bindingBlocked = configured && accountBinding.businessAllowed !== true;
@@ -2203,10 +2356,17 @@ function applyBusinessVisibility() {
   if (dashboardEl) {
     dashboardEl.hidden = Boolean(settingsSection) ||
       (configured && (!authenticated || bindingBlocked || !documentLoaded));
+    // A read that is genuinely authorized and still pending exposes the stable
+    // placeholder instead of an empty or absent projects area.
+    if (configured && !documentLoaded && !settingsSection && authenticated &&
+        !bindingBlocked && presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ) {
+      dashboardEl.hidden = false;
+    }
     // In local mode the dashboard may load visibly, but a failed read must never
     // be presented as an authoritative empty workspace.
     if (!configured && !settingsSection) dashboardEl.hidden = localReadFailed;
   }
+  applyOverviewSurfaces(overviewPresentationSnapshot);
   applySettingsVisibility(settingsSection);
 }
 function setLocalStatus(message) {
@@ -2858,26 +3018,7 @@ function applySettingsVisibility(section) {
   renderSyncOnboarding();
 }
 function applySyncSummaryVisibility() {
-  if (!syncSummaryEl && !syncSettingsAccessEl) return;
-  const diagnostic = buildSyncDiagnostic(readSyncDiagnosticInput());
-  const summary = buildDiagnosticSummary(diagnostic);
-  const show = route.view === "overview" && summary.needsAttention === true;
-  if (syncSummaryEl) {
-    syncSummaryEl.hidden = !show;
-    if (show) syncSummaryEl.textContent = summary.text;
-  }
-  if (syncSettingsAccessEl) {
-    const record = activationMarker();
-    const showLink = route.view === "overview" && overviewAccessLinkVisible({
-      configured: diagnostic.configured,
-      needsAttention: summary.needsAttention === true,
-      localError: localDiagnosticError(diagnostic),
-      activationNeedsResume: !!record &&
-        (record.status === ACTIVATION_STATUS.SUSPENDED ||
-          record.status === ACTIVATION_STATUS.CANCELLED)
-    });
-    syncSettingsAccessEl.hidden = !showLink;
-  }
+  applyOverviewSurfaces(refreshOverviewPresentation());
 }
 // Transient viewport/focus continuity, scoped to one authorized view only.
 // A full view transition or an account-binding change invalidates the capture.
@@ -3050,6 +3191,13 @@ function render() {
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
   const n = pendingCount(documentState);
   counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
+  const presentation = overviewPresentationSnapshot
+    ? overviewPresentationSnapshot.presentation
+    : null;
+  const suppressOverview = route.view === "overview" && !!presentation &&
+    (presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ ||
+      (presentation.actionRequired && !presentation.projectsAvailable));
+  counterEl.hidden = suppressOverview;
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
     subjectsEl.replaceChildren();
@@ -3057,6 +3205,19 @@ function render() {
     focusSuggestEl.hidden = true;
     focusCardEl.hidden = true;
     resumeCardEl.hidden = true;
+    applyFocus();
+    finishUxRender(uxSnapshot, explicitUxFocus);
+    return;
+  }
+  if (suppressOverview) {
+    // A necessary read that has not produced a trustworthy document must never
+    // show an empty list, a zero counter or an inoperative suggestion.
+    subjectForm.hidden = true;
+    focusSuggestEl.hidden = true;
+    focusCardEl.hidden = true;
+    resumeCardEl.hidden = true;
+    if (reorderNoteEl) reorderNoteEl.hidden = true;
+    replaceSubjectsInCurrentView(document.createDocumentFragment(), uxSnapshot);
     applyFocus();
     finishUxRender(uxSnapshot, explicitUxFocus);
     return;

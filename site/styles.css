@@ -44,6 +44,9 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .add-subject input,.task-form input{flex:1;min-width:0;border:1px solid #d4dbcf;background:white;border-radius:10px;padding:12px 15px;color:#24382f}
 .add-subject{padding:16px;background:#e9eddf;border-radius:14px}
 .subjects{display:grid;gap:15px;margin-top:22px;overflow-anchor:none}
+.projects-loading{display:flex;align-items:center;min-height:72px;max-width:100%;margin-top:22px;padding:16px 18px;background:#f3f6ec;border:1px solid #d7dfc9;border-radius:14px;color:#53675a;font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
+.projects-loading[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){.projects-loading{animation:none;transition:none}}
 .filter-toggle{display:inline-flex;align-items:center;gap:9px;margin-top:16px;font-size:.85rem;font-weight:600;color:#415748;cursor:pointer;user-select:none;padding:9px 13px;background:#eef2e8;border:1px solid #dde4d6;border-radius:10px}
 .filter-toggle input{accent-color:#466e4d;width:17px;height:17px;flex-shrink:0}
 .subject{background:white;border:1px solid #e1e5de;border-radius:16px;padding:18px;box-shadow:0 6px 18px #24382f08}
