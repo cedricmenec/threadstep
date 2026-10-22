@@ -101,7 +101,7 @@ spécifications canoniques dans openspec/specs/. L'historique reste dans GitHub.
   demandé et effectué la fusion après CI indépendante. La fusion du
   workflow direct sans OpenSpec reste non éprouvée de bout en bout.
 - **Versions/coûts** : OpenSpec épinglé en 1.14.1, OpenCode installé par
-  opencode-ai@latest, observé en 1.19.0 durant TS-008. Modèles OpenRouter
+  `opencode-ai@1.19.0` (ASF-OPENCODE-001 ; le smoke test CI valide le binaire Linux), observé en 1.19.0 durant TS-008. Modèles OpenRouter
   configurés : DeepSeek V4.1 Flash et GLM 5.3 Flash. Les appels restent
   payants ; il n'existe ni plafond USD garanti ni relevé de dépense
   automatique dans le workflow.
@@ -193,8 +193,7 @@ après #30. L'agent manuel est à nouveau disponible, mais son chemin
 2. **Budget** : aucun plafond OpenRouter USD exécutable par run/vague, ni
    comptabilité fournisseur corrélée aux runs. Chaque lancement effectif
    reste une opération à autoriser.
-3. **Reproductibilité** : OpenCode installé par @latest, à épingler après
-   validation d'une version cible ; OpenSpec est déjà épinglé.
+3. **Reproductibilité** : OpenCode épinglé à `1.19.0` sur les trois agents et vérifié par le smoke test CI ; OpenSpec reste épinglé à `1.14.1`. Toute évolution de version demande une PR factory avec preuve d'installation Linux.
 4. **Isolation** : empreintes SHA-256 et filtres de chemins sont des
    protections de fichiers, non une sandbox contre les actions du modèle.
 5. **Couverture OPSX** : MODIFIED vérifié ; REMOVED, RENAMED, conflits de
@@ -212,7 +211,7 @@ après #30. L'agent manuel est à nouveau disponible, mais son chemin
 - **Maintenir** le ruleset `Protect Main`, le statut obligatoire `check`
   et l'absence de contournement ; tester spécifiquement un cas CI rouge
   et le chemin auto-merge du workflow direct.
-- Épingler OpenCode, tracer les coûts fournisseur et fixer une politique
+- Maintenir l'épingle et sa recette CI OpenCode, tracer les coûts fournisseur et fixer une politique
   de dépenses/reprises proportionnée.
 - Préparer une nouvelle expérimentation **distincte** pour REMOVED/RENAMED
   ou une fusion sémantique conflictuelle, sans rejouer TS-009.
