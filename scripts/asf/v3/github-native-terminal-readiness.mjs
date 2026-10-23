@@ -9,6 +9,8 @@
  * controller must still do independent latest-ref verification and CAS.
  */
 import { observeV3GithubRulesetPolicy } from "./github-native-control.mjs";
+import { observeV3GithubWaveRulesetPolicy }
+ from "./github-native-wave-ruleset.mjs";
 import { observeV3GithubDelivery } from "./github-native-delivery-observer.mjs";
 import { inspectV3GithubTerminalCandidate } from "./global-terminal-evidence.mjs";
 import { createV3WaveReadPort, loadV3TrustedSnapshot }
@@ -66,6 +68,15 @@ export async function observeV3GithubTerminalReadiness({
  const rules=await observeV3GithubRulesetPolicy(readClient);
  if(rules.status!=="structurally_consistent")
   return gate(rules.status,"github_global_rules_unconfirmed");
+ // A valid global registry cannot justify RELEASE or QUARANTINE while the
+ // wave journal has no independent writer and immutable-history protections.
+ // Do not even inspect the terminal Git refs before this structural gate.
+ let wavePolicy;
+ try { wavePolicy=await observeV3GithubWaveRulesetPolicy(readClient); }
+ catch { return unknown("terminal_wave_ruleset_observation_failed"); }
+ if(wavePolicy?.status!=="wave_rule_structure_observed_not_authorized")
+  return gate(wavePolicy?.status==="rejected"?"rejected":"uncertain",
+   "terminal_wave_rulesets_unconfirmed");
  let global,readSnapshot;
  try {
   global=await readClient.get(G_REF);
