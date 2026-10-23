@@ -2,6 +2,8 @@
 
 Statut : **lecture seule, PR brouillon empilée sur #102**, non payant, aucune activation.
 
+**Mise à jour du 23 octobre 2026 (ASF-V3-034) :** G1 exige aussi la vérification des règles wave avant toute observation de genèse ; la configuration actuelle les laisse absentes. Le workflow continue à refuser toute écriture et toute dépense.
+
 ## Chaîne de contrôle effectivement raccordée
 
 Le préflight de `.github/workflows/backlog-orchestrator-v3.yml` continue à lire les six paramètres directement dans `GITHUB_EVENT_PATH` et à vérifier le run `workflow_dispatch` sur `main` auprès de l'API GitHub. Il exécute désormais une **étape logique supplémentaire** via `inspectV3OwnerGenesisReadiness` dans `owner-run-capture.mjs` :
@@ -9,10 +11,11 @@ Le préflight de `.github/workflows/backlog-orchestrator-v3.yml` continue à lir
 1. Vérifier la variable publique d'environnement `ASF_V3_CONTROLLER_APP_ID=5361227`, distincte de l'App V1 `5321746` ; l'environnement GitHub réel doit rester réservé à `main` et à la revue propriétaire.
 2. Vérifier l'identité du run GitHub, ses six inputs figés et le hash canonique de la liste de candidats reconstruite depuis les fichiers du backlog.
 3. Vérifier les trois rulesets actifs `main` / `creation+update` / `deletion+non_fast_forward` en lisant les détails REST, avec bypass du seul contrôleur `5361227` sur la règle writer et aucun bypass sur l'immutabilité.
-4. Relire le SHA du HEAD `main` et la référence globale `refs/heads/asf/control/active-wave-v3`. Un `404` normalized `error.status=404` est **une observation non fiable d'absence**, jamais une autorisation de créer.
-5. Si le ref existe, lire `registry.json` **au commit SHA exact**, rejouer l'historique et refuser toute tentative de remise à zéro, y compris s'il ne contient encore que la genèse.
-6. Relire `main` et le registre pour détecter une course. Si toutes les données sont cohérentes, retourner `genesis_absent_observed_no_authority` ou `genesis_exists_do_not_recreate`.
-7. **Conserver le `Deny` final du workflow sans exception.** Ces statuts portent tous `authorized:false`, `canCreate:false`, `canWrite:false`, `canDispatch:false`, `canSpend:false` et `canRetry:false`.
+4. Vérifier séparément les **deux** règles `refs/heads/asf/waves/*` : writer `creation+update`, seul bypass App Controller 5361227 ; immutabilité `deletion+non_fast_forward` sans bypass. En leur absence ou si les droits sont ambigus, arrêt **avant même** la lecture du ref global (durcissement ASF-V3-034). Une règle structurelle conforme ne prouve pas les permissions réelles des Apps.
+5. Relire le SHA du HEAD `main` et la référence globale `refs/heads/asf/control/active-wave-v3`. Un `404` normalized `error.status=404` est **une observation non fiable d'absence**, jamais une autorisation de créer.
+6. Si le ref existe, lire `registry.json` **au commit SHA exact**, rejouer l'historique et refuser toute tentative de remise à zéro, y compris s'il ne contient encore que la genèse.
+7. Relire `main` et le registre pour détecter une course. Si toutes les données sont cohérentes, retourner `genesis_absent_observed_no_authority` ou `genesis_exists_do_not_recreate`.
+8. **Conserver le `Deny` final du workflow sans exception.** Ces statuts portent tous `authorized:false`, `canCreate:false`, `canWrite:false`, `canDispatch:false`, `canSpend:false` et `canRetry:false`.
 
 ## Sécurité et limites
 

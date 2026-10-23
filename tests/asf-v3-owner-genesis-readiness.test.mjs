@@ -11,6 +11,7 @@ const REPO="cedricmenec/threadstep",BASE="repos/"+REPO;
 const SHA=c=>c.repeat(40),MAIN=SHA("a"),REG=SHA("b"),RUN="17241";
 const GLOBAL=BASE+"/git/ref/heads/asf/control/active-wave-v3";
 const MAIN_REF=BASE+"/git/ref/heads/main";
+const WAVE="refs/heads/asf/waves/*";
 const items=()=>[
  {id:"TS-013",path:"backlog/tasks/TS-013.md",type:"product",
   status:"ready",automation:"allowed",risk:"low",depends_on:[],
@@ -33,7 +34,10 @@ const policy=()=>[
   "pull_request","required_status_checks","deletion","non_fast_forward"]),
  mkrule(2,ADMISSION_REGISTRY_REF,["creation","update"],
   [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]),
- mkrule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"])
+ mkrule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]),
+ mkrule(4,WAVE,["creation","update"],
+  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]),
+ mkrule(5,WAVE,["deletion","non_fast_forward"])
 ];
 const runContext=()=>({
  repository:REPO,runId:RUN,runAttempt:1,actor:"cedricmenec",
@@ -47,8 +51,14 @@ const ghEvent=()=>({
   candidate_set_sha256:contentSha256(selected)}
 });
 function f({exists=false,registry=createAdmissionRegistry(),badRule=false,
- refRace=false,mainRace=false,wrongStatus=null,invalidRun=false}={}){
+ refRace=false,mainRace=false,wrongStatus=null,invalidRun=false,
+ missingWaves=false,badWaveWriter=false,badWaveImmutable=false}={}){
  const paths=[],rules=policy();
+ if(missingWaves)rules.splice(3);
+ if(badWaveWriter)rules[3].bypass_actors=[{
+  actor_type:"Integration",actor_id:5321746,bypass_mode:"always"}];
+ if(badWaveImmutable)rules[4].bypass_actors=[{
+  actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}];
  if(badRule)rules[1].conditions.ref_name.include=[
   "refs/heads/refs/heads/asf/control/active-wave-v3"];
  const get=async path=>{
@@ -126,6 +136,24 @@ test("ruleset wrong pattern or owner run mismatch blocks before reading globals"
   assert.equal(x.paths.includes(GLOBAL),false);
   mustNotGrant(r);
  }
+});
+test("C4/G1 wave protections are required BEFORE genesis ref reads",async()=>{
+ for(const option of [{missingWaves:true},{badWaveWriter:true},
+  {badWaveImmutable:true}]){
+  const x=f(option),r=await inspectV3OwnerGenesisReadiness(x);
+  assert.equal(r.status,"rejected",JSON.stringify(option));
+  assert.equal(r.reason,"wave_rulesets_missing_or_unverified");
+  assert.equal(x.paths.includes(GLOBAL),false,
+   "global ref should not be consulted with broken wave security");
+  mustNotGrant(r);
+ }
+});
+test("even valid global and wave rulesets do not authorize write or payment",async()=>{
+ const x=f(),r=await inspectV3OwnerGenesisReadiness(x);
+ assert.equal(r.status,"genesis_absent_observed_no_authority");
+ assert.equal(x.paths.includes(BASE+"/rulesets/4"),true);
+ assert.equal(x.paths.includes(BASE+"/rulesets/5"),true);
+ mustNotGrant(r);
 });
 test("wrong or missing environment App ID never even reads GitHub",async()=>{
  for(const invalid of ["5321746","5361228",null,""," 5361227 "]){

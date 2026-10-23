@@ -19,6 +19,8 @@ import { observeV3GithubRulesetPolicy, V3_CONTROLLER_APP_ID }
  from "./github-native-control.mjs";
 import { observeV3GithubBootstrapReadiness }
  from "./github-native-bootstrap-readiness.mjs";
+import { observeV3GithubWaveRulesetPolicy }
+ from "./github-native-wave-ruleset.mjs";
 import { contentSha256 } from "../waves/hash.mjs";
 import { checkBacklogIndex } from "../backlog-index.mjs";
 import { createGithubClient } from "../github/client.mjs";
@@ -173,6 +175,15 @@ export async function inspectV3OwnerGenesisReadiness({
  if(owner.status!=="owner_intent_observed_no_write")
   return result(owner.status==="rejected"?"rejected":"uncertain",
    "owner_intent_not_reconciled");
+ // The global registry rules do NOT protect the per-wave journal. Stop
+ // BEFORE genesis observation unless the independent wave pair is verified.
+ // This is structural evidence only; real App permissions remain unproven.
+ let wavePolicy;
+ try { wavePolicy=await observeV3GithubWaveRulesetPolicy(readClient); }
+ catch { return uncertain("wave_ruleset_observation_failed"); }
+ if(wavePolicy?.status!=="wave_rule_structure_observed_not_authorized")
+  return result(wavePolicy?.status==="rejected"?"rejected":"uncertain",
+   "wave_rulesets_missing_or_unverified");
  let bootstrap;
  try {
   bootstrap=await observeV3GithubBootstrapReadiness({
