@@ -322,6 +322,65 @@ export function totalTaskCountLabel(count) {
   const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
   return normalized + " tâche" + (normalized > 1 ? "s" : "") + " au total";
 }
+function countItemMetrics(items) {
+  const list = Array.isArray(items) ? items : [];
+  let total = 0;
+  let done = 0;
+  let pending = 0;
+  let urgentPending = 0;
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    total += 1;
+    if (item.done === true) {
+      done += 1;
+    } else {
+      pending += 1;
+      if (item.priority === "urgent") urgentPending += 1;
+    }
+  }
+  return { total, done, pending, urgentPending, active: pending > 0 };
+}
+export function subjectMetrics(subject) {
+  if (!subject || typeof subject !== "object") return countItemMetrics([]);
+  return countItemMetrics(subject.items);
+}
+export function overviewMetrics(document) {
+  const subjects = document && Array.isArray(document.subjects) ? document.subjects : [];
+  let activeProjects = 0;
+  let pendingSteps = 0;
+  let urgentSteps = 0;
+  for (const subject of subjects) {
+    const metrics = subjectMetrics(subject);
+    if (metrics.active) activeProjects += 1;
+    pendingSteps += metrics.pending;
+    urgentSteps += metrics.urgentPending;
+  }
+  return { activeProjects, pendingSteps, urgentSteps };
+}
+function countLabel(count, singular, plural) {
+  const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  return normalized + " " + (normalized > 1 ? plural : singular);
+}
+export function overviewSummaryLabel(metrics) {
+  const activeProjects = metrics && Number.isFinite(metrics.activeProjects) ? metrics.activeProjects : 0;
+  const pendingSteps = metrics && Number.isFinite(metrics.pendingSteps) ? metrics.pendingSteps : 0;
+  const urgentSteps = metrics && Number.isFinite(metrics.urgentSteps) ? metrics.urgentSteps : 0;
+  return [
+    countLabel(activeProjects, "projet actif", "projets actifs"),
+    countLabel(pendingSteps, "étape en attente", "étapes en attente"),
+    countLabel(urgentSteps, "urgence en attente", "urgences en attente")
+  ].join(" · ");
+}
+export function subjectUrgencyLabel(count) {
+  return countLabel(count, "urgence restante", "urgences restantes");
+}
+export function subjectProgressLabel(items) {
+  const metrics = countItemMetrics(items);
+  if (metrics.total === 0) return "Aucune étape";
+  const percent = Math.round(100 * metrics.done / metrics.total);
+  const steps = metrics.total > 1 ? "étapes terminées" : "étape terminée";
+  return metrics.done + " / " + metrics.total + " " + steps + " (" + percent + " %)";
+}
 export function nextActionSuggestion(document) {
   let best = null;
   let bestRank = null;
