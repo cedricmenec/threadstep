@@ -1,4 +1,4 @@
-import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter } from "./core.js";
+import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter, OVERVIEW_URGENCY_LIMIT, overviewUrgencyView, findOverviewUrgency } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -161,6 +161,13 @@ const reorderNoteEl = document.querySelector("#reorder-note");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
 const resumeCardEl = document.querySelector("#resume-card");
+const overviewUrgenciesEl = document.querySelector("#overview-urgencies");
+const overviewUrgenciesTitleEl = document.querySelector("#overview-urgencies-title");
+const overviewUrgenciesEmptyEl = document.querySelector("#overview-urgencies-empty");
+const overviewUrgenciesListEl = document.querySelector("#overview-urgencies-list");
+const overviewUrgenciesCountEl = document.querySelector("#overview-urgencies-count");
+const overviewUrgenciesMoreEl = document.querySelector("#overview-urgencies-more");
+const overviewUrgenciesReduceEl = document.querySelector("#overview-urgencies-reduce");
 const snackbarEl = document.querySelector("#snackbar");
 const cloudConfigEl = document.querySelector("#cloud-config");
 const cloudConfigFormEl = document.querySelector("#cloud-config-form");
@@ -298,6 +305,8 @@ let revealItemId = null;
 let suggestionVisible = false;
 let hideCompleted = false;
 let overviewProjectFilter = OVERVIEW_FILTER_ALL;
+let overviewUrgenciesExpanded = false;
+let overviewUrgenciesRenderKey = null;
 let resumeRef = null;
 let documentLoaded = false;
 let pendingMoveFocus = null;
@@ -2829,6 +2838,8 @@ function resetExpandedViewState() {
   expandedParents = new Set();
   pendingCollapseFocus = null;
   overviewProjectFilter = OVERVIEW_FILTER_ALL;
+  overviewUrgenciesExpanded = false;
+  overviewUrgenciesRenderKey = null;
   syncOverviewFilterControl();
 }
 function currentAuthorizedWorkspaceIdentity() {
@@ -3226,6 +3237,119 @@ function applyOverviewCounter(presentation) {
   if (counterEl.textContent !== text) counterEl.textContent = text;
   if (counterEl.hidden !== suppressed) counterEl.hidden = suppressed;
 }
+function hideOverviewUrgencies() {
+  overviewUrgenciesRenderKey = null;
+  if (overviewUrgenciesEl && !overviewUrgenciesEl.hidden) overviewUrgenciesEl.hidden = true;
+}
+function overviewUrgencyHiddenLabel(count) {
+  return count + " urgence" + (count > 1 ? "s" : "") + " non affichée" + (count > 1 ? "s" : "");
+}
+function overviewUrgencyRow(entry) {
+  const row = el("li", "overview-urgency");
+  row.dataset.subject = entry.subjectId;
+  row.dataset.item = entry.itemId;
+  const body = el("div", "overview-urgency-body");
+  body.append(el("p", "overview-urgency-title", entry.itemTitle));
+  body.append(el("p", "overview-urgency-project", entry.subjectTitle));
+  if (entry.isSubstep && entry.parentTitle) {
+    body.append(el("p", "overview-urgency-parent", "Sous-tâche de " + entry.parentTitle));
+  }
+  const open = el("button", "secondary overview-urgency-open", "Ouvrir dans le projet");
+  open.type = "button";
+  const label = "Ouvrir dans le projet " + entry.subjectTitle + " : " + entry.itemTitle;
+  open.setAttribute("aria-label", entry.isSubstep && entry.parentTitle
+    ? label + " (sous-tâche de " + entry.parentTitle + ")"
+    : label);
+  open.addEventListener("click", () => openUrgencyEntry(entry));
+  row.append(body, open);
+  return row;
+}
+function currentUrgencyFocus() {
+  if (!overviewUrgenciesListEl || typeof document === "undefined" || !document.activeElement) {
+    return null;
+  }
+  const active = document.activeElement;
+  if (typeof overviewUrgenciesListEl.contains !== "function" ||
+      !overviewUrgenciesListEl.contains(active) ||
+      typeof active.closest !== "function") {
+    return null;
+  }
+  const row = active.closest(".overview-urgency");
+  if (!row || !row.dataset) return null;
+  return { subjectId: row.dataset.subject, itemId: row.dataset.item };
+}
+function restoreUrgencyFocus(focused) {
+  if (!focused) return;
+  const row = overviewUrgenciesListEl && typeof overviewUrgenciesListEl.querySelector === "function"
+    ? [...overviewUrgenciesListEl.querySelectorAll(".overview-urgency")].find((node) =>
+      node.dataset && node.dataset.subject === focused.subjectId &&
+      node.dataset.item === focused.itemId)
+    : null;
+  if (row && typeof row.querySelector === "function") {
+    const control = row.querySelector(".overview-urgency-open");
+    if (control) { control.focus(); return; }
+  }
+  const fallback = overviewUrgenciesReduceEl && !overviewUrgenciesReduceEl.hidden
+    ? overviewUrgenciesReduceEl
+    : overviewUrgenciesMoreEl && !overviewUrgenciesMoreEl.hidden
+      ? overviewUrgenciesMoreEl
+      : overviewUrgenciesTitleEl;
+  if (fallback && typeof fallback.focus === "function") fallback.focus();
+}
+function renderUrgencyList() {
+  if (!overviewUrgenciesEl) return;
+  if (!businessAllowed() || route.view !== "overview") {
+    hideOverviewUrgencies();
+    return;
+  }
+  const view = overviewUrgencyView(documentState, overviewUrgenciesExpanded);
+  const key = (overviewUrgenciesExpanded ? "expanded:" : "collapsed:") +
+    JSON.stringify(view.entries);
+  if (overviewUrgenciesEl.hidden) overviewUrgenciesEl.hidden = false;
+  if (key === overviewUrgenciesRenderKey) return;
+  const focused = currentUrgencyFocus();
+  overviewUrgenciesRenderKey = key;
+  const empty = view.total === 0;
+  if (overviewUrgenciesEmptyEl && overviewUrgenciesEmptyEl.hidden !== !empty) {
+    overviewUrgenciesEmptyEl.hidden = !empty;
+  }
+  if (overviewUrgenciesListEl) {
+    if (overviewUrgenciesListEl.hidden !== empty) overviewUrgenciesListEl.hidden = empty;
+    overviewUrgenciesListEl.replaceChildren(...view.shown.map(overviewUrgencyRow));
+  }
+  const countVisible = view.hasMore && !overviewUrgenciesExpanded;
+  if (overviewUrgenciesCountEl) {
+    const text = view.hiddenCount > 0 ? overviewUrgencyHiddenLabel(view.hiddenCount) : "";
+    if (overviewUrgenciesCountEl.textContent !== text) overviewUrgenciesCountEl.textContent = text;
+    if (overviewUrgenciesCountEl.hidden !== !countVisible) {
+      overviewUrgenciesCountEl.hidden = !countVisible;
+    }
+  }
+  if (overviewUrgenciesMoreEl && overviewUrgenciesMoreEl.hidden !== (view.hasMore === false || overviewUrgenciesExpanded)) {
+    overviewUrgenciesMoreEl.hidden = view.hasMore === false || overviewUrgenciesExpanded;
+  }
+  if (overviewUrgenciesReduceEl && overviewUrgenciesReduceEl.hidden !== (view.hasMore === false || !overviewUrgenciesExpanded)) {
+    overviewUrgenciesReduceEl.hidden = view.hasMore === false || !overviewUrgenciesExpanded;
+  }
+  restoreUrgencyFocus(focused);
+}
+function setOverviewUrgenciesExpanded(expanded) {
+  if (overviewUrgenciesExpanded === expanded) return;
+  overviewUrgenciesExpanded = expanded;
+  render();
+  const preferred = expanded ? overviewUrgenciesReduceEl : overviewUrgenciesMoreEl;
+  if (preferred && !preferred.hidden && typeof preferred.focus === "function") {
+    preferred.focus();
+    return;
+  }
+  const first = overviewUrgenciesListEl && typeof overviewUrgenciesListEl.querySelector === "function"
+    ? overviewUrgenciesListEl.querySelector(".overview-urgency-open")
+    : null;
+  if (first && typeof first.focus === "function") first.focus();
+  else if (overviewUrgenciesTitleEl && typeof overviewUrgenciesTitleEl.focus === "function") {
+    overviewUrgenciesTitleEl.focus();
+  }
+}
 function render() {
   applyExpandedIdentityBoundary();
   // An intentional reveal/navigation must not be undone by scroll restoration.
@@ -3240,6 +3364,7 @@ function render() {
   applySyncSummaryVisibility();
   if (!businessAllowed()) {
     applyOverviewCounter(null);
+    hideOverviewUrgencies();
     applyFocus();
     finishUxRender(null, true);
     return;
@@ -3255,6 +3380,7 @@ function render() {
   applyOverviewCounter(presentation);
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
+    hideOverviewUrgencies();
     subjectsEl.replaceChildren();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
@@ -3267,6 +3393,7 @@ function render() {
   if (suppressOverview) {
     // A necessary read that has not produced a trustworthy document must never
     // show an empty list, a zero counter or an inoperative suggestion.
+    hideOverviewUrgencies();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
     focusCardEl.hidden = true;
@@ -3282,12 +3409,14 @@ function render() {
   focusSuggestEl.hidden = detail;
   const nextSubjects = document.createDocumentFragment();
   if (detail) {
+    hideOverviewUrgencies();
     focusCardEl.hidden = true;
     resumeCardEl.hidden = true;
     renderDetail(nextSubjects);
   } else {
     renderSuggestion();
     renderResumeCard();
+    renderUrgencyList();
     const overviewSubjects = overviewFilteredSubjects(documentState.subjects, overviewProjectFilter);
     if (!overviewSubjects.length) {
       const emptyMessages = {
@@ -3478,7 +3607,8 @@ function applyFocus() {
   }
   if (focusItemId) {
     const card = [...subjectsEl.querySelectorAll(".task")].find((node) => node.dataset.item === focusItemId);
-    const target = card && card.querySelector(".task-edit");
+    const target = card && (card.querySelector(".task-edit") ||
+      card.querySelector(".task-check") || card.querySelector(".task-menu-button"));
     focusItemId = null;
     if (target) {
       target.focus();
@@ -3557,13 +3687,13 @@ function renderSuggestion() {
   actions.append(reveal, close);
   focusCardEl.append(actions);
 }
-function revealAction(subjectId, itemId) {
+function revealAction(subjectId, itemId, options = {}) {
   revealItemId = itemId;
   focusItemId = itemId;
   const subject = findSubject(documentState, subjectId);
   const hiddenByOverviewFilter = subject &&
     !isSubjectVisibleInOverviewFilter(subject, overviewProjectFilter);
-  if (subject && (hiddenByOverviewFilter ||
+  if (subject && (options.detail === true || hiddenByOverviewFilter ||
       !isWithinOverviewPreview(subject.items, itemId, hideCompleted))) {
     renamingSubject = false;
     focusDetailHeading = false;
@@ -3571,6 +3701,17 @@ function revealAction(subjectId, itemId) {
     return;
   }
   render();
+}
+function openUrgencyEntry(entry) {
+  if (!entry || typeof entry.subjectId !== "string" || typeof entry.itemId !== "string") return;
+  const current = findOverviewUrgency(documentState, entry.subjectId, entry.itemId);
+  if (!current) {
+    revealItemId = null;
+    focusItemId = null;
+    render();
+    return;
+  }
+  revealAction(current.subjectId, current.itemId, { detail: true });
 }
 function revealSuggestion(suggestion) {
   revealAction(suggestion.subjectId, suggestion.itemId);
@@ -4233,6 +4374,12 @@ focusSuggestEl.addEventListener("click", () => {
   revealItemId = null;
   renderSuggestion();
 });
+if (overviewUrgenciesMoreEl) {
+  overviewUrgenciesMoreEl.addEventListener("click", () => setOverviewUrgenciesExpanded(true));
+}
+if (overviewUrgenciesReduceEl) {
+  overviewUrgenciesReduceEl.addEventListener("click", () => setOverviewUrgenciesExpanded(false));
+}
 subjectForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const input = subjectForm.elements.namedItem("subject");

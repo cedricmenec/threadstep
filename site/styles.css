@@ -41,6 +41,24 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .focus-reason{margin:0;font-size:.82rem;color:#657366;overflow-wrap:anywhere}
 .focus-empty{margin:0;color:#657366;font-size:.9rem}
 .focus-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.overview-urgencies{background:#f7f5ec;border:1px solid #e2ddc9;border-radius:14px;padding:14px 16px;margin:0 0 18px;max-width:100%;min-width:0}
+.overview-urgencies[hidden]{display:none}
+.overview-urgencies-title{font-size:1rem;margin:0;letter-spacing:-.02em;overflow-wrap:anywhere}
+.overview-urgencies-title:focus-visible{outline:3px solid #a9ba69;outline-offset:2px;border-radius:6px}
+.overview-urgencies-empty{margin:8px 0 0;color:#657366;font-size:.88rem;overflow-wrap:anywhere}
+.overview-urgencies-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:2px;max-width:100%;min-width:0}
+.overview-urgencies-list[hidden],.overview-urgencies-empty[hidden],.overview-urgencies-count[hidden],.overview-urgencies-toggle[hidden]{display:none}
+.overview-urgency{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 0;border-top:1px solid #e7e3d4;min-width:0}
+.overview-urgency:first-child{border-top:0}
+.overview-urgency-body{flex:1;min-width:0}
+.overview-urgency-title{margin:0;font-size:.9rem;font-weight:700;overflow-wrap:anywhere}
+.overview-urgency-project{margin:2px 0 0;font-size:.8rem;color:#53675a;overflow-wrap:anywhere}
+.overview-urgency-parent{margin:2px 0 0;font-size:.78rem;color:#68766a;overflow-wrap:anywhere}
+.overview-urgency-open{min-width:44px;min-height:44px;white-space:normal;text-align:left;overflow-wrap:anywhere}
+.overview-urgencies-controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;min-width:0}
+.overview-urgencies-count{margin:0;font-size:.8rem;color:#53675a;overflow-wrap:anywhere}
+.overview-urgencies-toggle{min-width:44px;min-height:44px;white-space:normal;text-align:left;overflow-wrap:anywhere}
+@media(max-width:620px){.overview-urgencies{padding:12px}.overview-urgency{flex-direction:column;align-items:stretch}.overview-urgency-open{width:100%;justify-content:center;text-align:center}}
 .add-subject,.task-form{display:flex;gap:9px}
 .add-subject input,.task-form input{flex:1;min-width:0;border:1px solid #d4dbcf;background:white;border-radius:10px;padding:12px 15px;color:#24382f}
 .add-subject{padding:16px;background:#e9eddf;border-radius:14px}

@@ -51,7 +51,7 @@ test("TS-052 the loading region is hidden, accessible and immediately before the
   const loader = /<div id="projects-loading" class="projects-loading" role="status" aria-live="polite" aria-busy="true" hidden>Chargement de vos projets…<\/div>/;
   assert.match(html, loader);
   assert.equal(html.split('id="projects-loading"').length - 1, 1);
-  const dashboard = between(html, '<section class="dashboard" id="dashboard"', "</section>");
+  const dashboard = between(html, '<section class="dashboard" id="dashboard"', "<footer>");
   assert.ok(dashboard.indexOf('id="projects-loading"') < dashboard.indexOf('id="subjects"'));
   assert.ok(dashboard.indexOf('id="projects-loading"') > dashboard.indexOf('id="subject-form"'));
   assert.doesNotMatch(dashboard.slice(dashboard.indexOf('id="projects-loading"'), dashboard.indexOf('id="subjects"')), /<button|<a\b|tabindex/i);
