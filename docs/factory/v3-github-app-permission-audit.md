@@ -53,7 +53,7 @@ Le propriétaire a créé les deux règles wave. L'API GitHub retourne maintenan
 Le script `scripts/asf/v3/g1-readonly-audit.mjs` peut être appelé sur une copie de la pile V3, avec Node 22+, un **SHA main explicite** et `GH_TOKEN` en variable d'environnement (jeton GitHub *en lecture seule*, non fourni dans l'argument, jamais imprimé). Exemple :
 
 ```sh
-node scripts/asf/v3/g1-readonly-audit.mjs <sha40-main-validé>
+node scripts/asf/v3/g1-readonly-audit.mjs "$MAIN_SHA"
 ```
 
 Il ne permet par construction que des GET GitHub du dépôt cible sur les deux refs main/global et sur les rulesets. Il retourne un diagnostic JSON sans valeur de secret. Exit code 1 en cas de NO-GO/ambiguïté ; exit code 0 uniquement si la **structure** est observée conforme. Ce statut n'accorde **jamais** de permission d'App, de bootstrap, de fusion sensible ni de dépense. L'absence du ref global (404) est une observation de non-existence et non une autorisation de création.
