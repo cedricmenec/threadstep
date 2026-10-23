@@ -100,6 +100,8 @@ test("transport uses GET only and masks token in errors",async()=>{
  for(const path of [
   ROOT+"/rulesets?per_page=100&page=4",ROOT+"/rulesets",
   ROOT+"/git/refs/heads/main",
+  ROOT+"/rulesets/123?token=forbidden",
+  "repos/cedricmenec/threadstep/rulesets/25316890",
   "repos/cedricmenec/threadstep/rulesets?per_page=100&page=1"
  ]){
   const r=await client.get(path);
@@ -113,4 +115,21 @@ test("transport uses GET only and masks token in errors",async()=>{
  assert.equal(calls.length,1);
  assert.equal(calls[0].opts.method,"GET");
  assert.equal(calls[0].opts.redirect,"error");
+});
+
+test("detail allowlist permits only a numeric ID GET on this dedicated lab",async()=>{
+ const calls=[];
+ const client=createV3LabReadOnlyClient({repository:"cedricmenec/asf-v3-ruleset-lab",
+  fetchImpl:async(url,opts)=>{
+   calls.push({url,method:opts.method});
+   return {ok:true,json:async()=>({id:123})};
+  }});
+ const r=await client.get("repos/cedricmenec/asf-v3-ruleset-lab/rulesets/123");
+ assert.equal(r.ok,true);
+ assert.equal(r.data.id,123);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].method,"GET");
+ const denied=await client.get("repos/cedricmenec/asf-v3-ruleset-lab/rulesets/0");
+ assert.equal(denied.ok,false);
+ assert.equal(calls.length,1);
 });
