@@ -89,13 +89,16 @@ export async function observeV3GithubWaveRulesetPolicy(readClient){
  }
  if(matching.length!==2)
   return reject("wave_rulesets_missing_or_ambiguous");
+ // Identify the writer by its intended creation/update capability, then
+ // check the OTHER distinct rule for immutability. Do not classify the
+ // writer as "immutable" merely because it erroneously also contains
+ // deletion/non-FF rules: surface the exact writer-type violation instead.
  const writers=matching.filter(x=>x.rules?.some(r=>
   r.type==="creation"||r.type==="update"));
- const immutables=matching.filter(x=>x.rules?.some(r=>
-  r.type==="deletion"||r.type==="non_fast_forward"));
- if(writers.length!==1||immutables.length!==1)
+ if(writers.length!==1)
   return reject("wave_rulesets_combined_or_not_separated");
+ const immutable=matching.find(x=>x.id!==writers[0].id);
  return inspectV3GithubWaveRulesets({
-  writer:writers[0],immutable:immutables[0]
+  writer:writers[0],immutable
  });
 }

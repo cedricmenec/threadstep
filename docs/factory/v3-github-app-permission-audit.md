@@ -35,3 +35,27 @@ Les réponses `blocked` (wave rulesets absents), `uncertain` (lecture ou race do
 Leur configuration doit être contrôlée via les endpoints GitHub REST après création. Cette PR ne les crée **pas**.
 
 **Aucune action propriétaire supplémentaire n'est demandée pour fusionner cette documentation**, qui reste en brouillon. Les actions administratives et tout transport d'un token privé restent non autorisées par défaut.
+
+## Mise à jour du 23 octobre 2026, ASF-V3-038 : audit G1 réel et reproductible
+
+Le propriétaire a créé les deux règles wave. L'API GitHub retourne maintenant cinq rulesets actifs. L'audit détaillé observe :
+
+| Règle | ID | Configuration | Verdict |
+| --- | --- | --- | --- |
+| main | 25163425 | PR + check + delete/non-FF protégés, aucun bypass | structure conforme |
+| Global writer | 25316890 | creation + update, App Controller 5361227 bypass Always | structure conforme |
+| Global immutable | 25316926 | deletion + non_fast_forward, zéro bypass | structure conforme |
+| Wave writer | 25747770 | creation + update **et deletion + non_fast_forward**, App Controller bypass Always | **G1 BLOQUÉ** |
+| Wave immutable | 25747923 | deletion + non_fast_forward, zéro bypass | structure conforme |
+
+**Action humaine exacte** : dans [Wave writer #25747770](https://github.com/cedricmenec/threadstep/rules/25747770), enlever uniquement les cases **Restrict deletions** et **Block force pushes**, conserver Restrict creations, Restrict updates et le bypass de l'App Controller 5361227. Ne pas modifier la deuxième règle wave ni les trois règles préexistantes. Les patterns enregistrés sont correctement `refs/heads/asf/waves/*`, aucune exclusion.
+
+Le script `scripts/asf/v3/g1-readonly-audit.mjs` peut être appelé sur une copie de la pile V3, avec Node 22+, un **SHA main explicite** et `GH_TOKEN` en variable d'environnement (jeton GitHub *en lecture seule*, non fourni dans l'argument, jamais imprimé). Exemple :
+
+```sh
+node scripts/asf/v3/g1-readonly-audit.mjs "$MAIN_SHA"
+```
+
+Il ne permet par construction que des GET GitHub du dépôt cible sur les deux refs main/global et sur les rulesets. Il retourne un diagnostic JSON sans valeur de secret. Exit code 1 en cas de NO-GO/ambiguïté ; exit code 0 uniquement si la **structure** est observée conforme. Ce statut n'accorde **jamais** de permission d'App, de bootstrap, de fusion sensible ni de dépense. L'absence du ref global (404) est une observation de non-existence et non une autorisation de création.
+
+La qualification CI de tests simulés est distincte de la qualification réelle des jetons des deux Apps ; G2/G3 doivent reproduire les refus GitHub côté serveur en dépôt isolé, avant toute opération sur un ref opérationnel.
