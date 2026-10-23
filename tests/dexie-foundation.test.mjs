@@ -57,14 +57,16 @@ test("1.1 pinned dependencies and committed lockfile", () => {
   assert.equal(lock.packages["node_modules/dexie-cloud-addon"].version, "4.4.15");
 });
 
-test("1.1 vendored asset exists, carries pinned versions and is referenced locally", () => {
+test("1.1 vendored asset exists, carries pinned versions and is imported locally", () => {
   assert.ok(existsSync(resolve(root, "site/vendor/dexie-cloud.mjs")));
   const bundle = read("site/vendor/dexie-cloud.mjs");
   assert.match(bundle, /dexie@4\.4\.6/);
   assert.match(bundle, /dexie-cloud-addon@4\.4\.15/);
   assert.match(bundle, /export\s*\{[^}]*\bDexie\b[^}]*\bdexieCloud\b/);
+  const app = read("site/app.js");
+  assert.match(app, /from "\.\/vendor\/dexie-cloud\.mjs"/);
   const html = read("site/index.html");
-  assert.match(html, /href="\.\/vendor\/dexie-cloud\.mjs"/);
+  assert.doesNotMatch(html, /rel="modulepreload"[^>]*vendor\/dexie-cloud\.mjs/);
   assert.doesNotMatch(html, /<script[^>]+src="https?:\/\//i);
   assert.doesNotMatch(html, /cdn\./i);
 });
