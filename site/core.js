@@ -5,6 +5,8 @@ export const PRIORITIES = ["urgent", "normal", "later"];
 export const OVERVIEW_TASK_LIMIT = 5;
 export const OVERVIEW_FILTER_ALL = "all";
 export const OVERVIEW_FILTER_URGENT = "urgent";
+export const OVERVIEW_FILTER_FOLLOWING = "following";
+export const OVERVIEW_FILTER_COMPLETED = "completed";
 export const NOTE_MAX_LENGTH = 2000;
 const priorityIndex = (priority) => PRIORITIES.indexOf(priority);
 export const emptyDocument = () => ({ version: 1, subjects: [] });
@@ -362,13 +364,26 @@ export function overviewMetrics(document) {
 export function subjectHasPendingUrgency(subject) {
   return subjectMetrics(subject).urgentPending > 0;
 }
+export function overviewSubjectStatus(subject) {
+  const metrics = subjectMetrics(subject);
+  if (metrics.pending > 0) return "following";
+  if (metrics.total > 0) return "completed";
+  return "empty";
+}
 export function isSubjectVisibleInOverviewFilter(subject, mode) {
-  return mode !== OVERVIEW_FILTER_URGENT || subjectHasPendingUrgency(subject);
+  if (mode === OVERVIEW_FILTER_URGENT) return subjectHasPendingUrgency(subject);
+  if (mode === OVERVIEW_FILTER_FOLLOWING || mode === OVERVIEW_FILTER_COMPLETED) {
+    return overviewSubjectStatus(subject) === mode;
+  }
+  return true;
 }
 export function overviewFilteredSubjects(subjects, mode) {
   if (!Array.isArray(subjects)) return [];
-  if (mode !== OVERVIEW_FILTER_URGENT) return subjects;
-  return subjects.filter((subject) => subjectHasPendingUrgency(subject));
+  if (mode !== OVERVIEW_FILTER_URGENT && mode !== OVERVIEW_FILTER_FOLLOWING &&
+      mode !== OVERVIEW_FILTER_COMPLETED) {
+    return subjects;
+  }
+  return subjects.filter((subject) => isSubjectVisibleInOverviewFilter(subject, mode));
 }
 function countLabel(count, singular, plural) {
   const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
