@@ -12,6 +12,7 @@ const GLOBAL=S("1"),WAVE=S("2"),ORIGIN=S("a");
 const WAVE_ID="wave-native-terminal-015";
 const ROOT=BASE+"/git/ref/heads/asf/control/active-wave-v3";
 const WREF=BASE+"/git/ref/heads/asf/waves/"+WAVE_ID;
+const WAVE_POLICY="refs/heads/asf/waves/*";
 const rules=(id,ref,types,bypass=[])=>({
  id,source:REPO,target:"branch",enforcement:"active",
  conditions:{ref_name:{include:[ref],exclude:[]}},
@@ -26,8 +27,13 @@ const policyGlobal=()=>rules(2,ADMISSION_REGISTRY_REF,
  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
 const policyImmutable=()=>rules(3,ADMISSION_REGISTRY_REF,
  ["deletion","non_fast_forward"]);
+const policyWaveWriter=()=>rules(4,WAVE_POLICY,["creation","update"],
+ [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]);
+const policyWaveImmutable=()=>rules(5,WAVE_POLICY,
+ ["deletion","non_fast_forward"]);
 function fixture({kind="RELEASE",moved=false,invalidRegistry=false,
- malformedJournal=false,missingPolicy=false,missingWave=false}={}){
+ malformedJournal=false,missingPolicy=false,missingWave=false,
+ missingWavePolicy=false,badWaveWriter=false,badWaveImmutable=false}={}){
  const manifest=createV3Manifest({
   waveId:WAVE_ID,repository:REPO,backlogCommit:ORIGIN,
   model:"openrouter/deepseek/deepseek-v4.1-flash",
@@ -57,10 +63,17 @@ function fixture({kind="RELEASE",moved=false,invalidRegistry=false,
  const get=async path=>{
   paths.push(path);
   if(path===BASE+"/rulesets")
-   return {ok:true,data:missingPolicy?[{id:1}]:[{id:1},{id:2},{id:3}]};
+   return {ok:true,data:missingPolicy?[{id:1}]:[
+    {id:1},{id:2},{id:3},...(missingWavePolicy?[]:[{id:4},{id:5}])]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:policyMain()};
   if(path===BASE+"/rulesets/2")return {ok:true,data:policyGlobal()};
   if(path===BASE+"/rulesets/3")return {ok:true,data:policyImmutable()};
+  if(path===BASE+"/rulesets/4")return {ok:true,data:badWaveWriter?
+   {...policyWaveWriter(),bypass_actors:[{actor_type:"Integration",
+    actor_id:5321746,bypass_mode:"always"}]}:policyWaveWriter()};
+  if(path===BASE+"/rulesets/5")return {ok:true,data:badWaveImmutable?
+   {...policyWaveImmutable(),bypass_actors:[{actor_type:"Integration",
+    actor_id:5361227,bypass_mode:"always"}]}:policyWaveImmutable()};
   if(path===ROOT)return {ok:true,data:{
    ref:ADMISSION_REGISTRY_REF,object:{type:"commit",sha:
     moved&&paths.filter(p=>p===ROOT).length>1?S("3"):GLOBAL}
@@ -121,6 +134,18 @@ test("a missing global ruleset rejects terminal even with otherwise valid snapsh
  assert.equal(r.reason,"github_global_rules_unconfirmed");
  assert.equal(f.paths.some(p=>p===ROOT),false);
  noRights(r);
+});
+test("terminal observation blocks unprotected wave history BEFORE ref reads",async()=>{
+ for(const option of [{missingWavePolicy:true},{badWaveWriter:true},
+  {badWaveImmutable:true}]){
+  const f=fixture(option);
+  const r=await observeV3GithubTerminalReadiness(f);
+  assert.equal(r.status,"rejected",JSON.stringify({option,r}));
+  assert.equal(r.reason,"terminal_wave_rulesets_unconfirmed");
+  assert.equal(f.paths.includes(ROOT),false);
+  assert.equal(f.paths.includes(WREF),false);
+  noRights(r);
+ }
 });
 test("corrupted journal, missing wave ref, invalid global replay block all terminal events",async()=>{
  for(const opt of [{malformedJournal:true},{missingWave:true},
