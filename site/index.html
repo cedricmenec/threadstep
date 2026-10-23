@@ -291,6 +291,16 @@
         <button type="button" id="focus-suggest" class="primary focus-suggest">Une étape pour maintenant</button>
         <div id="focus-card" class="focus-card" aria-live="polite" hidden></div>
       </div>
+      <section id="overview-urgencies" class="overview-urgencies" aria-labelledby="overview-urgencies-title" hidden>
+        <h3 id="overview-urgencies-title" class="overview-urgencies-title" tabindex="-1">Urgences à traiter</h3>
+        <p id="overview-urgencies-empty" class="overview-urgencies-empty" hidden>Aucune urgence en attente</p>
+        <ul id="overview-urgencies-list" class="overview-urgencies-list" hidden></ul>
+        <div class="overview-urgencies-controls">
+          <p id="overview-urgencies-count" class="overview-urgencies-count" hidden></p>
+          <button type="button" id="overview-urgencies-more" class="secondary overview-urgencies-toggle" hidden>Voir toutes les urgences</button>
+          <button type="button" id="overview-urgencies-reduce" class="secondary overview-urgencies-toggle" hidden>Réduire</button>
+        </div>
+      </section>
       <form id="subject-form" class="add-subject">
         <label for="subject-title" class="sr-only">Nom du sujet</label>
         <input id="subject-title" name="subject" maxlength="100" required placeholder="Ajouter un sujet ou un projet…" autocomplete="off">

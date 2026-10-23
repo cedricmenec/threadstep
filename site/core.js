@@ -3,6 +3,7 @@ export const STORAGE_KEY = "threadstep.document.v1";
 export const RESUME_KEY = "threadstep.resume.v1";
 export const PRIORITIES = ["urgent", "normal", "later"];
 export const OVERVIEW_TASK_LIMIT = 5;
+export const OVERVIEW_URGENCY_LIMIT = 5;
 export const OVERVIEW_FILTER_ALL = "all";
 export const OVERVIEW_FILTER_URGENT = "urgent";
 export const OVERVIEW_FILTER_FOLLOWING = "following";
@@ -326,6 +327,10 @@ export function totalTaskCountLabel(count) {
   const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
   return normalized + " tâche" + (normalized > 1 ? "s" : "") + " au total";
 }
+export function isPendingUrgentItem(item) {
+  return !!item && typeof item === "object" &&
+    item.done === false && item.priority === "urgent";
+}
 function countItemMetrics(items) {
   const list = Array.isArray(items) ? items : [];
   let total = 0;
@@ -339,7 +344,7 @@ function countItemMetrics(items) {
       done += 1;
     } else {
       pending += 1;
-      if (item.priority === "urgent") urgentPending += 1;
+      if (isPendingUrgentItem(item)) urgentPending += 1;
     }
   }
   return { total, done, pending, urgentPending, active: pending > 0 };
@@ -363,6 +368,69 @@ export function overviewMetrics(document) {
 }
 export function subjectHasPendingUrgency(subject) {
   return subjectMetrics(subject).urgentPending > 0;
+}
+function overviewUrgencyEntry(subject, item, parent) {
+  const parentId = item.parentId === null || item.parentId === undefined
+    ? null
+    : item.parentId;
+  return {
+    subjectId: subject.id,
+    subjectTitle: subject.title,
+    itemId: item.id,
+    itemTitle: item.title,
+    parentId,
+    parentTitle: parent && typeof parent.title === "string" ? parent.title : null,
+    isSubstep: parentId !== null
+  };
+}
+export function overviewUrgencyEntries(document) {
+  const subjects = document && Array.isArray(document.subjects) ? document.subjects : [];
+  const entries = [];
+  for (const subject of subjects) {
+    if (!subject || typeof subject !== "object" || !Array.isArray(subject.items)) continue;
+    const items = subject.items;
+    const emitted = new Set();
+    const parents = items.filter((item) =>
+      item && typeof item === "object" &&
+      (item.parentId === null || item.parentId === undefined));
+    for (const parent of parents) {
+      if (isPendingUrgentItem(parent)) {
+        entries.push(overviewUrgencyEntry(subject, parent, null));
+      }
+      emitted.add(parent.id);
+      for (const child of items) {
+        if (!child || typeof child !== "object" || child.parentId !== parent.id) continue;
+        emitted.add(child.id);
+        if (isPendingUrgentItem(child)) {
+          entries.push(overviewUrgencyEntry(subject, child, parent));
+        }
+      }
+    }
+    for (const item of items) {
+      if (!item || typeof item !== "object" || emitted.has(item.id)) continue;
+      if (!isPendingUrgentItem(item)) continue;
+      const parent = items.find((entry) =>
+        entry && typeof entry === "object" && entry.id === item.parentId) || null;
+      entries.push(overviewUrgencyEntry(subject, item, parent));
+    }
+  }
+  return entries;
+}
+export function overviewUrgencyView(document, expanded) {
+  const entries = overviewUrgencyEntries(document);
+  const shown = expanded === true ? entries.slice() : entries.slice(0, OVERVIEW_URGENCY_LIMIT);
+  return {
+    entries,
+    shown,
+    total: entries.length,
+    hiddenCount: entries.length - shown.length,
+    hasMore: entries.length > OVERVIEW_URGENCY_LIMIT
+  };
+}
+export function findOverviewUrgency(document, subjectId, itemId) {
+  if (typeof subjectId !== "string" || typeof itemId !== "string") return null;
+  return overviewUrgencyEntries(document).find((entry) =>
+    entry.subjectId === subjectId && entry.itemId === itemId) || null;
 }
 export function overviewSubjectStatus(subject) {
   const metrics = subjectMetrics(subject);

@@ -42,11 +42,16 @@ const item = (id, priority = "normal", done = false, parentId = null) => ({
 const subject = (id, items = []) => ({ id, title: id, items });
 const doc = (...subjects) => ({ version: 1, subjects });
 
-const pureSource = between(
-  core,
-  "export function subjectHasPendingUrgency(subject)",
-  "function countLabel("
-);
+const pureSource = [
+  core.slice(
+    core.indexOf("export function subjectHasPendingUrgency(subject)"),
+    core.indexOf("function overviewUrgencyEntry(")
+  ),
+  core.slice(
+    core.indexOf("export function overviewSubjectStatus(subject)"),
+    core.indexOf("function countLabel(")
+  )
+].join("\n");
 const syncSource = app.slice(
   app.indexOf("function overviewFilterControl("),
   app.indexOf("function setOverviewProjectFilter(")
@@ -382,6 +387,8 @@ function createRenderHarness({ mode = OVERVIEW_FILTER_ALL, subjects = [], allowe
     },
     renderSuggestion: () => notifications.push("suggestion"),
     renderResumeCard: () => notifications.push("resume"),
+    renderUrgencyList: () => {},
+    hideOverviewUrgencies: () => {},
     renderSubject: (entry) => ({ tag: "section", cls: "subject", subjectId: entry.id }),
     renderDetail: () => {},
     replaceSubjectsInCurrentView: (next) => { subjectsEl.nodes = next.nodes.slice(); },
