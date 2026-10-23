@@ -97,8 +97,12 @@ export async function observeV3GithubRulesetPolicy(readClient) {
   let collection;
   try { collection = await readClient.get(BASE + "/rulesets"); }
   catch { return uncertain("rulesets_unavailable"); }
-  if (!collection?.ok || !Array.isArray(collection.data) ||
-      collection.data.length > 64) return uncertain("rulesets_unavailable");
+  // GitHub GET /rulesets defaults to 30 results per page. Without
+  // verified pagination, a full first page might conceal another policy.
+  if (!collection?.ok || !Array.isArray(collection.data))
+    return uncertain("rulesets_unavailable");
+  if (collection.data.length >= 30)
+    return uncertain("rulesets_pagination_unconfirmed");
   const full = [];
   const seen = new Set();
   for (const item of collection.data) {
