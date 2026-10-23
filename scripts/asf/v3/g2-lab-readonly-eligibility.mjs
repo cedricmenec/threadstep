@@ -34,7 +34,9 @@ export function createV3LabReadOnlyClient({
  const root=base(repository);
  const allowed=path=>path===root||
   [1,2,3].some(page=>path===root+
-    "/rulesets?per_page=100&page="+page);
+    "/rulesets?per_page=100&page="+page)||
+  new RegExp("^"+root.replaceAll("/","\\/")+
+    "/rulesets/[1-9][0-9]{0,15}$").test(path);
  return createGithubClient({timeoutMs:10000,transport:async(path,{timeoutMs})=>{
   if(!allowed(path))throw Object.assign(Error("lab_get_path_denied"),
     {code:"invalid_path"});
