@@ -19,6 +19,8 @@ import { observeV3GithubRulesetPolicy, V3_CONTROLLER_APP_ID }
  from "./github-native-control.mjs";
 import { observeV3GithubBootstrapReadiness }
  from "./github-native-bootstrap-readiness.mjs";
+import { observeV3GithubWaveRulesetPolicy }
+ from "./github-native-wave-ruleset.mjs";
 import { contentSha256 } from "../waves/hash.mjs";
 import { checkBacklogIndex } from "../backlog-index.mjs";
 import { createGithubClient } from "../github/client.mjs";
