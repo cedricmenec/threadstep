@@ -16,6 +16,7 @@ const WAVE_ID="wave-terminal-cas-v3-022";
 const G_GET=BASE+"/git/ref/heads/asf/control/active-wave-v3";
 const G_PATCH=BASE+"/git/refs/heads/asf/control/active-wave-v3";
 const W_GET=BASE+"/git/ref/heads/asf/waves/"+WAVE_ID;
+const WAVE_POLICY="refs/heads/asf/waves/*";
 function rule(id,ref,types,bypass=[]){
  return {id,source:REPO,target:"branch",enforcement:"active",
   conditions:{ref_name:{include:[ref],exclude:[]}},
@@ -29,7 +30,8 @@ function fixture({
  wrongApp=false,invalidRegistry=false,badJournal=false,
  lostTree=false,wrongCommitParent=false,malformedNext=false,
  spoofPatch=false,moveBeforeWrite=false,waveMovesAfterPatch=false,
- doublePatchResult=false,failRegistryReadback=false
+ doublePatchResult=false,failRegistryReadback=false,
+ missingWaveRuleset=false,badWaveWriter=false
 }={}) {
  const manifest=createV3Manifest({
   waveId:WAVE_ID,repository:REPO,backlogCommit:ORIGIN,
@@ -65,7 +67,8 @@ function fixture({
  };
  const get=async path=>{
   state.reads.push(path);
-  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2},{id:3}]};
+  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2},{id:3},
+   ...(missingWaveRuleset?[]:[{id:4},{id:5}])]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:rule(1,
    "refs/heads/main",["pull_request","required_status_checks",
      "deletion","non_fast_forward"])};
@@ -76,6 +79,13 @@ function fixture({
    }])};
   if(path===BASE+"/rulesets/3")return {ok:true,data:rule(3,
    ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"])};
+  if(path===BASE+"/rulesets/4")return {ok:true,data:rule(4,
+   WAVE_POLICY,["creation","update"],[{
+    actor_type:"Integration",actor_id:badWaveWriter?5321746:5361227,
+    bypass_mode:"always"
+   }])};
+  if(path===BASE+"/rulesets/5")return {ok:true,data:rule(5,
+   WAVE_POLICY,["deletion","non_fast_forward"])};
   if(path===G_GET){
    const count=state.reads.filter(p=>p===G_GET).length;
    if(moveBeforeWrite&&count>=5)state.head=RACED;
@@ -186,6 +196,16 @@ test("STOP_UNCERTAIN allows QUARANTINE only, never RELEASING the active wave",as
  const denied=await attemptV3GithubNativeTerminalCAS(wrong);
  assert.equal(denied.status,"rejected");
  assert.equal(nWrites(wrong),0);noAuthority(denied);
+});
+test("unprotected wave rulesets block both terminal writer kinds before Git mutation",async()=>{
+ for(const options of [{missingWaveRuleset:true},{badWaveWriter:true}]){
+  for(const kind of ["RELEASE","QUARANTINE"]){
+   const f=fixture({...options,kind});
+   const r=await attemptV3GithubNativeTerminalCAS(f);
+   assert.equal(r.status,"rejected",JSON.stringify({options,kind,r}));
+   assert.equal(nWrites(f),0);noAuthority(r);
+  }
+ }
 });
 test("GitHub lost PATCH response is uncertain, one PATCH, absolutely no retry",async()=>{
  const f=fixture({lostPatch:true});
