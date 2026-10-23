@@ -33,3 +33,9 @@ Le modèle sert uniquement à garantir que la politique de transitions ne transf
 Tests négatifs : duplications, perte de réponse, deux résultats contradictoires, parent/tree SHA incorrect, tentative post-quarantaine, mutation de l'historique, corruption des compteurs, injection de secret, révision locale périmée.
 
 Suivi propriétaire : [issue #86](https://github.com/cedricmenec/threadstep/issues/86), [procédure Notion](https://app.notion.com/p/3fc12ac9163681eb8dacca65bdbfc882).
+
+## Qualification C4b hors ligne, 23 octobre 2026 (ASF-V3-037)
+
+La suite `tests/asf-v3-genesis-durable-intent-lab.test.mjs` ajoute un faux stockage partagé simulant un compare-and-swap durable entre deux runners indépendants. Elle prouve au niveau de ce **modèle de test seulement** que `BEGIN_CREATE_ATTEMPT` doit être enregistré avant l'appel fictif `CREATE` ; une réponse perdue, un redémarrage ou une course sur la même révision n'autorisent jamais un second envoi. Même `VERIFIED_OBSERVED` renvoie `authorized:false` et `canSpend:false`. La corruption du journal déclenche un refus. Aucun endpoint GitHub REST, ref ou secret réel n'est utilisé.
+
+Cette simulation ne résout **pas** la garantie de persistance et de sérialisation distribuée dans GitHub. La future implémentation de G2 devra choisir un support durable protégé, prouver une écriture CAS atomique de l'intention **avant** `POST /git/refs`, tester les crashs réels avec le jeton Controller V3 restreint et refuser les reprises ambiguës. Aucun résultat de cette suite n'autorise une création live ni une dépense.
