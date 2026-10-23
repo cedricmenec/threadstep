@@ -1,0 +1,36 @@
+name: ASF Mutex Lab V3 Shared
+on:
+  workflow_dispatch:
+    inputs:
+      hold_seconds:
+        description: 'Simulated job duration (seconds)'
+        type: choice
+        required: true
+        default: '45'
+        options:
+          - '15'
+          - '45'
+          - '120'
+permissions: {}
+jobs:
+  simulate-v3:
+    if: ${{ github.event.repository.name == 'asf-v3-mutex-lab' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: threadstep-paid-development-v1
+      cancel-in-progress: false
+    env:
+      HOLD_SECONDS: ${{ inputs.hold_seconds }}
+    steps:
+      - name: Bounded simulation with no external calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$HOLD_SECONDS" in
+            15|45|120) ;;
+            *) printf 'invalid hold_seconds\n' >&2; exit 64 ;;
+          esac
+          printf 'LAB_START role=v3 run_id=%s attempt=%s at=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          sleep "$HOLD_SECONDS"
+          printf 'LAB_END role=v3 run_id=%s attempt=%s at=%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
