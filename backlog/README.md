@@ -1,13 +1,5 @@
 # Backlog ThreadStep
 
-## Prochaines fonctionnalités Overview (23 octobre 2026)
-
-- **[TS-055](tasks/TS-055.md)** : distinguer « Tous », « Projets avec urgences », « Projets à suivre » et « Projets terminés ». Présentation non destructive, `ready / allowed / low`, priorité haute.
-- **[TS-056](tasks/TS-056.md)** : panneau transversal « Urgences à traiter », avec projet d'origine, tâches et sous-tâches, accès ciblé, cinq résultats et développement explicite. `ready / manual / medium`, priorité haute.
-- Inspiration **fonctionnelle** de l'Overview Stitch : distinction actif/terminé proche des archives, et vue d'actions prioritaires. Conserver vanilla, données métier, sécurité Dexie, focus/scroll et suggestion déterministe.
-- Les tâches livrées TS-053 et TS-054 sont **retirées du backlog actif**, sans création d'archives dédiées, après vérification de leurs PR #185 et #186 fusionnées et des checks CI/Pages de main `a6707d8c39a034eacc80bc3ea29a31842bb0b682`. L'historique Git reste naturellement disponible.
-- PR strictement documentaire : aucun code applicatif, aucune exécution payante et aucune implémentation déclenchée.
-
 ## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
 
 - **[TS-052](tasks/TS-052.md)** : éviter le clignotement des états transitoires Dexie sur Overview. Diagnostic natif conservé en arrière-plan ; loader discret uniquement si les projets ne peuvent pas encore être lus ; message stable et lien Synchronisation pour une anomalie réellement actionnable. `ready / manual / medium`, priorité haute ; dépend de TS-043 et préserve les protections de TS-045/TS-048. Le clignotement provient plausiblement de `buildDiagnosticSummary()`/`applySyncSummaryVisibility()` ; reproduction sur appareil encore à confirmer.
