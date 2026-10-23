@@ -179,7 +179,8 @@ test("completed no-work RELEASE uses one Git fast-forward and two independent te
  assert.equal(f.state.next.state,"AVAILABLE");
  assert.equal(f.state.next.active,null);
  assert.equal(f.state.next.events.at(-1).type,"RELEASE");
- assert.equal(f.state.reads.filter(p=>p===BASE+"/rulesets").length,2);
+ // Every terminal transaction performs two independent global+wave checks.
+ assert.equal(f.state.reads.filter(p=>p===BASE+"/rulesets").length,4);
  assert.equal(f.state.reads.filter(p=>p===G_GET).length,6);
  onlyOnePatch(f);noAuthority(r);
 });
