@@ -1,5 +1,13 @@
 # Backlog ThreadStep
 
+## Tableau de bord Overview : TS-053 et TS-054 (23 octobre 2026)
+
+- **[TS-053](tasks/TS-053.md)** : synthèse des projets actifs, étapes restantes et urgences, progression de chaque projet (parents et sous-tâches). `ready / allowed / low`, priorité haute. Travail de lecture seule avec calculs purs ; ne touche pas à la persistance Dexie, à ses barrières de visibilité ni à l'architecture vanilla.
+- **[TS-054](tasks/TS-054.md)** : filtre temporaire « Projets avec urgences » ; une seule étape urgente non terminée suffit, même si elle est une sous-tâche. `ready / manual / medium`, priorité normale, dépend de la livraison de TS-053. Les compteurs, la suggestion et la reprise restent globaux ; les liens de révélation doivent fonctionner même quand un projet est masqué.
+- Origine du cadrage : [FONC-02, backlog Notion](https://app.notion.com/p/40212ac916368156bd3fc102d836a17e) ; inspiration **fonctionnelle** des maquettes Stitch, sans changement de design system, Vite, React ni Tailwind. La PR est strictement documentaire et ne déclenche aucun appel OpenRouter, aucune modification du site ni implémentation.
+- **Ordre suggéré :** implémenter et qualifier TS-053, puis décider du lancement distinct de TS-054 après recette. Les risques sont évalués selon le périmètre exact et devront être revus en cas de changement d'architecture, de contrôle d'accès ou de lecture Cloud.
+
+
 ## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
 
 - **[TS-052](tasks/TS-052.md)** : éviter le clignotement des états transitoires Dexie sur Overview. Diagnostic natif conservé en arrière-plan ; loader discret uniquement si les projets ne peuvent pas encore être lus ; message stable et lien Synchronisation pour une anomalie réellement actionnable. `ready / manual / medium`, priorité haute ; dépend de TS-043 et préserve les protections de TS-045/TS-048. Le clignotement provient plausiblement de `buildDiagnosticSummary()`/`applySyncSummaryVisibility()` ; reproduction sur appareil encore à confirmer.
