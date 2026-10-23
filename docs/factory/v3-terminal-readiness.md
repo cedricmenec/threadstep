@@ -30,3 +30,8 @@ L'observateur ne peut pas rendre une décision valide contre une transition conc
 \`tests/asf-v3-github-native-terminal-readiness.test.mjs\` couvre les vagues sans travail, l'arrêt ambigu, le ruleset manquant, le rejeu corrompu, le ref de vague absent, la course sur le ref global et les entrées non fiables.
 
 Il reste ensuite la mise en œuvre **non payante** de la validation en situation concurrente et du writer terminal restreint, ainsi que les droits GitHub App et la capture des inputs propriétaires par le workflow d'origine.
+
+
+## Mise à jour C4a / G1, 23 octobre 2026 : garde avant RELEASE/QUARANTINE
+
+Le préflight terminal `scripts/asf/v3/github-native-terminal-readiness.mjs` vérifie désormais, en plus de la protection du registre global, la **paire indépendante** des rulesets `refs/heads/asf/waves/*`. Sans writer `creation/update` limité au Controller V3 5361227 et sans immutabilité `deletion/non_fast_forward` sans bypass, il refuse avant de charger les refs et les preuves de livraison. Le writer terminal non raccordé utilise ce préflight avant tout Git CAS. Les tests vérifient le refus des deux événements RELEASE et QUARANTINE sans écriture. Il ne s'agit pas d'une preuve de droits GitHub App réels ni d'une activation : les gates G1, G2 et G3 et les autorisations ciblées restent requis.
