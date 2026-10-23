@@ -1,12 +1,12 @@
 # Backlog ThreadStep
 
-## Tableau de bord Overview : TS-053 et TS-054 (23 octobre 2026)
+## Prochaines fonctionnalités Overview (23 octobre 2026)
 
-- **[TS-053](tasks/TS-053.md)** : synthèse des projets actifs, étapes restantes et urgences, progression de chaque projet (parents et sous-tâches). `ready / allowed / low`, priorité haute. Travail de lecture seule avec calculs purs ; ne touche pas à la persistance Dexie, à ses barrières de visibilité ni à l'architecture vanilla.
-- **[TS-054](tasks/TS-054.md)** : filtre temporaire « Projets avec urgences » ; une seule étape urgente non terminée suffit, même si elle est une sous-tâche. `ready / manual / medium`, priorité normale, dépend de la livraison de TS-053. Les compteurs, la suggestion et la reprise restent globaux ; les liens de révélation doivent fonctionner même quand un projet est masqué.
-- Origine du cadrage : [FONC-02, backlog Notion](https://app.notion.com/p/40212ac916368156bd3fc102d836a17e) ; inspiration **fonctionnelle** des maquettes Stitch, sans changement de design system, Vite, React ni Tailwind. La PR est strictement documentaire et ne déclenche aucun appel OpenRouter, aucune modification du site ni implémentation.
-- **Ordre suggéré :** implémenter et qualifier TS-053, puis décider du lancement distinct de TS-054 après recette. Les risques sont évalués selon le périmètre exact et devront être revus en cas de changement d'architecture, de contrôle d'accès ou de lecture Cloud.
-
+- **[TS-055](tasks/TS-055.md)** : distinguer « Tous », « Projets avec urgences », « Projets à suivre » et « Projets terminés ». Présentation non destructive, `ready / allowed / low`, priorité haute.
+- **[TS-056](tasks/TS-056.md)** : panneau transversal « Urgences à traiter », avec projet d'origine, tâches et sous-tâches, accès ciblé, cinq résultats et développement explicite. `ready / manual / medium`, priorité haute.
+- Inspiration **fonctionnelle** de l'Overview Stitch : distinction actif/terminé proche des archives, et vue d'actions prioritaires. Conserver vanilla, données métier, sécurité Dexie, focus/scroll et suggestion déterministe.
+- Les tâches livrées TS-053 et TS-054 sont **retirées du backlog actif**, sans création d'archives dédiées, après vérification de leurs PR #185 et #186 fusionnées et des checks CI/Pages de main `a6707d8c39a034eacc80bc3ea29a31842bb0b682`. L'historique Git reste naturellement disponible.
+- PR strictement documentaire : aucun code applicatif, aucune exécution payante et aucune implémentation déclenchée.
 
 ## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
 

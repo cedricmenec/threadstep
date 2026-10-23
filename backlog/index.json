@@ -713,8 +713,8 @@
     "content_sha256": "7ffbed3b006179cbc780331b4114b1e45f9e9e2edfb392d928e7394e87171eb8"
   },
   {
-    "id": "TS-053",
-    "path": "backlog/tasks/TS-053.md",
+    "id": "TS-055",
+    "path": "backlog/tasks/TS-055.md",
     "type": "product",
     "status": "ready",
     "priority": "high",
@@ -722,20 +722,18 @@
     "risk": "low",
     "depends_on": [],
     "created_at": "2026-10-23",
-    "content_sha256": "f1cda48cad0026a317034ff11d2762af1d3b5d7b6a5611fe8df01c658fbb0813"
+    "content_sha256": "707286bb8d49fa07fb379802c02551f7c3b6a5369b826c2263f6c81b0e8b35d5"
   },
   {
-    "id": "TS-054",
-    "path": "backlog/tasks/TS-054.md",
+    "id": "TS-056",
+    "path": "backlog/tasks/TS-056.md",
     "type": "product",
     "status": "ready",
-    "priority": "normal",
+    "priority": "high",
     "automation": "manual",
     "risk": "medium",
-    "depends_on": [
-      "TS-053"
-    ],
+    "depends_on": [],
     "created_at": "2026-10-23",
-    "content_sha256": "9a1a5391d103d281b266ad288909a70436692a8f95cf42f97a5984406b059832"
+    "content_sha256": "ce528f176081465e5c03a555d50a69656a06f6149ba7e282ac1d8765777d06c7"
   }
 ]
