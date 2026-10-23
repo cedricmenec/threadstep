@@ -113,3 +113,8 @@ Le test est **non payant, sans réseau et sans droits Git**. Il ne prouve ni le 
 5. Ne pas confondre un succès de CI sur la PR avec une preuve de fonctionnement à dix tâches sur GitHub réel.
 
 **Décision d'architecture proposée :** une seule vague V3 active pour le dépôt, parallélisme payant global de 1 (V1/V3) et aucun mécanisme de sortie automatique de quarantaine. Ces garanties ne sont pas opérationnelles tant que le writer et les workflows ne sont pas branchés.
+
+
+## Mise à jour C4a / G1, 23 octobre 2026 : sécurité avant ADMIT
+
+Le prototype `scripts/asf/v3/github-native-global-cas.mjs` exige désormais, avant les POST/PATCH de la transaction Git Data, une observation des **deux rulesets** protégeant `refs/heads/asf/waves/*` (ASF-V3-035). Le writer doit accepter exclusivement le bypass de l'App contrôleur 5361227 pour `creation/update`, tandis que `deletion/non_fast_forward` n'a aucun bypass. Les tests rejettent l'absence de règles, l'App exécuteur 5321746 comme writer et un bypass d'immutabilité. Ce contrôle ne prouve pas les droits des jetons réels et n'autorise aucun démarrage payant. Le contrôle G1 administratif, les tests GitHub sans LLM et l'approbation ciblée demeurent indispensables.
