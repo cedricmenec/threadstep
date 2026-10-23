@@ -69,9 +69,12 @@ export async function observeV3GithubWaveRulesetPolicy(readClient){
  let summary;
  try{summary=await readClient.get(BASE+"/rulesets");}
  catch{return unknown("wave_ruleset_list_unavailable");}
- if(summary?.ok!==true||!Array.isArray(summary.data)||
-    summary.data.length>64)
+ // GitHub default page size is 30; a full page is NOT exhaustive.
+ // Fail closed rather than silently ignoring additional wave rulesets.
+ if(summary?.ok!==true||!Array.isArray(summary.data))
   return unknown("wave_ruleset_list_unavailable");
+ if(summary.data.length>=30)
+  return unknown("wave_ruleset_pagination_unconfirmed");
  const seen=new Set(),matching=[];
  for(const item of summary.data){
   if(!ID.test(String(item?.id??""))||seen.has(item.id))
