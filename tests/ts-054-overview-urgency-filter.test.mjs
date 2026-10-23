@@ -5,6 +5,8 @@ import { runInNewContext } from "node:vm";
 import {
   OVERVIEW_FILTER_ALL,
   OVERVIEW_FILTER_URGENT,
+  OVERVIEW_FILTER_FOLLOWING,
+  OVERVIEW_FILTER_COMPLETED,
   emptyDocument,
   newItem,
   newSubject,
@@ -43,13 +45,12 @@ const pureSource = between(
   "function countLabel("
 );
 const syncSource = app.slice(
-  app.indexOf("function syncOverviewFilterControl()"),
-  app.indexOf("function setOverviewUrgencyFilter(")
+  app.indexOf("function overviewFilterControl("),
+  app.indexOf("function setOverviewProjectFilter(")
 );
-const setSource = between(
-  app,
-  "function setOverviewUrgencyFilter(",
-  "function resetExpandedViewState("
+const setSource = app.slice(
+  app.indexOf("function setOverviewProjectFilter("),
+  app.indexOf("function resetExpandedViewState(")
 );
 const resetSource = app.slice(
   app.indexOf("function resetExpandedViewState()"),
@@ -112,14 +113,19 @@ test("TS-054 the pure model has no DOM, storage, network, timer or auth access",
 
 test("TS-054 the static control has exact labels, initial state and DOM order", () => {
   const block = between(html, '<fieldset id="overview-urgency-filter"', "</fieldset>");
-  assert.equal((block.match(/type="radio"/g) || []).length, 2);
-  assert.equal((block.match(/name="overview-urgency-filter"/g) || []).length, 2);
+  assert.equal((block.match(/type="radio"/g) || []).length, 4);
+  assert.equal((block.match(/name="overview-urgency-filter"/g) || []).length, 4);
   assert.equal((block.match(/>Tous les projets</g) || []).length, 1);
   assert.equal((block.match(/>Projets avec urgences</g) || []).length, 1);
+  assert.equal((block.match(/>Projets à suivre</g) || []).length, 1);
+  assert.equal((block.match(/>Projets terminés</g) || []).length, 1);
   assert.match(block, /id="overview-filter-all"[^>]*checked/);
+  assert.equal((block.match(/checked/g) || []).length, 1);
   assert.doesNotMatch(block, /aria-live/);
   assert.equal((html.match(/>Tous les projets</g) || []).length, 1);
   assert.equal((html.match(/>Projets avec urgences</g) || []).length, 1);
+  assert.equal((html.match(/>Projets à suivre</g) || []).length, 1);
+  assert.equal((html.match(/>Projets terminés</g) || []).length, 1);
 
   const completed = html.indexOf('id="hide-completed"');
   const filter = html.indexOf('id="overview-urgency-filter"');
@@ -134,55 +140,73 @@ test("TS-054 the control wraps and offers a visible 44 by 44 pixel target", () =
   assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:3px solid/);
 });
 
-function createSyncHarness(mode, allChecked, urgentChecked) {
-  let allWrites = 0;
-  let urgentWrites = 0;
-  const all = {
-    _checked: allChecked,
+function createSyncHarness(mode, { allChecked = true, urgentChecked = false,
+                                   followingChecked = false, completedChecked = false } = {}) {
+  const writes = { all: 0, urgent: 0, following: 0, completed: 0 };
+  const make = (key, initial) => ({
+    _checked: initial,
     get checked() { return this._checked; },
-    set checked(value) { allWrites += 1; this._checked = value; }
-  };
-  const urgent = {
-    _checked: urgentChecked,
-    get checked() { return this._checked; },
-    set checked(value) { urgentWrites += 1; this._checked = value; }
-  };
+    set checked(value) { writes[key] += 1; this._checked = value; }
+  });
+  const all = make("all", allChecked);
+  const urgent = make("urgent", urgentChecked);
+  const following = make("following", followingChecked);
+  const completed = make("completed", completedChecked);
   const context = {
-    overviewUrgencyFilter: mode,
+    overviewProjectFilter: mode,
+    OVERVIEW_FILTER_ALL,
     OVERVIEW_FILTER_URGENT,
+    OVERVIEW_FILTER_FOLLOWING,
+    OVERVIEW_FILTER_COMPLETED,
     overviewFilterAllEl: all,
-    overviewFilterUrgentEl: urgent
+    overviewFilterUrgentEl: urgent,
+    overviewFilterFollowingEl: following,
+    overviewFilterCompletedEl: completed
   };
   runInNewContext(syncSource, context);
-  return { context, all, urgent, allWrites: () => allWrites, urgentWrites: () => urgentWrites };
+  return {
+    context, all, urgent, following, completed,
+    allWrites: () => writes.all,
+    urgentWrites: () => writes.urgent,
+    followingWrites: () => writes.following,
+    completedWrites: () => writes.completed
+  };
 }
 
 test("TS-054 synchronization only rewrites a radio whose checked state differs", () => {
-  const aligned = createSyncHarness(OVERVIEW_FILTER_ALL, true, false);
+  const aligned = createSyncHarness(OVERVIEW_FILTER_ALL);
   aligned.context.syncOverviewFilterControl();
   aligned.context.syncOverviewFilterControl();
   assert.equal(aligned.allWrites(), 0);
   assert.equal(aligned.urgentWrites(), 0);
+  assert.equal(aligned.followingWrites(), 0);
+  assert.equal(aligned.completedWrites(), 0);
 
-  const stale = createSyncHarness(OVERVIEW_FILTER_URGENT, true, false);
+  const stale = createSyncHarness(OVERVIEW_FILTER_URGENT);
   stale.context.syncOverviewFilterControl();
   assert.equal(stale.all.checked, false);
   assert.equal(stale.urgent.checked, true);
   assert.equal(stale.allWrites(), 1);
   assert.equal(stale.urgentWrites(), 1);
+  assert.equal(stale.following.checked, false);
+  assert.equal(stale.completed.checked, false);
   stale.context.syncOverviewFilterControl();
   assert.equal(stale.allWrites(), 1);
   assert.equal(stale.urgentWrites(), 1);
+  assert.equal(stale.followingWrites(), 0);
+  assert.equal(stale.completedWrites(), 0);
 });
 
 test("TS-054 setting the filter stays in memory and never touches URL, history or storage", () => {
-  assert.match(app, /let overviewUrgencyFilter = OVERVIEW_FILTER_ALL;/);
-  assert.match(setSource, /overviewUrgencyFilter = mode === OVERVIEW_FILTER_URGENT/);
+  assert.match(app, /let overviewProjectFilter = OVERVIEW_FILTER_ALL;/);
+  assert.match(setSource, /overviewProjectFilter = overviewFilterIsValid\(mode\) \? mode : OVERVIEW_FILTER_ALL/);
   assert.match(setSource, /syncOverviewFilterControl\(\)/);
   assert.match(setSource, /render\(\)/);
   assert.doesNotMatch(setSource, /location|history|localStorage|sessionStorage|persist\(|documentState/);
-  assert.match(filterHandlers, /setOverviewUrgencyFilter\(OVERVIEW_FILTER_ALL\)/);
-  assert.match(filterHandlers, /setOverviewUrgencyFilter\(OVERVIEW_FILTER_URGENT\)/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_ALL\)/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_URGENT\)/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_FOLLOWING\)/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_COMPLETED\)/);
   assert.doesNotMatch(filterHandlers, /location|history|localStorage|sessionStorage|persist\(|documentState/);
 });
 
@@ -191,7 +215,7 @@ test("TS-054 the existing view reset also clears the urgency filter", () => {
   const context = {
     expandedParents: new Set(["p1"]),
     pendingCollapseFocus: "p1",
-    overviewUrgencyFilter: OVERVIEW_FILTER_URGENT,
+    overviewProjectFilter: OVERVIEW_FILTER_URGENT,
     OVERVIEW_FILTER_ALL,
     syncOverviewFilterControl: () => { synchronizations += 1; }
   };
@@ -199,16 +223,16 @@ test("TS-054 the existing view reset also clears the urgency filter", () => {
   context.resetExpandedViewState();
   assert.equal(context.expandedParents.size, 0);
   assert.equal(context.pendingCollapseFocus, null);
-  assert.equal(context.overviewUrgencyFilter, OVERVIEW_FILTER_ALL);
+  assert.equal(context.overviewProjectFilter, OVERVIEW_FILTER_ALL);
   assert.equal(synchronizations, 1);
   assert.doesNotMatch(resetSource, /localStorage|persist\(|documentState/);
 
   const loadBody = between(app, "function load() {", "async function refreshLocalDocument(");
-  assert.doesNotMatch(loadBody, /resetExpandedViewState|overviewUrgencyFilter/);
+  assert.doesNotMatch(loadBody, /resetExpandedViewState|overviewProjectFilter/);
   const localRefresh = between(app, "async function refreshLocalDocument()", "function startLocalWorkspace(");
   const syncedRefresh = between(app, "async function refreshSyncedDocument()", "function ensureChangeChannel(");
-  assert.doesNotMatch(localRefresh, /resetExpandedViewState|overviewUrgencyFilter = /);
-  assert.doesNotMatch(syncedRefresh, /resetExpandedViewState|overviewUrgencyFilter = /);
+  assert.doesNotMatch(localRefresh, /resetExpandedViewState|overviewProjectFilter = /);
+  assert.doesNotMatch(syncedRefresh, /resetExpandedViewState|overviewProjectFilter = /);
   assert.match(app, /if \(isViewEntry\(route, nextRoute\)\) resetExpandedViewState\(\)/);
   const restoreBody = between(app, "async function confirmRestore(", "function recoveryInstanceContext(");
   assert.match(restoreBody, /await businessStore\.commit\(operations\);[\s\S]*?resetExpandedViewState\(\);/);
@@ -222,9 +246,11 @@ function createRenderHarness({ mode = OVERVIEW_FILTER_ALL, subjects = [], allowe
   const context = {
     route: { view: "overview" },
     documentState: { subjects },
-    overviewUrgencyFilter: mode,
+    overviewProjectFilter: mode,
     OVERVIEW_FILTER_ALL,
     OVERVIEW_FILTER_URGENT,
+    OVERVIEW_FILTER_FOLLOWING,
+    OVERVIEW_FILTER_COMPLETED,
     overviewFilteredSubjects,
     businessAllowed: () => allowed,
     OVERVIEW_PRESENTATION_STATE: { AWAITING_READ: "awaiting-read" },
@@ -259,7 +285,7 @@ function createRenderHarness({ mode = OVERVIEW_FILTER_ALL, subjects = [], allowe
     replaceSubjectsInCurrentView: (next) => { subjectsEl.nodes = next.nodes.slice(); },
     applyFocus: () => {},
     finishUxRender: () => {},
-    setOverviewUrgencyFilter: (next) => notifications.push(["set", next]),
+    setOverviewProjectFilter: (next) => notifications.push(["set", next]),
     pendingNavigationFocus: null, focusDetailHeading: false, focusOpenSubjectId: null,
     focusItemId: null, revealItemId: null, focusSubjectId: null, focusRenameControl: false,
     pendingCollapseFocus: null, pendingPriorityFocus: null, pendingMenuFocus: null,
@@ -282,7 +308,7 @@ test("TS-054 render draws only matching cards in original order and keeps global
   harness.context.render();
   assert.deepEqual(harness.subjectsEl.nodes.map((node) => node.subjectId), ["A", "C"]);
   assert.deepEqual(harness.notifications, ["suggestion", "resume"]);
-  assert.match(renderSource, /overviewFilteredSubjects\(documentState\.subjects, overviewUrgencyFilter\)/);
+  assert.match(renderSource, /overviewFilteredSubjects\(documentState\.subjects, overviewProjectFilter\)/);
   assert.match(app, /overviewSummaryLabel\(overviewMetrics\(documentState\)\)/);
   assert.doesNotMatch(renderSource, /overviewMetrics\(overviewSubjects\)|overviewMetrics\(overviewFiltered/);
 });
@@ -380,9 +406,9 @@ test("TS-054 local mutation, refresh and Undo recalculate from the current docum
   assert.deepEqual(overviewFilteredSubjects(document.subjects, OVERVIEW_FILTER_URGENT).map((s) => s.id), ["s1"]);
 
   assert.doesNotMatch(between(app, "function persist()", "function syncOverviewFilterControl("),
-    /overviewUrgencyFilter = |resetExpandedViewState/);
+    /overviewProjectFilter = |resetExpandedViewState/);
   const undoBody = between(app, "function undoRemoval(", "function move(");
-  assert.doesNotMatch(undoBody, /overviewUrgencyFilter = |resetExpandedViewState/);
+  assert.doesNotMatch(undoBody, /overviewProjectFilter = |resetExpandedViewState/);
 });
 
 test("TS-054 global metrics stay identical and include projects hidden by the filter", () => {
@@ -404,7 +430,7 @@ function runReveal({ subjectEntry, mode }) {
     revealItemId: null,
     focusItemId: null,
     hideCompleted: false,
-    overviewUrgencyFilter: mode,
+    overviewProjectFilter: mode,
     documentState: { subjects: [subjectEntry] },
     findSubject: () => subjectEntry,
     isSubjectVisibleInOverviewFilter,
@@ -454,8 +480,9 @@ test("TS-054 toggling the filter leaves card, draft and completion view state in
     "if (overviewFilterAllEl)"
   );
   assert.match(completionHandler, /hideCompleted = hideCompletedEl\.checked/);
-  assert.doesNotMatch(completionHandler, /overviewUrgencyFilter|setOverviewUrgencyFilter/);
+  assert.doesNotMatch(completionHandler, /overviewProjectFilter|setOverviewProjectFilter/);
   assert.ok(html.indexOf('id="overview-urgency-filter"') < html.indexOf('id="subjects"'));
-  assert.match(app, /overviewFilterUrgentEl\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(app, /filterControl\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(app, /case OVERVIEW_FILTER_URGENT: return overviewFilterUrgentEl;/);
   assert.match(app, /card\.append\(renderTaskArea\(subject, \{ preview: true \}\)\)/);
 });

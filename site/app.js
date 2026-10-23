@@ -1,4 +1,4 @@
-import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter } from "./core.js";
+import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -155,6 +155,8 @@ const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
 const overviewFilterAllEl = document.querySelector("#overview-filter-all");
 const overviewFilterUrgentEl = document.querySelector("#overview-filter-urgent");
+const overviewFilterFollowingEl = document.querySelector("#overview-filter-following");
+const overviewFilterCompletedEl = document.querySelector("#overview-filter-completed");
 const reorderNoteEl = document.querySelector("#reorder-note");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
@@ -295,7 +297,7 @@ let focusSubjectId = null;
 let revealItemId = null;
 let suggestionVisible = false;
 let hideCompleted = false;
-let overviewUrgencyFilter = OVERVIEW_FILTER_ALL;
+let overviewProjectFilter = OVERVIEW_FILTER_ALL;
 let resumeRef = null;
 let documentLoaded = false;
 let pendingMoveFocus = null;
@@ -2789,27 +2791,44 @@ function persist() {
   render();
   return commitOperations(records);
 }
-function syncOverviewFilterControl() {
-  const allChecked = overviewUrgencyFilter !== OVERVIEW_FILTER_URGENT;
-  if (overviewFilterAllEl && overviewFilterAllEl.checked !== allChecked) {
-    overviewFilterAllEl.checked = allChecked;
-  }
-  if (overviewFilterUrgentEl && overviewFilterUrgentEl.checked !== !allChecked) {
-    overviewFilterUrgentEl.checked = !allChecked;
+function overviewFilterControl(mode) {
+  switch (mode) {
+    case OVERVIEW_FILTER_URGENT: return overviewFilterUrgentEl;
+    case OVERVIEW_FILTER_FOLLOWING: return overviewFilterFollowingEl;
+    case OVERVIEW_FILTER_COMPLETED: return overviewFilterCompletedEl;
+    default: return overviewFilterAllEl;
   }
 }
-function setOverviewUrgencyFilter(mode, focusControl = false) {
-  overviewUrgencyFilter = mode === OVERVIEW_FILTER_URGENT
-    ? OVERVIEW_FILTER_URGENT
-    : OVERVIEW_FILTER_ALL;
+function overviewFilterIsValid(mode) {
+  return mode === OVERVIEW_FILTER_ALL || mode === OVERVIEW_FILTER_URGENT ||
+    mode === OVERVIEW_FILTER_FOLLOWING || mode === OVERVIEW_FILTER_COMPLETED;
+}
+function syncOverviewFilterControl() {
+  const controls = [
+    [OVERVIEW_FILTER_ALL, overviewFilterAllEl],
+    [OVERVIEW_FILTER_URGENT, overviewFilterUrgentEl],
+    [OVERVIEW_FILTER_FOLLOWING, overviewFilterFollowingEl],
+    [OVERVIEW_FILTER_COMPLETED, overviewFilterCompletedEl]
+  ];
+  for (const [mode, control] of controls) {
+    if (!control) continue;
+    const checked = mode === overviewProjectFilter;
+    if (control.checked !== checked) control.checked = checked;
+  }
+}
+function setOverviewProjectFilter(mode, focusControl = false) {
+  overviewProjectFilter = overviewFilterIsValid(mode) ? mode : OVERVIEW_FILTER_ALL;
   syncOverviewFilterControl();
   render();
-  if (focusControl && overviewFilterAllEl) overviewFilterAllEl.focus();
+  if (focusControl) {
+    const control = overviewFilterControl(overviewProjectFilter);
+    if (control) control.focus();
+  }
 }
 function resetExpandedViewState() {
   expandedParents = new Set();
   pendingCollapseFocus = null;
-  overviewUrgencyFilter = OVERVIEW_FILTER_ALL;
+  overviewProjectFilter = OVERVIEW_FILTER_ALL;
   syncOverviewFilterControl();
 }
 function currentAuthorizedWorkspaceIdentity() {
@@ -3161,8 +3180,9 @@ function finishUxRender(snapshot, skipFocus = false) {
     if (target) {
       target.focus({ preventScroll: true });
     } else if (route.view === "overview" &&
-        overviewUrgencyFilter === OVERVIEW_FILTER_URGENT && overviewFilterUrgentEl) {
-      overviewFilterUrgentEl.focus({ preventScroll: true });
+        overviewProjectFilter !== OVERVIEW_FILTER_ALL) {
+      const filterControl = overviewFilterControl(overviewProjectFilter);
+      if (filterControl) filterControl.focus({ preventScroll: true });
     }
   }
   if (!snapshot || !shouldRestoreInteraction(snapshot.context, context)) return;
@@ -3268,14 +3288,20 @@ function render() {
   } else {
     renderSuggestion();
     renderResumeCard();
-    const overviewSubjects = overviewFilteredSubjects(documentState.subjects, overviewUrgencyFilter);
+    const overviewSubjects = overviewFilteredSubjects(documentState.subjects, overviewProjectFilter);
     if (!overviewSubjects.length) {
-      if (overviewUrgencyFilter === OVERVIEW_FILTER_URGENT) {
+      const emptyMessages = {
+        [OVERVIEW_FILTER_URGENT]: "Aucun projet avec urgence en attente",
+        [OVERVIEW_FILTER_FOLLOWING]: "Aucun projet à suivre",
+        [OVERVIEW_FILTER_COMPLETED]: "Aucun projet terminé"
+      };
+      const emptyMessage = emptyMessages[overviewProjectFilter];
+      if (emptyMessage) {
         const empty = el("div", "empty filtered-empty");
-        empty.append(el("p", "filtered-empty-text", "Aucun projet avec urgence en attente"));
+        empty.append(el("p", "filtered-empty-text", emptyMessage));
         const all = el("button", "secondary overview-filter-reset", "Tous les projets");
         all.type = "button";
-        all.addEventListener("click", () => setOverviewUrgencyFilter(OVERVIEW_FILTER_ALL, true));
+        all.addEventListener("click", () => setOverviewProjectFilter(OVERVIEW_FILTER_ALL, true));
         empty.append(all);
         nextSubjects.append(empty);
       } else {
@@ -3536,7 +3562,7 @@ function revealAction(subjectId, itemId) {
   focusItemId = itemId;
   const subject = findSubject(documentState, subjectId);
   const hiddenByOverviewFilter = subject &&
-    !isSubjectVisibleInOverviewFilter(subject, overviewUrgencyFilter);
+    !isSubjectVisibleInOverviewFilter(subject, overviewProjectFilter);
   if (subject && (hiddenByOverviewFilter ||
       !isWithinOverviewPreview(subject.items, itemId, hideCompleted))) {
     renamingSubject = false;
@@ -4144,12 +4170,22 @@ hideCompletedEl.addEventListener("change", () => {
 });
 if (overviewFilterAllEl) {
   overviewFilterAllEl.addEventListener("change", () => {
-    if (overviewFilterAllEl.checked) setOverviewUrgencyFilter(OVERVIEW_FILTER_ALL);
+    if (overviewFilterAllEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_ALL);
   });
 }
 if (overviewFilterUrgentEl) {
   overviewFilterUrgentEl.addEventListener("change", () => {
-    if (overviewFilterUrgentEl.checked) setOverviewUrgencyFilter(OVERVIEW_FILTER_URGENT);
+    if (overviewFilterUrgentEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_URGENT);
+  });
+}
+if (overviewFilterFollowingEl) {
+  overviewFilterFollowingEl.addEventListener("change", () => {
+    if (overviewFilterFollowingEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_FOLLOWING);
+  });
+}
+if (overviewFilterCompletedEl) {
+  overviewFilterCompletedEl.addEventListener("change", () => {
+    if (overviewFilterCompletedEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_COMPLETED);
   });
 }
 document.addEventListener("keydown", (event) => {
