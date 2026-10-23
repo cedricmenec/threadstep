@@ -11,6 +11,8 @@
 import { replayAdmissionRegistry, advanceAdmissionRegistry,
   ADMISSION_REGISTRY_REF } from "./global-admission.mjs";
 import { observeV3GithubNativeControl } from "./github-native-control.mjs";
+import { observeV3GithubWaveRulesetPolicy }
+ from "./github-native-wave-ruleset.mjs";
 import { contentSha256 } from "../waves/hash.mjs";
 
 const BASE = "repos/cedricmenec/threadstep";
@@ -57,6 +59,16 @@ export async function attemptV3GithubNativeAdmission({
  });
  if(observed.status!=="consistent_not_authorized")
    return response(observed.status,"native_owner_control_not_verified");
+
+ // A protected global ref alone is insufficient: a successfully ADMITted
+ // wave would otherwise have an unprotected child journal. This check runs
+ // BEFORE staging any Git object or obtaining a successful CAS response.
+ let wave;
+ try { wave=await observeV3GithubWaveRulesetPolicy(readClient); }
+ catch { return uncertain("wave_ruleset_observation_failed"); }
+ if(wave?.status!=="wave_rule_structure_observed_not_authorized")
+   return response(wave?.status==="rejected"?"rejected":"uncertain",
+    "global_admission_requires_wave_rulesets");
 
  const head=observed.evidence.headSha;
  let registry;
