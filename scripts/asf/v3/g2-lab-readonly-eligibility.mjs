@@ -10,7 +10,7 @@ import {pathToFileURL} from "node:url";
 import {createGithubClient} from "../github/client.mjs";
 
 const OWNER="cedricmenec",PAGE_SIZE=100,MAX_PAGES=3;
-const CANDIDATE=/^cedricmenec\/[A-Za-z0-9][A-Za-z0-9._-]{0,98}$/;
+const CANDIDATE=/^cedricmenec\/asf-v3-[a-z0-9-]+-lab$/;
 const base=repo=>"repos/"+repo;
 const deny=(status,reason,repository=null,extra={})=>Object.freeze({
  status,reason,repository,authorized:false,canCreate:false,canWrite:false,
@@ -19,9 +19,7 @@ const deny=(status,reason,repository=null,extra={})=>Object.freeze({
  realAppDenyTestsCompleted:false,...extra
 });
 function valid(repo){
- return typeof repo==="string"&&CANDIDATE.test(repo)&&
-  repo!=="cedricmenec/threadstep"&&!repo.endsWith(".git")&&
-  !repo.endsWith(".")&&!repo.includes("..");
+ return typeof repo==="string"&&repo.length<=120&&CANDIDATE.test(repo);
 }
 /**
  * Generic, deliberately restricted GET-only transport. GH_TOKEN may contain
@@ -35,8 +33,8 @@ export function createV3LabReadOnlyClient({
   throw Error("invalid_lab_read_client_configuration");
  const root=base(repository);
  const allowed=path=>path===root||
-  new RegExp("^"+root.replaceAll("/","\\/")+
-    "\\/rulesets\\?per_page=100&page=[1-3]$").test(path);
+  [1,2,3].some(page=>path===root+
+    "/rulesets?per_page=100&page="+page);
  return createGithubClient({timeoutMs:10000,transport:async(path,{timeoutMs})=>{
   if(!allowed(path))throw Object.assign(Error("lab_get_path_denied"),
     {code:"invalid_path"});
@@ -105,7 +103,7 @@ export async function auditV3LabEligibility({repository,readClient}={}){
 export async function main(args=process.argv.slice(2),env=process.env,
  fetchImpl=fetch){
  if(args.length!==1||!valid(args[0])){
-  process.stderr.write("ASF V3 lab audit: expected dedicated cedricmenec/<repo>, not threadstep\n");
+  process.stderr.write("ASF V3 lab audit: expected cedricmenec/asf-v3-<name>-lab\n");
   return 1;
  }
  const client=createV3LabReadOnlyClient({
