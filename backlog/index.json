@@ -711,29 +711,5 @@
     ],
     "created_at": "2026-10-22",
     "content_sha256": "7ffbed3b006179cbc780331b4114b1e45f9e9e2edfb392d928e7394e87171eb8"
-  },
-  {
-    "id": "TS-055",
-    "path": "backlog/tasks/TS-055.md",
-    "type": "product",
-    "status": "ready",
-    "priority": "high",
-    "automation": "allowed",
-    "risk": "low",
-    "depends_on": [],
-    "created_at": "2026-10-23",
-    "content_sha256": "707286bb8d49fa07fb379802c02551f7c3b6a5369b826c2263f6c81b0e8b35d5"
-  },
-  {
-    "id": "TS-056",
-    "path": "backlog/tasks/TS-056.md",
-    "type": "product",
-    "status": "ready",
-    "priority": "high",
-    "automation": "manual",
-    "risk": "medium",
-    "depends_on": [],
-    "created_at": "2026-10-23",
-    "content_sha256": "ce528f176081465e5c03a555d50a69656a06f6149ba7e282ac1d8765777d06c7"
   }
 ]
