@@ -3,6 +3,8 @@ export const STORAGE_KEY = "threadstep.document.v1";
 export const RESUME_KEY = "threadstep.resume.v1";
 export const PRIORITIES = ["urgent", "normal", "later"];
 export const OVERVIEW_TASK_LIMIT = 5;
+export const OVERVIEW_FILTER_ALL = "all";
+export const OVERVIEW_FILTER_URGENT = "urgent";
 export const NOTE_MAX_LENGTH = 2000;
 const priorityIndex = (priority) => PRIORITIES.indexOf(priority);
 export const emptyDocument = () => ({ version: 1, subjects: [] });
@@ -356,6 +358,17 @@ export function overviewMetrics(document) {
     urgentSteps += metrics.urgentPending;
   }
   return { activeProjects, pendingSteps, urgentSteps };
+}
+export function subjectHasPendingUrgency(subject) {
+  return subjectMetrics(subject).urgentPending > 0;
+}
+export function isSubjectVisibleInOverviewFilter(subject, mode) {
+  return mode !== OVERVIEW_FILTER_URGENT || subjectHasPendingUrgency(subject);
+}
+export function overviewFilteredSubjects(subjects, mode) {
+  if (!Array.isArray(subjects)) return [];
+  if (mode !== OVERVIEW_FILTER_URGENT) return subjects;
+  return subjects.filter((subject) => subjectHasPendingUrgency(subject));
 }
 function countLabel(count, singular, plural) {
   const normalized = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
