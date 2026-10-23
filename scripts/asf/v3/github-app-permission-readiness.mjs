@@ -68,6 +68,7 @@ export async function observeAsfV3AppPermissionsReadiness({
   globalRefState:refState,
   globalRulesetStatus:globalPolicy.status,
   waveRulesetStatus:wavePolicy?.status??"unknown",
+  waveRulesetReason:wavePolicy?.reason??"unavailable",
   wavePattern:ASF_V3_WAVE_REF_PATTERN,
   actualAppPermissionsProven:false,
   realAppDenyTestsCompleted:false,
