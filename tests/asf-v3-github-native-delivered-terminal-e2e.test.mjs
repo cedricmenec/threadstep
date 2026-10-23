@@ -30,7 +30,10 @@ const policies=()=>[
   "deletion","non_fast_forward"]),
  rule(2,ADMISSION_REGISTRY_REF,["creation","update"],
   [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]),
- rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"])
+ rule(3,ADMISSION_REGISTRY_REF,["deletion","non_fast_forward"]),
+ rule(4,"refs/heads/asf/waves/*",["creation","update"],
+  [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]),
+ rule(5,"refs/heads/asf/waves/*",["deletion","non_fast_forward"])
 ];
 const proof=()=>({
  prNumber:PR,headSha:HEAD,mergeSha:MERGE,merged:true,branchProtected:true,
