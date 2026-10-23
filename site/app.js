@@ -1,4 +1,4 @@
-import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, pendingCount, totalTaskCount, totalTaskCountLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -3170,6 +3170,14 @@ function replaceSubjectsInCurrentView(nextSubjects, snapshot) {
     if (guarded) subjectsEl.style.minHeight = oldMinHeight;
   }
 }
+function applyOverviewCounter(presentation) {
+  const suppressed = !businessAllowed() || (!!presentation &&
+    (presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ ||
+      (presentation.actionRequired && !presentation.projectsAvailable)));
+  const text = suppressed ? "" : overviewSummaryLabel(overviewMetrics(documentState));
+  if (counterEl.textContent !== text) counterEl.textContent = text;
+  if (counterEl.hidden !== suppressed) counterEl.hidden = suppressed;
+}
 function render() {
   applyExpandedIdentityBoundary();
   // An intentional reveal/navigation must not be undone by scroll restoration.
@@ -3183,21 +3191,20 @@ function render() {
   applyNavigationMenu();
   applySyncSummaryVisibility();
   if (!businessAllowed()) {
+    applyOverviewCounter(null);
     applyFocus();
     finishUxRender(null, true);
     return;
   }
   expandAncestorForFocus();
   if (reorderNoteEl) reorderNoteEl.hidden = !hideCompleted;
-  const n = pendingCount(documentState);
-  counterEl.textContent = n + (n > 1 ? " prochaines étapes" : " prochaine étape");
   const presentation = overviewPresentationSnapshot
     ? overviewPresentationSnapshot.presentation
     : null;
   const suppressOverview = route.view === "overview" && !!presentation &&
     (presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ ||
       (presentation.actionRequired && !presentation.projectsAvailable));
-  counterEl.hidden = suppressOverview;
+  applyOverviewCounter(presentation);
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
     subjectsEl.replaceChildren();
@@ -3643,6 +3650,9 @@ function renderSubject(subject) {
   const pending = subject.items.filter((item) => !item.done).length;
   titleBox.append(el("p", "small", pending + " étape" + (pending > 1 ? "s" : "") + " en attente"));
   titleBox.append(el("p", "small subject-total", totalTaskCountLabel(totalTaskCount(subject.items))));
+  const metrics = subjectMetrics(subject);
+  titleBox.append(el("p", "small subject-urgency", subjectUrgencyLabel(metrics.urgentPending)));
+  titleBox.append(el("p", "small subject-progress", subjectProgressLabel(subject.items)));
   const controls = el("div", "subject-controls");
   const open = el("button", "secondary subject-open", "Ouvrir le projet");
   open.type = "button";

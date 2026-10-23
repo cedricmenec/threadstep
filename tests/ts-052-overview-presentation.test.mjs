@@ -256,7 +256,8 @@ test("TS-052 waiting suppresses the list, counter, suggestion, resume card and a
   assert.match(render, /applySyncSummaryVisibility\(\)/);
   assert.match(render, /presentation\.state === OVERVIEW_PRESENTATION_STATE\.AWAITING_READ/);
   assert.match(render, /presentation\.actionRequired && !presentation\.projectsAvailable/);
-  assert.match(render, /counterEl\.hidden = suppressOverview/);
+  assert.match(render, /applyOverviewCounter\(presentation\)/);
+  assert.match(app, /function applyOverviewCounter\(presentation\)[\s\S]*?const text = suppressed \? "" : overviewSummaryLabel\(overviewMetrics\(documentState\)\)[\s\S]*?counterEl\.hidden = suppressed/);
   assert.match(render, /subjectForm\.hidden = true/);
   assert.match(render, /focusSuggestEl\.hidden = true/);
   assert.match(render, /resumeCardEl\.hidden = true/);
