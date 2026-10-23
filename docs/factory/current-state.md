@@ -1,5 +1,15 @@
 # État courant de l'Autonomous Software Factory
 
+## ASF V3, 23 octobre 2026 : G1 structuré mais non conforme, C4 préparatoire
+
+**Cette section datée est plus récente que les états historiques conservés ci-dessous.** Le dépôt `main` exécute encore les workflows V1 ; la V3 n'est **ni fusionnée, ni activée, ni autorisée à payer**. Source de pilotage à réconcilier au prochain contrôle : [Notion ASF V3](https://app.notion.com/p/3fc12ac9163680adb3e3e3f63d827f69), [issue #86](https://github.com/cedricmenec/threadstep/issues/86).
+
+- **Rapport API détaillé** : [G1 GitHub au 23 octobre](v3-g1-live-audit-2026-10-23.md). Cinq rulesets actifs : trois main/global conformes, mais writer wave #25747770 avec deux règles de suppression et de non-fast-forward excédentaires. L'immuable wave #25747923 est conforme. **G1 reste NO-GO** jusqu'à correction manuelle du seul writer.
+- **Global control ref absent (404)**, ce qui n'autorise pas un bootstrap. App Controller V3 5361227 et App Executor V1 5321746 : permissions réelles et essais négatifs non démontrés.
+- **Préparation V3** : [PR #169](https://github.com/cedricmenec/threadstep/pull/169) convergence, brouillon non fusionné ; [#177](https://github.com/cedricmenec/threadstep/pull/177), [#178](https://github.com/cedricmenec/threadstep/pull/178), [#179](https://github.com/cedricmenec/threadstep/pull/179), [#180](https://github.com/cedricmenec/threadstep/pull/180), [#181](https://github.com/cedricmenec/threadstep/pull/181) qualifiées en CI et toujours empilées en brouillon. La documentation C4 indépendante [#176](https://github.com/cedricmenec/threadstep/pull/176) est fusionnée. Les tests simulés ne démontrent pas les droits réels.
+- **G3 laboratoire** : M01–M07 (mutex) conservés, mais l'API des rulesets du dépôt privé de test renvoie HTTP 403 (fonction non disponible dans sa configuration actuelle). Ne pas modifier sa visibilité ni déclencher des jobs supplémentaires sans une décision distincte.
+- **Gates non franchies** : G2 writer et secret privilégié, genèse réelle, G3 permissions négatives/CAS live et G4 pilote LLM. Toute fusion sensible, écriture opérationnelle ou dépense nécessite accord ciblé et preuves GitHub.
+
 ## 17 octobre 2026 : fiabilisation ASF-OPSX-03/04 (PR en cours)
 
 Le [run TS-023 #39047805814](https://github.com/cedricmenec/threadstep/actions/runs/39047805814)
