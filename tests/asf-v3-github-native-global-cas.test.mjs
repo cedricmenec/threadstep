@@ -10,6 +10,7 @@ import { attemptV3GithubNativeAdmission }
 const REPO="cedricmenec/threadstep",BASE="repos/"+REPO;
 const REF=BASE+"/git/ref/heads/asf/control/active-wave-v3";
 const PATCH=BASE+"/git/refs/heads/asf/control/active-wave-v3";
+const WAVE="refs/heads/asf/waves/*";
 const SHA=c=>c.repeat(40);
 const ROOT=SHA("1"),TREE=SHA("2"),NEXTTREE=SHA("3"),NEXT=SHA("4");
 const manifest=()=>createV3Manifest({
@@ -27,7 +28,8 @@ const rule=(id,ref,types,bypass=[])=>({
  rules:types.map(type=>type==="required_status_checks"?
  {type,parameters:{required_status_checks:[{context:"check"}]}}:{type})
 });
-function fixture({lostPatch=false,concurrent=false,malformed=false}={}){
+function fixture({lostPatch=false,concurrent=false,malformed=false,
+ missingWaves=false,badWaveWriter=false,badWaveImmutable=false}={}){
  const m=manifest(),calls=[];
  const state={head:ROOT,docs:new Map([[ROOT,createAdmissionRegistry()]])};
  const context={
@@ -44,7 +46,8 @@ function fixture({lostPatch=false,concurrent=false,malformed=false}={}){
    id:70001,repository:{full_name:REPO},actor:{login:"cedricmenec"},
    event:"workflow_dispatch",path:".github/workflows/backlog-orchestrator-v3.yml",
    head_branch:"main",head_sha:SHA("a"),run_attempt:1,status:"in_progress"}};
-  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2},{id:3}]};
+  if(path===BASE+"/rulesets")return {ok:true,data:[{id:1},{id:2},{id:3},
+   ...(missingWaves?[]:[{id:4},{id:5}])]};
   if(path===BASE+"/rulesets/1")return {ok:true,data:rule(1,"refs/heads/main",
    ["pull_request","required_status_checks","deletion","non_fast_forward"])};
   if(path===BASE+"/rulesets/2")return {ok:true,data:rule(2,ADMISSION_REGISTRY_REF,
@@ -52,6 +55,12 @@ function fixture({lostPatch=false,concurrent=false,malformed=false}={}){
    [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}])};
   if(path===BASE+"/rulesets/3")return {ok:true,data:rule(3,ADMISSION_REGISTRY_REF,
    ["deletion","non_fast_forward"])};
+  if(path===BASE+"/rulesets/4")return {ok:true,data:rule(4,WAVE,
+   ["creation","update"],[{actor_type:"Integration",
+    actor_id:badWaveWriter?5321746:5361227,bypass_mode:"always"}])};
+  if(path===BASE+"/rulesets/5")return {ok:true,data:rule(5,WAVE,
+   ["deletion","non_fast_forward"],badWaveImmutable?
+   [{actor_type:"Integration",actor_id:5361227,bypass_mode:"always"}]:[])};
   if(path===REF)return {ok:true,data:{ref:ADMISSION_REGISTRY_REF,
    object:{type:"commit",sha:state.head}}};
   if(path===BASE+"/git/commits/"+ROOT)return {ok:true,data:{
@@ -119,6 +128,18 @@ test("lost PATCH response or racing sibling cannot trigger a retry or paid step"
   assert.equal(r.status,"uncertain");
   assert.match(r.code,/global_git_response_uncertain_at_patch/);
   assert.equal(f.calls.filter(x=>x.startsWith("PATCH ")).length,1);
+  noSpend(r);
+ }
+});
+test("global ADMIT refuses missing or bypassable wave rulesets before Git writes",async()=>{
+ for(const options of [{missingWaves:true},{badWaveWriter:true},
+  {badWaveImmutable:true}]){
+  const f=fixture(options);
+  const r=await attemptV3GithubNativeAdmission(f);
+  assert.equal(r.status,"rejected",JSON.stringify({options,r}));
+  assert.equal(r.code,"global_admission_requires_wave_rulesets");
+  assert.equal(f.calls.some(x=>x.startsWith("POST ")||x.startsWith("PATCH ")),false);
+  assert.equal(f.state.head,ROOT);
   noSpend(r);
  }
 });
