@@ -1,5 +1,10 @@
 # Backlog ThreadStep
 
+## Outillage frontend Vite : TS-057 (23 octobre 2026)
+
+- **[TS-057](tasks/TS-057.md)** : introduire les commandes de développement, build et preview Vite à comportement constant, en conservant l'application vanilla, Dexie, la CSP, les URLs et les mécanismes de sauvegarde. `ready / manual / medium`, priorité normale, aucune dépendance. Le build statique est d'abord validé séparément sous `/threadstep/`, **sans bascule du workflow Pages**.
+- La migration effective de la publication vers l'artefact Vite devra faire l'objet d'une tâche et d'une PR ASF distinctes, explicitement autorisées. Ni React, ni Tailwind, ni refonte Stitch, ni lancement payant ne font partie de ce lot. [Cadrage Notion UI-01](https://app.notion.com/p/40212ac916368102ab70ee8bfaa1ae7d).
+
 ## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
 
 - **[TS-052](tasks/TS-052.md)** : éviter le clignotement des états transitoires Dexie sur Overview. Diagnostic natif conservé en arrière-plan ; loader discret uniquement si les projets ne peuvent pas encore être lus ; message stable et lien Synchronisation pour une anomalie réellement actionnable. `ready / manual / medium`, priorité haute ; dépend de TS-043 et préserve les protections de TS-045/TS-048. Le clignotement provient plausiblement de `buildDiagnosticSummary()`/`applySyncSummaryVisibility()` ; reproduction sur appareil encore à confirmer.
