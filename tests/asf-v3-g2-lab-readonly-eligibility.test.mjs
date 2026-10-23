@@ -82,10 +82,13 @@ test("identity mismatch, archived repo and real production target are refused",a
  const b=await auditV3LabEligibility({repository:REPO,readClient:archived.readClient});
  const c=await auditV3LabEligibility({repository:"cedricmenec/threadstep",
   readClient:archived.readClient});
+ const d=await auditV3LabEligibility({repository:"cedricmenec/asf-agent-kits",
+  readClient:archived.readClient});
  assert.equal(a.status,"uncertain");
  assert.equal(b.status,"blocked");
  assert.equal(c.status,"rejected");
- noAuthority(a);noAuthority(b);noAuthority(c);
+ assert.equal(d.status,"rejected");
+ noAuthority(a);noAuthority(b);noAuthority(c);noAuthority(d);
 });
 test("transport uses GET only and masks token in errors",async()=>{
  const calls=[];
