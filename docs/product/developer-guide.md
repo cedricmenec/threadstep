@@ -367,6 +367,67 @@ intermittent reste une observation manuelle distincte, consignée séparément.
 Une CI verte ne doit pas être présentée comme une propagation distante ou une
 accessibilité vérifiée.
 
+## Outillage Vite local (TS-057)
+
+Vite est une **dépendance de développement épinglée** (`vite@7.3.7`, sans `^` ni
+`~`) installée par `npm ci`. Le code applicatif reste vanilla, sans framework.
+`site/` est la source unique ; `dist/` est un artefact local non versionné
+(présent dans `.gitignore`). Ce lot ne modifie ni le workflow Pages ni la
+publication : **GitHub Pages publie encore `site/`** et `dist/` n'est pas le site
+en production.
+
+```sh
+npm ci
+npm run dev        # serveur de développement sous /threadstep/
+npm run build      # artefact statique local dans dist/
+npm run preview    # prévisualisation de dist/ sous /threadstep/
+npm run verify:build    # deux builds comparés + inspection sécurité/chemins
+npm run verify:servers  # preview et dev sous /threadstep/, puis arrêt des serveurs
+npm run check      # suite existante, sans dépendre de Vite
+```
+
+`vite.config.mjs` fixe `root: "site"`, `base: "/threadstep/"`, une sortie
+`dist/` absolue hors de `site/`, `publicDir: false`, `appType: "spa"` et des
+noms d'assets déterministes. Les liens de navigation par fragment
+(`#/`, `#/parametres`, `#/parametres/donnees`,
+`#/parametres/synchronisation`, `#/sujet/<id>`) restent résolus par le routeur
+existant ; ils ne dépendent d'aucune route serveur.
+
+**Vendor Dexie.** `site/vendor/dexie-cloud.mjs` reste le prébundle local
+versionné produit par `npm run vendor:build`. `site/app.js` l'importe
+localement ; Vite l'isole dans un chunk unique `vendor-dexie-*` et injecte son
+préchargement. Le `modulepreload` manuel obsolète a été retiré de
+`site/index.html`. Aucun CDN, secret, fichier `dexie-cloud.key`/`dexie-cloud.json`
+ni URL d'instance Dexie Cloud n'est embarqué par le build.
+
+**CSP.** `site/index.html` porte la CSP de production, reprise à l'identique
+dans `dist/` : `script-src 'self'`, `style-src 'self'`, `connect-src` limité aux
+hôtes Dexie Cloud. Le serveur `dev` reçoit, uniquement en mode `serve`, une CSP
+distincte autorisant le WebSocket HMR local (`ws://localhost:*`,
+`ws://127.0.0.1:*`) et les styles injectés (`style-src 'self' 'unsafe-inline'`),
+sans `unsafe-eval`. `preview` et le site publié conservent la CSP stricte ; la
+dérogation de développement n'est jamais écrite dans `site/` ni dans `dist/`.
+
+**Diagnostic des chemins cassés.** Servir l'artefact à la racine du domaine
+(`/`) n'est pas une cible supportée : utiliser `/threadstep/`. Un 404 sur un
+asset construit indique en général une base incorrecte ou un `dist/` obsolète ;
+relancer `npm run build`, puis `npm run verify:build` et `npm run verify:servers`
+qui vérifient chaque URL locale et chaque fichier référencé. Une vue vide alors
+que le document charge correctement relève du routeur par fragment, pas d'un
+chemin d'asset : comparer avec le site statique servi depuis `site/`.
+
+**Retour arrière.** Supprimer ou ignorer `dist/` et l'outillage local suffit :
+la publication `site/` reste intacte et aucune donnée, base IndexedDB, URL
+Cloud, route ou sauvegarde n'est affectée. La bascule effective de Pages vers
+`dist/` exige une tâche ASF distincte, explicitement autorisée et revue ; elle
+est hors de ce lot.
+
+Les vérifications automatiques couvrent la reproductibilité, les chemins, la
+CSP, le vendor et l'absence de fichiers sensibles. La comparaison visuelle,
+mobile, clavier, lecteur d'écran, hors ligne, IndexedDB réelle, import/export,
+restauration et Cloud/OTP reste une **recette manuelle** sur données de test et
+un environnement Cloud isolé.
+
 Toutes les modifications passent par une branche et PR ; les workflows CI et Pages fournissent une preuve indépendante après fusion. Les tâches produit `TS-NNN` sont spécifiées sous `backlog/tasks/` ; les spécifications canoniques OpenSpec vivent sous `openspec/specs/`, leur historique sous `openspec/changes/archive/`.
 
 ## Frontières de sécurité et évolution

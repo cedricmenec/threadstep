@@ -304,6 +304,6 @@ test("4.1 the check chain covers the module and keeps runtime dependencies and s
     dexie: "4.4.6",
     "dexie-cloud-addon": "4.4.15"
   });
-  assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10" });
+  assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10", vite: "7.3.7" });
   assert.equal(SCHEMA_VERSION, 3);
 });

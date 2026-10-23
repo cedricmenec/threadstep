@@ -3,11 +3,12 @@
 > La documentation de référence de la **software factory générique** est désormais dans [docs/factory/README.md](factory/README.md). Cette page décrit principalement le **pilote ThreadStep**.
 
 ## Application
-- Static `site/index.html` + CSS and vanilla ECMAScript modules; no build/bundle, no server.
+- Static `site/index.html` + CSS and vanilla ECMAScript modules; no UI framework and no runtime application server.
+- An optional **local** Vite toolchain (TS-057) uses `site/` as source and writes an unversioned `dist/` artefact under the `/threadstep/` base. It is for development and local verification only; it does not replace the published site.
 - `site/core.js` contains pure domain functions and schema validation, testable with built-in Node test runner.
 - `site/app.js` owns browser DOM/localStorage, import/export, rendering and events.
-- No network access by design (CSP connect-src none).
-- Public Pages exposes only `site/`, never `docs/` or repository metadata.
+- Network access stays limited to the configured Dexie Cloud hosts by the production CSP.
+- Public Pages exposes only `site/`, never `docs/`, `dist/` or repository metadata. The Pages workflow is unchanged and still publishes the static `site/` directory; switching it to the Vite artefact requires a separate authorized ASF task.
 
 ## Factory pilot
 1. Human + ChatGPT coauthor product intent and backlog under version control.
