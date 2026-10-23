@@ -50,6 +50,11 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 @media(prefers-reduced-motion:reduce){.projects-loading{animation:none;transition:none}}
 .filter-toggle{display:inline-flex;align-items:center;gap:9px;margin-top:16px;font-size:.85rem;font-weight:600;color:#415748;cursor:pointer;user-select:none;padding:9px 13px;background:#eef2e8;border:1px solid #dde4d6;border-radius:10px}
 .filter-toggle input{accent-color:#466e4d;width:17px;height:17px;flex-shrink:0}
+.overview-urgency-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0;padding:0;border:0;min-width:0;max-width:100%}
+.overview-urgency-filter legend{margin:0 0 4px;padding:0;font-size:.85rem;font-weight:700;color:#415748}
+.overview-urgency-filter .filter-option{display:inline-flex;align-items:center;gap:9px;min-width:44px;min-height:44px;padding:9px 13px;font-size:.85rem;font-weight:600;color:#415748;cursor:pointer;user-select:none;background:#eef2e8;border:1px solid #dde4d6;border-radius:10px;overflow-wrap:anywhere}
+.overview-urgency-filter .filter-option input{accent-color:#466e4d;width:17px;height:17px;flex-shrink:0;margin:0}
+.overview-urgency-filter .filter-option span{min-width:0;overflow-wrap:anywhere}
 .subject{background:white;border:1px solid #e1e5de;border-radius:16px;padding:18px;box-shadow:0 6px 18px #24382f08}
 .subject-head{display:flex;align-items:start;justify-content:space-between;gap:14px}
 .subject-head>div:first-child{min-width:0}

@@ -1,4 +1,4 @@
-import { PRIORITIES, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef } from "./core.js";
+import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter } from "./core.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -153,6 +153,8 @@ const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
+const overviewFilterAllEl = document.querySelector("#overview-filter-all");
+const overviewFilterUrgentEl = document.querySelector("#overview-filter-urgent");
 const reorderNoteEl = document.querySelector("#reorder-note");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
@@ -293,6 +295,7 @@ let focusSubjectId = null;
 let revealItemId = null;
 let suggestionVisible = false;
 let hideCompleted = false;
+let overviewUrgencyFilter = OVERVIEW_FILTER_ALL;
 let resumeRef = null;
 let documentLoaded = false;
 let pendingMoveFocus = null;
@@ -1809,6 +1812,7 @@ async function confirmRestore() {
     notify("Échec de la transaction de restauration : aucune écriture partielle confirmée.");
     return;
   }
+  resetExpandedViewState();
   if (restoreStatusEl) restoreStatusEl.textContent = "Restauration explicitement confirmée et enregistrée localement. Vérifiez la synchronisation séparément.";
   notify("Restauration enregistrée localement ; aucune convergence distante n'est affirmée.");
   hideRestorePanel();
@@ -2785,9 +2789,28 @@ function persist() {
   render();
   return commitOperations(records);
 }
+function syncOverviewFilterControl() {
+  const allChecked = overviewUrgencyFilter !== OVERVIEW_FILTER_URGENT;
+  if (overviewFilterAllEl && overviewFilterAllEl.checked !== allChecked) {
+    overviewFilterAllEl.checked = allChecked;
+  }
+  if (overviewFilterUrgentEl && overviewFilterUrgentEl.checked !== !allChecked) {
+    overviewFilterUrgentEl.checked = !allChecked;
+  }
+}
+function setOverviewUrgencyFilter(mode, focusControl = false) {
+  overviewUrgencyFilter = mode === OVERVIEW_FILTER_URGENT
+    ? OVERVIEW_FILTER_URGENT
+    : OVERVIEW_FILTER_ALL;
+  syncOverviewFilterControl();
+  render();
+  if (focusControl && overviewFilterAllEl) overviewFilterAllEl.focus();
+}
 function resetExpandedViewState() {
   expandedParents = new Set();
   pendingCollapseFocus = null;
+  overviewUrgencyFilter = OVERVIEW_FILTER_ALL;
+  syncOverviewFilterControl();
 }
 function currentAuthorizedWorkspaceIdentity() {
   if (!businessAllowed()) return null;
@@ -3135,7 +3158,12 @@ function finishUxRender(snapshot, skipFocus = false) {
   } else if (snapshot && snapshot.focus && !skipFocus &&
       (!snapshot.focusedNode.isConnected || document.activeElement === document.body)) {
     const target = uxFindFocus(snapshot.focus);
-    if (target) target.focus({ preventScroll: true });
+    if (target) {
+      target.focus({ preventScroll: true });
+    } else if (route.view === "overview" &&
+        overviewUrgencyFilter === OVERVIEW_FILTER_URGENT && overviewFilterUrgentEl) {
+      overviewFilterUrgentEl.focus({ preventScroll: true });
+    }
   }
   if (!snapshot || !shouldRestoreInteraction(snapshot.context, context)) return;
   restoreUxScroll(snapshot);
@@ -3240,10 +3268,21 @@ function render() {
   } else {
     renderSuggestion();
     renderResumeCard();
-    if (!documentState.subjects.length) {
-      nextSubjects.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
+    const overviewSubjects = overviewFilteredSubjects(documentState.subjects, overviewUrgencyFilter);
+    if (!overviewSubjects.length) {
+      if (overviewUrgencyFilter === OVERVIEW_FILTER_URGENT) {
+        const empty = el("div", "empty filtered-empty");
+        empty.append(el("p", "filtered-empty-text", "Aucun projet avec urgence en attente"));
+        const all = el("button", "secondary overview-filter-reset", "Tous les projets");
+        all.type = "button";
+        all.addEventListener("click", () => setOverviewUrgencyFilter(OVERVIEW_FILTER_ALL, true));
+        empty.append(all);
+        nextSubjects.append(empty);
+      } else {
+        nextSubjects.append(el("p", "empty", "Aucun sujet pour le moment. Ajoutez un premier fil de travail ci-dessus."));
+      }
     } else {
-      for (const subject of documentState.subjects) nextSubjects.append(renderSubject(subject));
+      for (const subject of overviewSubjects) nextSubjects.append(renderSubject(subject));
     }
   }
   // No intermediate blank grid or multi-step append to the live scroll tree.
@@ -3496,7 +3535,10 @@ function revealAction(subjectId, itemId) {
   revealItemId = itemId;
   focusItemId = itemId;
   const subject = findSubject(documentState, subjectId);
-  if (subject && !isWithinOverviewPreview(subject.items, itemId, hideCompleted)) {
+  const hiddenByOverviewFilter = subject &&
+    !isSubjectVisibleInOverviewFilter(subject, overviewUrgencyFilter);
+  if (subject && (hiddenByOverviewFilter ||
+      !isWithinOverviewPreview(subject.items, itemId, hideCompleted))) {
     renamingSubject = false;
     focusDetailHeading = false;
     navigate(subjectRoute(subject.id));
@@ -4100,6 +4142,16 @@ hideCompletedEl.addEventListener("change", () => {
   hideCompleted = hideCompletedEl.checked;
   render();
 });
+if (overviewFilterAllEl) {
+  overviewFilterAllEl.addEventListener("change", () => {
+    if (overviewFilterAllEl.checked) setOverviewUrgencyFilter(OVERVIEW_FILTER_ALL);
+  });
+}
+if (overviewFilterUrgentEl) {
+  overviewFilterUrgentEl.addEventListener("change", () => {
+    if (overviewFilterUrgentEl.checked) setOverviewUrgencyFilter(OVERVIEW_FILTER_URGENT);
+  });
+}
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && openMenuId) {
     event.preventDefault();
