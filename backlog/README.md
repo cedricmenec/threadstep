@@ -1,5 +1,14 @@
 # Backlog ThreadStep
 
+## Prochaine progression React maîtrisée : TS-060 à TS-063 (24 octobre 2026)
+
+Le [backlog produit Notion](https://app.notion.com/p/40212ac9163681349ce5c8130f76ee75) conserve quatre étapes, **sans autorisation d'implémentation par la seule création des fiches** :
+
+1. **[TS-060](tasks/TS-060.md), UI-10** : qualifier la continuité UX du pilote React, les tests de non-régression et la recette physique Android/Dexie de test ; documenter un GO/NO-GO humain avant de poursuivre. `ready / manual / medium`, priorité haute, dépend de TS-059 livrée.
+2. **[TS-061](tasks/TS-061.md), UI-03** : socle borné de primitives React et tokens CSS sémantiques locaux, à parité graphique ; pas de Tailwind ou refonte Stitch. `ready / manual / medium`, priorité normale, dépend d'un bilan TS-060 favorable.
+
+La suite de la séquence prévoit la revue des 32 maquettes mobiles (UI-04), puis un premier lot de navigation responsive (UI-05) après validation des prérequis. Ces étapes seront spécifiées séparément ; aucun lancement ASF/OpenRouter n'est inclus dans cette préparation documentaire.
+
 ## Migration progressive vers React : TS-058 et TS-059 (24 octobre 2026)
 
 - **[TS-058](tasks/TS-058.md)** : introduire une frontière d'intégration React contrôlée dans Vite (racine DOM exclusive, adaptateur en lecture seule et commandes du contrôleur, tests de montage/démontage), sans migrer d'écran. `ready / manual / medium`, priorité haute ; dépend de TS-057.
