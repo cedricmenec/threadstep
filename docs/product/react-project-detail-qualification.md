@@ -1,5 +1,15 @@
 # Qualification du pilote React — détail projet (TS-060)
 
+## Addendum de décision humaine post-qualification (24 octobre 2026)
+
+**Décision actuelle pour le lot TS-061 : GO de poursuite confirmé par le propriétaire.** Après la livraison de TS-060 dans la [PR #204](https://github.com/cedricmenec/threadstep/pull/204), le propriétaire a explicitement confirmé dans son échange du 24 octobre 2026 avoir testé le détail projet React sur Android, les interactions tactiles, la navigation et la synchronisation entre appareils, sans régression constatée. Il a ensuite autorisé le lancement de TS-061. La [fiche de suivi UI-10 dans Notion](https://app.notion.com/p/40212ac916368193be78d23b6d012bb5) conserve cette décision.
+
+Ce **GO humain ultérieur satisfait la précondition de décision favorable du lot TS-061**. Il ne vaut ni preuve CI supplémentaire ni autorisation de migrer TS-063 ou les autres vues. Il n'autorise pas non plus à modifier la persistance, les comptes ou les contrats de sécurité. La recette déclarée ne précise pas les appareils, versions et protocoles d'essai et ne démontre pas individuellement les scénarios clavier physique, lecteur d'écran, rafraîchissement de brouillon ou comparaison visuelle.
+
+Le **NO-GO initial de qualification**, reproduit ci-dessous avec sa matrice Q01 à Q20, reste un résultat historique exact à la date du rapport automatisé. Les lignes Q13 à Q20 y restent `NOT_RUN` : elles ne sont pas converties rétrospectivement en `PASS` sans preuve traçable par scénario. La validation déclarative et le risque résiduel sont explicités ici pour ne pas confondre avis du propriétaire, essai documenté et assertion automatisée. Les recettes humaines des prochains lots restent exigées dans leurs propres bilans.
+
+---
+
 **Date de qualification :** 24 octobre 2026
 **Branche proposée :** état de travail au-dessus de `main` au SHA
 `7c7ec0da994bdeea0ef57dd6b8db0979b62411f7`.
