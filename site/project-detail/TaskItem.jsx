@@ -1,13 +1,14 @@
 import {
-  PRIORITIES,
   substepToggleLabel,
   substepView
 } from "../core.js";
+import { Button } from "../ui/Button.jsx";
+import { PriorityControl } from "../ui/PriorityControl.jsx";
+import { priorityLabel } from "../ui/priority-options.js";
 import { SubtaskList } from "./SubtaskList.jsx";
 import { TaskActionMenu } from "./TaskActionMenu.jsx";
 import { TaskEditor } from "./TaskEditor.jsx";
 
-const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 
 export function TaskItem({
   subjectId,
@@ -52,8 +53,9 @@ export function TaskItem({
 
   const toggle = item.parentId === null || item.parentId === undefined
     ? (view.hasVisibleSubsteps ? (
-      <button
-        className="subtle task-toggle"
+      <Button
+        variant="subtle"
+        className="task-toggle"
         type="button"
         aria-expanded={view.collapsed ? "false" : "true"}
         aria-label={substepToggleLabel(view.children.length, view.collapsed) + " de « " + item.title + " »"}
@@ -61,7 +63,7 @@ export function TaskItem({
         onClick={() => commands.toggleSubsteps(subjectId, item.id)}
       >
         {substepToggleLabel(view.children.length, view.collapsed)}
-      </button>
+      </Button>
     ) : null)
     : null;
 
@@ -80,16 +82,12 @@ export function TaskItem({
               onChange={(event) => commands.toggleItem(subjectId, item.id, event.target.checked)}
             />
             <span className="task-title">{item.title}</span>
-            <select
-              className={"priority priority-" + item.priority + " priority-control"}
-              aria-label={"Priorité de « " + item.title + " » : " + priorityLabels[item.priority]}
+            <PriorityControl
+              variant="badge"
+              ariaLabel={"Priorité de « " + item.title + " » : " + priorityLabel(item.priority)}
               value={item.priority}
-              onChange={(event) => commands.setPriority(subjectId, item.id, event.target.value)}
-            >
-              {PRIORITIES.map((priority) => (
-                <option key={priority} value={priority}>{priorityLabels[priority]}</option>
-              ))}
-            </select>
+              onChange={(priority) => commands.setPriority(subjectId, item.id, priority)}
+            />
           </div>
           {typeof item.note === "string" && item.note.trim().length > 0 ? (
             <p className="task-note">{item.note}</p>
@@ -140,8 +138,8 @@ export function moveContext(subject, item) {
     ? null
     : subject.items.find((entry) => entry.id === item.parentId);
   return parent
-    ? "sous-étape de « " + parent.title + " », priorité " + priorityLabels[item.priority]
-    : "priorité " + priorityLabels[item.priority];
+    ? "sous-étape de « " + parent.title + " », priorité " + priorityLabel(item.priority)
+    : "priorité " + priorityLabel(item.priority);
 }
 
 export default TaskItem;

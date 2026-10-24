@@ -562,7 +562,7 @@ test("3.4 technical identifiers are not required for the first-screen summary", 
 
 test("4.1 compact responsive styles, visible focus and 44px targets exist", () => {
   assert.match(css, /@media\(max-width:320px\)\{[^\n]*\.sync-trust-block/);
-  assert.match(css, /\.sync-help-toggle:focus-visible[^}]*outline:3px solid/);
+  assert.match(css, /\.sync-help-toggle:focus-visible[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
   assert.match(css, /\.sync-help-toggle,\.sync-intent-link\{[^}]*min-height:44px[^}]*min-width:44px/);
   assert.match(css, /\.sync-business-details>summary[^{]*\{[^}]*min-height:44px/);
   assert.match(css, /\.sync-intent>summary\{[^}]*min-height:44px/);

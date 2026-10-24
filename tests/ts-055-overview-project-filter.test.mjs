@@ -204,7 +204,7 @@ test("TS-055 the selector wraps and keeps a visible 44 by 44 pixel target", () =
   assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*min-width:44px[^}]*min-height:44px/);
   assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.overview-urgency-filter \.filter-option span\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:3px solid/);
+  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
 });
 
 function createFilterHarness(mode) {

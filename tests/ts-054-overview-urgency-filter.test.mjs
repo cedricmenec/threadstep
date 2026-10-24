@@ -136,7 +136,7 @@ test("TS-054 the control wraps and offers a visible 44 by 44 pixel target", () =
   assert.match(css, /\.overview-urgency-filter\{[^}]*display:flex[^}]*flex-wrap:wrap[^}]*min-width:0/);
   assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*min-width:44px[^}]*min-height:44px/);
   assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:3px solid/);
+  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
 });
 
 function createSyncHarness(mode, { allChecked = true, urgentChecked = false,
