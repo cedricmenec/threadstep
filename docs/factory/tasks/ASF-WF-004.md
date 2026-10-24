@@ -1,7 +1,7 @@
 # ASF-WF-004 | Préparer la publication GitHub Pages du build Vite
 
 Date: 2026-10-24
-Status: implementation in review; publication non vérifiée tant que PR, CI et Pages ne sont pas prouvés
+Status: delivered on main, PR #194 merged, CI and Pages successful (2026-10-24); manual browser acceptance pending
 Type: factory
 Automation: manual
 Priority: high
@@ -35,9 +35,9 @@ Cette fiche **ne déclenche ni la bascule Pages ni une exécution payante**. Le 
 
 ## Critères d'acceptation
 
-- [ ] Une PR dédiée ne modifie les workflows protégés qu'au titre de cette tâche ASF et est revue sur son SHA exact, sans changement de secret, règle de branche, permission GitHub App ou droit d'administration.
-- [ ] CI indépendante `check` de la PR : tests Node existants, tests de workflow, Actionlint, syntaxe Bash, installation reproductible, build Vite et inspection de `dist/` réussis. Un build erroné / asset manquant / fichier sensible / CSP affaiblie doit faire échouer les contrôles **avant toute publication**.
-- [ ] La chaîne Pages effective exécute le build à partir d'un `npm ci` propre, ne publie que `dist/` après validations et n'utilise plus `path: site` comme source d'upload. Les jobs `validate`, `build` et `deploy` conservent une chaîne de dépendances qui refuse le déploiement en cas d'échec.
+- [x] Une PR dédiée ne modifie les workflows protégés qu'au titre de cette tâche ASF et est revue sur son SHA exact, sans changement de secret, règle de branche, permission GitHub App ou droit d'administration.
+- [x] CI indépendante `check` de la PR : tests Node existants, tests de workflow, Actionlint, syntaxe Bash, installation reproductible, build Vite et inspection de `dist/` réussis. Un build erroné / asset manquant / fichier sensible / CSP affaiblie doit faire échouer les contrôles **avant toute publication**.
+- [x] La chaîne Pages effective exécute le build à partir d'un `npm ci` propre, ne publie que `dist/` après validations et n'utilise plus `path: site` comme source d'upload. Les jobs `validate`, `build` et `deploy` conservent une chaîne de dépendances qui refuse le déploiement en cas d'échec.
 - [ ] Les ressources du site construit chargent correctement à `https://cedricmenec.github.io/threadstep/` et les chemins locaux restent sous `/threadstep/`. Rafraîchissement, retour et navigation `#/parametres`, `#/parametres/donnees`, `#/parametres/synchronisation` et détail d'un projet fonctionnent.
 - [ ] CSP, vendor Dexie, absence de secrets/CDN runtime, formats de sauvegarde, données locales et gardes Cloud restent inchangés. Les tests de code ne sont pas présentés comme une preuve de session OTP ou de synchronisation Cloud réelle.
 - [ ] La stratégie de rollback est écrite et reproductible, avec conditions d'activation si le chargement du site échoue, sans purge IndexedDB ni rupture des fichiers de sauvegarde.
@@ -61,3 +61,12 @@ Cette fiche **ne déclenche ni la bascule Pages ni une exécution payante**. Le 
 La voie ASF manuelle a été autorisée explicitement par le propriétaire dans la session ThreadStep du 24 octobre 2026. La branche d'implémentation `feat/asf-wf-004-pages-vite-dist-20261024` prépare le changement des workflows Pages et CI, l'actualisation des tests TS-057, la vérification pré-publication et le [protocole de rollback](../pages-vite-deployment.md). **Le seul commit ou la création de PR ne prouve ni fusion, ni publication, ni recette physique.** Ne cocher les critères ci-dessus qu'après preuves effectives.
 
 Le lancement d'un agent OpenRouter/LLM n'est pas nécessaire à cette implémentation manuelle ; aucune demande de secret ni de nouveau privilège ne doit être ajoutée. Le changement ne touche pas le stockage métier ou Dexie Cloud.
+
+## Preuves de livraison observées le 24 octobre 2026
+
+- Implémentation autorisée et créée sur une branche ASF dédiée. [PR #194](https://github.com/cedricmenec/threadstep/pull/194) fusionnée après revue du diff limité à `.github/workflows/ci.yml`, `.github/workflows/pages.yml`, tests, documentation et protocole de retour arrière.
+- SHA final de la PR : `038dd9695014d00cb3a3077a9c4c918fc7fd7b0d`. [CI de PR #40078263030](https://github.com/cedricmenec/threadstep/actions/runs/40078263030) : `completed/success` sur le SHA exact, avec Actionlint, `npm ci`,  tests Node, build, comparaisons d'artefacts `verify:build`, serveurs `verify:servers`, vérification OpenSpec et smoke OpenCode **sans modèle**.
+- Commit de fusion `eb3624a5e6f51800c9317ccb1e39f8b385a5d974`. [CI main #40078435298](https://github.com/cedricmenec/threadstep/actions/runs/40078435298) : `completed/success`. [Pages #40078435278](https://github.com/cedricmenec/threadstep/actions/runs/40078435278) : `completed/success` ; jobs `validate`, `build`, `deploy` réussis. Dans `build`, les étapes `npm ci`, `npm run build`, `npm run verify:build`, `npm run verify:servers` et `actions/upload-pages-artifact@v4` ont chacune réussi. L'upload est configuré sur `path: dist`.
+- Le site GitHub Pages est publié depuis `dist/` selon le workflow versionné et les jobs GitHub. L'URL canonique de contrôle est `https://cedricmenec.github.io/threadstep/`. L'accès HTTP direct à cette URL n'était pas disponible dans la session de vérification ; ne pas revendiquer de comparaison visuelle réelle.
+- **Limites restantes** : recette sur appareil Chrome Android et desktop, accès direct aux fragments et retour arrière réel non exécutés. Aucun test réel sur base IndexedDB personnelle, session OTP ou instance Cloud de production. Aucune purge, migration de données, nouvelle permission GitHub, modification de secret ou appel OpenRouter.
+- Procédure de rollback : [pages-vite-deployment.md](../pages-vite-deployment.md), PR de retour à `path: site` ou revert normal, `check` obligatoire et Pages post-fusion, sans opération sur les données.
