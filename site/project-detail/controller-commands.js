@@ -133,10 +133,11 @@ export function createProjectDetailCommands(dependencies = {}) {
         (typeof patch.note !== "string" || patch.note.length > NOTE_MAX_LENGTH)) {
       return false;
     }
+    const note = patch.note === undefined ? item.note : patch.note;
     const next = updateItem(document, subjectId, itemId, {
       title: patch.title,
       priority: patch.priority,
-      note: patch.note === undefined ? item.note : patch.note
+      ...(typeof note === "string" ? { note } : {})
     });
     setTransient({ editingItemId: null, focusItemId: itemId });
     if (next === document) {

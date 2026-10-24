@@ -811,3 +811,58 @@ d'écriture locale et n'annonce aucun push réussi. Les tests déterministes
 vide/peuplée/divergente/indisponible/autre compte, l'annulation, le rechargement
 et la reprise idempotente. La recette navigateur, mobile, tactile, clavier,
 lecteur d'écran et Cloud réel reste **manuelle** sur une instance isolée.
+
+## Qualification du pilote React du détail projet (TS-060)
+
+TS-060 qualifie et durcit la frontière React de `#/sujet/<id>` sur des données
+synthétiques. Il ne change pas le comportement produit attendu : la seule
+correction de production est la commande `updateItem`, qui omettait la clé
+`note` indéfinie et perdait silencieusement une édition sans note. Le bilan et la
+matrice de recette versionnés sont dans
+`docs/product/react-project-detail-qualification.md`. Le pilote reste borné à
+cette route ; Overview, Paramètres, Synchronisation et la navigation demeurent
+vanilla.
+
+Les preuves déterministes sont réparties par invariant :
+
+- `tests/ts-060-project-detail-commands.test.mjs` : une intention, au plus une
+  écriture, validations, priorité/ordre/hiérarchie/notes/compteurs, retrait et
+  Undo de dix secondes, alternative clavier ;
+- `tests/ts-060-project-detail-lifecycle.test.mjs` : montage, rafraîchissement,
+  présentation, démontage et remontage sans écriture ni requête ;
+- `tests/ts-060-project-detail-transitions.test.mjs` : route, projet, identité,
+  espace, lecture bloquée et projet disparu ; invalidation avant le rendu
+  vanilla et propriétaire DOM unique ;
+- `tests/ts-060-project-detail-continuity.test.mjs` : brouillon, parents
+  développés, focus, clavier virtuel simulé et ancrage de liste longue ;
+- `tests/ts-060-overview-read-state.test.mjs` : seuils TS-052 (250 ms et
+  8 000 ms), absence de faux état vide et branchement Overview sans React ;
+- `tests/ts-060-qualification-report.test.mjs` : structure honnête de la matrice
+  et du bilan, statuts autorisés et décision bornée.
+
+Commandes de vérification et de mesure :
+
+```sh
+node --test tests/ts-060-*.test.mjs
+node --test --experimental-test-coverage tests/ts-060-*.test.mjs
+npm run check
+npm run build
+npm run verify:build
+```
+
+Les mesures de build lisent `dist/assets`, le chunk `app-*.js` et le CSS. Une
+preuve automatisée ou une CI verte ne remplace ni navigateur isolé, ni Android
+réel, ni clavier physique, ni tactile, ni lecteur d'écran, ni Dexie Cloud de
+test. Ces scénarios restent `NOT_RUN` dans la matrice tant qu'aucune preuve
+datée n'existe.
+
+Toute régression n'est corrigée que si un test TS-060 échoue de façon
+reproductible dans `site/project-detail/*`, `site/react-adapter.js` ou
+`site/react-boundary.js`, sans toucher à `site/core.js` ni au flux `persist()`.
+L'invalidation de la frontière précède tout retour au rendu vanilla. Un défaut
+de synchronisation, d'identité ou de migration hors de cette frontière est
+documenté et orienté vers une tâche distincte.
+
+La décision GO/NO-GO du bilan est une recommandation humaine bornée au lot
+suivant. Elle ne déclenche et n'autorise automatiquement ni TS-061, ni TS-063,
+ni aucune fusion ou publication.
