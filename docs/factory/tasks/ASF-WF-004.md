@@ -1,7 +1,7 @@
 # ASF-WF-004 | Préparer la publication GitHub Pages du build Vite
 
 Date: 2026-10-24
-Status: ready for manual implementation; publication not yet changed
+Status: implementation in review; publication non vérifiée tant que PR, CI et Pages ne sont pas prouvés
 Type: factory
 Automation: manual
 Priority: high
@@ -55,3 +55,9 @@ Cette fiche **ne déclenche ni la bascule Pages ni une exécution payante**. Le 
 - Risque **high** : l'artefact publié remplace l'entrée navigateur sur la même origine, avec un risque de chargement bloqué, d'échec CSP/assets ou de régression de la lecture locale. Qualifier et réduire ce risque avant fusion de la PR d'implémentation.
 - Hors périmètre : React, Tailwind, changements de composants/UI, nouveaux droits GitHub, secrets OpenRouter, mise en production d'un service backend, changement Dexie/Cloud, nouvelle télémétrie, migrations de stockage, bascule CDN et optimisation non demandée.
 - **Automation: manual** : l'agent OpenSpec de tâches produit `TS-NNN` ne doit pas être détourné pour modifier `.github/workflows/`. Utiliser la voie ASF explicitement autorisée, avec contrôle indépendant. **La création ou fusion de la présente fiche documentaire n'autorise pas la future bascule de publication.**
+
+## Suivi de l'implémentation (24 octobre 2026)
+
+La voie ASF manuelle a été autorisée explicitement par le propriétaire dans la session ThreadStep du 24 octobre 2026. La branche d'implémentation `feat/asf-wf-004-pages-vite-dist-20261024` prépare le changement des workflows Pages et CI, l'actualisation des tests TS-057, la vérification pré-publication et le [protocole de rollback](../pages-vite-deployment.md). **Le seul commit ou la création de PR ne prouve ni fusion, ni publication, ni recette physique.** Ne cocher les critères ci-dessus qu'après preuves effectives.
+
+Le lancement d'un agent OpenRouter/LLM n'est pas nécessaire à cette implémentation manuelle ; aucune demande de secret ni de nouveau privilège ne doit être ajoutée. Le changement ne touche pas le stockage métier ou Dexie Cloud.
