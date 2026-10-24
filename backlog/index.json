@@ -736,7 +736,7 @@
       "TS-057"
     ],
     "created_at": "2026-10-24",
-    "content_sha256": "8aca218ba278d611fcc83d4a557b21c86a04627f7a5b48edb259e5bad18a0702"
+    "content_sha256": "4da11ff013ca69306a42ed983a5afd74c2855c8fa03da41453074f8933c8b713"
   },
   {
     "id": "TS-059",
@@ -750,6 +750,6 @@
       "TS-058"
     ],
     "created_at": "2026-10-24",
-    "content_sha256": "f9b23c6e1c121d5073364069a96df3138e1dd5e2839180aa3aa6c3b36d57473c"
+    "content_sha256": "408ca49114e5e3d2efc10e8db3365d36d82b8f39b79fa17d804a8317c5cb2592"
   }
 ]
