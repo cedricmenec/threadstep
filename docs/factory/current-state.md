@@ -1,5 +1,14 @@
 # État courant de l'Autonomous Software Factory
 
+## 24 octobre 2026 : ASF-WF-004, GitHub Pages publie le build Vite
+
+- **PR d'implémentation [#194](https://github.com/cedricmenec/threadstep/pull/194) fusionnée**, commit de main `eb3624a5e6f51800c9317ccb1e39f8b385a5d974`. La configuration Pages construit désormais Vite depuis la source `site/` et publie exclusivement `dist/`, avec `base: "/threadstep/"`. L'ancien `site/` reste disponible pour un rollback via une nouvelle PR vérifiée.
+- **Contrôle indépendant sur la PR** : [CI #40078263030](https://github.com/cedricmenec/threadstep/actions/runs/40078263030) `completed/success` au SHA final `038dd9695014d00cb3a3077a9c4c918fc7fd7b0d`. Actionlint, installation épinglée, `npm run check`, build, reproductibilité/sécurité `verify:build`, smoke serveurs `verify:servers`, OpenSpec et OpenCode sans modèle ont réussi.
+- **Après fusion** : [CI main #40078435298](https://github.com/cedricmenec/threadstep/actions/runs/40078435298) et [Pages #40078435278](https://github.com/cedricmenec/threadstep/actions/runs/40078435278) `completed/success` sur le même SHA. Jobs Pages `validate`, `build`, `deploy` réussis ; l'upload Pages pointe explicitement sur `path: dist`.
+- **Aucune preuve de recette matérielle** : accès HTTP direct à la page non obtenu depuis cette session, Chrome Android, données IndexedDB existantes, navigation tactile, OTP Cloud et convergence multi-appareils restent à vérifier séparément. La réussite Actions ne vaut pas preuve de ces parcours. Aucun secret, règle de protection, permission GitHub App ou code de persistance n'a été changé.
+- [Tâche ASF-WF-004](tasks/ASF-WF-004.md) · [Protocole de publication et rollback](pages-vite-deployment.md) · [Suivi Notion](https://app.notion.com/p/40312ac91636818facb1f47a274184b6).
+
+
 ## ASF V3, 23 octobre 2026 : G1 structuré mais non conforme, C4 préparatoire
 
 **Cette section datée est plus récente que les états historiques conservés ci-dessous.** Le dépôt `main` exécute encore les workflows V1 ; la V3 n'est **ni fusionnée, ni activée, ni autorisée à payer**. Source de pilotage à réconcilier au prochain contrôle : [Notion ASF V3](https://app.notion.com/p/3fc12ac9163680adb3e3e3f63d827f69), [issue #86](https://github.com/cedricmenec/threadstep/issues/86).
