@@ -6,8 +6,10 @@ Le [backlog produit Notion](https://app.notion.com/p/40212ac9163681349ce5c8130f7
 
 1. **[TS-060](tasks/TS-060.md), UI-10** : qualifier la continuité UX du pilote React, les tests de non-régression et la recette physique Android/Dexie de test ; documenter un GO/NO-GO humain avant de poursuivre. `ready / manual / medium`, priorité haute, dépend de TS-059 livrée.
 2. **[TS-061](tasks/TS-061.md), UI-03** : socle borné de primitives React et tokens CSS sémantiques locaux, à parité graphique ; pas de Tailwind ou refonte Stitch. `ready / manual / medium`, priorité normale, dépend d'un bilan TS-060 favorable.
+3. **[TS-062](tasks/TS-062.md), UI-04** : auditer et faire valider les 32 références mobiles Stitch, comparer aux contrats métier et figer un sous-ensemble navigation. `ready / manual / low`, priorité normale ; techniquement indépendant des précédentes, revue humaine impérative.
+4. **[TS-063](tasks/TS-063.md), UI-05** : préparer le shell et la navigation responsive React, quatre destinations inchangées, sans migration des formulaires sensibles. `proposed / manual / high`, priorité normale ; dépend de TS-060, TS-061 et TS-062 et ne devient lançable qu'après leurs preuves et arbitrages.
 
-La suite de la séquence prévoit la revue des 32 maquettes mobiles (UI-04), puis un premier lot de navigation responsive (UI-05) après validation des prérequis. Ces étapes seront spécifiées séparément ; aucun lancement ASF/OpenRouter n'est inclus dans cette préparation documentaire.
+Ce découpage conserve l'ordre de décision UI-10 → UI-03 → UI-04 → UI-05 sans inventer une dépendance technique entre UI-03 et la revue UI-04, qui peut être préparée en parallèle. **Aucun lancement ASF/OpenRouter n'est inclus dans cette préparation documentaire.** UI-06 (cartes et tâches d'Overview) reste différé et constitue une décision ultérieure.
 
 ## Migration progressive vers React : TS-058 et TS-059 (24 octobre 2026)
 
