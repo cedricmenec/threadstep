@@ -1,5 +1,15 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-059 (24 octobre 2026) : dépendances Node absentes dans le runner OpenSpec
+
+**Preuve :** le [run #40100098015](https://github.com/cedricmenec/threadstep/actions/runs/40100098015/job/120890329291), démarré sur le commit fusionné de TS-058, a produit et validé un plan OpenSpec pour TS-059 puis échoué lors de `npm run check`. Trois suites TS-058 n'ont pas pu importer `esbuild` (`ERR_MODULE_NOT_FOUND`) ; 1 081 autres tests ont réussi. Le workflow installait OpenSpec/OpenCode globalement mais jamais les dépendances projet avant ses vérifications.
+
+**Correctif factory :** voir [ASF-OPSX-DEPS-01](tasks/ASF-OPSX-DEPS-01.md). Le runner configure Node 22 et exécute `npm ci` après le checkout, avant le jeton d'installation GitHub App et les appels payants, pour toutes les phases. La CI indépendante suit déjà cette séquence.
+
+**Reprise TS-059 :** aucun checkpoint de plan ou d'implémentation n'a été poussé et aucune branche `agent/openspec/TS-059` n'a été attestée. Après fusion de la PR de factory et confirmation des checks sur `main`, le propriétaire peut déclencher une **nouvelle exécution `phase=auto`**, et non `apply`/`finalize` ou « Re-run jobs ». Cela régénère un plan et entraîne des appels OpenRouter facturables : nouvelle autorisation explicite requise. Le correctif ne déclenche aucun run payant et ne promet pas à lui seul le succès du pilote React.
+
+---
+
 ## Incident TS-039 (19 octobre 2026) : exception limitée aux scripts produit
 
 **Constat vérifié.** Le [run TS-039 #39169388706](https://github.com/cedricmenec/threadstep/actions/runs/39169388706) a exécuté les tests produit puis échoué au checkpoint pré-OPSX : `Checkpoint has forbidden paths: scripts/product/e2e-matrix.mjs`. Le [plan TS-039](https://github.com/cedricmenec/threadstep/blob/agent/openspec/TS-039/openspec/changes/ts-039/tasks.md) prévoit ce module, mais le vérificateur de checkpoint applique `PROTECTED_PREFIXES` à tout `scripts/`. Cette interdiction trop large contredit l'intention d'ASF-OPSX-06 de permettre le tooling produit.
