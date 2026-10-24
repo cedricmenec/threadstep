@@ -7,6 +7,14 @@ plus bas. Ce GO ne planifie ni n'autorise automatiquement la migration
 d'Overview, de Paramètres, de la Synchronisation, du design system ou de
 Tailwind.
 
+## Livraison effective et vérification du site public (24 octobre 2026)
+
+- [PR TS-059 #200](https://github.com/cedricmenec/threadstep/pull/200) fusionnée au commit `bde2e5d62cfb415c82f3e19131dcfbd77e566927`.
+- [CI de `main` réussie](https://github.com/cedricmenec/threadstep/actions/runs/40103243753) et [GitHub Pages déployé](https://github.com/cedricmenec/threadstep/actions/runs/40103243815) depuis le même SHA, via le build Vite `dist/`.
+- Smoke test manuel non destructif sur le site public, dans un navigateur isolé **sans instance Dexie Cloud** : création d'un projet de test en IndexedDB locale, ouverture du détail `#/sujet/<id>`, création puis complétion d'une tâche, avec compteurs et état visuel cohérents.
+- La parité graphique est attendue : les styles, classes et libellés sont conservés. Aucun changement visible n'est un indicateur de défaut de déploiement. Le gain actuel est l'architecture React limitée au détail du projet.
+- Ce smoke test ne couvre pas Chrome Android réel, la navigation clavier complète, les gestes tactiles, le lecteur d'écran, les données personnelles du propriétaire, l'isolation multi-comptes ni la convergence Dexie Cloud. Ces validations ne sont pas revendiquées.
+
 ## Commandes de mesure
 
 ```sh
