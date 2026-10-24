@@ -14,17 +14,20 @@
     "preview": "vite preview",
     "verify:build": "node tools/verify-build.mjs",
     "verify:servers": "node tools/verify-servers.mjs",
-    "check": "npm test && npm run backlog:check && node --check scripts/product/e2e-matrix.mjs && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/authentication.js && node --check site/local-recovery.js && node --check site/indexeddb-backup.js && node --check site/local-metadata.js && node --check site/synced-records.js && node --check site/cloud-activation.js && node --check site/fingerprint.js && node --check site/workspace-identity.js && node --check site/bootstrap-diagnostics.js && node --check site/local-migration.js && node --check site/persistence.js && node --check site/migration.js && node --check site/migration-reconciliation.js && node --check site/migration-lifecycle.js && node --check site/data-integrity-recovery.js && node --check site/sync-diagnostics.js && node --check site/sync-diagnostic-report.js && node --check site/sync-lifecycle-instrumentation.js && node --check site/sync-trust-guidance.js && node --check site/overview-read-state.js && node --check site/cloud-settings.js && node --check site/interaction-continuity.js && node --check site/app.js"
+    "check": "npm test && npm run backlog:check && node --check scripts/product/e2e-matrix.mjs && node --check site/core.js && node --check site/dexie-foundation.js && node --check site/authentication.js && node --check site/local-recovery.js && node --check site/indexeddb-backup.js && node --check site/local-metadata.js && node --check site/synced-records.js && node --check site/cloud-activation.js && node --check site/fingerprint.js && node --check site/workspace-identity.js && node --check site/bootstrap-diagnostics.js && node --check site/local-migration.js && node --check site/persistence.js && node --check site/migration.js && node --check site/migration-reconciliation.js && node --check site/migration-lifecycle.js && node --check site/data-integrity-recovery.js && node --check site/sync-diagnostics.js && node --check site/sync-diagnostic-report.js && node --check site/sync-lifecycle-instrumentation.js && node --check site/sync-trust-guidance.js && node --check site/overview-read-state.js && node --check site/cloud-settings.js && node --check site/interaction-continuity.js && node --check site/react-boundary.js && node --check site/react-adapter.js && node --check site/app.js"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "dexie": "4.4.6",
-    "dexie-cloud-addon": "4.4.15"
+    "dexie-cloud-addon": "4.4.15",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "esbuild": "0.25.10",
+    "jsdom": "30.1.3",
     "vite": "7.3.7"
   }
 }

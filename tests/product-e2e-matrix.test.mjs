@@ -302,8 +302,10 @@ test("4.1 the check chain covers the module and keeps runtime dependencies and s
   assert.ok(pkg.scripts.check.includes("node --check scripts/product/e2e-matrix.mjs"));
   assert.deepEqual(pkg.dependencies, {
     dexie: "4.4.6",
-    "dexie-cloud-addon": "4.4.15"
+    "dexie-cloud-addon": "4.4.15",
+    react: "19.3.1",
+    "react-dom": "19.3.1"
   });
-  assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10", vite: "7.3.7" });
+  assert.deepEqual(pkg.devDependencies, { esbuild: "0.25.10", jsdom: "30.1.3", vite: "7.3.7" });
   assert.equal(SCHEMA_VERSION, 3);
 });

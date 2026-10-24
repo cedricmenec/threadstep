@@ -51,6 +51,7 @@ test("TS-048 a binding block invalidates the previous start without deleting Ind
     lastRecords: { subjects: [1] },
     subjectForm: { hidden: true },
     subjectsEl: { replaceChildren: () => { cleared += 1; } },
+    reactBoundary: { canWriteVanilla: () => true, invalidate: () => false },
     emptyDocument: () => ({ subjects: [] }),
     emptyRecords: () => ({ subjects: [] }),
     applyBusinessVisibility: () => {}

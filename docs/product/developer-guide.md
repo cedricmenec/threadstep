@@ -448,6 +448,96 @@ un environnement Cloud isolé.
 
 Toutes les modifications passent par une branche et PR ; les workflows CI et Pages fournissent une preuve indépendante après fusion. Les tâches produit `TS-NNN` sont spécifiées sous `backlog/tasks/` ; les spécifications canoniques OpenSpec vivent sous `openspec/specs/`, leur historique sous `openspec/changes/archive/`.
 
+## Frontière d'intégration React dormante (TS-058)
+
+TS-058 prépare le pilote React de TS-059 sans activer aucune surface React
+métier dans l'application publiée. `react@19.3.1` et `react-dom@19.3.1` sont des
+dépendances d'exécution à versions exactes, verrouillées dans
+`package.json`/`package-lock.json` et installées par `npm ci`. L'outillage DOM
+de test `jsdom@30.1.3` reste une `devDependency` exacte. `dexie` et
+`dexie-cloud-addon` conservent leurs versions livrées.
+
+**JSX local.** `vite.config.mjs` déclare `esbuild: { jsx: "automatic" }`.
+Les fichiers `.jsx` de test utilisent le runtime automatique de React, sans
+Babel, sans plugin React supplémentaire, sans CDN et sans script inline. La CSP
+de production reste identique à `site/index.html` : `script-src 'self'`, sans
+`unsafe-inline` ni `unsafe-eval`, et la base reste `/threadstep/`.
+
+**Fichiers du socle.**
+
+- `site/react-boundary.js` : propriété DOM unique et bornée. Une racine active
+  est identifiée par une clé `vue|projet|identité autorisée`. Un second
+  propriétaire est refusé ; `canWriteVanilla(conteneur)` est faux tant que la
+  racine possède le conteneur ; `unmount`/`invalidate` démontent la racine.
+- `site/react-adapter.js` : adaptateur de présentation en lecture seule. Il
+  dérive les métriques de `site/core.js`, expose un instantané détaché et figé,
+  sépare le sous-objet `transient` (éditeur, menu, parents développés, filtre),
+  notifie les rafraîchissements autorisés et route des commandes nommées vers
+  les callbacks du contrôleur existant.
+- `site/app.js` : garde-fou minimal autour de `#subjects`. Le renderer vanilla
+  refuse de remplacer les descendants d'un conteneur possédé par React et
+  invalide la surface au changement de route, d'identité autorisée, de
+  chargement bloquant ou de projet disparu. Aucun composant React n'y est
+  importé ni monté.
+- `tests/fixtures/ts-058/synthetic-project-detail.jsx` et
+  `tests/helpers/ts-058-react-harness.mjs` : fixture synthétique et DOM
+  déterministe.
+- `tests/ts-058-react-toolchain.test.mjs`,
+  `tests/ts-058-react-boundary.test.mjs`,
+  `tests/ts-058-react-adapter.test.mjs`,
+  `tests/ts-058-react-integration.test.mjs` et
+  `tests/ts-058-react-docs.test.mjs` : compilation JSX locale, propriété DOM,
+  adaptateur, scénarios de montage/démontage et documentation.
+
+**Contrat de montage/démontage.** Une seule racine possède au plus un conteneur.
+Le montage est idempotent pour la même clé ; un second propriétaire est refusé.
+Avant tout retour au rendu vanilla, la racine est démontée. Un changement de
+route, de projet, d'identité/espace autorisé, un chargement bloquant ou la
+disparition du projet invalide l'ancien instantané : aucun contenu du contexte
+précédent ne doit rester affiché. Un rafraîchissement de données autorisé
+notifie l'adaptateur et conserve les états transitoires encore valides.
+
+**Aucune seconde source de vérité.** Les modules React n'importent ni Dexie,
+ni Dexie Cloud, ni l'OTP, ni `site/app.js`. Aucun montage, rendu, démontage ou
+changement de préférence visuelle n'écrit dans IndexedDB/Dexie et n'émet de
+requête Cloud. Les identifiants, validations et écritures restent ceux de
+`site/core.js` et du flux existant.
+
+**Diagnostic d'un conteneur vide ou remplacé.** Vérifier d'abord que la route
+est bien `#/sujet/<id>` et que le projet existe. Contrôler ensuite
+`boundary.owner()` : un propriétaire actif interdit toute écriture vanilla dans
+le conteneur. Un conteneur vide après montage indique en général une surface
+non montée, une invalidation de route/identité ou une compilation JSX
+incorrecte ; relancer `node --test tests/ts-058-react-*.test.mjs`. Si le
+vanilla a remplacé un arbre React, la clé de propriété ou le garde-fou
+`canWriteVanilla` a été contourné : démonter, corriger l'appel, puis vérifier
+qu'un seul propriétaire subsiste. Ne jamais monter deux racines pour corriger
+un conteneur vide.
+
+**Taille du build.** Mesure TS-058 avant/après : total `dist/assets`
+687 844 octets → 690 229 octets, soit +2 385 octets ; le chunk applicatif passe
+de 309 560 à 311 945 octets. Aucun runtime React (`react`, `react-dom`,
+`jsx-runtime`, `createRoot`) n'est présent dans le bundle de production tant que
+TS-059 n'importe pas la surface réelle. La présence du mot `react` dans les
+identifiants du garde-fou ne constitue pas une activation React.
+
+**Limites de vérification.** Les tests TS-058 sont déterministes sous Node et
+jsdom : ils prouvent la propriété DOM, les listeners, l'adaptateur, les
+invalidations et l'absence d'écriture, pas un rendu navigateur réel, le focus,
+le tactile, un lecteur d'écran, Chrome Android ou une session Cloud/OTP. Cette
+recette reste manuelle et distincte.
+
+**Retour arrière.** Le socle est réversible : ne pas monter la surface, ou la
+démonter avant `render()`. Pour retirer TS-058, supprimer ou laisser dormants
+`site/react-boundary.js`, `site/react-adapter.js`, la fixture et les tests
+associés, retirer les dépendances React/jsdom et l'option JSX, puis reconstruire
+et republier via la CI normale. Aucune préférence persistée, aucune route
+publique, aucune clé de stockage, base IndexedDB, configuration Cloud ou export utilisateur n'est
+créé ou modifié par cette bascule. La spec canonique `static-build-pipeline`
+contient encore une formulation « publication `site/` » antérieure à
+ASF-WF-004 alors que Pages sert `dist/` ; TS-058 ne la réécrit pas et ne change
+aucun workflow.
+
 ## Frontières de sécurité et évolution
 
 **État courant du pilote :** le socle de configuration Dexie Cloud (TS-024), la persistance local-first (TS-025), la migration historique (TS-026), l'authentification OTP email native (TS-027) et l'espace local IndexedDB par défaut (TS-032) sont intégrés ; l'indicateur de synchronisation, la purge locale et la consolidation de la recette restent à livrer (TS-028 à TS-030). Sans URL valide, aucune base synchronisée n'est construite : la vue métier lit et écrit l'espace local `threadstep-local`. La CSP n'autorise que les hôtes Dexie Cloud, et aucun appel n'est émis en mode local. La clé `threadstep.document.v1` et ses exports restent préservés ; sa conversion explicite relève de TS-033 et le transfert consenti de TS-037.
