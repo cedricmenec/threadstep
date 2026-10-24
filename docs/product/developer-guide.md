@@ -538,6 +538,81 @@ contient encore une formulation « publication `site/` » antérieure à
 ASF-WF-004 alors que Pages sert `dist/` ; TS-058 ne la réécrit pas et ne change
 aucun workflow.
 
+## Pilote React du détail projet (TS-059)
+
+TS-059 active la surface React du détail **uniquement** pour `#/sujet/<id>`, lorsque la
+route est valide, l'identité autorisée, aucune lecture bloquante n'est en cours
+et le projet existe. Overview, Paramètres, Imports / Exports et Synchronisation
+restent rendus par le vanilla existant. Aucune route, préférence persistée, clé
+de stockage ou migration n'est créée.
+
+**Composants de présentation.**
+
+- `site/project-detail/ProjectDetail.jsx` : en-tête, compteurs, renommage,
+  formulaire de création et zone de tâches.
+- `site/project-detail/TaskList.jsx`, `TaskItem.jsx` et `SubtaskList.jsx` :
+  ordre par priorité, hiérarchie parent/sous-tâche, filtre des tâches
+  terminées, notes et état vide.
+- `site/project-detail/TaskActionMenu.jsx` : bouton « ⋮ », panneau, libellés
+  accessibles et commandes désactivées de `site/core.js`.
+- `site/project-detail/TaskEditor.jsx` : édition inline titre/priorité/note et
+  erreurs de validation existantes.
+- `site/project-detail/ProjectDetailSurface.jsx` : racine React, abonnement à
+  l'adaptateur, montage/mise à jour/démontage.
+- `site/project-detail/surface-decision.js` : décision pure de montage.
+- `site/project-detail/controller-commands.js` : fabrique de commandes à
+  dépendances injectées. Elle ne conserve aucun document et délègue chaque
+  écriture au contrôleur, avec les règles de `site/core.js`.
+
+Ces composants n'importent ni Dexie, ni l'OTP, ni `site/app.js`, ni
+`persistence.js`. Les titres et notes sont rendus comme nœuds texte React.
+
+**Montage et propriété DOM.** Une seule racine possède `#subjects`. La clé
+`reactBoundaryKey({ view: "subject", subjectId, identity })` est réutilisée pour
+la même surface ; un changement de projet, de route, d'identité ou un chargement
+bloquant invalide l'ancienne racine avant tout rendu vanilla. Le repli « Projet
+introuvable » reste vanilla et aucun projet absent n'est inventé. Le retour à
+Overview ou à Paramètres démonte la racine avant que le vanilla ne réécrive la
+zone de contenu.
+
+**Répartition de l'état transitoire.** Le contrôleur reste propriétaire de
+`expandedParents`, `openMenuId`, `editingItemId`, `renamingSubject`,
+`hideCompleted`, du suivi et des intentions de focus. Ces valeurs sont exposées
+dans `snapshot.transient`. React ne conserve que le contenu non enregistré des
+champs d'édition, de création et de renommage, identifié par l'ID stable de la
+tâche ou du projet : un rafraîchissement autorisé conserve le brouillon, alors
+qu'un démontage de navigation le supprime. Aucun effet de montage n'appelle une
+commande d'écriture.
+
+**Mise à jour et continuité.** Les commandes passent par l'adaptateur puis le
+contrôleur. Les mises à jour appellent `adapter.refresh()` dans `flushSync`,
+puis `applyFocus()` et `finishUxRender()` : focus, position de lecture et scroll
+sont restaurés après le commit React. Les listes utilisent `key={item.id}`, ce
+qui réutilise les nœuds lors des réordonnancements et évite une hauteur
+artificielle. Le glisser-déposer réutilise les listeners `pointermove`/`up`
+existants ; les commandes « Monter » / « Descendre » restent disponibles au
+clavier.
+
+**Diagnostic.** Vérifier la route, l'existence du projet et `boundary.owner()`.
+Un conteneur vide après montage indique une décision de route fausse, une
+invalidation d'identité ou un échec de compilation JSX. Un contenu vanilla à la
+place du détail signifie que `releaseProjectDetailSurface` n'a pas été appelé
+avant `replaceChildren`. Tester avec
+`node --test tests/ts-059-project-detail-*.test.mjs`.
+
+**Retour arrière.** Retirer l'import et l'appel de surface de `site/app.js`, ou
+revenir au commit précédent. Les modules peuvent rester dormants ou être
+supprimés. Aucune donnée, préférence, route, clé de stockage, base IndexedDB ni
+configuration Cloud n'est affectée. Le bilan mesuré se trouve dans
+`docs/product/react-project-detail-pilot.md`.
+
+**Limites de vérification.** Les tests déterministes sous Node/jsdom couvrent
+rendu, commandes, focus, drafts, rafraîchissements, invalidation, unicité de
+propriétaire et absence d'écriture. Ils ne prouvent pas un rendu navigateur
+réel, le clavier physique, le tactile, Chrome Android, un lecteur d'écran ni une
+session Dexie Cloud. Cette recette reste manuelle, avec export préalable et
+données de test uniquement.
+
 ## Frontières de sécurité et évolution
 
 **État courant du pilote :** le socle de configuration Dexie Cloud (TS-024), la persistance local-first (TS-025), la migration historique (TS-026), l'authentification OTP email native (TS-027) et l'espace local IndexedDB par défaut (TS-032) sont intégrés ; l'indicateur de synchronisation, la purge locale et la consolidation de la recette restent à livrer (TS-028 à TS-030). Sans URL valide, aucune base synchronisée n'est construite : la vue métier lit et écrit l'espace local `threadstep-local`. La CSP n'autorise que les hôtes Dexie Cloud, et aucun appel n'est émis en mode local. La clé `threadstep.document.v1` et ses exports restent préservés ; sa conversion explicite relève de TS-033 et le transfert consenti de TS-037.

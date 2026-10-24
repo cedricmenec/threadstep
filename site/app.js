@@ -1,5 +1,11 @@
 import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter, OVERVIEW_URGENCY_LIMIT, overviewUrgencyView, findOverviewUrgency } from "./core.js";
 import { createReactBoundary, reactBoundaryKey } from "./react-boundary.js";
+import { createReactAdapter } from "./react-adapter.js";
+import { decideProjectDetailSurface } from "./project-detail/surface-decision.js";
+import { createProjectDetailCommands } from "./project-detail/controller-commands.js";
+import { createProjectDetailSurface } from "./project-detail/ProjectDetailSurface.jsx";
+import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -378,6 +384,94 @@ let removalTimer = null;
 let removalDeadline = 0;
 
 const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
+
+// Presentation state of the project-detail pilot stays owned by this
+// controller. React only reads a detached snapshot and calls named commands.
+function projectDetailTransientState() {
+  return {
+    expandedParents,
+    openMenuId,
+    editingItemId,
+    renamingSubject,
+    hideCompleted,
+    trackedItemId: resumeRef && typeof resumeRef.itemId === "string" ? resumeRef.itemId : null,
+    resumeRef,
+    revealItemId,
+    pendingCollapseFocus,
+    pendingPriorityFocus,
+    pendingMenuFocus,
+    pendingMoveFocus,
+    pendingTaskCreationFocus
+  };
+}
+function setProjectDetailTransient(patch) {
+  if (!patch || typeof patch !== "object") return;
+  if (Object.prototype.hasOwnProperty.call(patch, "expandedParents")) {
+    expandedParents = patch.expandedParents instanceof Set
+      ? patch.expandedParents
+      : new Set(patch.expandedParents || []);
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "openMenuId")) openMenuId = patch.openMenuId;
+  if (Object.prototype.hasOwnProperty.call(patch, "editingItemId")) editingItemId = patch.editingItemId;
+  if (Object.prototype.hasOwnProperty.call(patch, "renamingSubject")) renamingSubject = patch.renamingSubject === true;
+  if (Object.prototype.hasOwnProperty.call(patch, "hideCompleted")) hideCompleted = patch.hideCompleted === true;
+  if (Object.prototype.hasOwnProperty.call(patch, "revealItemId")) revealItemId = patch.revealItemId;
+  if (Object.prototype.hasOwnProperty.call(patch, "focusItemId")) focusItemId = patch.focusItemId;
+  if (Object.prototype.hasOwnProperty.call(patch, "focusSubjectId")) focusSubjectId = patch.focusSubjectId;
+  if (Object.prototype.hasOwnProperty.call(patch, "focusRenameControl")) focusRenameControl = patch.focusRenameControl === true;
+  if (Object.prototype.hasOwnProperty.call(patch, "focusOpenSubjectId")) focusOpenSubjectId = patch.focusOpenSubjectId;
+  if (Object.prototype.hasOwnProperty.call(patch, "pendingCollapseFocus")) pendingCollapseFocus = patch.pendingCollapseFocus;
+  if (Object.prototype.hasOwnProperty.call(patch, "pendingPriorityFocus")) pendingPriorityFocus = patch.pendingPriorityFocus;
+  if (Object.prototype.hasOwnProperty.call(patch, "pendingMenuFocus")) pendingMenuFocus = patch.pendingMenuFocus;
+  if (Object.prototype.hasOwnProperty.call(patch, "pendingMoveFocus")) pendingMoveFocus = patch.pendingMoveFocus;
+  if (Object.prototype.hasOwnProperty.call(patch, "pendingTaskCreationFocus")) pendingTaskCreationFocus = patch.pendingTaskCreationFocus;
+}
+const projectDetailCommands = createProjectDetailCommands({
+  getDocument: () => documentState,
+  setDocument: (next) => { documentState = next; },
+  persist,
+  render,
+  notify,
+  getTransient: projectDetailTransientState,
+  setTransient: setProjectDetailTransient,
+  removeAction: (subjectId, itemId) => {
+    const subject = findSubject(documentState, subjectId);
+    const item = subject && subject.items.find((entry) => entry.id === itemId);
+    if (!subject || !item) return false;
+    const before = documentState;
+    retirerAction(subject, item);
+    return documentState !== before;
+  },
+  undoAction: () => {
+    const before = documentState;
+    undoRemoval();
+    return documentState !== before;
+  },
+  startDragAction: (event, subject, item, handle) => {
+    startDrag(event, subject, item, handle);
+    return dragState !== null;
+  },
+  cancelDragAction: () => {
+    const hadDrag = dragState !== null;
+    cancelDrag(null);
+    return hadDrag;
+  },
+  navigate,
+  getResumeRef: () => resumeRef,
+  setResumeRef: (ref) => { resumeRef = ref; },
+  saveResumePreference
+});
+function createProjectDetailAdapter() {
+  return createReactAdapter({
+    getDocument: () => documentState,
+    getRoute: () => route,
+    getTransientState: projectDetailTransientState,
+    getAuthorizedIdentity: currentAuthorizedWorkspaceIdentity,
+    isBusinessAllowed: businessAllowed,
+    isLoadingBlocked: () => !documentLoaded,
+    commands: projectDetailCommands
+  });
+}
 let footerStatus = initialFooterStatus();
 function publishFooter(event) {
   footerStatus = reduceFooterStatus(footerStatus, event);
@@ -2877,6 +2971,51 @@ function reconcileReactSurface(nextRoute = route) {
   if (current.key === reactSurfaceContextKey(nextRoute)) return false;
   return reactBoundary.invalidate("context-change");
 }
+let reactProjectDetailRecord = null;
+function releaseProjectDetailSurface(reason) {
+  if (!reactProjectDetailRecord && !reactBoundary.owner()) return false;
+  return reactBoundary.invalidate(reason);
+}
+function renderProjectDetailSurface(uxSnapshot, explicitFocus) {
+  const key = reactSurfaceContextKey();
+  if (reactProjectDetailRecord && reactProjectDetailRecord.key === key &&
+      reactBoundary.owns(subjectsEl)) {
+    reactProjectDetailRecord.surface.update();
+    applyFocus();
+    finishUxRender(uxSnapshot, explicitFocus);
+    return true;
+  }
+  // A previous project, route or identity must lose ownership before the new
+  // root is created. This unmounts the old React tree synchronously.
+  if (reactProjectDetailRecord || reactBoundary.owner()) {
+    reactBoundary.invalidate("context-change");
+  }
+  const adapter = createProjectDetailAdapter();
+  const surface = createProjectDetailSurface({
+    adapter,
+    container: subjectsEl,
+    createRoot,
+    flushSync
+  });
+  const record = { key, adapter, surface };
+  reactProjectDetailRecord = record;
+  const mounted = reactBoundary.mount({
+    key,
+    container: subjectsEl,
+    unmount() {
+      surface.unmount();
+      if (reactProjectDetailRecord === record) reactProjectDetailRecord = null;
+    }
+  });
+  if (mounted.status === "refused") {
+    surface.unmount();
+    if (reactProjectDetailRecord === record) reactProjectDetailRecord = null;
+    return false;
+  }
+  applyFocus();
+  finishUxRender(uxSnapshot, explicitFocus);
+  return true;
+}
 function applyExpandedIdentityBoundary() {
   const identity = currentAuthorizedWorkspaceIdentity();
   const nextKey = authorizedWorkspaceIdentityKey(identity);
@@ -3409,6 +3548,7 @@ function render() {
   applyOverviewCounter(presentation);
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
+    if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("route-settings");
     hideOverviewUrgencies();
     if (reactBoundary.canWriteVanilla(subjectsEl)) subjectsEl.replaceChildren();
     subjectForm.hidden = true;
@@ -3422,6 +3562,7 @@ function render() {
   if (suppressOverview) {
     // A necessary read that has not produced a trustworthy document must never
     // show an empty list, a zero counter or an inoperative suggestion.
+    if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("overview-suppressed");
     hideOverviewUrgencies();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
@@ -3441,8 +3582,26 @@ function render() {
     hideOverviewUrgencies();
     focusCardEl.hidden = true;
     resumeCardEl.hidden = true;
+    if (route.view === "subject") {
+      const decision = decideProjectDetailSurface({
+        route,
+        businessAllowed: businessAllowed(),
+        isLoadingBlocked: !documentLoaded,
+        documentLoaded,
+        projectExists: !!findSubject(documentState, route.subjectId)
+      });
+      if (decision.mount) {
+        if (renderProjectDetailSurface(uxSnapshot, explicitUxFocus)) return;
+      }
+      if (typeof releaseProjectDetailSurface === "function") {
+        releaseProjectDetailSurface(decision.reason || "surface-unavailable");
+      }
+    } else {
+      if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("route-invalid");
+    }
     renderDetail(nextSubjects);
   } else {
+    if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("route-overview");
     renderSuggestion();
     renderResumeCard();
     renderUrgencyList();

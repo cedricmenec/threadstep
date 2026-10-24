@@ -96,10 +96,13 @@ test("TS-058 production CSP and document security are unchanged", () => {
   assert.doesNotMatch(html, /cdn\.|unpkg|jsdelivr|esm\.sh/i);
 });
 
-test("TS-058 the app still loads one local module and no React surface", () => {
+test("TS-058 the app still loads one local module and activates React only via the detail surface", () => {
   assert.match(html, /<script type="module" src="\.\/app\.js"><\/script>/);
   const app = read("site/app.js");
-  assert.doesNotMatch(app, /from "react"|from "react-dom|\.jsx["']/);
   assert.match(app, /from "\.\/react-boundary\.js"/);
-  assert.doesNotMatch(app, /createRoot|react-adapter\.js/);
+  assert.match(app, /from "react-dom\/client"/);
+  assert.match(app, /from "react-dom"/);
+  assert.match(app, /from "\.\/project-detail\/ProjectDetailSurface\.jsx"/);
+  assert.doesNotMatch(app, /from "react"|from "react-dom\/server"/);
+  assert.doesNotMatch(app, /<script[^>]*src=["'][^"']*cdn/i);
 });

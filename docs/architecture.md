@@ -3,11 +3,11 @@
 > La documentation de référence de la **software factory générique** est désormais dans [docs/factory/README.md](factory/README.md). Cette page décrit principalement le **pilote ThreadStep**.
 
 ## Application
-- Static `site/index.html` + CSS and vanilla ECMAScript modules; no runtime application server. The delivered UI remains vanilla: TS-058 installs pinned React dependencies and proves a dormant integration boundary, but `site/app.js` never imports or mounts a React business surface before TS-059.
+- Static `site/index.html` + CSS and vanilla ECMAScript modules; no runtime application server. TS-058 installs pinned React dependencies and the ownership boundary; TS-059 activates one React surface only for the project detail route `#/sujet/<id>`. Overview, Settings, Imports / Exports and Synchronization remain vanilla.
 - Vite (`TS-057`) uses `site/` as the source and writes an unversioned `dist/` artifact with base `/threadstep/`; the protected Pages pipeline (`ASF-WF-004`) builds and publishes this artifact while preserving the vanilla application.
 - `site/core.js` contains pure domain functions and schema validation, testable with built-in Node test runner.
 - `site/app.js` owns browser DOM/localStorage, import/export, rendering and events.
-- `site/react-boundary.js` records exclusive ownership of one bounded container and blocks vanilla replacement while a React root is active; `site/react-adapter.js` exposes a frozen read-only snapshot, separate transient state, named controller commands and explicit invalidation without importing Dexie or OTP. The production build contains no React runtime until a real surface imports it.
+- `site/react-boundary.js` records exclusive ownership of one bounded container and blocks vanilla replacement while a React root is active; `site/react-adapter.js` exposes a frozen read-only snapshot, separate transient state, named controller commands and explicit invalidation without importing Dexie or OTP. `site/project-detail/` contains the TS-059 presentational components, the pure surface decision and the injected command factory. React owns only `#subjects` on the project detail route and is unmounted before any vanilla render.
 - Network access stays limited to the configured Dexie Cloud hosts by the production CSP.
 - Public Pages serves the compiled assets from `dist/`, never `docs/` or repository metadata. The preserved `site/` sources remain the tested rollback path through an authorized and CI-checked PR. No browser data is migrated by this deployment.
 

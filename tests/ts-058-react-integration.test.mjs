@@ -177,7 +177,9 @@ test("TS-058 identifiers stay stable through React refresh and routes stay uncha
   assert.equal(subjectRoute("p1"), "#/sujet/p1");
   assert.deepEqual(parseRoute(subjectRoute("p1")), { view: "subject", subjectId: "p1" });
   assert.match(appSource, /window\.addEventListener\("hashchange"/);
-  assert.doesNotMatch(appSource, /createRoot\s*\(|react-dom\/client|from "react"/);
-  assert.doesNotMatch(appSource, /react-adapter\.js/);
+  assert.match(appSource, /from "react-dom\/client"/);
+  assert.match(appSource, /react-adapter\.js/);
+  assert.match(appSource, /from "\.\/project-detail\/ProjectDetailSurface\.jsx"/);
+  assert.equal((appSource.match(/ProjectDetailSurface/g) || []).length >= 2, true);
   assert.doesNotMatch(appSource, /localStorage\.setItem\([^)]*(?:react|surface)/i);
 });
