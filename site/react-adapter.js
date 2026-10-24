@@ -27,7 +27,19 @@ export const REACT_ADAPTER_COMMAND_NAMES = Object.freeze([
   "openItemMenu",
   "closeItemMenu",
   "trackItem",
-  "returnToOverview"
+  "returnToOverview",
+  "createSubstep",
+  "setPriority",
+  "undoRemoval",
+  "moveItem",
+  "beginEdit",
+  "cancelEdit",
+  "startDrag",
+  "cancelDrag",
+  "startRename",
+  "cancelRename",
+  "addSubstepFromPrompt",
+  "runMenuCommand"
 ]);
 
 function detach(value, seen = new WeakMap()) {

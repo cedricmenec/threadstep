@@ -54,13 +54,16 @@ test("TS-058 documentation describes JSX, CSP, mount contract and invalidation",
   assert.match(guide, /Diagnostic d'un conteneur vide ou remplacé/);
 });
 
-test("TS-058 documentation records the measured build delta and no React runtime", () => {
+test("TS-058 documentation records the measured delta and the TS-059 activation scope", () => {
+  const report = read("docs/product/react-project-detail-pilot.md");
   assert.match(guide, /687 844 octets/);
   assert.match(guide, /690 229 octets/);
   assert.match(guide, /\+2 385 octets/);
   assert.match(guide, /309 560 à 311 945 octets/);
-  assert.match(guide, /Aucun runtime React/);
-  assert.match(guide, /pas une activation React/i);
+  assert.match(guide, /TS-059/);
+  assert.match(guide, /surface React du détail/);
+  assert.match(report, /936 456 octets/);
+  assert.match(report, /GO/);
 });
 
 test("TS-058 documentation separates automated proof from manual limits and rollback", () => {
@@ -79,7 +82,8 @@ test("TS-058 documentation separates automated proof from manual limits and roll
   assert.match(architecture, /TS-058/);
   assert.match(architecture, /react-boundary\.js/);
   assert.match(architecture, /react-adapter\.js/);
-  assert.match(architecture, /no React runtime/i);
+  assert.match(architecture, /TS-059/);
+  assert.match(architecture, /project-detail/);
 });
 
 test("TS-058 documentation checks the protected files were not modified", () => {
