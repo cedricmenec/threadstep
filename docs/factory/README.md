@@ -23,6 +23,7 @@
 | OpenSpec manuel et protocole OPSX | [Agent OpenSpec](openspec-manual-pilot.md), [contrat et précontrôle ASF-OPSX-01/02](openspec-checklist-contract.md) et [protocole](openspec-protocol.md) |
 | Historique des choix et feuille de route | [Décisions](decisions.md) et [roadmap](roadmap.md) |
 | Application pilote ThreadStep | [Guide utilisateur](../product/guide-utilisation.md), [guide développeur](../product/developer-guide.md) et [recette](../product/acceptance-checklist.md) |
+| Préparer la publication du build Vite (non exécutée) | [ASF-WF-004](tasks/ASF-WF-004.md) : bascule Pages `site/` vers `dist/`, tests pré-déploiement et retour arrière, voie ASF manuelle |
 
 À chaque session, commencer par [ChatGPT.md](../../ChatGPT.md) et [AGENTS.md](../../AGENTS.md) ; ces fichiers portent le contrat de sécurité, pas les preuves opérationnelles. Les faits de livraison doivent être recoupés avec GitHub.
 
