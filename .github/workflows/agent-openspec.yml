@@ -132,6 +132,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Keep project checks deterministic even when plan/apply/finalize use
+      # a fresh runner. Install from the trusted checkout before any App token
+      # or paid OpenCode phase; global OpenSpec/OpenCode installs are separate.
+      - name: Set up Node for project checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install project dependencies before agent phases
+        run: npm ci
+
       - name: Create GitHub App installation token
         id: app-token
         uses: actions/create-github-app-token@v1
