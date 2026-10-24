@@ -9,7 +9,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,8 +22,16 @@ jobs:
           # Pin the validator; workflow syntax was previously unchecked by CI.
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
           "$(go env GOPATH)/bin/actionlint" -color=false
+      - name: Install pinned frontend dependencies
+        run: npm ci
       - name: Run independent tests and syntax checks
         run: npm run check
+      - name: Build Vite production artifact
+        run: npm run build
+      - name: Verify reproducible and secure artifact
+        run: npm run verify:build
+      - name: Verify Vite preview and development servers
+        run: npm run verify:servers
       - name: Smoke test pinned OpenCode Linux CLI (no model calls)
         shell: bash
         run: |

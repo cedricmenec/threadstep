@@ -17,7 +17,7 @@ site/index.html
         ↕ IndexedDB du navigateur (threadstep-local par défaut, threadstep si Cloud configuré)
         ↕ localStorage limité aux réglages techniques Cloud ; préférences dans le store IndexedDB local `meta` ; clé V1 retirée, inerte et supprimable seulement avec consentement
         ↕ import / export JSON explicites
-GitHub Pages publie uniquement site/ ; aucune API produit
+GitHub Pages publie l'artefact Vite dist/ généré depuis site/ ; aucune API produit
 ```
 
 CSP `connect-src https://*.dexie.cloud wss://*.dexie.cloud` : seuls les hôtes Dexie Cloud sont joignables ; aucun contenu des tâches n'est transmis avant configuration et consentement. Les valeurs utilisateur doivent devenir des nœuds texte, jamais du HTML interpolé. Un export JSON personnel doit rester local à l'utilisateur.
@@ -367,14 +367,14 @@ intermittent reste une observation manuelle distincte, consignée séparément.
 Une CI verte ne doit pas être présentée comme une propagation distante ou une
 accessibilité vérifiée.
 
-## Outillage Vite local (TS-057)
+## Outillage Vite et publication Pages (TS-057, ASF-WF-004)
 
 Vite est une **dépendance de développement épinglée** (`vite@7.3.7`, sans `^` ni
 `~`) installée par `npm ci`. Le code applicatif reste vanilla, sans framework.
 `site/` est la source unique ; `dist/` est un artefact local non versionné
-(présent dans `.gitignore`). Ce lot ne modifie ni le workflow Pages ni la
-publication : **GitHub Pages publie encore `site/`** et `dist/` n'est pas le site
-en production.
+(présent dans `.gitignore`). **GitHub Pages publie désormais `dist/`**, construit
+sur le runner à partir de `site/` par ASF-WF-004. L'ancienne publication `site/`
+reste disponible comme option de retour arrière via PR sécurisée.
 
 ```sh
 npm ci
@@ -416,11 +416,29 @@ qui vérifient chaque URL locale et chaque fichier référencé. Une vue vide al
 que le document charge correctement relève du routeur par fragment, pas d'un
 chemin d'asset : comparer avec le site statique servi depuis `site/`.
 
-**Retour arrière.** Supprimer ou ignorer `dist/` et l'outillage local suffit :
-la publication `site/` reste intacte et aucune donnée, base IndexedDB, URL
-Cloud, route ou sauvegarde n'est affectée. La bascule effective de Pages vers
-`dist/` exige une tâche ASF distincte, explicitement autorisée et revue ; elle
-est hors de ce lot.
+**Retour arrière.** Si les ressources du site construit échouent en production,
+si la CSP bloque une fonction critique ou si les données auparavant visibles
+ne sont plus consultables, ne jamais purger IndexedDB ni réinitialiser Dexie.
+Créer une PR ASF de retour arrière basée sur `main`, restaurer dans
+`.github/workflows/pages.yml` la publication `path: site` (et réconcilier les
+tests et documents de publication avec cet état), puis exiger la CI `check`
+indépendante et la fusion normale sous protection `main`. Vérifier ensuite
+Pages, l'URL publique et le chargement des ressources. Une annulation complète
+de la PR ASF-WF-004 avec `git revert`, revue et CI, est également possible.
+Aucun retour arrière ne touche les bases locales, la configuration Cloud ou
+les exports JSON. Ne jamais pousser directement sur `main` ni contourner CI.
+
+
+**Pipeline de publication ASF-WF-004.** Sur PR, le job indépendant `check`
+installe les dépendances épinglées (`npm ci`) puis exécute `npm run check`,
+`npm run build`, `npm run verify:build` et `npm run verify:servers`. Sur
+`main`, Pages exige la validation, construit un nouvel artefact avec `npm ci`,
+contrôle la reproductibilité, la CSP, les URLs préfixées `/threadstep/`,
+les assets et l'unicité du vendor Dexie avant l'upload exclusif de `dist/`.
+Le déploiement normal de Pages reste déclenché par push sur `main` ; une PR
+non fusionnée ne publie rien. L'URL de contrôle est
+`https://cedricmenec.github.io/threadstep/`. La réussite des tests et du
+pipeline ne vaut pas recette Android ou authentification OTP réelle.
 
 Les vérifications automatiques couvrent la reproductibilité, les chemins, la
 CSP, le vendor et l'absence de fichiers sensibles. La comparaison visuelle,

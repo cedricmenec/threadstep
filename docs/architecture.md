@@ -4,16 +4,16 @@
 
 ## Application
 - Static `site/index.html` + CSS and vanilla ECMAScript modules; no UI framework and no runtime application server.
-- An optional **local** Vite toolchain (TS-057) uses `site/` as source and writes an unversioned `dist/` artefact under the `/threadstep/` base. It is for development and local verification only; it does not replace the published site.
+- Vite (`TS-057`) uses `site/` as the source and writes an unversioned `dist/` artifact with base `/threadstep/`; the protected Pages pipeline (`ASF-WF-004`) builds and publishes this artifact while preserving the vanilla application.
 - `site/core.js` contains pure domain functions and schema validation, testable with built-in Node test runner.
 - `site/app.js` owns browser DOM/localStorage, import/export, rendering and events.
 - Network access stays limited to the configured Dexie Cloud hosts by the production CSP.
-- Public Pages exposes only `site/`, never `docs/`, `dist/` or repository metadata. The Pages workflow is unchanged and still publishes the static `site/` directory; switching it to the Vite artefact requires a separate authorized ASF task.
+- Public Pages serves the compiled assets from `dist/`, never `docs/` or repository metadata. The preserved `site/` sources remain the tested rollback path through an authorized and CI-checked PR. No browser data is migrated by this deployment.
 
 ## Factory pilot
 1. Human + ChatGPT coauthor product intent and backlog under version control.
 2. `CI` validates every PR independently (Node tests, Actionlint, embedded Bash syntax, strict OpenSpec).
-3. `Pages` runs after changes reach `main`, deploys only `site/`.
+3. `Pages` runs after changes reach `main`, executes a clean, verified Vite build and deploys only `dist/`.
 4. Two owner-dispatched **manual agent** workflows exist: `Agent (manual, OpenRouter)` (direct, `TS-NNN`) and `Agent OpenSpec (manual, staged or auto)` (plan/apply/auto/finalize, accepts `11` or `TS-011`). Both execute OpenCode on a dedicated branch and open a PR through the GitHub App; no paid run starts on pushes or PRs.
 5. An additional owner-dispatched **Backlog Orchestrator V1** authorizes 1 or 2 sequential OpenSpec product-task starts (`mode=dry-run|execute`), with a frozen manifest, a durable journal and independent post-merge CI/Pages verification before the next paid task. [Developer guide](factory/developer-guide.md). No paid model runs automatically on public PRs, issues or pushes. For final agent PRs, the owner may disable `auto_merge`; if enabled, GitHub merges only after required `check` CI. Auto-merge is demonstrated on TS-010 (#32) and TS-011 (#34), followed by Pages.
 
