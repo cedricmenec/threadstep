@@ -1,9 +1,15 @@
 # Backlog ThreadStep
 
+## Migration progressive vers React : TS-058 et TS-059 (24 octobre 2026)
+
+- **[TS-058](tasks/TS-058.md)** : introduire une frontière d'intégration React contrôlée dans Vite (racine DOM exclusive, adaptateur en lecture seule et commandes du contrôleur, tests de montage/démontage), sans migrer d'écran. `ready / manual / medium`, priorité haute ; dépend de TS-057.
+- **[TS-059](tasks/TS-059.md)** : premier pilote React sur **le détail d'un seul projet**, avec tâches, sous-tâches, menu et éditeur, tout en gardant les styles, comportements, données et parcours existants. `ready / manual / high`, priorité haute ; dépend de TS-058 et exige un bilan GO / NO-GO avant toute généralisation.
+- Les deux tâches reprennent le [cadrage UI-02 dans Notion](https://app.notion.com/p/40212ac916368148b26be851a842d9f7). Tailwind, design system et refonte Stitch restent différés. Création documentaire seulement : aucun workflow payant, code produit, secret ou déploiement n'est lancé par cette PR.
+
 ## Outillage frontend Vite : TS-057 (23 octobre 2026)
 
-- **[TS-057](tasks/TS-057.md)** : introduire les commandes de développement, build et preview Vite à comportement constant, en conservant l'application vanilla, Dexie, la CSP, les URLs et les mécanismes de sauvegarde. `ready / manual / medium`, priorité normale, aucune dépendance. Le build statique est d'abord validé séparément sous `/threadstep/`, **sans bascule du workflow Pages**.
-- La migration effective de la publication vers l'artefact Vite devra faire l'objet d'une tâche et d'une PR ASF distinctes, explicitement autorisées. Ni React, ni Tailwind, ni refonte Stitch, ni lancement payant ne font partie de ce lot. [Cadrage Notion UI-01](https://app.notion.com/p/40212ac916368102ab70ee8bfaa1ae7d).
+- **[TS-057](tasks/TS-057.md)** : introduire les commandes de développement, build et preview Vite à comportement constant, en conservant l'application vanilla, Dexie, la CSP, les URLs et les mécanismes de sauvegarde. `ready / manual / medium`, priorité normale, aucune dépendance. Le build statique a d'abord été validé séparément sous `/threadstep/`, sans bascule de Pages dans la seule TS-057.
+- La publication de l'artefact Vite `dist/` a ensuite été livrée par **ASF-WF-004** (PR #194), avec CI et Pages réussis. Ni React, ni Tailwind, ni refonte Stitch ne faisaient partie de ce lot. [Cadrage Notion UI-01](https://app.notion.com/p/40212ac916368102ab70ee8bfaa1ae7d).
 
 ## Expérience de chargement de Mes projets : TS-052 (22 octobre 2026)
 
