@@ -121,10 +121,10 @@ test("compact rows preserve hierarchy cues, notes, touch targets, focus and redu
   assert.match(styles, /\.task-parent>\.task-row \.task-title\{[^}]*font-weight:700/);
   assert.match(styles, /\.task-note\{[^}]*white-space:pre-wrap/);
   assert.match(styles, /\.task-note\{[^}]*overflow-wrap:anywhere/);
-  assert.match(styles, /\.task-menu-command\{[^}]*min-width:44px[^}]*min-height:44px/);
-  assert.match(styles, /\.priority-control\{[^}]*min-height:44px[^}]*min-width:44px/);
+  assert.match(styles, /\.task-menu-command\{[^}]*min-width:(?:44px|var\(--control-target-min\))[^}]*min-height:(?:44px|var\(--control-target-min\))/);
+  assert.match(styles, /\.priority-control\{[^}]*min-height:(?:44px|var\(--control-target-min\))[^}]*min-width:(?:44px|var\(--control-target-min\))/);
   assert.match(styles, /\.task-handle\{[^}]*min-width:44px[^}]*min-height:44px/);
-  assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:3px solid/);
+  assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
   assert.match(styles, /@media\(prefers-reduced-motion:no-preference\)\{\.task-menu/);
   assert.match(styles, /\.task-menu\{[^}]*max-width:min\(260px,calc\(100vw - 32px\)\)/);
 });

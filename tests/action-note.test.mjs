@@ -47,6 +47,6 @@ test("the .task-note style preserves line breaks and wraps on mobile", () => {
 });
 
 test("the note textarea exposes a visible focus style", () => {
-  assert.match(styles, /textarea:focus-visible[^{]*\{[^}]*outline:3px solid/);
+  assert.match(styles, /textarea:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
   assert.match(styles, /\.task-edit-note\{[^}]*white-space:pre-wrap/);
 });

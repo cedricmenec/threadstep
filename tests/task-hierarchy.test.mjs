@@ -62,8 +62,8 @@ test("the existing mobile query adapts the hierarchy without a new media query",
 });
 
 test("focus, 44 × 44 px targets and reduced-motion rules are still present", () => {
-  assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:3px solid/);
-  assert.match(styles, /\.priority-control\{[^}]*min-height:44px[^}]*min-width:44px/);
+  assert.match(styles, /button:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
+  assert.match(styles, /\.priority-control\{[^}]*min-height:(?:44px|var\(--control-target-min\))[^}]*min-width:(?:44px|var\(--control-target-min\))/);
   assert.match(styles, /@media\(prefers-reduced-motion:no-preference\)/);
 });
 

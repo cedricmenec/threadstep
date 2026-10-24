@@ -866,3 +866,48 @@ documenté et orienté vers une tâche distincte.
 La décision GO/NO-GO du bilan est une recommandation humaine bornée au lot
 suivant. Elle ne déclenche et n'autorise automatiquement ni TS-061, ni TS-063,
 ni aucune fusion ou publication.
+
+## Socle UI : tokens et primitives React (TS-061)
+
+TS-061 introduit un vocabulaire visuel partagé et trois primitives de
+présentation pour le détail projet React. Il ne migre aucune autre vue et ne
+change pas la propriété DOM, l'adaptateur ni les commandes du contrôleur.
+Overview, Paramètres, Synchronisation, Imports / Exports et la navigation
+restent vanilla.
+
+**Tokens.** `site/styles/tokens.css` est la source unique des variables
+sémantiques (couleur, typographie, espacement, rayons, focus, erreur,
+désactivé, responsive). Il est importé en tête de `site/styles.css` par
+`@import "./styles/tokens.css";` et embarqué par Vite sous `/threadstep/`.
+Le CSS vanilla peut consommer les mêmes variables sans monter React. Le point
+de rupture compact `620px` reste littéral dans les `@media` et documenté dans
+le fichier de tokens.
+
+**Primitives.** `site/ui/Button.jsx`, `site/ui/PriorityControl.jsx` et
+`site/ui/TextField.jsx` rendent un seul élément, transmettent classes, types,
+attributs ARIA et callbacks. `site/ui/priority-options.js` centralise les
+libellés `Urgent`, `Normal` et `Plus tard` depuis `PRIORITIES` de
+`site/core.js`. Les primitives n'importent ni Dexie, ni l'OTP, ni `persist()`,
+ni `site/app.js`, et ne conservent aucun état métier.
+
+**Adoption.** `Button` sert aux boutons de retour, renommage, création,
+sauvegarde, annulation, menu et bascule de sous-étapes. `PriorityControl` sert
+au formulaire de création (champ), à la ligne de tâche (badge) et à l'éditeur
+inline (champ). `TextField` sert au renommage, à la création, au titre et à la
+note. Les classes, libellés, noms accessibles, ordres de lecture et commandes
+restent identiques.
+
+**Accessibilité et limites.** Les objectifs (texte 4,5:1, focus/non textuel
+3:1, cible 44 px) et les exceptions préexistantes sont documentés dans
+`docs/product/ui-foundation.md`. Les tests déterministes ne remplacent pas la
+recette navigateur, clavier, tactile, Chrome Android ou lecteur d'écran.
+
+**Retour arrière.** Retirer les imports des primitives et revenir aux contrôles
+inline précédents, puis retirer l'import des tokens et le fichier s'il n'est
+plus consommé. Aucune donnée, préférence, route, clé de stockage, base
+IndexedDB ni configuration Cloud n'est affectée.
+
+**Diagnostic.** `node --test tests/ts-061-*.test.mjs` couvre les tokens, les
+primitives, la parité du détail et la documentation ; les tests TS-059 restent
+la référence de non-régression. Le socle n'autorise pas la conversion
+automatique d'une autre route.

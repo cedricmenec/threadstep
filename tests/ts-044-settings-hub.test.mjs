@@ -473,7 +473,7 @@ test("4.1 styles cover the integrated sections, onboarding and 44px access link"
   assert.match(css, /\.sync-section\{[^}]*overflow-wrap:anywhere/);
   assert.match(css, /\.sync-section\[hidden\]\{display:none\}/);
   assert.match(css, /\.sync-settings-access\{[^}]*min-height:44px[^}]*min-width:44px/);
-  assert.match(css, /\.sync-settings-access:focus-visible\{[^}]*outline:3px solid/);
+  assert.match(css, /\.sync-settings-access:focus-visible\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
   assert.match(css, /\.sync-settings-access\[hidden\]\{display:none\}/);
   assert.match(css, /@media\(max-width:620px\)\{[^\n]*\.sync-settings-access\{width:100%/);
   assert.doesNotMatch(css, /overflow-x\s*:/);

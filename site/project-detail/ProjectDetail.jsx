@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { PRIORITIES, totalTaskCount, totalTaskCountLabel } from "../core.js";
+import { totalTaskCount, totalTaskCountLabel } from "../core.js";
+import { Button } from "../ui/Button.jsx";
+import { PriorityControl } from "../ui/PriorityControl.jsx";
+import { TextField } from "../ui/TextField.jsx";
 import { TaskList } from "./TaskList.jsx";
-
-const priorityLabels = { urgent: "Urgent", normal: "Normal", later: "Plus tard" };
 const MAX_SUBJECT_TITLE = 100;
 
 function RenameForm({ subject, commands }) {
@@ -22,24 +23,27 @@ function RenameForm({ subject, commands }) {
 
   return (
     <form className="subject-rename-form" onSubmit={submit}>
-      <input
+      <TextField
         className="subject-rename-input"
         type="text"
         maxLength={MAX_SUBJECT_TITLE}
         required
         value={title}
-        aria-label={"Nouveau nom du projet " + subject.title}
+        ariaLabel={"Nouveau nom du projet " + subject.title}
+        ariaInvalid={error !== ""}
+        errorId={error ? "subject-rename-error" : undefined}
         onChange={(event) => setTitle(event.target.value)}
       />
-      <button className="primary" type="submit">Enregistrer</button>
-      <button
-        className="subtle subject-rename-cancel"
+      <Button variant="primary" type="submit">Enregistrer</Button>
+      <Button
+        variant="subtle"
+        className="subject-rename-cancel"
         type="button"
         onClick={() => commands.cancelRename()}
       >
         Annuler
-      </button>
-      {error ? <p className="rename-error" role="alert">{error}</p> : null}
+      </Button>
+      {error ? <p className="rename-error" id="subject-rename-error" role="alert">{error}</p> : null}
     </form>
   );
 }
@@ -59,24 +63,21 @@ function CreateTaskForm({ subject, commands }) {
 
   return (
     <form className="task-form" data-subject={subject.id} onSubmit={submit}>
-      <input
+      <TextField
         required
         maxLength={300}
         placeholder="Quelle est la prochaine action ?"
-        aria-label={"Nouvelle étape pour " + subject.title}
+        ariaLabel={"Nouvelle étape pour " + subject.title}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
       />
-      <select
-        aria-label="Priorité de la nouvelle étape"
+      <PriorityControl
+        variant="field"
+        ariaLabel="Priorité de la nouvelle étape"
         value={priority}
-        onChange={(event) => setPriority(event.target.value)}
-      >
-        {PRIORITIES.map((entry) => (
-          <option key={entry} value={entry}>{priorityLabels[entry]}</option>
-        ))}
-      </select>
-      <button className="primary" type="submit">+ Étape</button>
+        onChange={setPriority}
+      />
+      <Button variant="primary" type="submit">+ Étape</Button>
     </form>
   );
 }
@@ -108,14 +109,15 @@ export function ProjectDetail({ snapshot, commands }) {
       tabIndex={-1}
     >
       <div className="detail-nav">
-        <button
-          className="secondary detail-return"
+        <Button
+          variant="secondary"
+          className="detail-return"
           type="button"
           aria-label={"Retour à la vue d'ensemble depuis " + subject.title}
           onClick={() => commands.returnToOverview(subject.id)}
         >
           Retour à la vue d'ensemble
-        </button>
+        </Button>
       </div>
       {transient.renamingSubject === true ? (
         <RenameForm subject={subject} commands={commands} />
@@ -131,14 +133,15 @@ export function ProjectDetail({ snapshot, commands }) {
             </p>
           </div>
           <div className="subject-controls">
-            <button
-              className="subtle subject-rename"
+            <Button
+              variant="subtle"
+              className="subject-rename"
               type="button"
               aria-label={"Renommer le projet " + subject.title}
               onClick={() => commands.startRename()}
             >
               Renommer le projet
-            </button>
+            </Button>
           </div>
         </div>
       )}
