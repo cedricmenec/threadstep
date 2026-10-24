@@ -19,12 +19,12 @@ test("5.1 the developer guide documents the exact Vite version and commands", ()
   }
 });
 
-test("5.1 the guide distinguishes the local dist artefact from the published site", () => {
+test("ASF-WF-004 the guide distinguishes Vite sources from deployed artifact", () => {
   assert.match(guide, /`site\/` est la source unique/);
   assert.match(guide, /`dist\/` est un artefact local/);
-  assert.match(guide, /GitHub Pages publie encore `site\/`/);
-  assert.match(guide, /`dist\/` n'est pas le site\s+en production/);
-  assert.match(guide, /tâche ASF distincte/);
+  assert.match(guide, /GitHub Pages publie désormais `dist\/`/);
+  assert.match(guide, /l'ancienne publication `site\/`/i);
+  assert.match(guide, /ASF-WF-004/);
 });
 
 test("5.1 the guide documents base, vendor, CSP, diagnostics and rollback", () => {
@@ -41,19 +41,22 @@ test("5.1 the guide documents base, vendor, CSP, diagnostics and rollback", () =
 });
 
 test("5.1 the architecture distinguishes local tooling from the static publication", () => {
-  assert.match(architecture, /local\*\* Vite toolchain/);
+  assert.match(architecture, /Vite \(`TS-057`\)/);
   assert.match(architecture, /`site\/` as source/);
   assert.match(architecture, /unversioned `dist\/`/);
-  assert.match(architecture, /still publishes the static `site\/` directory/);
-  assert.match(architecture, /separate authorized ASF task/);
+  assert.match(architecture, /serves the compiled assets from `dist\/`/);
+  assert.match(architecture, /authorized and CI-checked PR/);
   assert.doesNotMatch(architecture, /no build\/bundle/);
 });
 
-test("5.2 the Pages workflow still publishes site and stays outside this change", () => {
+test("ASF-WF-004 Pages publishes the verified Vite artifact, not the raw sources", () => {
   assert.match(pages, /uses: actions\/upload-pages-artifact@v4/);
-  assert.match(pages, /path: site/);
-  assert.doesNotMatch(pages, /path: dist/);
-  assert.doesNotMatch(pages, /vite|npm run build/);
+  assert.match(pages, /path: dist/);
+  assert.doesNotMatch(pages, /path: site/);
+  assert.match(pages, /npm ci/);
+  assert.match(pages, /npm run build/);
+  assert.match(pages, /npm run verify:build/);
+  assert.match(pages, /npm run verify:servers/);
   const workflowFiles = ["pages.yml", "ci.yml"];
   for (const name of workflowFiles) {
     assert.ok(read(".github/workflows/" + name).length > 0, name);
