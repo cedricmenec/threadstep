@@ -42,7 +42,7 @@ test("5.1 the guide documents base, vendor, CSP, diagnostics and rollback", () =
 
 test("5.1 the architecture distinguishes local tooling from the static publication", () => {
   assert.match(architecture, /Vite \(`TS-057`\)/);
-  assert.match(architecture, /`site\/` as source/);
+  assert.match(architecture, /`site\/` as (?:the )?source/);
   assert.match(architecture, /unversioned `dist\/`/);
   assert.match(architecture, /serves the compiled assets from `dist\/`/);
   assert.match(architecture, /authorized and CI-checked PR/);
