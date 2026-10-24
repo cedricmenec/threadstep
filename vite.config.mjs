@@ -50,6 +50,9 @@ export default {
   publicDir: false,
   appType: "spa",
   plugins: [developmentCspPlugin()],
+  esbuild: {
+    jsx: "automatic"
+  },
   build: {
     outDir: resolve(root, "dist"),
     emptyOutDir: true,

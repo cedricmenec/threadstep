@@ -1,4 +1,5 @@
 import { PRIORITIES, OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED, emptyDocument, newSubject, newItem, subjectRoute, parseRoute, findSubject, renameSubject, visibleItems, overviewPreview, isWithinOverviewPreview, substepView, substepToggleLabel, toggleExpandedParent, substepAncestorId, isViewEntry, routeHeadingId, navigationMenuState, totalTaskCount, totalTaskCountLabel, overviewMetrics, overviewSummaryLabel, subjectMetrics, subjectUrgencyLabel, subjectProgressLabel, moveSubject, updateItem, setItemPriority, reorderWithinPriority, moveWithinPriority, canMoveWithinPriority, canReorderWithinPriority, itemMenuCommands, promoteItemToTopLevel, nextActionSuggestion, suggestionReason, resumeView, planRemoval, restoreRemoval, removalContainsItem, restorableTrackingRef, overviewFilteredSubjects, isSubjectVisibleInOverviewFilter, OVERVIEW_URGENCY_LIMIT, overviewUrgencyView, findOverviewUrgency } from "./core.js";
+import { createReactBoundary, reactBoundaryKey } from "./react-boundary.js";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
 import {
   ACTIVATION_STAGE,
@@ -148,6 +149,7 @@ import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction, authorizedWorkspaceIdentityKey, shouldResetExpandedParents } from "./interaction-continuity.js";
 
 const subjectsEl = document.querySelector("#subjects");
+const reactBoundary = createReactBoundary();
 const projectsLoadingEl = document.querySelector("#projects-loading");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
@@ -681,7 +683,8 @@ function clearBusinessForBindingBlock() {
   documentLoaded = false;
   cloudWriteBlocked = true;
   subjectForm.hidden = false;
-  if (subjectsEl) subjectsEl.replaceChildren();
+  reactBoundary.invalidate("binding-blocked");
+  if (subjectsEl && reactBoundary.canWriteVanilla(subjectsEl)) subjectsEl.replaceChildren();
   applyBusinessVisibility();
 }
 async function refreshAccountBinding() {
@@ -2360,6 +2363,10 @@ function applyOverviewSurfaces(snapshot) {
 }
 
 function applyBusinessVisibility() {
+  if (!businessAllowed() || (businessStarted && !documentLoaded) ||
+      (!requiresAuthentication() && localReadFailed)) {
+    reactBoundary.invalidate("blocking-load");
+  }
   const presentation = refreshOverviewPresentation().presentation;
   const configured = requiresAuthentication();
   const authenticated = canAccessBusiness(authState);
@@ -2855,9 +2862,28 @@ function currentAuthorizedWorkspaceIdentity() {
       (accountBinding && (accountBinding.userDigest || accountBinding.digest)) || null
   };
 }
+let reactSurfaceIdentityKey = null;
+function reactSurfaceContextKey(nextRoute = route) {
+  const identity = currentAuthorizedWorkspaceIdentity();
+  return reactBoundaryKey({
+    view: nextRoute && typeof nextRoute.view === "string" ? nextRoute.view : "overview",
+    subjectId: nextRoute && typeof nextRoute.subjectId === "string" ? nextRoute.subjectId : "",
+    identity: authorizedWorkspaceIdentityKey(identity)
+  });
+}
+function reconcileReactSurface(nextRoute = route) {
+  const current = reactBoundary.owner();
+  if (!current) return false;
+  if (current.key === reactSurfaceContextKey(nextRoute)) return false;
+  return reactBoundary.invalidate("context-change");
+}
 function applyExpandedIdentityBoundary() {
   const identity = currentAuthorizedWorkspaceIdentity();
   const nextKey = authorizedWorkspaceIdentityKey(identity);
+  if (reactSurfaceIdentityKey !== null && nextKey !== reactSurfaceIdentityKey) {
+    reactBoundary.invalidate("identity-change");
+  }
+  reactSurfaceIdentityKey = nextKey;
   if (shouldResetExpandedParents(expandedParentIdentityKey, identity)) {
     resetExpandedViewState();
   }
@@ -3013,6 +3039,7 @@ function activateNavigationLink(event, target) {
   const nextRoute = parseRoute(target);
   if (location.hash === target || (target === "#/" && (location.hash === "" || location.hash === "#"))) {
     pendingNavigationFocus = null;
+    reconcileReactSurface(nextRoute);
     route = nextRoute;
     render();
     focusRouteHeading(routeHeadingId(nextRoute));
@@ -3214,6 +3241,7 @@ function finishUxRender(snapshot, skipFocus = false) {
 // its height, before a later scrollTo() can recover it. A single atomic swap
 // with the previous height reserved avoids the transient empty-page state.
 function replaceSubjectsInCurrentView(nextSubjects, snapshot) {
+  if (!reactBoundary.canWriteVanilla(subjectsEl)) return false;
   const oldMinHeight = subjectsEl.style.minHeight;
   let guarded = false;
   if (snapshot) {
@@ -3228,6 +3256,7 @@ function replaceSubjectsInCurrentView(nextSubjects, snapshot) {
   } finally {
     if (guarded) subjectsEl.style.minHeight = oldMinHeight;
   }
+  return true;
 }
 function applyOverviewCounter(presentation) {
   const suppressed = !businessAllowed() || (!!presentation &&
@@ -3381,7 +3410,7 @@ function render() {
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
     hideOverviewUrgencies();
-    subjectsEl.replaceChildren();
+    if (reactBoundary.canWriteVanilla(subjectsEl)) subjectsEl.replaceChildren();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
     focusCardEl.hidden = true;
@@ -3447,7 +3476,9 @@ function render() {
 }
 function navigate(hash) {
   if (location.hash === hash) {
-    route = parseRoute(hash);
+    const nextRoute = parseRoute(hash);
+    reconcileReactSurface(nextRoute);
+    route = nextRoute;
     render();
     return;
   }
@@ -3455,11 +3486,13 @@ function navigate(hash) {
 }
 function renderDetail(target = subjectsEl) {
   if (route.view === "invalid") {
+    reactBoundary.invalidate("route-invalid");
     target.append(renderDetailFallback());
     return;
   }
   const subject = findSubject(documentState, route.subjectId);
   if (!subject) {
+    reactBoundary.invalidate("subject-missing");
     target.append(renderDetailFallback());
     return;
   }
@@ -4489,6 +4522,7 @@ if (navMenuPanelEl) {
 }
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
+  reconcileReactSurface(nextRoute);
   if (isViewEntry(route, nextRoute)) resetExpandedViewState();
   openMenuId = null;
   updateNavigationMenu("route-change");

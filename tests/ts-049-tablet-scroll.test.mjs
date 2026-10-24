@@ -62,6 +62,7 @@ function simulateOldTablet({ view = "overview", subjects = [{ id: "s1" }], autho
     overviewMetrics: () => ({ activeProjects: 0, pendingSteps: 0, urgentSteps: 0 }),
     overviewSummaryLabel: () => "",
     businessAllowed: () => authorized,
+    reactBoundary: { canWriteVanilla: () => true, invalidate: () => false, owner: () => null },
     expandAncestorForFocus: () => events.push(["expand"]),
     pendingCount: () => 1,
     renderSuggestion: () => {}, renderResumeCard: () => {},

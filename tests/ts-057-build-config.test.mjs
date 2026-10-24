@@ -35,11 +35,13 @@ test("1.1 Vite is pinned exactly in package.json, lockfile and node_modules", ()
 });
 
 test("1.1 business dependencies stay pinned to their delivered versions", () => {
-  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["dexie", "dexie-cloud-addon"]);
+  assert.deepEqual(Object.keys(pkg.dependencies).sort(), ["dexie", "dexie-cloud-addon", "react", "react-dom"]);
   assert.equal(pkg.dependencies.dexie, "4.4.6");
   assert.equal(pkg.dependencies["dexie-cloud-addon"], "4.4.15");
   assert.equal(lock.packages["node_modules/dexie"].version, "4.4.6");
   assert.equal(lock.packages["node_modules/dexie-cloud-addon"].version, "4.4.15");
+  assert.match(pkg.dependencies.react, /^\d+\.\d+\.\d+$/);
+  assert.match(pkg.dependencies["react-dom"], /^\d+\.\d+\.\d+$/);
   assert.equal(pkg.engines.node, ">=22");
 });
 
