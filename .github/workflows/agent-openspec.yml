@@ -504,6 +504,9 @@ jobs:
           }
           openspec validate --all --strict --no-interactive
           openspec validate --archived --strict --no-interactive
+          # Run the exact CI test suite after archive moves change-local specs.
+          # Prevent publishing a PR that fails because tests use stale OpenSpec paths.
+          npm run check
 
       - name: Guard scope, commit and publish PR
         env:
