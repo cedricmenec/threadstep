@@ -74,7 +74,7 @@ test("TS-063 targets, focus and hidden panel remain conformant", () => {
 });
 
 test("TS-063 automated width checks are structural, not device evidence", () => {
-  const spec = read("openspec/changes/ts-063/specs/app-navigation/spec.md");
+  const spec = read("openspec/changes/archive/2026-10-25-ts-063/specs/app-navigation/spec.md");
   assert.match(spec, /ne sont pas présentés comme une mesure de débordement sur un/);
   assert.match(spec, /navigateur ou un appareil réel/);
   assert.match(css, /@media\(max-width:320px\)/);
