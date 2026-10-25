@@ -1,5 +1,34 @@
 # Qualification du pilote React — détail projet (TS-060)
 
+## Addendum de décision humaine pour TS-063 (25 octobre 2026)
+
+**Décision du propriétaire : GO de poursuite du lot TS-063, spécifiquement pour
+la migration bornée du header, du menu et des quatre destinations existantes.**
+À la suite de l'échec du run
+[OpenSpec #40181434190](https://github.com/cedricmenec/threadstep/actions/runs/40181434190),
+le propriétaire a explicitement confirmé le 25 octobre 2026 son approbation
+de TS-060 en tant que prérequis de TS-063, ainsi que sa validation des
+références Stitch M01, M02, M15, M16 et M19. Cette décision étend la
+**portée du GO humain de poursuite** au seul lot TS-063 et ne remplace
+aucune des preuves de qualification manquantes.
+
+Le GO du 24 octobre pour TS-061 et le NO-GO initial automatisé restent
+historiquement exacts dans les sections ci-dessous. Les scénarios physiques
+Q13 à Q20 demeurent `NOT_RUN` faute de preuve par scénario ; aucune
+qualification clavier, lecteur d'écran, rafraîchissement de brouillon,
+contraste, test mobile supplémentaire ou synchronisation nouvelle n'est
+déclarée `PASS`. Le risque résiduel de cohabitation React/vanilla,
+de navigation, d'identité et de persistance doit être contrôlé par les
+tests et la recette propres à TS-063 avant toute validation de livraison.
+
+Cette décision ne permet ni modification des contrats Dexie/OTP/Cloud,
+ni fusion automatique de code TS-063, ni nouvel appel OpenRouter.
+La reprise `phase=apply` du plan conservé sur
+`agent/openspec/TS-063` reste une action propriétaire distincte après
+livraison documentaire et rapprochement des prérequis sur cette branche.
+
+---
+
 ## Addendum de décision humaine post-qualification (24 octobre 2026)
 
 **Décision actuelle pour le lot TS-061 : GO de poursuite confirmé par le propriétaire.** Après la livraison de TS-060 dans la [PR #204](https://github.com/cedricmenec/threadstep/pull/204), le propriétaire a explicitement confirmé dans son échange du 24 octobre 2026 avoir testé le détail projet React sur Android, les interactions tactiles, la navigation et la synchronisation entre appareils, sans régression constatée. Il a ensuite autorisé le lancement de TS-061. La [fiche de suivi UI-10 dans Notion](https://app.notion.com/p/40212ac916368193be78d23b6d012bb5) conserve cette décision.
