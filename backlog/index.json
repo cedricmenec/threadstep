@@ -807,5 +807,47 @@
     ],
     "created_at": "2026-10-24",
     "content_sha256": "ddb2b6c644b65b759288d74bac6b8d16194b6db240233f1e03326eb96b373e15"
+  },
+  {
+    "id": "TS-064",
+    "path": "backlog/tasks/TS-064.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "high",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [
+      "TS-063"
+    ],
+    "created_at": "2026-10-25",
+    "content_sha256": "4d6617f2f1c5f45d6a207e75fbbf8b067112b4c361474797523f7fc2a947479b"
+  },
+  {
+    "id": "TS-065",
+    "path": "backlog/tasks/TS-065.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "high",
+    "depends_on": [
+      "TS-064"
+    ],
+    "created_at": "2026-10-25",
+    "content_sha256": "39f55486f0a844cf0fb1052410f2ee8df3946497651fee1b610e9e06cd23e217"
+  },
+  {
+    "id": "TS-066",
+    "path": "backlog/tasks/TS-066.md",
+    "type": "product",
+    "status": "proposed",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [
+      "TS-065"
+    ],
+    "created_at": "2026-10-25",
+    "content_sha256": "ca59a5f792ca21d24eb78484ce3ab4714e9fffe1aa43f27fef5825e21b494f01"
   }
 ]

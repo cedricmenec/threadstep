@@ -1,5 +1,16 @@
 # Backlog ThreadStep
 
+## Suite de TS-063 : migration progressive Overview (25 octobre 2026)
+
+La PR #209 (TS-063) et la PR #210 (contrôle Factory post-archivage) sont fusionnées. Le propriétaire a déclaré la recette TS-063 validée le 25 octobre. Les étapes suivantes sont préparées, **sans lancer OpenRouter** :
+
+1. [TS-064](tasks/TS-064.md) : migrer les cartes projets Overview vers React à comportement constant ; priorité haute, risque moyen, lancement manuel.
+2. [TS-065](tasks/TS-065.md) : migrer les interactions et éditeurs Overview après qualification TS-064 ; risque élevé, lancement manuel.
+3. [TS-066](tasks/TS-066.md) : harmoniser visuellement Overview avec Stitch, sous réserve d'une approbation explicite des références ; statut proposé, lancement manuel.
+
+Les tests sur appareil restent distincts des preuves CI. Ne pas déclencher TS-065 ou TS-066 avant validation de leurs prérequis.
+
+
 ## Prochaine progression React maîtrisée : TS-060 à TS-063 (24 octobre 2026)
 
 Le [backlog produit Notion](https://app.notion.com/p/40212ac9163681349ce5c8130f76ee75) conserve quatre étapes, **sans autorisation d'implémentation par la seule création des fiches** :
