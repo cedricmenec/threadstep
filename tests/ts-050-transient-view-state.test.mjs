@@ -21,7 +21,7 @@ const renderBody = app.slice(app.indexOf("function render() {"), app.indexOf("fu
 const toggleBody = app.slice(app.indexOf("function renderSubstepToggle("), app.indexOf("function renderActions("));
 const revealBody = app.slice(app.indexOf("function expandAncestorForFocus("), app.indexOf("function render() {"));
 const hashchangeBody = app.slice(app.indexOf('window.addEventListener("hashchange"'), app.indexOf("if (cleanupKeepEl)"));
-const importHandlerBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf("if (navMenuButtonEl)"));
+const importHandlerBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf("window.addEventListener(\"hashchange\""));
 const localConfirmBody = app.slice(app.indexOf("async function confirmLocalImport("), app.indexOf("function renderAuthPanel("));
 const reconciliationBody = app.slice(app.indexOf("async function confirmReconciliation("), app.indexOf("const workspaceLegacyConfig = readCloudConfig();"));
 const subscribeBody = app.slice(app.indexOf("function subscribeToChanges()"), app.indexOf("let migrationPanelEl"));

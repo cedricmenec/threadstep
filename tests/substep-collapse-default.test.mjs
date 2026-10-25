@@ -12,7 +12,7 @@ const renderBody = app.slice(app.indexOf("function render() {"), app.indexOf("fu
 const navigateBody = app.slice(app.indexOf("function navigate("), app.indexOf("function renderDetail("));
 const hashchangeBody = app.slice(app.indexOf('window.addEventListener("hashchange"'), app.indexOf('snackbarEl.addEventListener'));
 const loadBody = app.slice(app.indexOf("function load() {"), app.indexOf("async function refreshLocalDocument("));
-const importBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf("if (navMenuButtonEl)"));
+const importBody = app.slice(app.indexOf('document.querySelector("#import")'), app.indexOf("window.addEventListener(\"hashchange\""));
 const localImportConfirmBody = app.slice(app.indexOf("async function confirmLocalImport("), app.indexOf("function renderAuthPanel("));
 
 test("the app keeps a transient expanded-parents set defaulting to empty", () => {

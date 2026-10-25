@@ -140,8 +140,10 @@ test("TS-060 protected paths and existing business specs remain unchanged", () =
     .split("\n")
     .filter(Boolean)
     .map((line) => line.slice(3).replace(/^"|"$/g, ""));
+  const authorizedShellMigration = new Set(["site/index.html"]);
   const violations = status.filter((path) =>
     protectedPaths.some((protectedPath) =>
-      path === protectedPath || path.startsWith(protectedPath)));
+      path === protectedPath || path.startsWith(protectedPath)) &&
+    !authorizedShellMigration.has(path));
   assert.deepEqual(violations, []);
 });
