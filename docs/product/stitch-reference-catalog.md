@@ -1,12 +1,13 @@
 # Catalogue des références Stitch | TS-062
 
-- **Version :** 1.0
+- **Version :** 1.1
 - **Date de rédaction :** 2026-10-24
-- **Statut du document :** catalogue documentaire livré ; revue humaine et
-  validation des maquettes **en attente**.
-- **Rôle produit :** prérequis documentaire de **TS-063**. Le prérequis reste
-  **non levé** tant que le propriétaire n'a pas consigné explicitement sa
-  décision.
+- **Statut du document :** catalogue documentaire livré ; décision propriétaire
+  **approuvée le 25 octobre 2026 pour le seul sous-ensemble TS-063**. Les autres
+  références et les essais techniques restent à examiner.
+- **Rôle produit :** prérequis documentaire de **TS-063**. La porte de
+  validation des références de navigation est levée par la décision du
+  propriétaire du 25 octobre 2026, indépendamment des essais d'accessibilité.
 - **Portée :** documentation seulement. Ce document ne modifie aucun code, test,
   donnée, configuration Cloud, workflow, backlog ni maquette Stitch.
 
@@ -123,8 +124,8 @@ Inventaire M01 à M32 (32 références mobiles).
 
 | ID | Surface / état (catégorie à confirmer, non observée) | Statut de revue | Lien identifiable | Motif d'absence d'inspection |
 | --- | --- | --- | --- | --- |
-| M01 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M02 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
+| M01 | Mes projets / Overview ; header ThreadStep, espace actif et actions | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25, limitée au header et à l'entrée Overview ; pas de recette exhaustive.|
+| M02 | Navigation mobile ouverte ; menu contractuel de quatre entrées | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25 ; variante de barre inférieure à cinq entrées exclue ; pas de recette exhaustive.|
 | M03 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M04 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M05 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
@@ -137,11 +138,11 @@ Inventaire M01 à M32 (32 références mobiles).
 | M12 | Tâches et éditeurs | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M13 | Tâches et éditeurs | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M14 | Tâches et éditeurs | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M15 | Navigation (header / menu) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M16 | Navigation (header / menu) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
+| M15 | Paramètres accueil ; destination Paramètres | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25 pour TS-063 uniquement ; pas de recette exhaustive.|
+| M16 | Imports & Exports ; destination données | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25 pour TS-063 uniquement ; pas de recette exhaustive.|
 | M17 | Navigation (header / menu) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M18 | Navigation (header / menu) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M19 | Paramètres | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
+| M19 | Mode local autonome ; entrée de synchronisation Dexie Cloud | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25 ; textes Cloud soumis aux specs ; pas de recette exhaustive.|
 | M20 | Paramètres | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M21 | Paramètres | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M22 | Import / export / restauration | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
@@ -179,15 +180,18 @@ confirmés**, pas des observations.
 
 ### 5.5 Références et états non examinés
 
-- **Références non examinées :** les 32 références mobiles (`M01` à `M32`) et
-  les quatre références desktop (`DESKTOP-1` à `DESKTOP-4`), soit 36 références.
-- **États manquants :** tous les états, parcours et variantes de chaque
-  référence restent non observés, y compris les états de chargement, d'erreur,
-  d'édition, de confirmation, de focus, de menu ouvert et de restauration.
-- **Raison :** l'accès Stitch nécessite une session autorisée et la tâche ne
-  fournit ni session ni lien profond. Aucun nom d'écran n'est déduit.
-- **Conséquence :** aucune validation intégrale n'est revendiquée. Les
-  références restent `NOT_REVIEWED` jusqu'à inspection humaine réelle.
+- **Décision propriétaire partielle :** M01, M02, M15, M16 et M19 sont
+  `PARTIALLY_REVIEWED` et approuvées uniquement pour le header, le menu
+  et les quatre destinations de TS-063 (section 10). Leur approbation ne
+  certifie pas tous les états ni les mesures d'accessibilité.
+- **Références non examinées :** les 27 autres références mobiles et les quatre
+  références desktop, soit 31 références, restent `NOT_REVIEWED`.
+- **États manquants :** chargement, erreur, édition, confirmation, focus,
+  menu ouvert, synchronisation et restauration n'ont pas fait l'objet d'une
+  recette automatisée ou physique exhaustive.
+- **Limite de provenance :** les identifiants approuvés proviennent de la
+  décision du propriétaire du 25 octobre 2026 ; le runner GitHub ne dispose
+  pas de session Stitch ni de liens profonds vérifiés.
 
 ## 6. Matrice traçable des écarts
 
@@ -319,85 +323,83 @@ existence ne prouve aucun comportement sur appareil réel.
 
 ## 10. Sous-ensemble navigation pour TS-063
 
-### 10.1 État de la porte
+### 10.1 Décision et état de la porte
 
-**État : `BLOCKED_PENDING_USER_VALIDATION`.**
+**État : `OWNER_APPROVED_FOR_TS_063`, porte documentaire levée le 25 octobre 2026.**
 
-Le prérequis documentaire de TS-063 n'est **pas levé**. Aucune validation
-propriétaire n'est consignée à la date du 2026-10-24. Une CI verte, un contrôle
-documentaire ou l'existence de ce catalogue ne vaut pas validation.
+Le propriétaire a explicitement approuvé le 25 octobre 2026 l'ensemble
+M01, M02, M15, M16 et M19 proposé pour le header, le menu et les quatre
+destinations de TS-063. Il a renouvelé son accord lors de la reprise
+du run OpenSpec en échec
+[#40181434190](https://github.com/cedricmenec/threadstep/actions/runs/40181434190).
+L'approbation est une **décision produit humaine**, non une certification
+des maquettes, une mesure d'accessibilité ou une permission de modifier
+les contrats de persistance et de sécurité.
 
-### 10.2 Candidats à identifier
+### 10.2 Références et destinations approuvées
 
-Les références candidates ne peuvent pas être désignées individuellement sans
-inspection réelle. Les catégories candidates sont :
-
-| Élément | Références candidates | État |
+| Élément | Référence | Portée retenue |
 | --- | --- | --- |
-| Header | Références mobiles de navigation parmi `M01` à `M32`, à identifier après inspection | Non identifié / `NOT_REVIEWED` |
-| Menu | Références mobiles de navigation parmi `M01` à `M32`, à identifier après inspection | Non identifié / `NOT_REVIEWED` |
-| Destination « Mes projets » (`#/`) | Références d'Overview ou de navigation à identifier | Non identifié / `NOT_REVIEWED` |
-| Destination « Paramètres » (`#/parametres`) | Références de paramètres à identifier | Non identifié / `NOT_REVIEWED` |
-| Destination « Imports / Exports » (`#/parametres/donnees`) | Références d'import/export/restauration à identifier | Non identifié / `NOT_REVIEWED` |
-| Destination « Synchronisation Dexie Cloud » (`#/parametres/synchronisation`) | Références Cloud à identifier | Non identifié / `NOT_REVIEWED` |
+| Header ThreadStep | `M01` | Titre, espace actif et actions visibles ; composition de navigation seulement |
+| Menu de navigation mobile ouvert | `M02` | Menu borné aux quatre destinations existantes |
+| « Mes projets » (`#/`) | `M01` | Entrée Overview et retour à la liste des projets |
+| « Paramètres » (`#/parametres`) | `M15` | Entrée d'accueil des paramètres |
+| « Imports / Exports » (`#/parametres/donnees`) | `M16` | Entrée données ; aucune nouvelle commande d'import ou restauration |
+| « Synchronisation Dexie Cloud » (`#/parametres/synchronisation`) | `M19` | Mode local autonome comme entrée de synchronisation, sans promesse Cloud non attestée |
 
-### 10.3 Points bloquants et décision attendue
+Ordre, libellés et fragments existants prévalent sur toute divergence visuelle
+des maquettes. Le panneau `M02` ne doit **pas** introduire la navigation
+inférieure « Tâches / Projets / Focus / Chercher ». Les états associés
+`M20` à `M25` ne créent aucune destination ou autorisation supplémentaire.
+Les fonctions de recherche, archives, partage, échéances et pièces jointes
+restent des idées séparées du backlog, hors TS-063. Les textes Cloud ou
+sécurité non attestés sont remplacés par un libellé neutre conforme aux
+spécifications. Les autres propositions ou états non examinés restent
+`NOT_REVIEWED`.
 
-1. **Accès Stitch absent :** aucune session autorisée ni lien profond n'est
-   disponible sur le runner ; les 36 références restent `NOT_REVIEWED`.
-2. **Sous-ensemble non identifiable :** sans inspection, aucun identifiant ne
-   peut être retenu pour le header, le menu ou les quatre destinations.
-3. **Divergences produit non tranchées :** les écarts signalés par UI-04 sur les
-   suggestions, priorités, textes Cloud, sous-tâches et commandes hors périmètre
-   restent des `PRODUCT_DECISION`.
-4. **Recette absente :** aucune mesure de contraste, aucun test clavier, tactile
-   ou lecteur d'écran n'a été réalisé.
+### 10.3 Limites et contrôles toujours nécessaires
 
-**Décision attendue du propriétaire :** inspecter les références, puis approuver
-ou refuser explicitement, avec date, portée et identifiants, le sous-ensemble
-header/menu/quatre destinations destiné à TS-063. Les références non approuvées
-restent refusées, en attente ou `NOT_REVIEWED`.
-
-### 10.4 Absence d'autorisation d'implémentation
-
-Ce catalogue n'autorise ni code React/CSS, ni migration, ni modification de
-route, de donnée ou de configuration Cloud. Il prépare uniquement la revue de
-TS-063 ; les autres portes de TS-063 restent applicables.
+- La validation des cinq références est **bornée à TS-063**. Aucune
+  approbation des 31 autres références, des variantes ou d'une refonte
+  fonctionnelle globale n'est déduite.
+- Aucun test physique de contraste, de clavier, de lecteur d'écran, de
+  retour du focus ou de cible tactile n'est attesté par ce registre.
+  La recette humaine TS-063 et les tests déterministes restent obligatoires.
+- La précondition documentaire Stitch/TS-062 est levée. Le GO TS-060
+  propre à TS-063 est consigné séparément dans
+  `docs/product/react-project-detail-qualification.md`.
+- Ce document **n'exécute pas** le workflow et ne vaut pas autorisation
+  d'une reprise OpenRouter. Le propriétaire relancera lui-même
+  `phase=apply` après fusion et rapprochement de la branche persistante.
 
 ## 11. Bilan des décisions humaines
 
 ### 11.1 Registre des décisions
 
-| Date | Auteur | Portée | Références approuvées | Références refusées | Statut |
+| Date | Auteur | Portée | Références approuvées | Références refusées ou hors portée | Statut |
 | --- | --- | --- | --- | --- | --- |
-| 2026-10-24 | Aucun propriétaire (entrée documentaire de l'agent) | Aucune validation de maquette | Aucune | Aucune | En attente de décision propriétaire |
+| 2026-10-24 | Agent, historique | Catalogue TS-062 sans accès Stitch | Aucune | Aucune | En attente de décision propriétaire à cette date |
+| 2026-10-25 | Propriétaire de ThreadStep | Header, menu et destinations `#/`, `#/parametres`, `#/parametres/donnees`, `#/parametres/synchronisation` pour TS-063 seulement | `M01`, `M02`, `M15`, `M16`, `M19` | Barre inférieure à cinq entrées, nouvelles fonctions et états non examinés | `OWNER_APPROVED_FOR_TS_063` |
 
-Le registre distingue explicitement :
+Cette décision ne requalifie ni les 31 autres références ni les
+essais physiques non effectués. La validation propriétaire et les preuves
+d'exécution restent deux catégories distinctes.
 
-- **décision du propriétaire :** aucune à ce jour ;
-- **inspection partielle ou absente :** toutes les références sont
-  `NOT_REVIEWED`, aucun état n'a été observé ;
-- **contrôle documentaire automatisé :** vérifie la complétude du présent
-  fichier pendant `apply`, sans valeur de revue visuelle ;
-- **preuve sur appareil réel :** aucune ; aucun test navigateur, tactile,
-  clavier ou lecteur d'écran n'a été exécuté.
+### 11.2 Vérifications restantes
 
-### 11.2 Ce qui n'a pas été vérifié
-
-- Les 32 références mobiles et les quatre références desktop.
-- Les états de chargement, d'erreur, d'édition, de confirmation, de focus, de
-  menu ouvert, de synchronisation et de restauration.
-- Les contrastes, tailles de cible, focus visibles, textes tronqués et ordres de
-  lecture.
-- Les parcours réels sur mobile et desktop.
-- Les décisions produit sur les suggestions, priorités, textes Cloud,
-  sous-tâches, espace actif et commandes hors périmètre.
+- Les 27 autres références mobiles et les quatre références desktop n'ont
+  pas de validation propriétaire.
+- Les états de chargement, d'erreur, de confirmation, de focus, de menu ouvert,
+  de synchronisation et de restauration n'ont pas de recette complète.
+- Les contrastes, tailles de cible, focus visibles, textes tronqués et ordres
+  de lecture exigent encore des vérifications dédiées.
+- Les parcours réels sur mobile et desktop relèvent de la recette TS-063.
 
 ### 11.3 Règle de silence
 
-Une référence sans décision du propriétaire reste `NOT_REVIEWED` ou en attente.
-Elle n'est pas comptée comme approuvée et ne lève pas la porte TS-063. Le silence
-n'est pas une approbation.
+Toute référence sans décision explicite reste `NOT_REVIEWED` ou en attente.
+Le silence n'est pas une approbation et aucune référence hors des cinq
+identifiants ci-dessus n'est incluse dans la porte levée pour TS-063.
 
 ## 12. Limites et journal
 
@@ -417,8 +419,12 @@ n'est pas une approbation.
 
 ## 13. Prérequis TS-063
 
-Le prérequis documentaire de TS-063 est **non levé**. Il ne pourra être levé
-qu'après validation humaine explicite, datée et limitée des références
-nécessaires au header, au menu et aux quatre destinations. Les références
-rejetées ou non examinées restent visibles dans ce catalogue et ne sont jamais
-reformulées comme approuvées.
+**Porte documentaire Stitch/TS-062 levée le 25 octobre 2026**, pour les seules
+références M01, M02, M15, M16 et M19 et les quatre destinations existantes.
+Le GO de poursuite TS-060 pour ce lot est documenté dans le rapport de
+qualification TS-060, sans transformation des scénarios `NOT_RUN` en `PASS`.
+La tâche TS-063 conserve son niveau de risque élevé, ses contrôles
+d'accessibilité, ses vérifications d'absence de régression et sa recette humaine.
+Le plan OpenSpec persistant doit être rapproché de ces décisions avant tout
+nouveau `apply` manuellement autorisé. Aucune exécution payante ou fusion
+de code n'est déclenchée par cette correction documentaire.
