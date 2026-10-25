@@ -911,3 +911,38 @@ IndexedDB ni configuration Cloud n'est affectée.
 primitives, la parité du détail et la documentation ; les tests TS-059 restent
 la référence de non-régression. Le socle n'autorise pas la conversion
 automatique d'une autre route.
+
+## Coque React bornée de l'en-tête (TS-063)
+
+La coque React se limite à `#app-shell-root`, qui contient le bouton Menu, le
+panneau et les quatre liens. Elle ne possède ni `#subjects`, ni les pages de
+paramètres, ni les formulaires OTP, Cloud, import/restauration ou consentement :
+ces sous-arbres restent vanilla et hors de l'hôte de coque. La coque et le
+détail projet utilisent deux frontières React distinctes et deux conteneurs
+disjoints, chacun avec un propriétaire unique, sans écriture croisée.
+
+`site/app.js` conserve l'autorité de navigation (`parseRoute`, `hashchange`,
+`navigate`, `activateNavigationLink`, `routeHeadingId`,
+`navigationMenuState`). La coque est un composant contrôlé : `app.js` lui
+transmet `open`, `route`, `onToggle` et `onNavigate`, puis appelle `update` et
+`focusMenuButton`. Aucun routeur, historique, store ou état de menu parallèle
+n'est créé.
+
+Aux changements de route, de section, de projet, d'identité autorisée ou d'état
+bloquant, l'ancienne coque est démontée avant le montage de la suivante et le
+menu redémarre fermé. Le détail React est invalidé séparément avant tout retour
+vanilla. Une ouverture/fermeture de menu ne remonte pas le détail et ne
+déclenche aucune écriture IndexedDB, requête Cloud, OTP ou commande métier.
+
+Diagnostic :
+
+```sh
+node --test tests/ts-063-app-shell-*.test.mjs
+node --test tests/ts-041-navigation.test.mjs tests/ts-058-react-boundary.test.mjs
+npm run check && npm run build && npm run verify:build
+```
+
+La carte de propriété, les frontières, le retour arrière et la séparation entre
+preuves automatisées et recette humaine sont détaillés dans
+`docs/product/react-app-shell.md`. Les tests jsdom ne remplacent pas une recette
+desktop, tablette, Chrome Android, tactile, clavier réel ou lecteur d'écran.

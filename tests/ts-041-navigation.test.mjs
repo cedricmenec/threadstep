@@ -170,13 +170,18 @@ test("menu CSS keeps 44px targets, bounded panel, focus and hidden handling", ()
 });
 
 test("app wires menu state, escape, outside activation and route changes", () => {
-  assert.match(app, /navMenuButtonEl\.setAttribute\("aria-expanded", navMenuOpen \? "true" : "false"\)/);
-  assert.match(app, /navMenuPanelEl\.hidden = !navMenuOpen/);
-  assert.match(app, /navMenuButtonEl\.addEventListener\("click", \(\) => \{\s*updateNavigationMenu\("toggle"\)/);
+  assert.match(app, /import \{ createAppShellSurface \} from "\.\/app-shell\/AppShellSurface\.jsx"/);
+  assert.match(app, /const appShellBoundary = createReactBoundary\(\)/);
+  assert.match(app, /function reconcileAppShell\(/);
+  assert.match(app, /createAppShellSurface\(\{/);
+  assert.match(app, /appShellRecord\.surface\.update\(\{ open: navMenuOpen, route \}\)/);
+  assert.match(app, /appShellRecord\.surface\.focusMenuButton\(\)/);
   assert.match(app, /updateNavigationMenu\("escape"\)/);
   assert.match(app, /updateNavigationMenu\("outside"\)/);
   assert.match(app, /updateNavigationMenu\("route-change"\)/);
-  assert.match(app, /next\.restoreFocus && navMenuButtonEl\) navMenuButtonEl\.focus\(\)/);
+  assert.doesNotMatch(app, /navMenuButtonEl\.setAttribute/);
+  assert.doesNotMatch(app, /navMenuPanelEl\.hidden/);
+  assert.doesNotMatch(app, /navMenuPanelEl\.querySelectorAll/);
 });
 
 test("menu links use the pure heading mapping and close before navigating", () => {
@@ -186,6 +191,8 @@ test("menu links use the pure heading mapping and close before navigating", () =
   assert.match(activate, /pendingNavigationFocus = routeHeadingId\(nextRoute\)/);
   assert.match(activate, /location\.hash = target/);
   assert.match(app, /routeHeadingId, navigationMenuState/);
+  assert.match(app, /onNavigate: \(fragment\) => \{ activateNavigationLink\(null, fragment\); \}/);
+  assert.doesNotMatch(app, /querySelectorAll\("a\[href\]"\)/);
 });
 
 test("route visibility shows one settings section and preserves existing selectors", () => {

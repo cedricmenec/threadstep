@@ -4,6 +4,7 @@ import { createReactAdapter } from "./react-adapter.js";
 import { decideProjectDetailSurface } from "./project-detail/surface-decision.js";
 import { createProjectDetailCommands } from "./project-detail/controller-commands.js";
 import { createProjectDetailSurface } from "./project-detail/ProjectDetailSurface.jsx";
+import { createAppShellSurface } from "./app-shell/AppShellSurface.jsx";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { readCloudConfig, writeCloudConfig, validateCloudUrl, shouldOpenSyncedDatabase, cloudConfigureOptions, dexieSchema, openLocalDatabase, SCHEMA_VERSION, LOCAL_DATABASE_NAME } from "./dexie-foundation.js";
@@ -156,6 +157,8 @@ import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRe
 
 const subjectsEl = document.querySelector("#subjects");
 const reactBoundary = createReactBoundary();
+const appShellHostEl = document.querySelector("#app-shell-root");
+const appShellBoundary = createReactBoundary();
 const projectsLoadingEl = document.querySelector("#projects-loading");
 const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
@@ -183,8 +186,6 @@ const cloudUrlEl = document.querySelector("#cloud-url");
 const cloudConfigErrorEl = document.querySelector("#cloud-config-error");
 const businessToolsEl = document.querySelector("#business-tools");
 const dashboardEl = document.querySelector("#dashboard");
-const navMenuButtonEl = document.querySelector("#nav-menu-button");
-const navMenuPanelEl = document.querySelector("#nav-menu-panel");
 const settingsPageEl = document.querySelector("#settings-page");
 const settingsDataPageEl = document.querySelector("#settings-data-page");
 const settingsSyncPageEl = document.querySelector("#settings-sync-page");
@@ -2484,6 +2485,7 @@ function applyBusinessVisibility() {
   }
   applyOverviewSurfaces(overviewPresentationSnapshot);
   applySettingsVisibility(settingsSection);
+  reconcileAppShell();
 }
 function setLocalStatus(message) {
   if (localStatusEl) localStatusEl.textContent = typeof message === "string" ? message : "";
@@ -3152,17 +3154,78 @@ function expandAncestorForFocus() {
     }
   }
 }
-function applyNavigationMenu() {
-  if (navMenuButtonEl) {
-    navMenuButtonEl.setAttribute("aria-expanded", navMenuOpen ? "true" : "false");
+function appShellContextKey(nextRoute = route) {
+  const identity = currentAuthorizedWorkspaceIdentity();
+  const blocked = !businessAllowed() ||
+    (businessStarted && !documentLoaded) ||
+    (!requiresAuthentication() && localReadFailed);
+  return [
+    nextRoute && typeof nextRoute.view === "string" ? nextRoute.view : "overview",
+    nextRoute && typeof nextRoute.section === "string" ? nextRoute.section : "",
+    nextRoute && typeof nextRoute.subjectId === "string" ? nextRoute.subjectId : "",
+    authorizedWorkspaceIdentityKey(identity) || "",
+    blocked ? "blocked" : "allowed"
+  ].join("|");
+}
+function appShellControlledState() {
+  return {
+    open: navMenuOpen,
+    route,
+    onToggle: () => { updateNavigationMenu("toggle"); },
+    onNavigate: (fragment) => { activateNavigationLink(null, fragment); }
+  };
+}
+let appShellRecord = null;
+function releaseAppShellSurface(reason) {
+  if (!appShellRecord && !appShellBoundary.owner()) return false;
+  return appShellBoundary.invalidate(reason);
+}
+function reconcileAppShell(nextRoute = route) {
+  if (!appShellHostEl) return false;
+  const key = appShellContextKey(nextRoute);
+  if (appShellRecord && appShellRecord.key === key && appShellBoundary.owns(appShellHostEl)) {
+    appShellRecord.surface.update(appShellControlledState());
+    return false;
   }
-  if (navMenuPanelEl) navMenuPanelEl.hidden = !navMenuOpen;
+  // A new route, identity or blocking boundary releases the previous header
+  // before the new one mounts. The menu always starts closed.
+  if (appShellRecord || appShellBoundary.owner()) {
+    releaseAppShellSurface("context-change");
+  }
+  navMenuOpen = false;
+  const surface = createAppShellSurface({
+    container: appShellHostEl,
+    createRoot,
+    flushSync,
+    initialState: appShellControlledState()
+  });
+  const record = { key, surface };
+  appShellRecord = record;
+  const mounted = appShellBoundary.mount({
+    key,
+    container: appShellHostEl,
+    unmount() {
+      surface.unmount();
+      if (appShellRecord === record) appShellRecord = null;
+    }
+  });
+  if (mounted.status === "refused") {
+    surface.unmount();
+    if (appShellRecord === record) appShellRecord = null;
+    return false;
+  }
+  return true;
+}
+function applyNavigationMenu() {
+  reconcileAppShell();
+  if (!appShellRecord) return false;
+  return appShellRecord.surface.update({ open: navMenuOpen, route });
 }
 function updateNavigationMenu(action) {
   const next = navigationMenuState({ open: navMenuOpen }, action);
   navMenuOpen = next.open;
   applyNavigationMenu();
-  if (next.restoreFocus && navMenuButtonEl) navMenuButtonEl.focus();
+  if (next.restoreFocus && appShellRecord) appShellRecord.surface.focusMenuButton();
   return next;
 }
 function focusRouteHeading(headingId) {
@@ -4667,18 +4730,6 @@ document.querySelector("#import").addEventListener("change", async (event) => {
     event.target.value = "";
   }
 });
-if (navMenuButtonEl) {
-  navMenuButtonEl.addEventListener("click", () => {
-    updateNavigationMenu("toggle");
-  });
-}
-if (navMenuPanelEl) {
-  for (const link of navMenuPanelEl.querySelectorAll("a[href]")) {
-    link.addEventListener("click", (event) => {
-      activateNavigationLink(event, link.getAttribute("href"));
-    });
-  }
-}
 window.addEventListener("hashchange", () => {
   const nextRoute = parseRoute(location.hash);
   reconcileReactSurface(nextRoute);
@@ -5921,3 +5972,6 @@ if (syncedDatabase) {
 }
 setupSyncDiagnostics();
 
+if (appShellHostEl) {
+  reconcileAppShell();
+}

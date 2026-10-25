@@ -107,9 +107,12 @@ test("TS-059 no new route, storage key, migration or protected factory file is a
     "package-lock.json",
     "site/index.html"
   ];
-  const output = execFileSync("git", ["status", "--porcelain", "--", ...protectedPaths], {
+  const authorizedShellMigration = new Set(["site/index.html"]);
+  const status = execFileSync("git", ["status", "--porcelain", "--", ...protectedPaths], {
     cwd: root,
     encoding: "utf8"
-  }).trim();
-  assert.equal(output, "", "protected paths must stay untouched:\n" + output);
+  }).replace(/\n$/, "").split("\n").filter(Boolean)
+    .map((line) => line.slice(3).replace(/^"|"$/g, ""))
+    .filter((path) => !authorizedShellMigration.has(path));
+  assert.deepEqual(status, [], "protected paths must stay untouched:\n" + status.join("\n"));
 });

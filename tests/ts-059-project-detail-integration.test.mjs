@@ -73,7 +73,11 @@ test("TS-059 app.js wires a single React branch for the subject route only", () 
   assert.match(appSource, /from "\.\/project-detail\/surface-decision\.js"/);
   assert.equal((appSource.match(/createProjectDetailSurface\(/g) || []).length, 1);
   assert.match(appSource, /import \{ createRoot \} from "react-dom\/client"/);
-  assert.equal((appSource.match(/createRoot,/g) || []).length, 1);
+  const detailSurfaceWiring = appSource.slice(
+    appSource.indexOf("function renderProjectDetailSurface("),
+    appSource.indexOf("function applyExpandedIdentityBoundary(")
+  );
+  assert.equal((detailSurfaceWiring.match(/createRoot,/g) || []).length, 1);
   assert.match(appSource, /if \(route\.view === "subject"\)/);
   assert.match(appSource, /decideProjectDetailSurface\(\{/);
   assert.match(appSource, /reactBoundary\.mount\(\{/);

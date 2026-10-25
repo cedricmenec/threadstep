@@ -141,7 +141,7 @@ test("existing handlers are attached exactly once without a second engine", () =
   const importBlock = between(
     app,
     'document.querySelector("#import").addEventListener("change"',
-    'if (navMenuButtonEl)'
+    'window.addEventListener("hashchange"'
   );
   assert.match(importBlock, /parseIndexedDbBackup\(text\)/);
   assert.match(importBlock, /offerJsonReconciliation\(parsed\.records\)/);
@@ -179,7 +179,7 @@ test("navigation, cancellation and file resets never trigger an implicit restore
   assert.doesNotMatch(cancel, /confirmRestore|businessStore\.commit|diffRecords|buildRestorePlan/);
   const restoreChange = between(app, 'if (restoreInputEl) restoreInputEl.addEventListener("change"', "\n});");
   assert.doesNotMatch(restoreChange, /confirmRestore|businessStore\.commit|diffRecords/);
-  const importChange = between(app, 'document.querySelector("#import").addEventListener("change"', 'if (navMenuButtonEl)');
+  const importChange = between(app, 'document.querySelector("#import").addEventListener("change"', 'window.addEventListener("hashchange"');
   const reset = between(importChange, "} finally {", "}");
   assert.match(reset, /event\.target\.value = ""/);
   assert.doesNotMatch(reset, /confirmRestore|businessStore\.commit|diffRecords|buildRestorePlan/);
