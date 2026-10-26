@@ -192,7 +192,8 @@ test("TS-060 repeated transition cycles keep one owner and emit no additional wr
       assert.equal(boundary.activeCount(), 0);
       assert.equal(adapter.listenerCount(), 0);
       assert.deepEqual(calls, []);
-      fixture.container.remove();
+      // Flush React teardown while the deterministic DOM globals still exist.
+      await fixture.act(async () => { fixture.unmount(); });
     }
     assert.deepEqual(writes, []);
     assert.deepEqual(requests, []);
