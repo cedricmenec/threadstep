@@ -117,6 +117,12 @@ lecteur d'écran ni une synchronisation Dexie Cloud de test.
 La recette desktop et Chrome Android reste dans `Manual acceptance` du
 changement, **non cochée par `apply`** et non remplacée par une CI verte.
 
+**Attestation post-livraison du 26 octobre 2026 :** le propriétaire déclare
+avoir réalisé une recette manuelle globale sur desktop et Android et juge le
+résultat valide. Voir le [rapport de GO humain TS-064](react-overview-ts-064-acceptance.md),
+qui distingue cette déclaration des scénarios individuels non attestés ;
+ce rapport constitue la trace du prérequis de TS-065.
+
 ## Limites
 
 - Aucun changement de règle métier, de route, de stockage, de dépendance, de
