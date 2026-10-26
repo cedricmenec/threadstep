@@ -22,6 +22,7 @@ const read = (relative) => readFileSync(new URL(relative, root), "utf8");
 const html = read("site/index.html");
 const css = read("site/styles.css");
 const app = read("site/app.js");
+const projectCard = read("site/overview/ProjectCard.jsx");
 
 function between(source, start, end) {
   const from = source.indexOf(start);
@@ -285,4 +286,11 @@ test("TS-053 the synthesis text is produced from authorized document state only"
   ));
   assert.equal(overviewSummaryLabel(metrics), "1 projet actif · 1 étape en attente · 1 urgence en attente");
   assert.doesNotMatch(counterSource, /in-sync|phase|syncComplete|session/);
+});
+
+test("TS-053 the React Overview card keeps both urgency and progress indicators", () => {
+  assert.match(projectCard, /className="small subject-urgency">\{project\.urgencyLabel\}/);
+  assert.match(projectCard, /className="small subject-progress">\{project\.progressLabel\}/);
+  assert.match(projectCard, /className="small">[\s\S]*pending[\s\S]*en attente/);
+  assert.doesNotMatch(projectCard, /innerHTML|dangerouslySetInnerHTML/);
 });

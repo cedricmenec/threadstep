@@ -114,7 +114,7 @@ test("TS-060 projects stay available across a background refresh and only real e
   }
 });
 
-test("TS-060 the overview route mounts no business React surface and keeps the announcement keys", () => {
+test("TS-060 the overview route mounts only the bounded card surface and keeps the announcement keys", () => {
   const decision = decideProjectDetailSurface({
     route: { view: "overview" },
     businessAllowed: true,
@@ -131,7 +131,11 @@ test("TS-060 the overview route mounts no business React surface and keeps the a
   assert.doesNotMatch(overviewBranch, /createProjectDetailSurface|createRoot/);
   assert.match(overviewBranch, /renderSuggestion\(\)/);
   assert.match(overviewBranch, /renderUrgencyList\(\)/);
+  assert.match(overviewBranch, /renderOverviewSurface\(uxSnapshot, explicitUxFocus\)/);
   assert.match(overviewBranch, /overviewFilteredSubjects\(/);
+  assert.match(appSource, /from "\.\/overview\/OverviewSurface\.jsx"/);
+  assert.match(appSource, /function overviewSurfaceCanMount\(\)/);
+  assert.match(appSource, /function renderOverviewSurface\(uxSnapshot, explicitFocus\)/);
 
   assert.match(appSource, /from "\.\/overview-read-state\.js"/);
   assert.match(appSource, /OVERVIEW_LOADER_DELAY_MS/);

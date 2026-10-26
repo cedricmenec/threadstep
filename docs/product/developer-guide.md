@@ -946,3 +946,52 @@ La carte de propriété, les frontières, le retour arrière et la séparation e
 preuves automatisées et recette humaine sont détaillés dans
 `docs/product/react-app-shell.md`. Les tests jsdom ne remplacent pas une recette
 desktop, tablette, Chrome Android, tactile, clavier réel ou lecteur d'écran.
+
+## Cartes projets Overview React (TS-064)
+
+La liste des cartes projet de `#/` est désormais rendue par une surface React
+bornée dans `#subjects`. Les filtres, le compteur global, la suggestion, la
+reprise, la zone d'urgences, le chargement, la synthèse, le formulaire de
+projet et toutes les pages de paramètres restent vanilla. Overview et le détail
+React partagent la même instance `reactBoundary` et ne possèdent jamais
+`#subjects` simultanément ; la coque garde son hôte `#app-shell-root` séparé.
+
+`site/overview/overview-adapter.js` produit un instantané détaché et gelé des
+projets filtrés dans l'ordre enregistré, avec les compteurs et libellés dérivés
+de `site/core.js`. `site/overview/surface-decision.js` monte la surface
+uniquement sur `#/`, si l'accès métier est autorisé, la lecture terminée et la
+présentation TS-052 disponible. `OverviewSurface.jsx`, `OverviewCards.jsx`,
+`ProjectCard.jsx` et `OverviewTaskList.jsx` réutilisent `TaskItem`,
+`TaskEditor`, `TaskActionMenu`, `CreateTaskForm` et les primitives `site/ui/`.
+L'aperçu applique `overviewPreview` puis la limite de cinq parents ; les
+sous-tâches ne consomment pas d'emplacement et « Voir plus » ouvre
+`#/sujet/<id>` via `openSubject`.
+
+`site/app.js` conserve `parseRoute`, `hashchange`, `navigate`, `openSubject`,
+`applyFocus` et `finishUxRender`. Les commandes de carte (`openProject`,
+`seeMore`, `moveProject`, `removeProject`, `resetFilter`) et les commandes
+d'items existantes sont injectées une seule fois. Une mise à jour de données,
+un filtre ou un rafraîchissement de fond met à jour la surface en place et
+préserve focus, scroll, parents développés, brouillons, menu et filtre. Une
+navigation, un rechargement, un import/restauration réussi ou un changement
+d'identité réinitialise les états transitoires. Le montage et les mises à jour
+n'écrivent ni dans Dexie/IndexedDB ou `localStorage`, ni sur le réseau, et ne
+déclenchent ni OTP ni commande métier.
+
+**Diagnostic.** Vérifier `reactBoundary.owner()`, `reactOverviewRecord`,
+`overviewSurfaceContextKey()`, puis la décision `decideOverviewSurface` et
+l'instantané de l'adaptateur. Les commandes de test ciblées sont
+`node --test tests/ts-064-overview-*.test.mjs`, puis `npm run check`,
+`npm run build` et `npm run verify:build`.
+
+**Retour arrière.** Retirer l'import et le montage de la surface Overview,
+restaurer le rendu de cartes du contrôleur, puis supprimer `site/overview/`
+s'il n'est plus consommé. Aucune donnée, migration, route, clé de stockage,
+dépendance ou configuration Cloud n'est affectée.
+
+La carte de propriété, les frontières route/identité/blocage/lecture, le cycle
+de mise à jour, le diagnostic, les commandes et la distinction entre preuves
+automatisées et recette humaine sont détaillés dans
+`docs/product/react-overview-cards.md`. Les tests jsdom ne prouvent ni le
+rendu visuel, ni le toucher réel, ni le clavier physique, ni le lecteur
+d'écran ; la recette desktop et Chrome Android reste manuelle.
