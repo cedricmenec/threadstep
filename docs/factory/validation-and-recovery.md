@@ -1,5 +1,18 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## Incident TS-064 (26 octobre 2026) : tests de statut Git lancés pendant l'archivage OpenSpec
+
+**Preuves :** [run #40413844910](https://github.com/cedricmenec/threadstep/actions/runs/40413844910/job/121891116107). Le checkpoint d'implémentation **durable** est `aea9a1615f2c2326d84af646cfdcd96fde8ad445` sur `agent/openspec/TS-064`. Le modèle a terminé la synchronisation sémantique ; OpenSpec a validé les 50 specs canoniques et les 54 changes archivées. Le second `npm run check` a ensuite échoué sur cinq tests inspectant `git status` alors que le commit autorisé de spécifications et d'archive n'avait pas encore été créé : `ts-040-openspec`, `ts-058-react-docs`, `ts-059-project-detail-docs`, `ts-060-qualification-report`, `ts-064-overview-side-effects`. L'incident relève de l'**ordre du workflow**, et non d'un échec de validation OPSX ou d'une régression métier démontrée.
+
+**Correction ASF-OPSX-09 :** maintenir l'intégralité du `sync-guard` et des validations strictes, puis faire `git add -A`, le contrôle de portée et un commit local de la sync/archives **avant** de relancer `npm run check`. Le check intervient toujours avant le push et avant l'ouverture de la PR finale, dans un worktree propre vérifié. La CI indépendante après PR reste impérative. Les tests historiques ne sont ni supprimés ni contournés. Un test statique protège l'ordre des phases.
+
+**Reprise TS-064 :** après fusion de ce correctif et CI/main validées, vérifier que le checkpoint `apply` existe toujours sur la branche et qu'aucun autre run/PR final TS-064 n'a depuis modifié son état. Déclencher un **nouveau workflow `task_id=TS-064`, `phase=finalize`, `auto_merge=false`**, avec autorisation spécifique du propriétaire. `finalize` réutilise le code vérifié mais effectue **un nouvel appel OpenRouter payant pour OPSX sync** : le résultat non committé du runner échoué n'est pas récupérable automatiquement. **Ne pas relancer `apply`, `auto`, ou le job GitHub échoué** et ne pas forcer la branche. Aucune PR de livraison n'est actuellement attestée ; vérifier de nouveau avant reprise.
+
+**Amélioration structurelle hors correctif immédiat :** [ASF-QA-01](tasks/ASF-QA-01.md) cartographiera les tests par phase et améliorera les diagnostics. L'augmentation du nombre de tests ne justifie pas de réduire les validations de sûreté sans preuve.
+
+---
+
+
 ## Incident TS-059 (24 octobre 2026) : dépendances Node absentes dans le runner OpenSpec
 
 **Preuve :** le [run #40100098015](https://github.com/cedricmenec/threadstep/actions/runs/40100098015/job/120890329291), démarré sur le commit fusionné de TS-058, a produit et validé un plan OpenSpec pour TS-059 puis échoué lors de `npm run check`. Trois suites TS-058 n'ont pas pu importer `esbuild` (`ERR_MODULE_NOT_FOUND`) ; 1 081 autres tests ont réussi. Le workflow installait OpenSpec/OpenCode globalement mais jamais les dépendances projet avant ses vérifications.
