@@ -4,6 +4,9 @@ import { createReactAdapter } from "./react-adapter.js";
 import { decideProjectDetailSurface } from "./project-detail/surface-decision.js";
 import { createProjectDetailCommands } from "./project-detail/controller-commands.js";
 import { createProjectDetailSurface } from "./project-detail/ProjectDetailSurface.jsx";
+import { createOverviewAdapter as createOverviewAdapterModule } from "./overview/overview-adapter.js";
+import { decideOverviewSurface } from "./overview/surface-decision.js";
+import { createOverviewSurface } from "./overview/OverviewSurface.jsx";
 import { createAppShellSurface } from "./app-shell/AppShellSurface.jsx";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
@@ -461,6 +464,46 @@ const projectDetailCommands = createProjectDetailCommands({
   getResumeRef: () => resumeRef,
   setResumeRef: (ref) => { resumeRef = ref; },
   saveResumePreference
+});
+function overviewTransientState() {
+  return {
+    ...projectDetailTransientState(),
+    projectFilter: overviewProjectFilter
+  };
+}
+const overviewCommands = Object.freeze({
+  ...projectDetailCommands,
+  openProject(subjectId) {
+    const subject = findSubject(documentState, subjectId);
+    if (!subject) return false;
+    openSubject(subject);
+    return true;
+  },
+  seeMore(subjectId) {
+    const subject = findSubject(documentState, subjectId);
+    if (!subject) return false;
+    openSubject(subject);
+    return true;
+  },
+  moveProject(subjectId, direction) {
+    const subject = findSubject(documentState, subjectId);
+    if (!subject) return false;
+    move(subject, direction);
+    return true;
+  },
+  removeProject(subjectId) {
+    const subject = findSubject(documentState, subjectId);
+    if (!subject) return false;
+    if (!confirm("Supprimer ce sujet et toutes ses étapes ?")) return false;
+    invalidatePendingRemoval();
+    documentState.subjects = documentState.subjects.filter((entry) => entry.id !== subjectId);
+    persist();
+    return true;
+  },
+  resetFilter() {
+    setOverviewProjectFilter(OVERVIEW_FILTER_ALL, true);
+    return true;
+  }
 });
 function createProjectDetailAdapter() {
   return createReactAdapter({
@@ -2970,13 +3013,99 @@ function reactSurfaceContextKey(nextRoute = route) {
 function reconcileReactSurface(nextRoute = route) {
   const current = reactBoundary.owner();
   if (!current) return false;
-  if (current.key === reactSurfaceContextKey(nextRoute)) return false;
+  const nextKey = reactSurfaceContextKey(nextRoute);
+  if (current.key === nextKey) return false;
+  if (nextRoute && nextRoute.view === "overview" &&
+      current.key.startsWith(nextKey + "|")) return false;
   return reactBoundary.invalidate("context-change");
 }
 let reactProjectDetailRecord = null;
+let reactOverviewRecord = null;
 function releaseProjectDetailSurface(reason) {
-  if (!reactProjectDetailRecord && !reactBoundary.owner()) return false;
+  if (!reactProjectDetailRecord) return false;
   return reactBoundary.invalidate(reason);
+}
+function releaseOverviewSurface(reason) {
+  if (!reactOverviewRecord) return false;
+  return reactBoundary.invalidate(reason);
+}
+function overviewSurfaceContextKey() {
+  const presentation = overviewPresentationSnapshot
+    ? overviewPresentationSnapshot.presentation
+    : null;
+  const blocked = !presentation ||
+    presentation.state === OVERVIEW_PRESENTATION_STATE.AWAITING_READ ||
+    (presentation.actionRequired && !presentation.projectsAvailable);
+  return reactBoundaryKey({
+    view: "overview",
+    subjectId: "",
+    identity: authorizedWorkspaceIdentityKey(currentAuthorizedWorkspaceIdentity())
+  }) + "|" + (blocked ? "blocked" : "ready");
+}
+function overviewSurfaceCanMount() {
+  return decideOverviewSurface({
+    route,
+    businessAllowed: businessAllowed(),
+    documentLoaded,
+    presentation: overviewPresentationSnapshot
+      ? overviewPresentationSnapshot.presentation
+      : null
+  }).mount;
+}
+function createOverviewAdapter() {
+  return createOverviewAdapterModule({
+    getDocument: () => documentState,
+    getRoute: () => route,
+    getTransientState: overviewTransientState,
+    getAuthorizedIdentity: currentAuthorizedWorkspaceIdentity,
+    isBusinessAllowed: businessAllowed,
+    isLoadingBlocked: () => !documentLoaded,
+    getPresentation: () => overviewPresentationSnapshot
+      ? overviewPresentationSnapshot.presentation
+      : null,
+    commands: overviewCommands
+  });
+}
+function renderOverviewSurface(uxSnapshot, explicitFocus) {
+  if (!overviewSurfaceCanMount()) return false;
+  const key = overviewSurfaceContextKey();
+  if (reactOverviewRecord && reactOverviewRecord.key === key &&
+      reactBoundary.owns(subjectsEl)) {
+    reactOverviewRecord.surface.update();
+    applyFocus();
+    finishUxRender(uxSnapshot, explicitFocus);
+    return true;
+  }
+  // Detail, another identity or a previous overview must lose ownership before
+  // the card surface creates its root in the shared #subjects container.
+  if (reactProjectDetailRecord || reactOverviewRecord || reactBoundary.owner()) {
+    reactBoundary.invalidate("context-change");
+  }
+  const adapter = createOverviewAdapter();
+  const surface = createOverviewSurface({
+    adapter,
+    container: subjectsEl,
+    createRoot,
+    flushSync
+  });
+  const record = { key, adapter, surface };
+  reactOverviewRecord = record;
+  const mounted = reactBoundary.mount({
+    key,
+    container: subjectsEl,
+    unmount() {
+      surface.unmount();
+      if (reactOverviewRecord === record) reactOverviewRecord = null;
+    }
+  });
+  if (mounted.status === "refused") {
+    surface.unmount();
+    if (reactOverviewRecord === record) reactOverviewRecord = null;
+    return false;
+  }
+  applyFocus();
+  finishUxRender(uxSnapshot, explicitFocus);
+  return true;
 }
 function renderProjectDetailSurface(uxSnapshot, explicitFocus) {
   const key = reactSurfaceContextKey();
@@ -3612,6 +3741,7 @@ function render() {
   if (route.view === "settings") {
     // Real navigation: do not retain an unrelated list's height.
     if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("route-settings");
+    if (typeof releaseOverviewSurface === "function") releaseOverviewSurface("route-settings");
     hideOverviewUrgencies();
     if (reactBoundary.canWriteVanilla(subjectsEl)) subjectsEl.replaceChildren();
     subjectForm.hidden = true;
@@ -3626,6 +3756,7 @@ function render() {
     // A necessary read that has not produced a trustworthy document must never
     // show an empty list, a zero counter or an inoperative suggestion.
     if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("overview-suppressed");
+    if (typeof releaseOverviewSurface === "function") releaseOverviewSurface("overview-suppressed");
     hideOverviewUrgencies();
     subjectForm.hidden = true;
     focusSuggestEl.hidden = true;
@@ -3659,8 +3790,12 @@ function render() {
       if (typeof releaseProjectDetailSurface === "function") {
         releaseProjectDetailSurface(decision.reason || "surface-unavailable");
       }
+      if (typeof releaseOverviewSurface === "function") {
+        releaseOverviewSurface(decision.reason || "surface-unavailable");
+      }
     } else {
       if (typeof releaseProjectDetailSurface === "function") releaseProjectDetailSurface("route-invalid");
+      if (typeof releaseOverviewSurface === "function") releaseOverviewSurface("route-invalid");
     }
     renderDetail(nextSubjects);
   } else {
@@ -3668,6 +3803,8 @@ function render() {
     renderSuggestion();
     renderResumeCard();
     renderUrgencyList();
+    if (typeof renderOverviewSurface === "function" &&
+        renderOverviewSurface(uxSnapshot, explicitUxFocus)) return;
     const overviewSubjects = overviewFilteredSubjects(documentState.subjects, overviewProjectFilter);
     if (!overviewSubjects.length) {
       const emptyMessages = {

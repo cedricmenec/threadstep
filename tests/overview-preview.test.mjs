@@ -5,6 +5,8 @@ import { newItem, overviewPreview, substepView } from "../site/core.js";
 
 const app = readFileSync(new URL("../site/app.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../site/styles.css", import.meta.url), "utf8");
+const overviewTaskList = readFileSync(new URL("../site/overview/OverviewTaskList.jsx", import.meta.url), "utf8");
+const projectCard = readFileSync(new URL("../site/overview/ProjectCard.jsx", import.meta.url), "utf8");
 
 test("the overview preview option defaults to unlimited rendering", () => {
   assert.match(app, /function renderTaskArea\(subject, \{ preview = false \} = \{\}\)/);
@@ -55,4 +57,13 @@ test("a previewed parent and its substeps count as one entry whether collapsed o
   const preview = overviewPreview(items);
   assert.deepEqual(preview.shown.map((item) => item.id), ["p", "o"]);
   assert.equal(preview.shown.length, 2);
+});
+
+test("the React Overview preview reuses overviewPreview and keeps one See more outside the quota", () => {
+  assert.match(overviewTaskList, /overviewPreview\(project\.items, hideCompleted\)/);
+  assert.equal((overviewTaskList.match(/overview-see-more/g) || []).length, 1);
+  assert.match(overviewTaskList, /preview\.hasMore \? <SeeMore/);
+  assert.match(overviewTaskList, /preview\.shown\.map/);
+  assert.match(projectCard, /<OverviewTaskList/);
+  assert.doesNotMatch(overviewTaskList, /slice\(0, 5\)|OVERVIEW_TASK_LIMIT/);
 });
