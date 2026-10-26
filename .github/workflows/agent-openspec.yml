@@ -504,9 +504,9 @@ jobs:
           }
           openspec validate --all --strict --no-interactive
           openspec validate --archived --strict --no-interactive
-          # Run the exact CI test suite after archive moves change-local specs.
-          # Prevent publishing a PR that fails because tests use stale OpenSpec paths.
-          npm run check
+          # Run the final CI suite only after committing the authorized
+          # semantic sync and archive, so git-status invariant tests observe
+          # a clean tree. See the guarded pre-push check below.
 
       - name: Guard scope, commit and publish PR
         env:
@@ -540,6 +540,17 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "agent($TASK_ID): OpenSpec $PHASE"
           fi
+          # The worktree must be clean before and after the post-archive check.
+          # Historical tests inspect git status to reject unauthorized edits:
+          # running them against uncommitted, authorized sync output is a false
+          # positive. This check happens BEFORE push and PR creation.
+          test -z "$(git status --porcelain)" || {
+            echo "::error::Post-archive validation requires a clean committed worktree"; exit 1;
+          }
+          npm run check
+          test -z "$(git status --porcelain)" || {
+            echo "::error::Post-archive validation changed the worktree"; exit 1;
+          }
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
           existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
           if [[ -z "$existing" ]]; then
