@@ -33,7 +33,8 @@ test("ASF-OPSX-09: post-archive check uses committed and scope-guarded tree befo
     return index;
   };
   const stage = at("git add -A");
-  const guard = at('node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" "$guard_phase" "$CHANGE_ID"');
+  const guard = publish.indexOf('node "$RUNNER_TEMP/agent-openspec-checkpoint.mjs" "$guard_phase" "$CHANGE_ID"', stage);
+  assert.ok(guard > stage, "missing post-staging scope guard");
   const commit = at('git commit -m "agent($TASK_ID): OpenSpec $PHASE"');
   const cleanBefore = at("Post-archive validation requires a clean committed worktree");
   const check = at("npm run check");
