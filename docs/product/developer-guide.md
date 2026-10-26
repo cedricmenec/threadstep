@@ -949,6 +949,18 @@ desktop, tablette, Chrome Android, tactile, clavier réel ou lecteur d'écran.
 
 ## Cartes projets Overview React (TS-064)
 
+**Recette humaine et tâche dépendante :** TS-064 a reçu un GO fonctionnel global
+explicitement déclaré par le propriétaire sur desktop et Android le 26 octobre
+2026 ; le [rapport versionné de recette TS-064](react-overview-ts-064-acceptance.md)
+identifie les environnements déclarés, le commit livré et les vérifications
+individuelles non attestées. Pour les tâches suivantes, consigner tout GO/NO-GO
+manuel en rapport daté dans `docs/product/`, publier sur `main` par PR/CI,
+et le rendre accessible à la branche OpenSpec persistante **avant** l'appel
+payant `apply`. Les cases de `Manual acceptance` ne sont pas des cases
+`tasks.md` à cocher par le modèle ; une CI verte ne constitue pas une recette
+sur appareil.
+
+
 La liste des cartes projet de `#/` est désormais rendue par une surface React
 bornée dans `#subjects`. Les filtres, le compteur global, la suggestion, la
 reprise, la zone d'urgences, le chargement, la synthèse, le formulaire de

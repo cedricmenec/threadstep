@@ -1,5 +1,14 @@
 # ThreadStep — recette fonctionnelle manuelle
 
+## Recette propriétaire TS-064 (26 octobre 2026)
+
+Le propriétaire a déclaré une **validation globale desktop et Android** de la
+surface React des cartes Overview livrée par la PR #214. Le compte rendu et
+ses limites de preuve scénario par scénario figurent dans le
+[rapport daté TS-064](react-overview-ts-064-acceptance.md). Ce GO humain ne
+transforme pas les cases non renseignées de cette checklist générale en PASS.
+
+
 **État au 16 octobre 2026 : recette manuelle déclarée OK par le propriétaire.** Attestation globale ; les scénarios individuels ci-dessous restent non cochés en l'absence de relevé détaillé et ne sont pas présentés comme vérifiés indépendamment. Voir [rapport de clôture ASF](../factory/closeout-2026-10-16.md).
 
 Version de la checklist : Version testée à noter : `main` et commit `97d326c5b262622f8146348f385eb1e0d838829c` (16 octobre 2026), ou un SHA plus récent vérifié.
