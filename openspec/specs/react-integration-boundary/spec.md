@@ -40,12 +40,12 @@ CSP de production inchangée.
 
 ### Requirement: Propriété DOM unique et bornée
 
-Une racine React SHALL posséder au plus un même conteneur borné à la fois.
-Pendant ce changement, l'application MAY avoir exactement deux conteneurs bornés
-— en-tête et détail — chacun avec un propriétaire exclusif. Tant qu'une racine
-est active, le renderer vanilla MUST NOT remplacer ni modifier ses descendants.
-Avant un nouveau rendu vanilla, la racine SHALL être démontée. Des cycles
-répétés MUST NOT cumuler des racines ni laisser de listeners actifs dupliqués.
+Au plus une racine React SHALL posséder un conteneur borné. L'application MAY
+avoir deux conteneurs bornés simultanément — en-tête et contenu — chacun avec un
+propriétaire exclusif. La surface de contenu est soit les cartes Overview, soit
+le détail projet, jamais les deux. Tant qu'une racine est active, le vanilla MUST
+NOT modifier ses descendants ; avant tout rendu vanilla, la racine SHALL être
+démontée. Des cycles répétés MUST NOT cumuler racines ni listeners dupliqués.
 
 #### Scenario: Montage puis démontage
 
@@ -73,13 +73,14 @@ répétés MUST NOT cumuler des racines ni laisser de listeners actifs dupliqué
 
 #### Scenario: Deux conteneurs autorisés coexistent
 
-- **GIVEN** une racine de coque dans l'hôte d'en-tête et une racine de détail
-  dans le conteneur de contenu
+- **GIVEN** une racine de coque dans l'hôte d'en-tête et une surface de contenu
+  dans le conteneur `#subjects`, soit Overview soit détail
 - **WHEN** les deux surfaces sont actives
 - **THEN** chaque conteneur possède exactement un propriétaire
 - **AND** aucune racine ne réécrit le conteneur de l'autre
 - **AND** le vanilla ne peut écrire ni dans l'un ni dans l'autre tant qu'ils
   sont actifs
+- **AND** Overview et détail ne possèdent jamais `#subjects` simultanément
 
 ### Requirement: Instantané métier en lecture seule et état transitoire séparé
 
@@ -304,3 +305,58 @@ concernée SHALL être libérée avant que le vanilla ne réécrive son conteneu
 - **THEN** le nombre de racines actives reste borné à deux conteneurs
 - **AND** chaque conteneur actif garde un propriétaire et un abonnement uniques
 - **AND** aucun listener de l'ancienne surface ne reste actif
+
+### Requirement: Invalidation indépendante des cartes Overview
+
+Les cartes Overview et le détail React SHALL pouvoir être invalidés séparément
+sur le conteneur de contenu partagé. Une invalidation de l'un MUST NOT
+démonter ni réinitialiser l'autre au-delà du changement de route, d'identité
+ou d'état bloquant. L'ancienne surface SHALL être libérée avant toute
+réécriture vanilla de son conteneur.
+
+#### Scenario: Overview libère sa surface avant le détail
+
+- **GIVEN** les cartes Overview possèdent `#subjects`
+- **WHEN** la route passe à un projet
+- **THEN** seule la surface Overview est démontée
+- **AND** le détail monte ensuite dans le même conteneur libéré
+- **AND** la coque d'en-tête reste indépendante et utilisable
+
+#### Scenario: Le détail libère sa surface avant Overview
+
+- **GIVEN** le détail React possède `#subjects`
+- **WHEN** la route revient à Overview
+- **THEN** seule la surface du détail est libérée avant le rendu des cartes
+- **AND** aucune commande, aucun Undo, aucune liste ni aucun brouillon du
+  détail ne reste actif
+- **AND** les cartes sont dérivées du document courant
+
+#### Scenario: Identité et blocage libèrent avant le vanilla
+
+- **GIVEN** une surface de contenu active pour une identité autorisée
+- **WHEN** l'identité ou l'espace change, devient non vérifié, ou qu'une
+  lecture bloquante survient
+- **THEN** la surface concernée est invalidée avant toute réécriture vanilla
+  de `#subjects`
+- **AND** aucun contenu métier de l'ancien contexte n'est affiché ou copié
+- **AND** aucune requête Cloud ou écriture IndexedDB supplémentaire n'est
+  déclenchée par la transition de présentation
+
+#### Scenario: Rafraîchissement de même contexte non invalidant
+
+- **GIVEN** une surface Overview active sous une identité autorisée inchangée
+- **WHEN** un rafraîchissement de données, un filtre ou un changement d'état
+  de présentation locale survient
+- **THEN** la surface n'est ni démontée ni recréée
+- **AND** son propriétaire, ses listeners et ses clés d'éléments restent
+  uniques
+- **AND** les états encore valides sont conservés
+
+#### Scenario: Cycles mixtes sans accumulation
+
+- **GIVEN** des cycles simulés Overview, détail, paramètres, identité et
+  lecture bloquée
+- **WHEN** les cycles sont répétés
+- **THEN** le nombre de conteneurs React actifs reste borné à deux
+- **AND** `#subjects` ne possède jamais plus d'un propriétaire
+- **AND** aucun listener ni arbre de l'ancienne surface ne subsiste
