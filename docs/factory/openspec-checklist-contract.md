@@ -66,6 +66,12 @@ réelle du modèle lors d'une exécution payante.
   et doivent être signalés comme `à vérifier` jusqu'à obtention
   d'une preuve réelle. Leur présence n'empêche pas le contrôle
   pré-sync d'archiver l'implémentation testée.
+- **Ce n'est pas une porte d'entrée de la tâche suivante.** Ne jamais
+  transformer le manque de GO manuel ou d'attestation versionnée de la
+  tâche précédente en case `tasks.md`, condition bloquante dans `proposal.md`
+  ou arrêt de `apply`. Les dépendances de livraison se vérifient via les
+  PR/CI/Pages réussies. Les nouvelles décisions produit explicitement
+  nécessaires au changement restent des prérequis séparés.
 
 ### 3. Post-sync review (hors checklist)
 
