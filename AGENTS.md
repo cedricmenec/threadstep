@@ -61,6 +61,14 @@ les non-objectifs ou l'architecture cible du produit.**
   indépendante, fusion, Pages) dans `Post-sync review` **sans
   cases à cocher**. Ces validations restent nécessaires au rapport
   final, mais ne bloquent pas artificiellement `apply`.
+- **Ne pas bloquer une tâche dépendante faute de GO/rapport de recette humaine
+  de la tâche précédente.** Une PR précédente fusionnée avec CI indépendante,
+  CI `main` et déploiement Pages réussis suffit pour la dépendance technique.
+  Garder la recette sur appareil dans `Manual acceptance` avec son état réel
+  (non effectuée/non attestée si nécessaire), sans créer de PR d'attestation
+  obligatoire ni demander au modèle d'inventer des résultats. Une **décision
+  produit explicite** (maquette, sécurité, consentement, arbitrage fonctionnel)
+  reste requise lorsqu'elle est véritablement nécessaire au nouveau périmètre.
 - Exécuter `npm run check` et les tests liés à la tâche ; préciser
   ce qui a réellement été vérifié. Ne jamais présenter une
   vérification non effectuée comme réussie.
