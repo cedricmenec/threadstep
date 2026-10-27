@@ -19,7 +19,10 @@ created_at: YYYY-MM-DD
 Status, priority, dependencies and eligibility are declared in the YAML
 frontmatter above; the body describes the work. `automation: allowed` is a
 declarative eligibility only and never authorizes a paid run, a merge or a
-change to code, secrets or permissions. See
+change to code, secrets or permissions. A prior task's independently checked
+merge and deployment satisfies a technical dependency; do not require a prior
+human/manual acceptance report to begin this task. Explicit new product
+choices or approvals must still be resolved when applicable. See
 [docs/factory/backlog-v2-task-contract.md](../../docs/factory/backlog-v2-task-contract.md).
 
 ## User value
