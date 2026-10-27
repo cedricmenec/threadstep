@@ -1,5 +1,10 @@
 # ThreadStep — recette fonctionnelle manuelle
 
+## GO propriétaire TS-065 (27 octobre 2026)
+
+Le propriétaire confirme une recette manuelle globale **desktop et Android** pour les interactions React Overview livrées via PR #216. Voir le [rapport TS-065](react-overview-ts-065-acceptance.md) pour la provenance et les limites : les vérifications individuelles non attestées ne sont pas cochées rétroactivement. Ce GO ne valide pas à lui seul les références Stitch nécessaires à TS-066.
+
+
 ## Recette propriétaire TS-064 (26 octobre 2026)
 
 Le propriétaire a déclaré une **validation globale desktop et Android** de la
