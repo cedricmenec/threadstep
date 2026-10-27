@@ -260,8 +260,12 @@ test("TS-065 cancel and reorder expose a present focus target without an extra w
     harness = createHarness();
     fixture = await createOverviewFixture(harness.adapter);
     try {
-      await harness.adapter.commands.reorderItem("p1", "b", "a", "before");
-      fixture.rerender();
+      // The controller schedules a React-visible update. Keep the mutation
+      // inside async act so its scheduler work is drained before jsdom teardown.
+      await fixture.act(async () => {
+        harness.adapter.commands.reorderItem("p1", "b", "a", "before");
+        fixture.rerender();
+      });
       assert.deepEqual(harness.state.transient.pendingMoveFocus, { itemId: "b", direction: null });
       const handle = fixture.container.querySelector('.task[data-item="b"] .task-handle');
       assert.ok(handle);
