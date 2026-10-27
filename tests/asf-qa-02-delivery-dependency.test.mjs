@@ -41,7 +41,7 @@ test("ASF-QA-02: product dependencies use real delivery and preserve manual revi
 
 test("ASF-QA-02: a distinct explicit Stitch product choice is still required for TS-066", () => {
   assert.match(ts066, /^status: proposed$/m);
-  assert.match(ts066, /depends_on:\s+\n\s+- TS-065/);
+  assert.match(ts066, /^depends_on:\r?\n  - TS-065$/m);
   assert.match(ts066, /les références Stitch spécifiques à Overview devront être examinées et approuvées explicitement/);
   assert.match(contract, /décision\s+produit explicite/i);
   assert.match(config, /Preserve explicit new product design or security decisions/);
