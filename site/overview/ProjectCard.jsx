@@ -2,7 +2,7 @@ import { Button } from "../ui/Button.jsx";
 import { CreateTaskForm } from "../project-detail/CreateTaskForm.jsx";
 import { OverviewTaskList } from "./OverviewTaskList.jsx";
 
-export function ProjectCard({ project, commands, transient }) {
+export function ProjectCard({ project, commands, transient, dragSession }) {
   const pending = project.pendingCount;
   return (
     <section
@@ -80,6 +80,7 @@ export function ProjectCard({ project, commands, transient }) {
           openMenuId={transient.openMenuId}
           revealItemId={transient.revealItemId}
           trackedItemId={transient.trackedItemId}
+          dragSession={dragSession}
         />
       </div>
     </section>

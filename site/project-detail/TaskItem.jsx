@@ -21,31 +21,52 @@ export function TaskItem({
   editingItemId,
   openMenuId,
   revealItemId,
-  trackedItemId
+  trackedItemId,
+  dragSession
 }) {
   const level = item.parentId === null || item.parentId === undefined
     ? "task-parent"
     : "task-substep";
   const view = substepView(subject.items, item.id, hideCompleted, expandedParents);
+  const sessionOwnsDrag = dragSession && dragSession.draggingItemId === item.id;
+  const dropPosition = dragSession && typeof dragSession.dropPositionFor === "function"
+    ? dragSession.dropPositionFor(item.id)
+    : null;
   const classes = [
     "task",
     level,
     item.done ? "done" : "",
-    revealItemId === item.id ? "reveal" : ""
+    revealItemId === item.id ? "reveal" : "",
+    sessionOwnsDrag ? "dragging" : "",
+    dropPosition === "before" ? "drop-before" : "",
+    dropPosition === "after" ? "drop-after" : ""
   ].filter(Boolean).join(" ");
 
   const handle = hideCompleted ? null : (
     <button
-      className="task-handle"
+      className={["task-handle", sessionOwnsDrag ? "dragging-handle" : ""]
+        .filter(Boolean).join(" ")}
       type="button"
       aria-label={"Déplacer « " + item.title + " » (" + moveContext(subject, item) + ")"}
       aria-describedby="reorder-note"
-      onPointerDown={(event) => commands.startDrag(
-        subjectId,
-        item.id,
-        event.nativeEvent || event,
-        event.currentTarget
-      )}
+      aria-grabbed={sessionOwnsDrag ? "true" : undefined}
+      onPointerDown={(event) => {
+        if (dragSession && typeof dragSession.startDrag === "function") {
+          dragSession.startDrag(
+            subjectId,
+            item.id,
+            event.nativeEvent || event,
+            event.currentTarget
+          );
+          return;
+        }
+        commands.startDrag(
+          subjectId,
+          item.id,
+          event.nativeEvent || event,
+          event.currentTarget
+        );
+      }}
     >
       ⠿
     </button>
@@ -125,6 +146,7 @@ export function TaskItem({
               openMenuId={openMenuId}
               revealItemId={revealItemId}
               trackedItemId={trackedItemId}
+              dragSession={dragSession}
             />
           )}
         />

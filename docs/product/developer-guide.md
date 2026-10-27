@@ -1007,3 +1007,55 @@ automatisées et recette humaine sont détaillés dans
 `docs/product/react-overview-cards.md`. Les tests jsdom ne prouvent ni le
 rendu visuel, ni le toucher réel, ni le clavier physique, ni le lecteur
 d'écran ; la recette desktop et Chrome Android reste manuelle.
+
+## Interactions et éditeurs Overview React (TS-065)
+
+TS-065 qualifie les commandes et éditeurs des cartes Overview après TS-064 et
+déplace la seule présentation encore impérative, le glisser-déposer, dans un
+état React local à la surface. Les mutations restent déléguées aux commandes
+existantes du contrôleur ; aucune règle métier n'est dupliquée.
+
+`site/overview/use-overview-drag.js` suit l'item déplacé, la cible candidate et
+la position `before`/`after`, expose les classes visuelles comme props et
+appelle `reorderItem` une seule fois lors d'un dépôt valide. `TaskItem` reçoit
+une prop optionnelle `dragSession` ; sans elle, le détail projet conserve son
+chemin `startDrag` historique. Les écouteurs pointeur et `Échap` sont posés une
+seule fois pour la surface et retirés au démontage.
+
+### Continuité des éditeurs
+
+`surface.update()` rafraîchit l'instantané sans remonter la racine. Une saisie
+non enregistrée dans `TaskEditor` ou `CreateTaskForm` survit à une mise à jour
+de même contexte, sans écriture. Une validation refusée ou « Annuler » ne
+persiste rien ; le focus rejoint un contrôle présent via les indications du
+contrôleur.
+
+### Isolation des contextes
+
+Un changement d'identité ou d'espace, une lecture bloquante ou une route non
+Overview invalide la surface avant tout affichage vanilla. Aucun brouillon,
+menu, cible de drag ni Undo du contexte précédent n'est réutilisé, exposé ou
+écrit ; la session de drag annule ses écouteurs et ignore les événements
+tardifs.
+
+### Frontière de plateforme
+
+Les modules d'interaction Overview n'ajoutent aucune route, clé de stockage,
+préférence, dépendance, accès Dexie/IndexedDB, appel OTP, requête réseau ni
+changement de CSP. Les titres, notes et noms accessibles restent des nœuds
+texte. Une synchronisation de fond de même contexte met à jour les cartes en
+place.
+
+### Retour arrière
+
+Retirer la prop `dragSession` de `TaskItem`, restaurer l'appel
+`commands.startDrag` pour Overview, puis supprimer
+`site/overview/use-overview-drag.js` et les tests TS-065. Aucune donnée,
+route, préférence ou migration n'est affectée.
+
+Les commandes de test ciblées sont
+`node --test tests/ts-065-overview-*.test.mjs`, puis `npm run check`,
+`npm run build` et `npm run verify:build`. Le détail complet se trouve dans
+`docs/product/react-overview-interactions.md`. Les tests jsdom ne prouvent ni
+le toucher, ni le clavier physique, ni Chrome Android, ni le lecteur d'écran ;
+la recette desktop et Android reste manuelle.

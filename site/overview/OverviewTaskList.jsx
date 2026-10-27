@@ -23,7 +23,8 @@ export function OverviewTaskList({
   editingItemId,
   openMenuId,
   revealItemId,
-  trackedItemId
+  trackedItemId,
+  dragSession
 }) {
   const hideCompleted = transient.hideCompleted === true;
   const expandedParents = new Set(
@@ -48,6 +49,7 @@ export function OverviewTaskList({
             openMenuId={openMenuId}
             revealItemId={revealItemId}
             trackedItemId={trackedItemId}
+            dragSession={dragSession}
           />
         ))}
       </ul>
