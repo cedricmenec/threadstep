@@ -341,7 +341,8 @@ jobs:
           }
           openspec validate "$CHANGE_ID" --strict --no-interactive
           node scripts/check-openspec-task-phases.mjs "openspec/changes/$CHANGE_ID/tasks.md"
-          npm run check
+          # Plan changes only OpenSpec artifacts, not executable product code.
+          # Baseline code is protected by independent main CI; apply rechecks it.
 
       # ASF-OPSX-03: publish a recoverable, plan-only checkpoint before paid apply.
       # No PR is created for auto here; plan mode publishes a draft later.
@@ -478,7 +479,12 @@ jobs:
           if grep -Eq '^[[:space:]]*-[[:space:]]+\[[[:space:]]\]' "$tasks"; then
             echo "::error::Unchecked tasks remain; refusing archive"; exit 1
           fi
-          npm run check
+          # An apply/auto run just passed npm run check at its durable
+          # implementation checkpoint. In a separate finalize run, recheck
+          # the clean saved checkpoint before starting the paid sync.
+          if [[ "$PHASE" == finalize ]]; then
+            npm run check
+          fi
           openspec validate "$CHANGE_ID" --strict --no-interactive
           # Semantic sync: OpenCode follows the OpenSpec /opsx:sync workflow.
           # A separate paid model call is required in apply, auto and finalize.
@@ -504,9 +510,8 @@ jobs:
           }
           openspec validate --all --strict --no-interactive
           openspec validate --archived --strict --no-interactive
-          # Run the final CI suite only after committing the authorized
-          # semantic sync and archive, so git-status invariant tests observe
-          # a clean tree. See the guarded pre-push check below.
+          # After archive, independent PR CI checks the committed tree.
+          # No full rerun here: strict OpenSpec validation already passed.
 
       - name: Guard scope, commit and publish PR
         env:
@@ -540,16 +545,10 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "agent($TASK_ID): OpenSpec $PHASE"
           fi
-          # The worktree must be clean before and after the post-archive check.
-          # Historical tests inspect git status to reject unauthorized edits:
-          # running them against uncommitted, authorized sync output is a false
-          # positive. This check happens BEFORE push and PR creation.
+          # Publication must remain scoped and the committed tree clean.
+          # The independent PR check then runs the full suite on the exact SHA.
           test -z "$(git status --porcelain)" || {
-            echo "::error::Post-archive validation requires a clean committed worktree"; exit 1;
-          }
-          npm run check
-          test -z "$(git status --porcelain)" || {
-            echo "::error::Post-archive validation changed the worktree"; exit 1;
+            echo "::error::Publication requires a clean committed worktree"; exit 1;
           }
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" push -u origin "HEAD:$AGENT_BRANCH"
           existing="$(gh pr list --head "$AGENT_BRANCH" --state open --json url --jq '.[0].url // empty')"
