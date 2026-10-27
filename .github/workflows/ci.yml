@@ -25,7 +25,14 @@ jobs:
       - name: Install pinned frontend dependencies
         run: npm ci
       - name: Run independent tests and syntax checks
-        run: npm run check
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run check 2>&1 | tee "$RUNNER_TEMP/threadstep-check.log"
+      - name: Summarize a failed CI check
+        if: failure()
+        shell: bash
+        run: bash scripts/asf/ci-failure-summary.sh "$RUNNER_TEMP/threadstep-check.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Build Vite production artifact
         run: npm run build
       - name: Verify reproducible and secure artifact
