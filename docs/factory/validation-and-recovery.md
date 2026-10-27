@@ -1,5 +1,16 @@
 # ASF V2 — recette finale, pannes et reprise manuelle
 
+## ASF-QA-01 (27 octobre 2026) : contrôle complet au bon moment
+
+**Nouveau contrat proposé** (voir [audit des gates](qa-gates-2026-10-27.md)) : après `apply`, le code est vérifié au checkpoint durable. Les phases OPSX synchronisent et valident **les spécifications**, contrôlent leurs modifications et archivent, sans répéter tous les tests métier. La CI indépendante de PR rejoue `npm run check` et reste **bloquante** pour la fusion ; la CI sur `main` et Pages restent indépendantes. En `finalize`, une exécution complète demeure **avant** le nouvel appel de synchronisation payant pour requalifier le code du checkpoint restauré.
+
+Une PR finale **rouge** après déplacement des fichiers OpenSpec devient possible : elle ne doit jamais être fusionnée et peut être corrigée dans sa branche. Ce comportement est volontaire et simplifie la reprise ; il ne supprime aucun test ni ne l'ignore. En cas de CI rouge, consulter le résumé GitHub et les logs complets avant de corriger. Aucune relance OpenRouter automatique n'est prévue.
+
+Les descriptions historiques ASF-OPSX-09 ci-dessous correspondent au **workflow précédent** et restent vraies pour les incidents datés. Elles ne doivent pas être utilisées comme mode opératoire de la nouvelle version avant sa fusion et CI verte.
+
+---
+
+
 ## Incident TS-064 (26 octobre 2026) : tests de statut Git lancés pendant l'archivage OpenSpec
 
 **Preuves :** [run #40413844910](https://github.com/cedricmenec/threadstep/actions/runs/40413844910/job/121891116107). Le checkpoint d'implémentation **durable** est `aea9a1615f2c2326d84af646cfdcd96fde8ad445` sur `agent/openspec/TS-064`. Le modèle a terminé la synchronisation sémantique ; OpenSpec a validé les 50 specs canoniques et les 54 changes archivées. Le second `npm run check` a ensuite échoué sur cinq tests inspectant `git status` alors que le commit autorisé de spécifications et d'archive n'avait pas encore été créé : `ts-040-openspec`, `ts-058-react-docs`, `ts-059-project-detail-docs`, `ts-060-qualification-report`, `ts-064-overview-side-effects`. L'incident relève de l'**ordre du workflow**, et non d'un échec de validation OPSX ou d'une régression métier démontrée.
