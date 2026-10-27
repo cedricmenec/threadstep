@@ -39,10 +39,12 @@ test("ASF-QA-02: product dependencies use real delivery and preserve manual revi
   assert.match(workflow, /node scripts\/sync-guard\.mjs verify/);
 });
 
-test("ASF-QA-02: a distinct explicit Stitch product choice is still required for TS-066", () => {
-  assert.match(ts066, /^status: proposed$/m);
+test("ASF-QA-02: the approved Stitch decision for TS-066 is recorded without a per-screen gate", () => {
+  assert.match(ts066, /^status: ready$/m);
   assert.match(ts066, /^depends_on:\r?\n  - TS-065$/m);
-  assert.match(ts066, /les références Stitch spécifiques à Overview devront être examinées et approuvées explicitement/);
+  assert.match(ts066, /L'ensemble des maquettes Stitch est approuvé pour la présentation visuelle et UX, sur mobile et desktop/);
+  assert.match(ts066, /ne déclenchent aucun workflow OpenRouter payant/);
+  assert.doesNotMatch(ts066, /références Stitch spécifiques à Overview devront être examinées et approuvées explicitement/);
   assert.match(contract, /décision\s+produit explicite/i);
   assert.match(config, /Preserve explicit new product design or security decisions/);
   assert.match(workflow, /Explicit decisions needed for THIS task \(e\.g\. Stitch references/);
