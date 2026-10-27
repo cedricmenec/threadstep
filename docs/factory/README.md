@@ -13,6 +13,7 @@
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
 | Consulter la décision formelle de clôture | [Rapport ASF V2 du 16 octobre 2026](closeout-2026-10-16.md) |
 | Comprendre les contrôles par phase et les erreurs de CI | [Contrat et audit ASF-QA-01](qa-gates-2026-10-27.md), [tâche ASF-QA-01](tasks/ASF-QA-01.md) et [historique ASF-OPSX-09](tasks/ASF-OPSX-09.md) |
+| Enchaîner des tâches sans PR de GO humain obligatoire | [Décision ASF-QA-02](tasks/ASF-QA-02.md) et [contrat OpenSpec](openspec-checklist-contract.md) ; livraison CI/Pages suffisante, approbations produit explicites maintenues |
 | Comprendre les checkpoints et la reprise après sync | [ASF-OPSX-03/04](tasks/ASF-OPSX-03.md), [correctif TS-024 ASF-OPSX-05](tasks/ASF-OPSX-05.md), [denylist ASF-OPSX-06](tasks/ASF-OPSX-06.md), [procédure d'incident](validation-and-recovery.md) et [qualité OPSX](opsx-sync-quality.md) |
 | Tester panne, CI rouge, permissions et reprise | [Recette finale et reprise](validation-and-recovery.md) |
 | Consulter le backlog de préparation ASF V3 (plafond envisagé 10 à 15 tâches) | [Backlog ASF V3 proposé](tasks/ASF-V3-README.md) |
