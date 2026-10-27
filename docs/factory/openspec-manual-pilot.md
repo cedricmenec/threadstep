@@ -91,6 +91,23 @@ Références :
 [OpenCode CLI](https://opencode.ai/docs/cli/),
 [OpenCode skills](https://opencode.ai/docs/skills/).
 
+## Dépendances : livraison vérifiée, sans gate de GO humain (27 octobre 2026)
+
+Pour lancer une tâche après une autre, distinguer **livraison technique** et
+**recette humaine**. Une tâche précédente livrée avec PR fusionnée, CI
+indépendante + CI `main` et Pages vertes satisfait le prérequis technique.
+Ne pas demander une PR documentaire de GO manuel, un formulaire rempli ou
+une case de recette sur appareil avant de produire le plan ou exécuter
+`apply` de la tâche suivante. Un défaut constaté lors de la recette reste
+naturellement à traiter, et la recette non effectuée reste signalée comme
+telle, sans la déclarer passée.
+
+**Exception justifiée :** l'approbation de maquettes Stitch, une décision
+fonctionnelle ou de sécurité requise par la nouvelle tâche doit être obtenue
+séparément. TS-066 attend ainsi l'approbation des références Overview, **pas**
+un certificat manuel TS-065. Cette règle n'autorise aucun lancement payant
+implicite ni bypass de la CI ou des protections de fusion.
+
 ## Contrat ASF-OPSX-01 : séparer checklist et recette humaine (17 octobre 2026)
 
 Le [contrat normatif](openspec-checklist-contract.md) distingue désormais :

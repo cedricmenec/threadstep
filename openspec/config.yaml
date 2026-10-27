@@ -19,6 +19,7 @@ rules:
   proposal:
     - State user value, non-goals and unresolved decisions explicitly.
     - For UI changes, identify affected focus, scrolling and transient-state invariants and justified exceptions.
+    - Treat an earlier task's merged PR, green independent/main CI and successful deployment as satisfying its technical dependency; never invent a prior manual acceptance GO gate. Preserve explicit new product design or security decisions.
   specs:
     - Describe observable behaviors with WHEN/THEN scenarios.
     - For UI changes, include the applicable continuity scenarios or reference the canonical UX contract without duplicating unrelated rules.

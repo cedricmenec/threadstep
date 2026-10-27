@@ -25,6 +25,15 @@ d'archive et aucune exécution automatique ne sont livrées.
   une case cochée ou un fichier présent ne prouvent **jamais** une livraison.
 - Les observations opérationnelles (`running`, `ci_pending`, `failed`, `merged`)
   ne sont pas des valeurs de `status` déclaratif.
+- **Résolution de `depends_on` pour les tâches produit :** une livraison
+  précédente validée par une PR fusionnée, un check CI indépendant vert,
+  une CI `main` verte et Pages réussi suffit pour avancer. Il n'existe pas de
+  prérequis implicite de recette humaine/GO signé, même lorsque les scénarios
+  physiques restent à tester. Un GO oral, une case ou une page de suivi ne
+  remplace pas les preuves opérationnelles GitHub.
+- **Décision produit distincte :** un choix visuel Stitch, un arbitrage
+  fonctionnel ou un consentement explicitement exigé par la tâche courante
+  demeure un prérequis réel et ne doit pas être déduit d'une simple livraison.
 
 ## 3. Champs obligatoires et enums
 

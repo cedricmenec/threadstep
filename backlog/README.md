@@ -8,7 +8,7 @@ La PR #209 (TS-063) et la PR #210 (contrôle Factory post-archivage) sont fusion
 2. [TS-065](tasks/TS-065.md) : migrer les interactions et éditeurs Overview après qualification TS-064 ; risque élevé, lancement manuel.
 3. [TS-066](tasks/TS-066.md) : harmoniser visuellement Overview avec Stitch, sous réserve d'une approbation explicite des références ; statut proposé, lancement manuel.
 
-Les tests sur appareil restent distincts des preuves CI. Ne pas déclencher TS-065 ou TS-066 avant validation de leurs prérequis.
+Les tests sur appareil restent distincts des preuves CI. **Une recette humaine non attestée ne bloque plus la tâche dépendante** : une PR fusionnée, CI indépendante et sur `main` vertes, Pages réussi suffisent pour la dépendance technique. TS-065 est livrée. TS-066 reste `proposed` **uniquement tant que les maquettes Stitch Overview ne sont pas approuvées**. Voir [ASF-QA-02](../docs/factory/tasks/ASF-QA-02.md).
 
 
 ## Prochaine progression React maîtrisée : TS-060 à TS-063 (24 octobre 2026)

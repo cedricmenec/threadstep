@@ -315,6 +315,13 @@ jobs:
           The manual and post-sync checks remain required for truthful acceptance,
           but are NOT claims of completion or reasons to mark checklist tasks [x].
           Never turn every backlog acceptance criterion into a checkbox automatically.
+          A dependency on an earlier task is satisfied by verified delivery:
+          merged PR, successful independent/main CI and successful Pages deploy.
+          Do NOT require a prior human/manual acceptance report, signed GO,
+          or a documentation PR before planning or implementing the next task.
+          Keep predecessor manual tests as NOT_RUN when evidence is missing.
+          Explicit decisions needed for THIS task (e.g. Stitch references,
+          scope or consent) still require approval; never invent them.
           During plan, NEVER modify application code, tests, product specs, backlog, workflow files,
           AGENTS.md, configuration, secrets, or other changes. No commit, push, PR or paid subagent.
           Do not archive. Report uncertainties in proposal.md, do not invent product decisions.
@@ -397,6 +404,11 @@ jobs:
           silently dropping a product requirement.
           Do not alter proposal.md, design.md, delta specs or the canonical specs.
           Do not edit workflows, AGENTS.md, backlog, secrets or execution configuration.
+          Do not stop apply solely because a previous task lacks a separately
+          versioned human acceptance GO. Verified PR/CI/Pages delivery is enough
+          for that technical dependency. Keep unperformed manual tests pending;
+          do not fabricate their results. Any explicit new product approval
+          remains a real blocker when required by the reviewed change.
           Do not archive, commit, push, merge or open a PR: the workflow performs these steps.
           When an implementation or test fails, investigate the actual error,
           repair the implementation or the test harness (including missing mocks
