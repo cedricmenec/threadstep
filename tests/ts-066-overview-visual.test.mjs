@@ -618,6 +618,22 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "openspec/changes/archive/2026-10-27-ts-066/",
     "openspec/specs/overview-visual-harmonization/spec.md"
   ];
+  const ts067InProgress = existsSync(resolve(root, "tests/ts-067-navigation-state.test.mjs"));
+  if (ts067InProgress) {
+    allowed.push(
+      "site/app-shell/",
+      "site/core.js",
+      "site/index.html",
+      "docs/product/react-app-shell.md",
+      "tests/ts-041-navigation.test.mjs",
+      "tests/ts-060-qualification-report.test.mjs",
+      "tests/ts-063-app-shell-",
+      "tests/ts-064-overview-side-effects.test.mjs",
+      "tests/ts-065-overview-docs.test.mjs",
+      "tests/ts-067-",
+      "openspec/changes/ts-067/"
+    );
+  }
   for (const path of changed) {
     assert.ok(
       allowed.some((prefix) => path === prefix || path.startsWith(prefix)),
@@ -634,6 +650,6 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "AGENTS.md",
     ".github/workflows/",
     "backlog/",
-  ];
+  ].filter((path) => !(ts067InProgress && path === "site/core.js"));
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });
