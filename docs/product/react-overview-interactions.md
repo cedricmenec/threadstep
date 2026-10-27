@@ -124,6 +124,9 @@ affecté.
 
 ## Preuves automatisées et recette humaine
 
+**GO humain post-livraison TS-065 (27 octobre 2026) :** le propriétaire confirme une recette manuelle globale desktop et Android. Le [rapport d'acceptation TS-065](react-overview-ts-065-acceptance.md) distingue ce GO déclaré des scénarios non attestés individuellement et indique que l'approbation des références Stitch Overview reste requise avant TS-066.
+
+
 Les tests `tests/ts-065-overview-*.test.mjs` utilisent des fixtures
 synthétiques, des espions et jsdom ; ils n'ouvrent ni base réelle, ni réseau, ni
 OTP, et ne lisent aucune donnée personnelle. Ils couvrent l'unicité des
