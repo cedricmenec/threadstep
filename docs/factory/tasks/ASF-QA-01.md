@@ -1,6 +1,6 @@
 # ASF-QA-01 | Audit et simplification des contrôles Factory/OpenSpec
 
-**Type :** factory. **Automation: manual**. **Statut :** proposé. **Date :** 26 octobre 2026.
+**Type :** factory. **Automation: manual**. **Statut :** première implémentation bornée, soumise à CI et à revue. **Date :** 26 octobre 2026.
 
 ## Problème
 
@@ -24,3 +24,17 @@ Les incidents TS-063 et TS-064 montrent des contrôles exécutés dans des phase
 - [ ] CI indépendante et validation humaine avant fusion.
 
 **Hors périmètre de ce cadrage :** changement du fournisseur LLM, suppression globale de tests, refonte du protocole OPSX sans preuve, nouvel automatisme payant.
+
+
+## Implémentation bornée du 27 octobre 2026
+
+**Décision KISS :** cette première itération ne cherche pas à réécrire les 120 suites, ni à créer un système d'observabilité supplémentaire. Elle supprime uniquement les relances complètes devenues redondantes et affiche une synthèse courte lorsque le contrôle indépendant est rouge.
+
+- [Rapport d'audit, cartographie et contrat de gates](../qa-gates-2026-10-27.md) : détail des responsabilités et des compromis.
+- Dans `agent-openspec.yml` : plus de `npm run check` pendant `plan`, ni de doublon pré-sync en `apply/auto`, ni de contrôle complet après archive. On conserve une suite complète obligatoire avant le checkpoint de code et **une suite complète en `finalize` avant l'appel OPSX payant**.
+- Dans `ci.yml` : `npm run check` reste bloquant avec `pipefail` et le `check` indépendant sur SHA de PR ; en cas d'échec, un petit résumé des tests fautifs est affiché dans `GITHUB_STEP_SUMMARY`.
+- Tests de régression : `tests/asf-openspec-postarchive-order.test.mjs` protège les frontières OPSX et Git ; `tests/asf-qa-01-summary.test.mjs` couvre les sorties TAP rouges, une erreur de contrôle hors TAP et un journal absent.
+- Les validations `sync-guard`, `openspec validate --all --strict`, les contrôles de portée, la CI obligatoire et Protect Main sont inchangés. Une PR avec une référence OpenSpec obsolète sera **rouge et bloquée** au lieu d'échouer dans le runner avant publication.
+- Aucun appel OpenRouter, permission, règle de fusion, secret, migration de produit, données Cloud ou bibliothèque ajouté dans cette PR.
+
+**Limite :** la CI sur PR vérifie la syntaxe et les tests de ce code, pas une exécution réelle de toutes les phases payantes du workflow. Le nombre de tests n'est pas un indicateur automatique de qualité ; ne pas déclarer « flaky » tous les tests historiquement rouges.
