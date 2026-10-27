@@ -6,9 +6,9 @@ La PR #209 (TS-063) et la PR #210 (contrôle Factory post-archivage) sont fusion
 
 1. [TS-064](tasks/TS-064.md) : migrer les cartes projets Overview vers React à comportement constant ; priorité haute, risque moyen, lancement manuel.
 2. [TS-065](tasks/TS-065.md) : migrer les interactions et éditeurs Overview après qualification TS-064 ; risque élevé, lancement manuel.
-3. [TS-066](tasks/TS-066.md) : harmoniser visuellement Overview avec Stitch, sous réserve d'une approbation explicite des références ; statut proposé, lancement manuel.
+3. [TS-066](tasks/TS-066.md) : harmoniser visuellement Overview avec les références Stitch globalement approuvées et effectivement examinées ; statut ready, risque medium, lancement manuel. L'approbation et la revue n'étendent pas le périmètre aux fonctions nouvelles de Stitch.
 
-Les tests sur appareil restent distincts des preuves CI. **Une recette humaine non attestée ne bloque plus la tâche dépendante** : une PR fusionnée, CI indépendante et sur `main` vertes, Pages réussi suffisent pour la dépendance technique. TS-065 est livrée. TS-066 reste `proposed` **uniquement tant que les maquettes Stitch Overview ne sont pas approuvées**. Voir [ASF-QA-02](../docs/factory/tasks/ASF-QA-02.md).
+Les tests sur appareil restent distincts des preuves CI. **Une recette humaine non attestée ne bloque plus la tâche dépendante** : une PR fusionnée, CI indépendante et sur `main` vertes, Pages réussi suffisent pour la dépendance technique. TS-065 est livrée, fusionnée, CI `main` et Pages réussis. TS-066 passe à `ready` après inspection Stitch et cadrage documentés. Son implémentation nécessite toujours une confirmation distincte avant tout appel OpenRouter payant. Voir [ASF-QA-02](../docs/factory/tasks/ASF-QA-02.md).
 
 
 ## Prochaine progression React maîtrisée : TS-060 à TS-063 (24 octobre 2026)
