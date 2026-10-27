@@ -1,8 +1,8 @@
-## Suite après TS-066 : shell de navigation Stitch (27 octobre 2026)
+## Suite après TS-067 : harmonisation des cartes Stitch (27 octobre 2026)
 
-TS-066 est livrée et déployée. La prochaine tâche préparée est [TS-067](tasks/TS-067.md), qui harmonise visuellement le shell autour d'Overview : navigation latérale persistante à 1280 px et tiroir Menu sur 768 px et moins, en conservant les quatre destinations et leurs routes. Le contenu métier d'Overview reste celui livré par TS-066.
+TS-067 est livrée et déployée. La nouvelle proposition [TS-068](tasks/TS-068.md) harmonise les cartes projet d’Overview et les cartes de tâches du détail projet avec les références Stitch desktop et mobile, en réutilisant les composants React et tokens existants.
 
-TS-067 est `ready / manual / medium`, dépend techniquement de TS-066 et mettra à jour le contrat canonique de navigation et la décision d'architecture du shell. Les fonctions Stitch nouvelles restent hors périmètre. La fiche ne lance pas OpenRouter : le propriétaire autorise séparément l'exécution.
+Les références desktop examinées montrent aussi des fonctions ou métadonnées absentes du contrat actuel : recherche, filtres et tri, échéances, description/catégorie/code/couverture, partage, archivage, et panneau d’activité/prochaine action. TS-068 reste `proposed / manual / medium` et dépend techniquement de TS-066 et TS-067. Le traitement de ces propositions doit être décidé avant le passage à `ready`. La création de cette fiche et sa PR documentaire ne lancent pas OpenRouter.
 
 ## Historique de préparation TS-064 à TS-066 (25 octobre 2026)
 

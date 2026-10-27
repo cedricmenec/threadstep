@@ -488,3 +488,40 @@ de navigation, barre inférieure « Tâches / Projets / Focus / Chercher »,
 statistiques non canoniques et affirmations de chiffrement/synchronisation non
 attestées restent hors de TS-066. Toute adoption ultérieure requiert une fiche
 de backlog et une décision distinctes.
+
+
+## 15. Inspection des cartes projet pour TS-068 (27 octobre 2026)
+
+### 15.1 Références observées directement
+
+Le canvas du projet Stitch a été consulté. Les frames desktop suivants ont été ouverts visuellement et leurs contenus comparés au code React livré :
+
+- « Mes Projets - Vue d'ensemble » : cartes projet avec titre et compteurs, aperçu de plusieurs tâches et sous-tâches, badges de priorité, cases d’achèvement et commandes d’ajout/ouverture. Les cartes donnent plus de relief à la hiérarchie du titre, aux compteurs et aux tâches.
+- « Projet - Détail et Gestion des Tâches » : tâches rendues comme surfaces distinctes avec priorité, état de suivi, note, progression des sous-étapes et liste hiérarchique. L’écran montre aussi une recherche, des filtres d’état, un tri, un panneau « Prochaine action ciblée » et des informations projet dans une colonne latérale.
+- M05 est identifié dans le canvas comme « Détail d'un projet » ; M01 est la référence mobile Overview. Les écrans mobiles restent des références approuvées par le propriétaire, mais cette inspection des cartes s’est concentrée sur les deux frames desktop.
+
+### 15.2 Écarts visuels et éléments réutilisables
+
+ThreadStep possède déjà des cartes projet React dans `ProjectCard`, des aperçus via `OverviewTaskList` et `TaskItem`, et le détail projet React via `ProjectDetail`/ `TaskItem`. Les commandes, compteurs métier, priorités, notes, tâches, sous-tâches, reprise et états de complétion existants sont la source du contenu.
+
+L’harmonisation TS-068 porte sur la surface, la densité, les espacements, la typographie, les badges et l’organisation visuelle des contenus existants. Le même composant de tâche sert aux deux contextes ; les indices de hiérarchie ne doivent pas dépendre uniquement de la couleur. Les tokens et primitives locaux sont à réutiliser.
+
+### 15.3 Fonctions et données Stitch à arbitrer séparément
+
+Les éléments suivants sont visibles dans les maquettes desktop, mais ne font pas partie des comportements ou données actuellement exposés dans les cartes ThreadStep :
+
+- recherche de tâches, filtres par état et tri par priorité dans le détail ;
+- échéances / commande calendrier sur les lignes de tâches ;
+- description, catégorie, identifiant/code, couverture/image et métadonnées de projet ;
+- partage et archivage ;
+- panneau latéral de prochaine action, activité et informations de projet.
+
+La suppression de projet et la plupart des commandes de tâche existent déjà dans ThreadStep, mais leur présentation et leur disponibilité diffèrent. Ne pas confondre une proposition de Stitch avec une fonction existante ou autorisée.
+
+Le propriétaire a déjà approuvé toutes les maquettes comme références visuelles et UX. Cette note consigne une inspection des deux frames desktop ; elle ne crée pas une nouvelle demande d’approbation et ne tranche pas comment traiter les fonctions manquantes. TS-068 reste proposée jusqu’au choix du propriétaire pour les groupes ci-dessus.
+
+### 15.4 Cadrage technique et suivi
+
+Réutiliser `ProjectCard`, `OverviewTaskList`, `TaskItem`, `ProjectDetail` et les tokens existants. Garder les interactions, routes, données, persistance, sécurité, brouillons, focus, scroll et ordre de lecture. N’introduire ni couche générale, ni dépendance, ni donnée fictive. Consulter le contrat canonique des cartes et du détail avant la mise en œuvre ; aucun changement d’ADR n’est présumé.
+
+Aucun code produit ni appel OpenRouter n’a été déclenché par cette inspection. La fiche et son suivi Notion enregistrent les arbitrages sans créer de porte de recette humaine.
