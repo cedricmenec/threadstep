@@ -2,6 +2,9 @@
 
 ## Suite de TS-063 : migration progressive Overview (25 octobre 2026)
 
+**État confirmé au 27 octobre :** TS-064 et TS-065 sont livrées et ont reçu chacune une déclaration humaine de recette desktop/Android ; voir le [GO TS-064](../docs/product/react-overview-ts-064-acceptance.md) et le [GO TS-065](../docs/product/react-overview-ts-065-acceptance.md). Le prérequis TS-065 de TS-066 est satisfait, mais **TS-066 reste `proposed`** : les variantes Stitch Overview M03/M04/M05 et les références desktop ne sont pas encore approuvées. Aucun lancement payant TS-066 avant validation explicite du sous-ensemble visuel.
+
+
 La PR #209 (TS-063) et la PR #210 (contrôle Factory post-archivage) sont fusionnées. Le propriétaire a déclaré la recette TS-063 validée le 25 octobre. Les étapes suivantes sont préparées, **sans lancer OpenRouter** :
 
 1. [TS-064](tasks/TS-064.md) : migrer les cartes projets Overview vers React à comportement constant ; priorité haute, risque moyen, lancement manuel.
