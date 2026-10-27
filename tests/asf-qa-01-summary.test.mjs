@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -46,9 +46,7 @@ test("ASF-QA-01: non-TAP failures and missing log have actionable diagnostics", 
 });
 
 test("ASF-QA-01: independent CI keeps failures blocking despite log capture", () => {
-  const ci = (await import("node:fs")).readFileSync(
-    new URL("../.github/workflows/ci.yml", import.meta.url), "utf8"
-  );
+  const ci = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   assert.match(ci, /set -o pipefail\s+npm run check 2>&1 \| tee/);
   assert.match(ci, /- name: Summarize a failed CI check\s+if: failure\(\)/);
   assert.doesNotMatch(ci, /continue-on-error:\s*true/);
