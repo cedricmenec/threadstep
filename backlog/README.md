@@ -6,8 +6,6 @@ Les références desktop examinées montrent aussi des fonctions ou métadonnée
 
 ## Historique de préparation TS-064 à TS-066 (25 octobre 2026)
 
-## Historique de préparation TS-064 à TS-066 (25 octobre 2026)
-
 # Backlog ThreadStep
 
 ### Historique de suite TS-063 : migration progressive Overview
