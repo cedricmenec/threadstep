@@ -1059,3 +1059,55 @@ Les commandes de test ciblées sont
 `docs/product/react-overview-interactions.md`. Les tests jsdom ne prouvent ni
 le toucher, ni le clavier physique, ni Chrome Android, ni le lecteur d'écran ;
 la recette desktop et Android reste manuelle.
+
+## Présentation visuelle Overview (TS-066)
+
+TS-066 harmonise la présentation de la route `#/` avec les références Stitch
+M01, `DESKTOP-1` et la planche `M32`, sans changer les commandes, les routes,
+les données, la persistance ni la frontière React de TS-064/TS-065. Le
+changement est CSS-only et vit dans la section
+`/* TS-066 Overview presentation */` de `site/styles.css`.
+
+### Points d'entrée
+
+- `site/styles.css` : composition de `.dashboard`, en-tête et compteur, reprise,
+  suggestion, urgences, formulaire, filtres, cartes `.subject`, aperçus de
+  tâches et paliers `min-width:768px` / `max-width:620px` / `max-width:320px`.
+- `site/overview/ProjectCard.jsx`, `site/overview/OverviewTaskList.jsx` et
+  `site/overview/OverviewCards.jsx` : réutilisés sans modification de markup,
+  de classe, d'identifiant, de nom accessible ni d'ordre de commande.
+- `site/styles/tokens.css` : lecture seule ; aucune valeur existante ne change
+  et aucun nouveau token n'est créé.
+- `docs/product/react-overview-presentation.md` : carte visuelle, paliers,
+  tokens, continuité, retour arrière et limites.
+
+### Tests et vérifications
+
+```sh
+node --test tests/ts-066-overview-*.test.mjs
+npm run check
+npm run build
+npm run verify:build
+```
+
+Les tests TS-066 vérifient la parité DOM compilée, les classes et noms
+accessibles, l'ordre des commandes et de « Voir plus », les media queries, les
+tokens, les cibles structurelles, l'absence de dépendance/route/stockage
+nouveaux et la continuité simulée du focus, du brouillon, du parent développé et
+du filtre. Ils n'ouvrent aucune base réelle et n'appellent aucun service réseau
+ou Cloud.
+
+### Retour arrière
+
+Retirer la section `/* TS-066 Overview presentation */ ... /* End TS-066 */` de
+`site/styles.css`, puis supprimer `tests/ts-066-overview-*.test.mjs` et
+`docs/product/react-overview-presentation.md`. Aucun composant, token, donnée,
+route, migration, format d'export/import ou configuration Cloud n'est affecté.
+
+### Limites de la vérification
+
+Une CI verte, un test jsdom ou une revue statique ne valent pas recette
+visuelle, tactile, clavier, Chrome Android ou lecteur d'écran. Ces vérifications
+restent une recette humaine dans `Manual acceptance` du changement, non cochée
+par `apply` et consignée `NOT_RUN` tant qu'elle n'a pas été réellement
+effectuée. Le détail est dans `docs/product/react-overview-presentation.md`.
