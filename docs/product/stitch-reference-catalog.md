@@ -124,11 +124,11 @@ Inventaire M01 à M32 (32 références mobiles).
 
 | ID | Surface / état (catégorie à confirmer, non observée) | Statut de revue | Lien identifiable | Motif d'absence d'inspection |
 | --- | --- | --- | --- | --- |
-| M01 | Mes projets / Overview ; header ThreadStep, espace actif et actions | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25, limitée au header et à l'entrée Overview ; pas de recette exhaustive.|
+| M01 | Mes projets / Overview mobile | `REVIEWED_KEEP` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Aperçu M01 directement observé dans Stitch; les commandes et destinations proposées restent soumises aux specs et exclusions TS-066. |
 | M02 | Navigation mobile ouverte ; menu contractuel de quatre entrées | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Décision propriétaire du 2026-10-25 ; variante de barre inférieure à cinq entrées exclue ; pas de recette exhaustive.|
-| M03 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M04 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
-| M05 | Overview | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
+| M03 | Création d'un projet | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifié dans le canvas et le contenu du frame; ce n'est pas une référence Overview. |
+| M04 | Renommage d'un projet | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifié dans le canvas et le contenu du frame; ce n'est pas une référence Overview. |
+| M05 | Détail d'un projet | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifié dans le canvas et le contenu du frame; ce n'est pas une référence Overview. |
 | M06 | Détail d'un projet | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M07 | Détail d'un projet | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
 | M08 | Détail d'un projet | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Session Stitch autorisée indisponible sur le runner ; aucun lien profond fourni. |
@@ -165,7 +165,7 @@ identifiants locaux de catalogue.
 
 | ID | Surface / état (catégorie à confirmer, non observée) | Statut de revue | Lien identifiable | Motif d'absence d'inspection |
 | --- | --- | --- | --- | --- |
-| DESKTOP-1 | Desktop — catégorie de couverture à confirmer (Overview / détail) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifiant officiel et lien profond non fournis ; session autorisée indisponible sur le runner. |
+| DESKTOP-1 | Mes Projets - Vue d'ensemble (identifiant local) | `PARTIALLY_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Titre, miniature et structure du frame observés directement dans le canvas; aucun lien profond officiel fourni. |
 | DESKTOP-2 | Desktop — catégorie de couverture à confirmer (détail / tâches) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifiant officiel et lien profond non fournis ; session autorisée indisponible sur le runner. |
 | DESKTOP-3 | Desktop — catégorie de couverture à confirmer (navigation / paramètres) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifiant officiel et lien profond non fournis ; session autorisée indisponible sur le runner. |
 | DESKTOP-4 | Desktop — catégorie de couverture à confirmer (Cloud / composants) | `NOT_REVIEWED` | [Projet Stitch](https://stitch.withgoogle.com/projects/10325329939517341056) | Identifiant officiel et lien profond non fournis ; session autorisée indisponible sur le runner. |
@@ -428,3 +428,60 @@ d'accessibilité, ses vérifications d'absence de régression et sa recette huma
 Le plan OpenSpec persistant doit être rapproché de ces décisions avant tout
 nouveau `apply` manuellement autorisé. Aucune exécution payante ou fusion
 de code n'est déclenchée par cette correction documentaire.
+
+\n## 11. Inspection Stitch et cadrage TS-066 (27 octobre 2026)
+\n
+### 11.1 Références Overview observées
+\n
+L'inspection a été faite dans le projet Stitch connecté, sur son canvas et dans
+l'aperçu M01 :
+\n
+- **Mobile M01 — Mes projets / Overview :** en-tête compact ThreadStep/espace,
+  titre et synthèse, contrôle Masquer les étapes terminées, reprise manuelle,
+  proposition « Une étape pour maintenant », cartes projet avec tâches
+  aperçues, puis barre inférieure. La maquette expose aussi des actions et
+  destinations supplémentaires; elles ne sont pas incluses dans TS-066.
+- **Desktop — « Mes Projets - Vue d'ensemble » (DESKTOP-1 local) :** référence
+  identifiée dans le canvas; le frame montre une navigation latérale, un titre
+  et des métriques, une recherche, des commandes, des blocs de reprise et de
+  recommandation et des cartes projet avec aperçu des tâches. Le menu et les
+  contenus suggèrent des fonctions absentes du contrat actuel; la recherche,
+  les archives, le partage et les autres actions nouvelles sont exclus.
+- **M32 — Composants réutilisables & règles responsive :** la planche Stitch
+  énumère les états normal, focus, désactivé et erreur des boutons/champs, les
+  badges de priorité, la hiérarchie des tâches, le toast Undo et les références
+  de largeur 320/390/430/768 px. Elle sert de repère visuel; l'implémentation
+  réutilise les primitives et tokens ThreadStep déjà livrés.
+
+### 11.2 Correction des identifiants
+\n
+Le catalogue précédent associait par erreur Overview à M03, M04 et M05. Les
+titres visibles dans le canvas Stitch confirment :
+\n
+- M03 : Créer un projet ;
+- M04 : Renommer un projet ;
+- M05 : Détail d'un projet.
+\n
+Le seul écran mobile Overview identifié est M01. Le desktop Overview porte le
+titre « Mes Projets - Vue d'ensemble »; DESKTOP-1 est une clé locale au
+catalogue, pas un identifiant officiel Stitch. Les écrans M03 à M05 peuvent
+éclairer des styles partagés, sans étendre le périmètre d'Overview.
+
+### 11.3 Règles d'adoption
+\n
+La présentation, les composants, la hiérarchie, les espacements, les couleurs
+et le responsive de Stitch sont approuvés. Les spécifications, la navigation
+à quatre destinations, les comportements livrés, la persistance et les règles
+de sécurité prévalent sur tout élément contraire dans une maquette. TS-066
+doit conserver les comportements Overview existants et appliquer seulement les
+changements visuels utiles avec `site/styles/tokens.css` et les composants
+React déjà présents. Aucun changement de routes, données, persistance ou
+dépendances n'est requis par ce cadrage.
+
+### 11.4 Exclusions explicites
+\n
+Recherche, archives, partage, échéances, pièces jointes, nouvelles destinations
+de navigation, barre inférieure « Tâches / Projets / Focus / Chercher »,
+statistiques non canoniques et affirmations de chiffrement/synchronisation non
+attestées restent hors de TS-066. Toute adoption ultérieure requiert une fiche
+de backlog et une décision distinctes.
