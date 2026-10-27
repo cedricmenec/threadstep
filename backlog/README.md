@@ -1,6 +1,14 @@
+## Suite après TS-066 : shell de navigation Stitch (27 octobre 2026)
+
+TS-066 est livrée et déployée. La prochaine tâche préparée est [TS-067](tasks/TS-067.md), qui harmonise visuellement le shell autour d'Overview : navigation latérale persistante à 1280 px et tiroir Menu sur 768 px et moins, en conservant les quatre destinations et leurs routes. Le contenu métier d'Overview reste celui livré par TS-066.
+
+TS-067 est `ready / manual / medium`, dépend techniquement de TS-066 et mettra à jour le contrat canonique de navigation et la décision d'architecture du shell. Les fonctions Stitch nouvelles restent hors périmètre. La fiche ne lance pas OpenRouter : le propriétaire autorise séparément l'exécution.
+
+## Historique de préparation TS-064 à TS-066 (25 octobre 2026)
+
 # Backlog ThreadStep
 
-## Suite de TS-063 : migration progressive Overview (25 octobre 2026)
+### Historique de suite TS-063 : migration progressive Overview
 
 La PR #209 (TS-063) et la PR #210 (contrôle Factory post-archivage) sont fusionnées. Le propriétaire a déclaré la recette TS-063 validée le 25 octobre. Les étapes suivantes sont préparées, **sans lancer OpenRouter** :
 
