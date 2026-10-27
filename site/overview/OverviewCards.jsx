@@ -20,7 +20,7 @@ export function OverviewEmptyState({ empty, commands }) {
   return <p className="empty">{empty.message}</p>;
 }
 
-export function OverviewCards({ snapshot, commands }) {
+export function OverviewCards({ snapshot, commands, dragSession }) {
   if (!snapshot.empty) {
     return snapshot.projects.map((project) => (
       <ProjectCard
@@ -28,6 +28,7 @@ export function OverviewCards({ snapshot, commands }) {
         project={project}
         commands={commands}
         transient={snapshot.transient}
+        dragSession={dragSession}
       />
     ));
   }
