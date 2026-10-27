@@ -72,9 +72,9 @@ test("TS-063 adds no new route or fragment source", () => {
   for (const { name, source } of appShellSourceFiles()) {
     assert.doesNotMatch(source, /parseRoute|location|history|router/i, name);
   }
-  const hostStart = html.indexOf('<div id="app-shell-root">');
-  const hostEnd = html.indexOf("</div>\n      </div>", hostStart);
-  const host = html.slice(hostStart, hostEnd);
+  const hostMatch = /<div id="app-shell-root">([\s\S]*?)\n    <\/div>/.exec(html);
+  assert.ok(hostMatch);
+  const host = hostMatch[1];
   const hrefs = [...host.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(hrefs, NAV_MENU_ENTRIES.map((entry) => entry.fragment));
 });
@@ -132,9 +132,9 @@ test("TS-063 preserves business form ids and the #subjects root once", () => {
     "settings-data-page",
     "settings-sync-page"
   ];
-  const hostStart = html.indexOf('<div id="app-shell-root">');
-  const hostEnd = html.indexOf("</div>\n      </div>", hostStart);
-  const host = html.slice(hostStart, hostEnd);
+  const hostMatch = /<div id="app-shell-root">([\s\S]*?)\n    <\/div>/.exec(html);
+  assert.ok(hostMatch);
+  const host = hostMatch[1];
   for (const id of ids) {
     assert.equal(html.split('id="' + id + '"').length - 1, 1, id + " must occur exactly once");
     assert.doesNotMatch(host, new RegExp('id="' + id + '"'), id + " must stay outside the shell host");

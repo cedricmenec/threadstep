@@ -1,6 +1,6 @@
 import { AppNavigation } from "./AppNavigation.jsx";
 
-export function AppHeader({ open, onToggle, onNavigate }) {
+export function AppHeader({ open, route, onToggle, onNavigate }) {
   const expanded = open === true;
   return (
     <>
@@ -17,8 +17,8 @@ export function AppHeader({ open, onToggle, onNavigate }) {
         <span className="nav-menu-icon" aria-hidden="true">☰</span>
         <span className="nav-menu-label">Menu</span>
       </button>
-      <div id="nav-menu-panel" className="nav-menu-panel" hidden={!expanded}>
-        <AppNavigation onNavigate={onNavigate} />
+      <div id="nav-menu-panel" className="nav-menu-panel" data-open={expanded ? "true" : "false"}>
+        <AppNavigation route={route} onNavigate={onNavigate} />
       </div>
     </>
   );
