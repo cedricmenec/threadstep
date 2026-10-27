@@ -21,7 +21,10 @@ const read = (relative) => readFileSync(resolve(root, relative), "utf8");
 const css = read("site/styles.css");
 const html = read("site/index.html");
 const tokens = read("site/styles/tokens.css");
-const tasks = read("openspec/changes/ts-066/tasks.md");
+const changeTasksPath = existsSync(resolve(root, "openspec/changes/ts-066/tasks.md"))
+  ? "openspec/changes/ts-066/tasks.md"
+  : "openspec/changes/archive/2026-10-27-ts-066/tasks.md";
+const tasks = read(changeTasksPath);
 const packageJson = JSON.parse(read("package.json"));
 const packageLock = JSON.parse(read("package-lock.json"));
 
@@ -611,7 +614,9 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "docs/product/react-overview-presentation.md",
     "docs/product/developer-guide.md",
     "tests/ts-066-overview-visual.test.mjs",
-    "openspec/changes/ts-066/"
+    "openspec/changes/ts-066/",
+    "openspec/changes/archive/2026-10-27-ts-066/",
+    "openspec/specs/overview-visual-harmonization/spec.md"
   ];
   for (const path of changed) {
     assert.ok(
@@ -629,7 +634,6 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "AGENTS.md",
     ".github/workflows/",
     "backlog/",
-    "openspec/specs/"
   ];
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });
