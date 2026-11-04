@@ -138,7 +138,7 @@ jobs:
       - name: Set up Node for project checks
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26.13.0'
           cache: 'npm'
       - name: Install project dependencies before agent phases
         run: npm ci

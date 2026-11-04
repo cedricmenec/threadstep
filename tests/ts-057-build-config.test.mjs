@@ -42,7 +42,7 @@ test("1.1 business dependencies stay pinned to their delivered versions", () => 
   assert.equal(lock.packages["node_modules/dexie-cloud-addon"].version, "4.4.15");
   assert.match(pkg.dependencies.react, /^\d+\.\d+\.\d+$/);
   assert.match(pkg.dependencies["react-dom"], /^\d+\.\d+\.\d+$/);
-  assert.equal(pkg.engines.node, ">=22");
+  assert.equal(pkg.engines.node, ">=26.13.0 <27");
 });
 
 test("1.2 Vite scripts exist and existing commands keep their intent", () => {

@@ -44,12 +44,12 @@ test("TS-058 jsdom is pinned in devDependencies only", () => {
   assert.equal(pkg.dependencies.jsdom, undefined);
 });
 
-test("TS-058 business dependency versions and Node engine are unchanged", () => {
+test("TS-058 business dependencies stay pinned and Node follows the approved LTS policy", () => {
   assert.equal(pkg.dependencies.dexie, "4.4.6");
   assert.equal(pkg.dependencies["dexie-cloud-addon"], "4.4.15");
   assert.equal(lock.packages["node_modules/dexie"].version, "4.4.6");
   assert.equal(lock.packages["node_modules/dexie-cloud-addon"].version, "4.4.15");
-  assert.equal(pkg.engines.node, ">=22");
+  assert.equal(pkg.engines.node, ">=26.13.0 <27");
 });
 
 test("TS-058 no caret, tilde or Babel dependency is introduced", () => {

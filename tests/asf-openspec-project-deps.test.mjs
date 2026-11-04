@@ -18,7 +18,7 @@ test("OpenSpec agent installs pinned project dependencies before every check and
   const setup = step("Set up Node for project checks");
   const install = step("Install project dependencies before agent phases");
   assert.match(setup, /uses: actions\/setup-node@v4/);
-  assert.match(setup, /node-version: [\x27\x22]22[\x27\x22]/);
+  assert.match(setup, /node-version: [\x27\x22]26\.13\.0[\x27\x22]/);
   assert.match(install, /^\s+run: npm ci$/m);
   assert.doesNotMatch(install, /^\s+if:/m, "dependency install must run for all phases");
   assert.equal([...staged.matchAll(/^\s+run: npm ci$/gm)].length, 1);
