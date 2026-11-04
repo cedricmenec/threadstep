@@ -70,7 +70,8 @@ test("TS-063 shell renders the exact header markup once in the host", async () =
     assert.equal(button.querySelector(".nav-menu-icon").getAttribute("aria-hidden"), "true");
 
     const panel = document.querySelector("#nav-menu-panel");
-    assert.equal(panel.hidden, true);
+    assert.equal(panel.hasAttribute("hidden"), false);
+    assert.equal(panel.getAttribute("data-open"), "false");
     assert.equal(panel.className, "nav-menu-panel");
     const nav = panel.querySelector("nav");
     assert.equal(nav.className, "nav-menu");
@@ -95,15 +96,15 @@ test("TS-063 closed and open states are exact and update without remounting", as
     const button = document.querySelector("#nav-menu-button");
     const panel = document.querySelector("#nav-menu-panel");
     assert.equal(button.getAttribute("aria-expanded"), "false");
-    assert.equal(panel.hidden, true);
+    assert.equal(panel.getAttribute("data-open"), "false");
 
     fixture.update({ open: true });
     assert.equal(button.getAttribute("aria-expanded"), "true");
-    assert.equal(panel.hidden, false);
+    assert.equal(panel.getAttribute("data-open"), "true");
 
     fixture.update({ open: false });
     assert.equal(button.getAttribute("aria-expanded"), "false");
-    assert.equal(panel.hidden, true);
+    assert.equal(panel.getAttribute("data-open"), "false");
     assert.equal(fixture.container.children.length, 1);
     fixture.unmount();
   } finally {
@@ -141,7 +142,7 @@ test("TS-063 native button activation and Tab order are deterministic", async ()
     const button = document.querySelector("#nav-menu-button");
     button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     assert.deepEqual(toggles, [false]);
-    assert.equal(document.querySelector("#nav-menu-panel").hidden, false);
+    assert.equal(document.querySelector("#nav-menu-panel").getAttribute("data-open"), "true");
 
     const focusables = [button, ...document.querySelectorAll("#nav-menu-panel a")];
     assert.deepEqual(focusables.map((node) => node.id || node.getAttribute("href")), [
@@ -153,7 +154,7 @@ test("TS-063 native button activation and Tab order are deterministic", async ()
     button.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     assert.deepEqual(toggles, [false, true]);
-    assert.equal(document.querySelector("#nav-menu-panel").hidden, true);
+    assert.equal(document.querySelector("#nav-menu-panel").getAttribute("data-open"), "false");
 
     button.dispatchEvent(new window.KeyboardEvent("keydown", { key: " ", bubbles: true }));
     button.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -173,7 +174,7 @@ test("TS-063 shell source exposes no executable label path", () => {
 });
 
 test("TS-063 static fallback host keeps the same ids, ARIA, labels and business controls outside", () => {
-  const hostMatch = /<div id="app-shell-root">([\s\S]*?)\n      <\/div>/.exec(html);
+  const hostMatch = /<div id="app-shell-root">([\s\S]*?)\n    <\/div>/.exec(html);
   assert.ok(hostMatch, "dedicated shell host present");
   const host = hostMatch[1];
   assert.match(host, /<div class="header-nav">/);
@@ -181,10 +182,12 @@ test("TS-063 static fallback host keeps the same ids, ARIA, labels and business 
   assert.match(host, /aria-expanded="false"/);
   assert.match(host, /aria-controls="nav-menu-panel"/);
   assert.match(host, /<span class="nav-menu-label">Menu<\/span>/);
-  assert.match(host, /id="nav-menu-panel"[^>]*hidden/);
-  const links = [...host.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)];
-  assert.deepEqual(links.map((match) => match[2]), NAV_MENU_ENTRIES.map((entry) => entry.label));
+  assert.match(host, /id="nav-menu-panel"[^>]*data-open="false"/);
+  assert.match(host, /aria-current="page"/);
+  const links = [...host.matchAll(/<a href="([^"]+)"([^>]*)>([^<]+)<\/a>/g)];
+  assert.deepEqual(links.map((match) => match[3]), NAV_MENU_ENTRIES.map((entry) => entry.label));
   assert.deepEqual(links.map((match) => match[1]), NAV_MENU_ENTRIES.map((entry) => entry.fragment));
+  assert.match(links[0][2], /aria-current="page"/);
 
   const businessIds = [
     "subjects",
@@ -226,6 +229,6 @@ test("TS-063 app mounts the shell in a dedicated boundary and keeps one root per
 test("TS-063 shell source imports NAV_MENU_ENTRIES only from core", () => {
   const sources = appShellSourceFiles();
   const navigation = sources.find(({ name }) => name === "AppNavigation.jsx").source;
-  assert.match(navigation, /import \{ NAV_MENU_ENTRIES \} from "\.\.\/core\.js"/);
+  assert.match(navigation, /import \{ NAV_MENU_ENTRIES, navigationFragmentForRoute \} from "\.\.\/core\.js"/);
   assert.doesNotMatch(navigation, /#\/[a-z/]/i);
 });

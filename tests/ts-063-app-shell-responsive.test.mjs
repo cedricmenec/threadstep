@@ -39,27 +39,32 @@ test("TS-063 shell host and header stay bounded at 320/390/430/768/1280 px", () 
 
   assert.match(css, /@media\(max-width:620px\)\{[^}]*\.nav-menu-panel\{left:0;right:auto;width:min\(280px,calc\(100vw - 30px\)\)\}/);
   assert.match(tokens, /--breakpoint-compact: 620px/);
+  assert.match(css, /@media\(min-width:1024px\)/);
 });
 
-test("TS-063 labels wrap and no fixed width or permanent sidebar is introduced", () => {
+test("TS-063 labels wrap, targets stay bounded and the approved desktop rail is explicit", () => {
   const link = between(css, ".nav-menu a{", "}");
   assert.match(link, /overflow-wrap:anywhere/);
   assert.match(link, /min-width:44px/);
   assert.match(link, /min-height:44px/);
 
-  const fixedWidths = [...css.matchAll(/(?<![-\w])width:(\d+)px/g)].map((match) => Number(match[1]));
-  for (const value of fixedWidths) {
-    assert.ok(value < 320, "fixed width " + value + "px would exceed a 320px viewport");
+  const navBlocks = [
+    between(css, ".header-nav{", "}"),
+    between(css, ".nav-menu-panel{", "}"),
+    between(css, ".nav-menu{", "}"),
+    link
+  ];
+  for (const block of navBlocks) {
+    assert.doesNotMatch(block, /position:fixed|off-canvas/i);
+    for (const match of block.matchAll(/(?<![-\w])width:(\d+)px/g)) {
+      assert.ok(Number(match[1]) < 320, "fixed width " + match[1] + "px would exceed a 320px viewport");
+    }
   }
-  const headerNav = between(css, ".header-nav{", "}");
-  const panel = between(css, ".nav-menu-panel{", "}");
-  const navigation = between(css, ".nav-menu{", "}");
-  for (const block of [headerNav, panel, navigation, link]) {
-    assert.doesNotMatch(block, /position:fixed|sidebar|drawer|off-canvas/i);
-  }
+  assert.match(css, /@media\(min-width:1024px\)\{[^}]*\.shell\{display:grid;grid-template-columns:208px minmax\(0,var\(--content-max-width\)\)/);
+  assert.match(css, /\.header-nav\{position:sticky;top:24px;margin-top:0\}/);
 });
 
-test("TS-063 targets, focus and hidden panel remain conformant", () => {
+test("TS-063 targets, focus and closed-panel state remain conformant", () => {
   const button = between(css, ".nav-menu-button{", "}");
   assert.match(button, /min-width:44px/);
   assert.match(button, /min-height:44px/);
@@ -67,7 +72,8 @@ test("TS-063 targets, focus and hidden panel remain conformant", () => {
   assert.match(css, /\.nav-menu-button:focus-visible/);
   assert.match(css, /outline:var\(--focus-outline\)/);
   assert.match(css, /outline-offset:var\(--focus-outline-offset\)/);
-  assert.match(css, /\.nav-menu-panel\[hidden\]\{display:none\}/);
+  assert.match(css, /\.nav-menu-panel\[data-open="false"\]\{display:none\}/);
+  assert.match(css, /@media\(min-width:1024px\)\{[\s\S]*\.nav-menu-panel\[data-open="false"\]\{display:block\}/);
   assert.match(tokens, /--control-target-min: 44px/);
   assert.match(tokens, /--focus-outline-width: 3px/);
   assert.match(tokens, /--focus-outline-offset: 2px/);
