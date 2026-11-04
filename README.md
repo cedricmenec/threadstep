@@ -31,10 +31,21 @@ Il sert de guide de navigation et de permissions, pas d'état daté.
 
 See `docs/` for the product and architecture and `backlog/` for tasks.
 
-## Dépannage du stockage local
+## Sauvegarde, import et stockage
 
-ThreadStep conserve vos données uniquement dans le `localStorage` du navigateur (clé `threadstep.document.v1`). Aucune copie n'est envoyée sur un serveur.
+Les données métier sont enregistrées dans **IndexedDB** dans le navigateur.
+La synchronisation **Dexie Cloud** est facultative et dépend de l'espace actif.
+Les anciennes clés localStorage V1 conservées ne sont plus le stockage métier
+courant.
 
-- **Stockage bloqué** : en navigation privée ou si les cookies/site data sont refusés, l'enregistrement échoue (message « Stockage indisponible : exportez vos données. »). Autorisez le stockage pour ce site, ou continuez en exportant votre travail.
-- **Données effacées** : vider le cache, les cookies ou les données de site, changer de navigateur/profil, ou désactiver la persistance supprime les données locales. Le message « Données locales illisibles » indique un contenu corrompu : réimportez un export JSON.
-- **Reprise** : pour éviter toute perte, utilisez régulièrement le bouton d'export JSON et réimportez le fichier sur le même navigateur ou sur un autre appareil.
+- [Importer, exporter et restaurer : procédures et format JSON](docs/product/guide-import-export.md).
+- [Comprendre la persistance et la synchronisation](docs/product/guide-persistance-et-synchronisation.md).
+
+Dans **Menu → Imports / Exports**, l'export produit un fichier
+`threadstep.indexeddb-backup`. L'import fusionne après prévisualisation ;
+la restauration peut remplacer les données et exige une sauvegarde préalable
+et une confirmation renforcée. Les anciens fichiers `version: 1` sont refusés.
+
+Conservez les sauvegardes hors des données du navigateur. Si le stockage est
+bloqué ou illisible, suivez le diagnostic et ne purgez pas les données en
+supposant que le Cloud est vide.
