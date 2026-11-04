@@ -9,8 +9,9 @@ Application : https://cedricmenec.github.io/threadstep/
 
 ThreadStep est une page web personnelle en français pour retrouver
 rapidement la prochaine action de plusieurs sujets de travail.
-Elle est utilisable sur téléphone ou sur ordinateur, sans compte,
-serveur applicatif ni intelligence artificielle dans le navigateur.
+Elle est utilisable sur téléphone ou sur ordinateur avec persistance locale
+IndexedDB et synchronisation Dexie Cloud facultative. Le mode local autonome
+ne nécessite pas de compte.
 
 ## Navigation, menu et paramètres (TS-041)
 
@@ -101,6 +102,9 @@ JSON préalable, une annulation et une confirmation explicite. Aucune purge ni
 suspension ne supprime de donnée distante ou un autre espace.
 
 ## Imports, exports et restauration (TS-042)
+
+Le [guide détaillé import/export](guide-import-export.md) décrit les étapes,
+les conflits, les limites et le format JSON complet avec un exemple valide.
 
 La page `#/parametres/donnees`, accessible depuis le menu, distingue trois
 intentions sans changer les moteurs existants :
