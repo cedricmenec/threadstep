@@ -73,7 +73,7 @@ jobs:
           echo "AGENT_BRANCH=$branch" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26.13.0'
       - name: Check API key and install agent
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}

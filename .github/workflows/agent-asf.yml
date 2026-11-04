@@ -41,7 +41,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26.13.0'
       - name: Validate ASF task before spending
         id: task
         shell: bash
@@ -82,7 +82,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26.13.0'
       - name: Freeze trusted policy away from agent workspace
         shell: bash
         run: cp scripts/agent-asf-policy.mjs "$RUNNER_TEMP/agent-asf-policy.mjs"
@@ -157,7 +157,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '26.13.0'
       - uses: actions/download-artifact@v4
         with:
           name: asf-diff

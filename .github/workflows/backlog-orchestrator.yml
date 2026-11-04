@@ -63,7 +63,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '26.13.0'
       - name: Mint limited installation token for execute only
         id: app-token
         if: inputs.mode == 'execute'
@@ -125,7 +125,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '26.13.0'
       - name: Mint temporary journal-writer token
         id: app-token
         uses: actions/create-github-app-token@v1
@@ -180,7 +180,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '26.13.0'
       - name: Mint temporary journal-writer token
         id: app-token
         uses: actions/create-github-app-token@v1

@@ -21,7 +21,7 @@ Lors d'un ajout de modèle dans l'UI GitHub Actions, mettre à jour simultanéme
 ## Démarrage rapide
 
 1. Lire `AGENTS.md`, `ChatGPT.md`, [l'état vérifié](current-state.md) et les [règles GitHub](github-autonomy-and-security.md). Ne jamais se fier à un ancien statut Markdown pour déterminer si une tâche a été réellement livrée.
-2. Utiliser Node **22+**, installer les dépendances nécessaires de l'environnement et exécuter :
+2. Utiliser Node **26.13.0 LTS** (plage npm `>=26.13.0 <27`, `.nvmrc` et CI épinglés, `engine-strict=true`), installer les dépendances nécessaires de l'environnement et exécuter :
 
    ```sh
    npm run check
