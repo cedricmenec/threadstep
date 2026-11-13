@@ -1,3 +1,10 @@
+Warning: truncated output (original token count: 8728)
+Total output lines: 362
+
+## Filtre compact des projets dans Overview : TS-070 (13 novembre 2026)
+
+[TS-070](tasks/TS-070.md) remplace le groupe de quatre options du filtre « Filtrer les projets » par un contrôle de sélection compact, en conservant les catégories, la logique, l'état sélectionné et l'accessibilité clavier/tactile. La tâche est `ready / manual / low`, indépendante des autres évolutions UI. Elle limite le changement au filtre Overview, à sa présentation et aux tests associés, et sera implémentée par Codex selon OpenSpec, sans ASF.
+
 ## Retouche visuelle ciblée : TS-069 (13 novembre 2026)
 
 [TS-069](tasks/TS-069.md) propose une amélioration cosmétique du formulaire d’édition d’une tâche : une surface douce et une bordure discrète pour le distinguer de la liste, sans toucher aux cartes, aux comportements ou aux données. La tâche est `ready / manual / low`, indépendante du shell TS-067 et des décisions de périmètre de TS-068. Son implémentation suivra OpenSpec en dehors d’ASF.
@@ -58,119 +65,7 @@ Ce découpage conserve l'ordre de décision UI-10 → UI-03 → UI-04 → UI-05 
 ## Continuité UX : TS-049 et TS-050 (20 octobre 2026)
 
 - **[TS-049](tasks/TS-049.md)** : stabiliser le scroll et le focus pendant création, complétion, édition et réordonnancement, sans navigation ni saut intempestif. `on_hold / manual / low`, priorité haute ; PR de code #161 et #163 fusionnées, recette Android/scroll réelle et réconciliation OpenSpec restantes. Ne pas relancer l'agent automatiquement.
-- **[TS-050](tasks/TS-050.md)** : préserver les sous-tâches volontairement ouvertes lors des mises à jour locales, événements Dexie Cloud et inter-onglets, avec reset uniquement sur vraie entrée de vue/reload/import. `ready / manual / medium`, priorité haute, à coordonner avec TS-048.
-- **Contrat cible :** `openspec/specs/ux-interaction-continuity/spec.md` (PR documentaire distincte). La présente PR décrit les travaux, **ne change aucun code produit**, ne déclenche aucun run payant et n'atteste aucune recette navigateur.
-
-## Incident : TS-048, projets invisibles malgré un compte lié (20 octobre 2026)
-
-- **[TS-048](tasks/TS-048.md)** : correctif prioritaire de reprise du chargement des projets après un changement transitoire de liaison, avec protection contre les lectures asynchrones périmées et suppression des faux diagnostics « données masquées ». `ready / manual / high`, priorité critique. Le mot `recovery` dans la base indique une copie locale isolée, pas une nouvelle base distante.
-- La régression est **reproductible dans le code**, mais la cause exacte de l'incident observé sur Android et laptop reste à confirmer par vérification des tables locales `subjects` et `items`. Le statut `in-sync` ne constitue pas une preuve de convergence des projets.
-- Aucun effacement, transfert ou récupération automatique n'est autorisé ; la recette Android/laptop et la comparaison avec la base Dexie Cloud de test restent obligatoires avant de considérer l'incident résolu.
-
-## Confiance dans les données : TS-045 à TS-047 (20 octobre 2026)
-
-Après deux incidents de cache Cloud non vérifié (Android puis laptop), la récupération explicite dans un nouveau cache isolé a permis de retrouver les projets, mais **la cause de réapparition de l'état non vérifié n'est pas démontrée**. Le nom d'un cache `threadstep-ws-*` ou `threadstep-recovery-*` désigne une IndexedDB **locale** ; ce n'est pas la création d'une nouvelle base distante Dexie Cloud. La synchronisation utilise une copie locale IndexedDB et une instance distante, dont l'état et la présence des données ne se prouvent pas par le seul statut natif `in-sync`.
-
-- **[TS-045](tasks/TS-045.md)** : reproduire et corriger les régressions d'identité de cache, reprise OTP/session et visibilité multi-appareils, tout en conservant les caches historiques. `ready / manual / high`, priorité critique.
-- **[TS-046](tasks/TS-046.md)** : guide utilisateur clair du modèle local-first, de toutes les copies de données, des transitions local↔Cloud, sauvegardes et scénarios d'incident. `ready / allowed / low`, priorité haute, documentaire uniquement.
-- **[TS-047](tasks/TS-047.md)** : interface de confiance de synchronisation, vue immédiate du stockage actif, état authentification/réplication, date fiable d'observation (ou absence de preuve), aides naturelles et actions guidées sans automatisme destructeur. `ready / manual / medium`, priorité haute, après TS-045 et TS-046.
-
-**Découpage et exécution :** TS-045 sécurise la liaison et traite la cause racine avant de masquer la complexité ; TS-046 peut être mené en parallèle, en restant fidèle au code effectivement livré ; TS-047 exploite leurs garanties. Seul TS-046 peut être candidat à Backlog Orchestrator V1 après fusion et précontrôles, **sans autorisation implicite de coût ni de lancement**. TS-045 et TS-047 restent manuels, avec revues et recette réelle Dexie Cloud sur base de test. Cette PR ne modifie que le backlog.
-
-## Interface et paramètres : TS-041 à TS-044 (20 octobre 2026)
-
-Nouveau besoin : menu hamburger et pages dédiées aux sauvegardes et à Dexie Cloud, sans modifier les mécanismes métier déjà livrés. **Cette PR est documentaire : aucun écran n'est encore implémenté et aucun appel OpenRouter n'est déclenché.**
-
-- **[TS-041](tasks/TS-041.md)** : menu hamburger, navigation accessible et routes de paramètres. `ready / allowed / low`, priorité haute ; tâche sélectionnable par Backlog Orchestrator V1 après fusion et vérifications.
-- **[TS-042](tasks/TS-042.md)** : déplacer les contrôles existants d'export, import/fusion et restauration vers une page dédiée, sans toucher aux protections de données. `ready / allowed / low`, dépend de TS-041.
-- **[TS-043](tasks/TS-043.md)** : page dédiée au diagnostic Dexie Cloud en lecture seule, conservant le pull manuel natif et ses garde-fous. `ready / allowed / low`, dépend de TS-041.
-- **[TS-044](tasks/TS-044.md)** : centraliser sur la page de synchronisation configuration, activation, OTP, sélection d'espace, déconnexion et purge locale. `ready / manual / medium`, dépend de TS-043 ; la sécurité des opérations nécessite revue manuelle.
-
-**Orchestration :** V1 sélectionne uniquement les tâches produit `ready / allowed / low` dont les dépendances sont livrées et les autres précontrôles satisfaits. TS-041 peut être candidate d'abord ; TS-042 et TS-043 deviennent candidates après sa livraison vérifiée. TS-044 **n'est pas éligible** automatiquement. Un dry-run sur `main` est nécessaire pour confirmer la sélection effective : les autres tâches et l'état GitHub peuvent influer sur l'ordre. L'ajout des fiches ne constitue ni autorisation de dépense, ni exécution, ni preuve de livraison. La PR ne modifie aucun workflow ASF.
-
-
-## Cible approuvée : IndexedDB local par défaut, Dexie Cloud facultatif (18 octobre 2026)
-
-Les [huit spécifications OpenSpec cibles](../docs/product/specs/dexie-data-lifecycle-target-v1.md) sont désormais versionnées sous `openspec/specs/` : sept capacités génériques réutilisables (persistance, activation, synchronisation, migration, réconciliation, import/restauration, isolation) et **un profil spécifique ThreadStep**. Elles constituent le **contrat cible approuvé**, pas une preuve que le site actuel l'implémente déjà. Les anciennes spécifications restent traçables et seront réconciliées via les changements OpenSpec de chaque implémentation. [Source de cadrage Notion](https://app.notion.com/p/3fd12ac9163681769406d0e98180b7ef).
-
-- **[TS-032](tasks/TS-032.md)** : base Dexie locale autonome, sans compte ni URL Cloud. `ready / manual / high`, priorité critique.
-- **[TS-033](tasks/TS-033.md)** : conversion du V1 `threadstep.document.v1` vers IndexedDB local, sans push Cloud. `ready / manual / high`, priorité critique.
-- **[TS-034](tasks/TS-034.md)** : vrai diagnostic Dexie et relance du pull, sans assimiler déconnexion et Cloud vide. `ready / manual / high`.
-- **[TS-035](tasks/TS-035.md)** : correction du mapping `legacy:` dans **l'import Cloud** et les réimports JSON, récupération non destructive des données déjà doublement préfixées, export brut des enregistrements orphelins et restauration contrôlée. `ready / manual / high`, priorité **critique** ; incident observé Chrome Android → laptop (5 sujets, 19 tâches dont une orpheline). **Aucune remise à zéro réelle sans sauvegardes vérifiées et consentement.**
-- **[TS-036](tasks/TS-036.md)** : réconciliation non destructive avec consentement lié au plan affiché, **correction du panneau de migration V1 et des messages Dexie périmés après restauration/synchronisation réussies**, sans supprimer les données historiques durant cette étape. `ready / manual / high`, priorité critique.
-- **[TS-037](tasks/TS-037.md)** : activation Cloud opt-in après usage local, premier transfert explicitement consenti. `ready / manual / high`, priorité critique.
-- **[TS-038](tasks/TS-038.md)** : isolation local / instances / comptes, logout et purge maîtrisés. `ready / manual / high`.
-- **[TS-039](tasks/TS-039.md)** : recette E2E sur instance de test, Chrome mobile, deux navigateurs, hors ligne et backups. `ready / manual / high`.
-- **[TS-040](tasks/TS-040.md)** : décommission définitif du chemin métier `localStorage` V1, **sans maintien du support des anciennes sauvegardes V1** ; auparavant, livrer et vérifier un **nouveau format d'export/import issu d'IndexedDB**, car les exports actuels utilisent encore `version: 1`. Nettoyage des anciennes clés **uniquement volontaire et local**. `ready / manual / high`, après TS-036/037/038/039.
-
-**Ordre prudent :** TS-032 → TS-033 → TS-034 → TS-035 → TS-036 → TS-037 → TS-038 → TS-039 → TS-040 ; les dépendances du frontmatter sont normatives et autorisent certains travaux parallèles. Aucun agent OpenSpec/OpenRouter n'est déclenché par ces briefs. La réussite CI des PR précédentes ne vaut pas recette Dexie Cloud réelle.
-
-## Fiabilisation des migrations Dexie Cloud : TS-031 (18 octobre 2026)
-
-- **[TS-031](tasks/TS-031.md) : reprendre et réconcilier une migration Dexie Cloud sans perte de données.** `ready / manual / high`, priorité critique. Après le correctif de persistance [#127](https://github.com/cedricmenec/threadstep/pull/127), une source V1 peut rester bloquée devant une cible déjà peuplée avec des identifiants divergents. Le brief couvre diagnostic détaillé, décisions explicites par conflit, import partiel non destructif, copies à identifiants stables, contrôle de la première synchronisation distante et reprise idempotente. **État actualisé :** cette tâche a depuis été implémentée par la [PR #130 fusionnée](https://github.com/cedricmenec/threadstep/pull/130), mais la recette Chrome mobile reste bloquée sur « Dexie Cloud n'est pas connecté ». Le nouveau chantier TS-032 à TS-039 traite l'architecture local-first et Cloud optionnel de façon systémique.
-
-*La section datée du 17 octobre ci-dessous est le cadrage historique de TS-024 à TS-030 et ne constitue pas un état de livraison actualisé.*
-
-## Synchronisation Dexie Cloud proposée le 17 octobre 2026 (non implémentée)
-
-[Spécification normative complète](../docs/product/specs/dexie-cloud-local-first.md) · [Architecture et plan de déploiement](../docs/product/dexie-cloud-rollout.md).
-
-- **[TS-024](tasks/TS-024.md)** : Configurer le socle Dexie.js et Dexie Cloud avant l'ouverture. `proposed / manual / high`.
-- **[TS-025](tasks/TS-025.md)** : Migrer les opérations métier vers une persistance Dexie local-first. `proposed / manual / high`.
-- **[TS-026](tasks/TS-026.md)** : Migrer sans destruction le document historique localStorage V1. `proposed / manual / high`.
-- **[TS-027](tasks/TS-027.md)** : Authentifier uniquement par OTP email natif Dexie Cloud. `proposed / manual / high`.
-- **[TS-028](tasks/TS-028.md)** : Visualiser la synchronisation et le diagnostic technique. `proposed / manual / medium`.
-- **[TS-029](tasks/TS-029.md)** : Séparer changement de base, déconnexion et purge locale. `proposed / manual / high`.
-- **[TS-030](tasks/TS-030.md)** : Durcir, tester et documenter la livraison Dexie Cloud. `proposed / manual / high`.
-
-**Constat réel :** ThreadStep utilise actuellement `localStorage`, et non IndexedDB. La migration est donc une tâche explicite ; aucun état historique ne doit être supprimé ni transféré au cloud sans consentement. Les anciennes exclusions cloud/authentification étaient propres au MVP ; `AGENTS.md` a été recentré sur les règles du coding agent et ne fixe plus la cible technique du produit. Ces tâches restent proposées, manuelles et de risque medium/high. Leur ajout ne lance aucun agent payant ni fusion et n'implique pas leur disponibilité en production. Prévoir une livraison cohérente protégeant les données V1.
-
-
-## Évolutions à développer le 17 octobre 2026 (briefs uniquement)
-
-- **[TS-021](tasks/TS-021.md) : repli initial des sous-tâches.** Chaque ouverture de l'overview ou d'une vue détail présente les enfants repliés ; une expansion volontaire reste valable jusqu'à la prochaine navigation, sans modifier le stockage.
-- **[TS-022](tasks/TS-022.md) : promotion d'une sous-tâche en tâche principale.** Changer uniquement sa parenté, préserver identité, contenu, priorité et état, garder les autres enfants liés à leur parent. **Risque modéré / exécution manuelle** en raison de l'impact sur les données.
-- **[TS-023](tasks/TS-023.md) : lignes compactes et menu d'actions ⋮.** Réduire la hauteur des commandes, regrouper les opérations, retirer les boutons haut/bas visibles tout en **conservant leur alternative clavier** ; dépend de TS-022. **Risque modéré / exécution manuelle** en raison des enjeux d'accessibilité.
-
-**Note facultative sur une sous-tâche : déjà livrée dans [TS-019](tasks/TS-019.md) via la [PR #89](https://github.com/cedricmenec/threadstep/pull/89).** Le champ `note` et son édition existent pour les deux niveaux, sans nouvelle tâche à créer. TS-017 à TS-020 ont aussi été livrées par les PR #84, #88, #89 et #90 ; leurs textes de préparation ci-dessous reflètent l'état documentaire au moment de leur rédaction, non un état actuel non livré.
-
-Ces trois nouveaux briefs sont **documentaires uniquement** : aucun code produit n'est changé, aucun appel OpenRouter/OpenSpec payant n'est déclenché par leur création. La livraison effective dépend de futurs runs autorisés et de PR distinctes.
-
-## Nouvelles évolutions proposées le 17 octobre 2026 (non implémentées)
-
-- **[TS-017](tasks/TS-017.md) : aperçu de cinq tâches par projet.**
-  Limiter chaque carte à cinq tâches principales visibles, sans
-  limiter leurs sous-tâches, et ouvrir la page de détail complète
-  par « Voir plus ». Préserver les filtres, le tri et les raccourcis
-  vers les tâches masquées par cette limite.
-- **[TS-018](tasks/TS-018.md) : compteur total en en-tête.**
-  Afficher le nombre de tâches **principales**, terminées ou non,
-  distinct du compteur existant des étapes en attente et indépendant
-  de la limite de cinq.
-- **[TS-019](tasks/TS-019.md) : note facultative par tâche.**
-  Texte brut multiligne (2 000 caractères maximum) sur une tâche
-  ou sous-tâche, avec compatibilité des imports JSON V1 historiques,
-  validation et absence de sauvegarde sur annulation.
-- **[TS-020](tasks/TS-020.md) : hiérarchie visuelle des tâches.**
-  Distinguer clairement tâches et sous-tâches par structure,
-  indentation et espacement, sur mobile et desktop, sans changement
-  des règles métier.
-
-
-**Préparation OpenSpec (17 octobre 2026)** : les quatre briefs TS-017 à
-TS-020 distinguent désormais critères fonctionnels, sous-tâches
-automatisables avant finalisation et recette manuelle post-publication
-non cochable. La recette humaine et les checks CI/Pages restent requis
-pour la validation réelle, mais ne sont **pas** des cases d'implémentation
-qu'un agent devrait prétendre avoir exécutées. Le plan durable de
-correction de la factory est consigné dans
-[Notion DEV / Projets / ASF](https://app.notion.com/p/3fc12ac9163681e0ba61ca7e6a93a767).
-Les briefs seuls ne garantissent pas la qualité d'un futur plan auto :
-relire `tasks.md` avant toute phase payante d'implémentation.
-
-Ces quatre fiches sont `product / ready / allowed / low` avec
-périmètres bornés et critères de non-régression. Les tâches sont
-indépendantes à ce stade et ne créent **aucun agent payant**.
+- **[TS-050](tasks/TS-050.md)** : préserver les sous-tâches volontairement ouvertes lors des mises à jour locales, événements Dexie Cloud et inter-onglets, avec …3728 tokens truncated…tade et ne créent **aucun agent payant**.
 La création/fusion documentaire ne vaut pas autorisation d'exécution
 OpenSpec/OpenRouter. Les fonctionnalités ci-dessus ne sont pas encore
 implémentées par cette PR.
