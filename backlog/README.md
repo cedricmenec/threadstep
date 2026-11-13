@@ -1,3 +1,7 @@
+## Retouche visuelle ciblée : TS-069 (13 novembre 2026)
+
+[TS-069](tasks/TS-069.md) propose une amélioration cosmétique du formulaire d’édition d’une tâche : une surface douce et une bordure discrète pour le distinguer de la liste, sans toucher aux cartes, aux comportements ou aux données. La tâche est `ready / manual / low`, indépendante du shell TS-067 et des décisions de périmètre de TS-068. Son implémentation suivra OpenSpec en dehors d’ASF.
+
 ## Suite après TS-067 : harmonisation des cartes Stitch (27 octobre 2026)
 
 TS-067 est livrée et déployée. La nouvelle proposition [TS-068](tasks/TS-068.md) harmonise les cartes projet d’Overview et les cartes de tâches du détail projet avec les références Stitch desktop et mobile, en réutilisant les composants React et tokens existants.

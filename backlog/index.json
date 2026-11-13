@@ -878,5 +878,17 @@
     ],
     "created_at": "2026-10-27",
     "content_sha256": "8b52043261364a757c88be693b2102c7e648dcac2fbcf902f7c2466b3657bd08"
+  },
+  {
+    "id": "TS-069",
+    "path": "backlog/tasks/TS-069.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-11-13",
+    "content_sha256": "c639661298d5cf04ca7c43ea1cac71976f698dfa7361ad3eb89bf1aa08c54f4c"
   }
 ]
