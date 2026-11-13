@@ -114,10 +114,12 @@ test("header menu markup exposes accessible state and the exact ordered links", 
   assert.match(button[0], /aria-controls="nav-menu-panel"/);
   assert.match(html, /<span class="nav-menu-label">Menu<\/span>/);
   const panel = between(html, '<div id="nav-menu-panel"', "</div>");
-  assert.match(panel, /\shidden(\s|>)/);
-  const links = [...panel.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)];
-  assert.deepEqual(links.map((match) => match[2]), NAV_MENU_ENTRIES.map((entry) => entry.label));
+  assert.match(panel, /data-open="false"/);
+  const links = [...panel.matchAll(/<a href="([^"]+)"([^>]*)>([^<]+)<\/a>/g)];
+  assert.deepEqual(links.map((match) => match[3]), NAV_MENU_ENTRIES.map((entry) => entry.label));
   assert.deepEqual(links.map((match) => match[1]), NAV_MENU_ENTRIES.map((entry) => entry.fragment));
+  assert.match(links[0][2], /aria-current="page"/);
+  for (const link of links.slice(1)) assert.doesNotMatch(link[2], /aria-current/);
 });
 
 test("settings pages expose titles, back links and destination sections", () => {
@@ -155,7 +157,7 @@ test("settings pages host the data and Cloud controls once in their destination"
   assert.match(html, /id="sync-settings-access"[^>]*href="#\/parametres\/synchronisation"/);
 });
 
-test("menu CSS keeps 44px targets, bounded panel, focus and hidden handling", () => {
+test("menu CSS keeps 44px targets, bounded panel, focus and data-open handling", () => {
   const button = between(css, ".nav-menu-button{", "}");
   assert.match(button, /min-width:44px/);
   assert.match(button, /min-height:44px/);
@@ -165,8 +167,9 @@ test("menu CSS keeps 44px targets, bounded panel, focus and hidden handling", ()
   const panel = between(css, ".nav-menu-panel{", "}");
   assert.match(panel, /calc\(100vw - 32px\)/);
   assert.match(css, /\.nav-menu-button:focus-visible/);
-  assert.match(css, /\.nav-menu-panel\[hidden\]\{display:none\}/);
+  assert.match(css, /\.nav-menu-panel\[data-open="false"\]\{display:none\}/);
   assert.match(css, /@media\(max-width:620px\)\{[^}]*\.nav-menu-panel/);
+  assert.match(css, /@media\(min-width:1024px\)/);
 });
 
 test("app wires menu state, escape, outside activation and route changes", () => {

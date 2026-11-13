@@ -346,10 +346,27 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .nav-menu-button:focus-visible,.nav-menu a:focus-visible,.settings-page a:focus-visible,.settings-page h2:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
 .nav-menu-icon{font-size:1.1rem;line-height:1}
 .nav-menu-panel{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:min(280px,calc(100vw - 32px));max-width:calc(100vw - 16px);background:#fff;border:1px solid #dde4d6;border-radius:12px;box-shadow:0 10px 24px #24382f1f;padding:6px}
-.nav-menu-panel[hidden]{display:none}
+.nav-menu-panel[data-open="false"]{display:none}
 .nav-menu{display:flex;flex-direction:column;gap:2px}
 .nav-menu a{display:flex;align-items:center;min-width:44px;min-height:44px;padding:8px 12px;border-radius:8px;color:#30473a;text-decoration:none;font-weight:600;overflow-wrap:anywhere}
 .nav-menu a:hover{background:#eef2e8}
+.nav-menu a[aria-current="page"]{background:var(--color-surface-muted);color:var(--color-action);font-weight:var(--font-weight-bold);box-shadow:inset 3px 0 0 var(--color-action)}
+.nav-menu a[aria-current="page"]:hover{background:var(--color-surface-muted)}
+/* TS-067 | Shell responsive : rail persistant a partir de 1024px, tiroir compact en dessous.
+   Point de rupture local documente (1024px) et ecrit litteralement car une custom
+   property ne peut pas etre consommee de facon fiable dans une media query. */
+@media(min-width:1024px){
+.shell{display:grid;grid-template-columns:208px minmax(0,var(--content-max-width));column-gap:24px;max-width:calc(var(--content-max-width) + 232px);align-items:start}
+.shell>#app-shell-root{grid-column:1;min-width:0;max-width:100%}
+.shell>#app-shell-root{align-self:stretch}
+.shell>*:not(#app-shell-root){grid-column:2;min-width:0;max-width:100%}
+.header-nav{position:sticky;top:24px;margin-top:0}
+.nav-menu-button{display:none}
+.nav-menu-panel{position:static;top:auto;left:auto;width:auto;max-width:100%;background:transparent;border:0;box-shadow:none;padding:0}
+.nav-menu-panel[data-open="false"]{display:block}
+.nav-menu a[aria-current="page"]{border-radius:8px}
+}
+/* End TS-067 */
 .settings-page{padding-top:37px;max-width:720px}
 .settings-page[hidden]{display:none}
 .settings-nav{margin-bottom:14px}
