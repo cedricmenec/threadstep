@@ -167,10 +167,7 @@ const counterEl = document.querySelector("#counter");
 const statusEl = document.querySelector("#status");
 const subjectForm = document.querySelector("#subject-form");
 const hideCompletedEl = document.querySelector("#hide-completed");
-const overviewFilterAllEl = document.querySelector("#overview-filter-all");
-const overviewFilterUrgentEl = document.querySelector("#overview-filter-urgent");
-const overviewFilterFollowingEl = document.querySelector("#overview-filter-following");
-const overviewFilterCompletedEl = document.querySelector("#overview-filter-completed");
+const overviewFilterSelectEl = document.querySelector("#overview-filter-select");
 const reorderNoteEl = document.querySelector("#reorder-note");
 const focusSuggestEl = document.querySelector("#focus-suggest");
 const focusCardEl = document.querySelector("#focus-card");
@@ -2947,29 +2944,18 @@ function persist() {
   return commitOperations(records);
 }
 function overviewFilterControl(mode) {
-  switch (mode) {
-    case OVERVIEW_FILTER_URGENT: return overviewFilterUrgentEl;
-    case OVERVIEW_FILTER_FOLLOWING: return overviewFilterFollowingEl;
-    case OVERVIEW_FILTER_COMPLETED: return overviewFilterCompletedEl;
-    default: return overviewFilterAllEl;
-  }
+  return overviewFilterSelectEl;
 }
 function overviewFilterIsValid(mode) {
   return mode === OVERVIEW_FILTER_ALL || mode === OVERVIEW_FILTER_URGENT ||
     mode === OVERVIEW_FILTER_FOLLOWING || mode === OVERVIEW_FILTER_COMPLETED;
 }
 function syncOverviewFilterControl() {
-  const controls = [
-    [OVERVIEW_FILTER_ALL, overviewFilterAllEl],
-    [OVERVIEW_FILTER_URGENT, overviewFilterUrgentEl],
-    [OVERVIEW_FILTER_FOLLOWING, overviewFilterFollowingEl],
-    [OVERVIEW_FILTER_COMPLETED, overviewFilterCompletedEl]
-  ];
-  for (const [mode, control] of controls) {
-    if (!control) continue;
-    const checked = mode === overviewProjectFilter;
-    if (control.checked !== checked) control.checked = checked;
-  }
+  if (!overviewFilterSelectEl) return;
+  const value = overviewFilterIsValid(overviewProjectFilter)
+    ? overviewProjectFilter
+    : OVERVIEW_FILTER_ALL;
+  if (overviewFilterSelectEl.value !== value) overviewFilterSelectEl.value = value;
 }
 function setOverviewProjectFilter(mode, focusControl = false) {
   overviewProjectFilter = overviewFilterIsValid(mode) ? mode : OVERVIEW_FILTER_ALL;
@@ -4701,24 +4687,9 @@ hideCompletedEl.addEventListener("change", () => {
   hideCompleted = hideCompletedEl.checked;
   render();
 });
-if (overviewFilterAllEl) {
-  overviewFilterAllEl.addEventListener("change", () => {
-    if (overviewFilterAllEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_ALL);
-  });
-}
-if (overviewFilterUrgentEl) {
-  overviewFilterUrgentEl.addEventListener("change", () => {
-    if (overviewFilterUrgentEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_URGENT);
-  });
-}
-if (overviewFilterFollowingEl) {
-  overviewFilterFollowingEl.addEventListener("change", () => {
-    if (overviewFilterFollowingEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_FOLLOWING);
-  });
-}
-if (overviewFilterCompletedEl) {
-  overviewFilterCompletedEl.addEventListener("change", () => {
-    if (overviewFilterCompletedEl.checked) setOverviewProjectFilter(OVERVIEW_FILTER_COMPLETED);
+if (overviewFilterSelectEl) {
+  overviewFilterSelectEl.addEventListener("change", () => {
+    setOverviewProjectFilter(overviewFilterSelectEl.value);
   });
 }
 document.addEventListener("keydown", (event) => {

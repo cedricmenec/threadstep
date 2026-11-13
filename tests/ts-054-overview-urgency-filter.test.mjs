@@ -65,7 +65,7 @@ const revealSource = app.slice(
 );
 const filterHandlers = between(
   app,
-  "if (overviewFilterAllEl) {",
+  "if (overviewFilterSelectEl) {",
   'document.addEventListener("keydown"'
 );
 
@@ -111,15 +111,18 @@ test("TS-054 the pure model has no DOM, storage, network, timer or auth access",
 });
 
 test("TS-054 the static control has exact labels, initial state and DOM order", () => {
-  const block = between(html, '<fieldset id="overview-urgency-filter"', "</fieldset>");
-  assert.equal((block.match(/type="radio"/g) || []).length, 4);
-  assert.equal((block.match(/name="overview-urgency-filter"/g) || []).length, 4);
-  assert.equal((block.match(/>Tous les projets</g) || []).length, 1);
-  assert.equal((block.match(/>Projets avec urgences</g) || []).length, 1);
-  assert.equal((block.match(/>Projets à suivre</g) || []).length, 1);
-  assert.equal((block.match(/>Projets terminés</g) || []).length, 1);
-  assert.match(block, /id="overview-filter-all"[^>]*checked/);
-  assert.equal((block.match(/checked/g) || []).length, 1);
+  const block = between(html, '<div id="overview-urgency-filter"', "</select>");
+  assert.match(block, /<label for="overview-filter-select">Filtrer les projets<\/label>/);
+  assert.equal((block.match(/<select\b/g) || []).length, 1);
+  assert.equal((block.match(/<option\b/g) || []).length, 4);
+  assert.match(block, /id="overview-filter-all" value="all" selected/);
+  assert.deepEqual([...block.matchAll(/<option[^>]*value="([^"]+)"[^>]*>([^<]+)<\/option>/g)].map((m) => [m[1], m[2]]), [
+    ["all", "Tous les projets"],
+    ["urgent", "Projets avec urgences"],
+    ["following", "Projets à suivre"],
+    ["completed", "Projets terminés"]
+  ]);
+  assert.doesNotMatch(block, /type="radio"|checked/);
   assert.doesNotMatch(block, /aria-live/);
   assert.equal((html.match(/>Tous les projets</g) || []).length, 1);
   assert.equal((html.match(/>Projets avec urgences</g) || []).length, 1);
@@ -132,68 +135,43 @@ test("TS-054 the static control has exact labels, initial state and DOM order", 
   assert.ok(completed >= 0 && filter > completed && list > filter);
 });
 
-test("TS-054 the control wraps and offers a visible 44 by 44 pixel target", () => {
-  assert.match(css, /\.overview-urgency-filter\{[^}]*display:flex[^}]*flex-wrap:wrap[^}]*min-width:0/);
-  assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*min-width:44px[^}]*min-height:44px/);
-  assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
+test("TS-054 the compact select has a visible 44 pixel target and focus indicator", () => {
+  assert.match(css, /\.overview-urgency-filter\{[^}]*display:grid[^}]*min-width:0/);
+  assert.match(css, /\.overview-urgency-filter select\{[^}]*min-height:var\(--control-target-min\)/);
+  assert.match(css, /button:focus-visible,input:focus-visible,select:focus-visible[^{]*\{[^}]*outline:var\(--focus-outline\)/);
 });
 
-function createSyncHarness(mode, { allChecked = true, urgentChecked = false,
-                                   followingChecked = false, completedChecked = false } = {}) {
-  const writes = { all: 0, urgent: 0, following: 0, completed: 0 };
-  const make = (key, initial) => ({
-    _checked: initial,
-    get checked() { return this._checked; },
-    set checked(value) { writes[key] += 1; this._checked = value; }
-  });
-  const all = make("all", allChecked);
-  const urgent = make("urgent", urgentChecked);
-  const following = make("following", followingChecked);
-  const completed = make("completed", completedChecked);
+function createSyncHarness(mode, initialValue = OVERVIEW_FILTER_ALL) {
+  let writes = 0;
+  const select = {
+    _value: initialValue,
+    get value() { return this._value; },
+    set value(value) { writes += 1; this._value = value; }
+  };
   const context = {
     overviewProjectFilter: mode,
     OVERVIEW_FILTER_ALL,
     OVERVIEW_FILTER_URGENT,
     OVERVIEW_FILTER_FOLLOWING,
     OVERVIEW_FILTER_COMPLETED,
-    overviewFilterAllEl: all,
-    overviewFilterUrgentEl: urgent,
-    overviewFilterFollowingEl: following,
-    overviewFilterCompletedEl: completed
+    overviewFilterSelectEl: select
   };
   runInNewContext(syncSource, context);
-  return {
-    context, all, urgent, following, completed,
-    allWrites: () => writes.all,
-    urgentWrites: () => writes.urgent,
-    followingWrites: () => writes.following,
-    completedWrites: () => writes.completed
-  };
+  return { context, select, writes: () => writes };
 }
 
-test("TS-054 synchronization only rewrites a radio whose checked state differs", () => {
+test("TS-054 synchronization only rewrites the select value when it differs", () => {
   const aligned = createSyncHarness(OVERVIEW_FILTER_ALL);
   aligned.context.syncOverviewFilterControl();
   aligned.context.syncOverviewFilterControl();
-  assert.equal(aligned.allWrites(), 0);
-  assert.equal(aligned.urgentWrites(), 0);
-  assert.equal(aligned.followingWrites(), 0);
-  assert.equal(aligned.completedWrites(), 0);
+  assert.equal(aligned.writes(), 0);
 
-  const stale = createSyncHarness(OVERVIEW_FILTER_URGENT);
+  const stale = createSyncHarness(OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_ALL);
   stale.context.syncOverviewFilterControl();
-  assert.equal(stale.all.checked, false);
-  assert.equal(stale.urgent.checked, true);
-  assert.equal(stale.allWrites(), 1);
-  assert.equal(stale.urgentWrites(), 1);
-  assert.equal(stale.following.checked, false);
-  assert.equal(stale.completed.checked, false);
+  assert.equal(stale.select.value, OVERVIEW_FILTER_URGENT);
+  assert.equal(stale.writes(), 1);
   stale.context.syncOverviewFilterControl();
-  assert.equal(stale.allWrites(), 1);
-  assert.equal(stale.urgentWrites(), 1);
-  assert.equal(stale.followingWrites(), 0);
-  assert.equal(stale.completedWrites(), 0);
+  assert.equal(stale.writes(), 1);
 });
 
 test("TS-054 setting the filter stays in memory and never touches URL, history or storage", () => {
@@ -202,10 +180,8 @@ test("TS-054 setting the filter stays in memory and never touches URL, history o
   assert.match(setSource, /syncOverviewFilterControl\(\)/);
   assert.match(setSource, /render\(\)/);
   assert.doesNotMatch(setSource, /location|history|localStorage|sessionStorage|persist\(|documentState/);
-  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_ALL\)/);
-  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_URGENT\)/);
-  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_FOLLOWING\)/);
-  assert.match(filterHandlers, /setOverviewProjectFilter\(OVERVIEW_FILTER_COMPLETED\)/);
+  assert.match(filterHandlers, /overviewFilterSelectEl\.addEventListener\("change"/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(overviewFilterSelectEl\.value\)/);
   assert.doesNotMatch(filterHandlers, /location|history|localStorage|sessionStorage|persist\(|documentState/);
 });
 
@@ -478,12 +454,12 @@ test("TS-054 toggling the filter leaves card, draft and completion view state in
   const completionHandler = between(
     app,
     'hideCompletedEl.addEventListener("change"',
-    "if (overviewFilterAllEl)"
+    "if (overviewFilterSelectEl)"
   );
   assert.match(completionHandler, /hideCompleted = hideCompletedEl\.checked/);
   assert.doesNotMatch(completionHandler, /overviewProjectFilter|setOverviewProjectFilter/);
   assert.ok(html.indexOf('id="overview-urgency-filter"') < html.indexOf('id="subjects"'));
   assert.match(app, /filterControl\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(app, /case OVERVIEW_FILTER_URGENT: return overviewFilterUrgentEl;/);
+  assert.match(app, /function overviewFilterControl\(mode\) \{\s*return overviewFilterSelectEl;/);
   assert.match(app, /card\.append\(renderTaskArea\(subject, \{ preview: true \}\)\)/);
 });
