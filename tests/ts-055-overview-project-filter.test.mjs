@@ -78,7 +78,7 @@ const finishFocusSource = app.slice(
 );
 const filterHandlers = between(
   app,
-  "if (overviewFilterAllEl) {",
+  "if (overviewFilterSelectEl) {",
   'document.addEventListener("keydown"'
 );
 
@@ -171,25 +171,22 @@ test("TS-055 the pure model has no DOM, storage, network, timer or auth access",
 });
 
 test("TS-055 the static selector exposes four unique modes before the list", () => {
-  const block = between(html, '<fieldset id="overview-urgency-filter"', "</fieldset>");
-  assert.equal((block.match(/type="radio"/g) || []).length, 4);
-  assert.equal((block.match(/name="overview-urgency-filter"/g) || []).length, 4);
-  assert.equal((block.match(/>Tous les projets</g) || []).length, 1);
-  assert.equal((block.match(/>Projets avec urgences</g) || []).length, 1);
-  assert.equal((block.match(/>Projets à suivre</g) || []).length, 1);
-  assert.equal((block.match(/>Projets terminés</g) || []).length, 1);
-  assert.match(block, /id="overview-filter-all"[^>]*checked/);
-  assert.equal((block.match(/checked/g) || []).length, 1);
-  assert.doesNotMatch(block, /aria-live/);
+  const block = between(html, '<div id="overview-urgency-filter"', "</select>");
+  assert.match(block, /<label for="overview-filter-select">Filtrer les projets<\/label>/);
+  assert.equal((block.match(/<select\b/g) || []).length, 1);
+  assert.equal((block.match(/<option\b/g) || []).length, 4);
+  assert.match(block, /id="overview-filter-all" value="all" selected/);
+  assert.doesNotMatch(block, /type="radio"|checked|aria-live/);
 
-  const labels = [...block.matchAll(/<span>([^<]+)<\/span>/g)].map((match) => match[1]);
+  const labels = [...block.matchAll(/<option[^>]*value="([^"]+)"[^>]*>([^<]+)<\/option>/g)]
+    .map((match) => [match[1], match[2]]);
   assert.deepEqual(labels, [
-    "Tous les projets",
-    "Projets avec urgences",
-    "Projets à suivre",
-    "Projets terminés"
+    ["all", "Tous les projets"],
+    ["urgent", "Projets avec urgences"],
+    ["following", "Projets à suivre"],
+    ["completed", "Projets terminés"]
   ]);
-  for (const label of labels) {
+  for (const [, label] of labels) {
     assert.equal((html.match(new RegExp(">" + label + "<", "g")) || []).length, 1);
   }
 
@@ -199,28 +196,21 @@ test("TS-055 the static selector exposes four unique modes before the list", () 
   assert.ok(completed >= 0 && filter > completed && list > filter);
 });
 
-test("TS-055 the selector wraps and keeps a visible 44 by 44 pixel target", () => {
-  assert.match(css, /\.overview-urgency-filter\{[^}]*display:flex[^}]*flex-wrap:wrap[^}]*min-width:0/);
-  assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*min-width:44px[^}]*min-height:44px/);
-  assert.match(css, /\.overview-urgency-filter \.filter-option\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /\.overview-urgency-filter \.filter-option span\{[^}]*overflow-wrap:anywhere/);
-  assert.match(css, /button:focus-visible,input:focus-visible[^{]*\{[^}]*outline:(?:var\(--focus-outline\)|3px solid)/);
+test("TS-055 the compact selector fits responsively and keeps a 44 pixel target", () => {
+  assert.match(css, /\.overview-urgency-filter\{[^}]*display:grid[^}]*grid-template-columns:auto minmax\(0,1fr\)[^}]*min-width:0/);
+  assert.match(css, /\.overview-urgency-filter select\{[^}]*min-width:0[^}]*min-height:var\(--control-target-min\)/);
+  assert.match(css, /\.overview-urgency-filter select\{[^}]*text-overflow:ellipsis/);
+  assert.match(css, /select:focus-visible[^{]*\{[^}]*outline:var\(--focus-outline\)/);
 });
 
 function createFilterHarness(mode) {
-  const writes = { all: 0, urgent: 0, following: 0, completed: 0 };
-  const makeControl = (key) => ({
-    _checked: false,
+  let writes = 0;
+  const select = {
+    _value: mode,
     _focused: 0,
-    get checked() { return this._checked; },
-    set checked(value) { writes[key] += 1; this._checked = value; },
+    get value() { return this._value; },
+    set value(value) { writes += 1; this._value = value; },
     focus() { this._focused += 1; }
-  });
-  const controls = {
-    overviewFilterAllEl: makeControl("all"),
-    overviewFilterUrgentEl: makeControl("urgent"),
-    overviewFilterFollowingEl: makeControl("following"),
-    overviewFilterCompletedEl: makeControl("completed")
   };
   let renders = 0;
   const context = {
@@ -229,42 +219,33 @@ function createFilterHarness(mode) {
     OVERVIEW_FILTER_URGENT,
     OVERVIEW_FILTER_FOLLOWING,
     OVERVIEW_FILTER_COMPLETED,
-    ...controls,
+    overviewFilterSelectEl: select,
     render: () => { renders += 1; }
   };
-  const initial = {
-    [OVERVIEW_FILTER_ALL]: controls.overviewFilterAllEl,
-    [OVERVIEW_FILTER_URGENT]: controls.overviewFilterUrgentEl,
-    [OVERVIEW_FILTER_FOLLOWING]: controls.overviewFilterFollowingEl,
-    [OVERVIEW_FILTER_COMPLETED]: controls.overviewFilterCompletedEl
-  };
-  initial[mode]._checked = true;
   runInNewContext(syncSource + setSource, context);
   return {
     context,
-    controls,
-    writes: () => ({ ...writes }),
-    totalWrites: () => Object.values(writes).reduce((sum, count) => sum + count, 0),
+    controls: { overviewFilterSelectEl: select },
+    writes: () => writes,
+    totalWrites: () => writes,
     renders: () => renders,
-    checkedModes: () => modes.filter((entry) => initial[entry].checked)
+    selectedModes: () => [select.value]
   };
 }
 
-test("TS-055 synchronization keeps exactly one mode checked and rewrites only stale radios", () => {
+test("TS-055 synchronization keeps one select value and rewrites only stale values", () => {
   const harness = createFilterHarness(OVERVIEW_FILTER_FOLLOWING);
   harness.context.syncOverviewFilterControl();
   harness.context.syncOverviewFilterControl();
   assert.equal(harness.totalWrites(), 0);
-  assert.deepEqual(harness.checkedModes(), [OVERVIEW_FILTER_FOLLOWING]);
+  assert.deepEqual(harness.selectedModes(), [OVERVIEW_FILTER_FOLLOWING]);
 
   const stale = createFilterHarness(OVERVIEW_FILTER_COMPLETED);
-  stale.controls.overviewFilterCompletedEl._checked = false;
-  stale.controls.overviewFilterAllEl._checked = true;
+  stale.controls.overviewFilterSelectEl._value = OVERVIEW_FILTER_ALL;
   stale.context.overviewProjectFilter = OVERVIEW_FILTER_COMPLETED;
   stale.context.syncOverviewFilterControl();
-  assert.deepEqual(stale.checkedModes(), [OVERVIEW_FILTER_COMPLETED]);
-  assert.equal(stale.controls.overviewFilterAllEl.checked, false);
-  assert.equal(stale.controls.overviewFilterCompletedEl.checked, true);
+  assert.deepEqual(stale.selectedModes(), [OVERVIEW_FILTER_COMPLETED]);
+  assert.equal(stale.controls.overviewFilterSelectEl.value, OVERVIEW_FILTER_COMPLETED);
   const writesAfterFirst = stale.totalWrites();
   stale.context.syncOverviewFilterControl();
   assert.equal(stale.totalWrites(), writesAfterFirst);
@@ -275,32 +256,27 @@ test("TS-055 setting a mode normalizes unknown values and stays in memory", () =
   for (const mode of [OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED]) {
     harness.context.setOverviewProjectFilter(mode);
     assert.equal(harness.context.overviewProjectFilter, mode);
-    assert.deepEqual(harness.checkedModes(), [mode]);
+    assert.deepEqual(harness.selectedModes(), [mode]);
   }
   harness.context.setOverviewProjectFilter("unknown");
   assert.equal(harness.context.overviewProjectFilter, OVERVIEW_FILTER_ALL);
-  assert.deepEqual(harness.checkedModes(), [OVERVIEW_FILTER_ALL]);
+  assert.deepEqual(harness.selectedModes(), [OVERVIEW_FILTER_ALL]);
   assert.equal(harness.renders(), 4);
 
   assert.doesNotMatch(setSource, /location|history|localStorage|sessionStorage|persist\(|documentState/);
   assert.doesNotMatch(syncSource, /location|history|localStorage|sessionStorage|persist\(|documentState/);
-  for (const mode of [OVERVIEW_FILTER_ALL, OVERVIEW_FILTER_URGENT,
-    OVERVIEW_FILTER_FOLLOWING, OVERVIEW_FILTER_COMPLETED]) {
-    assert.match(filterHandlers,
-      new RegExp("setOverviewProjectFilter\\(OVERVIEW_FILTER_" +
-        mode.toUpperCase() + "\\)"));
-  }
+  assert.match(filterHandlers, /overviewFilterSelectEl\.addEventListener\("change"/);
+  assert.match(filterHandlers, /setOverviewProjectFilter\(overviewFilterSelectEl\.value\)/);
   assert.doesNotMatch(filterHandlers,
     /location|history|localStorage|sessionStorage|persist\(|documentState/);
 });
 
-test("TS-055 empty-state reset focuses the static all-projects radio once", () => {
+test("TS-055 empty-state reset focuses the static select once", () => {
   const harness = createFilterHarness(OVERVIEW_FILTER_COMPLETED);
   harness.context.setOverviewProjectFilter(OVERVIEW_FILTER_ALL, true);
   assert.equal(harness.context.overviewProjectFilter, OVERVIEW_FILTER_ALL);
-  assert.deepEqual(harness.checkedModes(), [OVERVIEW_FILTER_ALL]);
-  assert.equal(harness.controls.overviewFilterAllEl._focused, 1);
-  assert.equal(harness.controls.overviewFilterCompletedEl._focused, 0);
+  assert.deepEqual(harness.selectedModes(), [OVERVIEW_FILTER_ALL]);
+  assert.equal(harness.controls.overviewFilterSelectEl._focused, 1);
 });
 
 test("TS-055 the existing view reset clears the project mode while refreshes preserve it", () => {
@@ -639,14 +615,8 @@ test("TS-055 hidden targets open the detail route under every filtered mode", ()
 });
 
 function createFocusHarness(mode) {
-  const control = { _focused: 0, focus() { this._focused += 1; } };
-  const controls = {
-    [OVERVIEW_FILTER_ALL]: { _focused: 0, focus() { this._focused += 1; } },
-    [OVERVIEW_FILTER_URGENT]: { _focused: 0, focus() { this._focused += 1; } },
-    [OVERVIEW_FILTER_FOLLOWING]: { _focused: 0, focus() { this._focused += 1; } },
-    [OVERVIEW_FILTER_COMPLETED]: { _focused: 0, focus() { this._focused += 1; } }
-  };
-  controls[mode] = control;
+  const select = { _focused: 0, focus() { this._focused += 1; } };
+  const controls = Object.fromEntries(modes.map((value) => [value, select]));
   const body = {};
   const context = {
     route: { view: "overview" },
@@ -655,11 +625,7 @@ function createFocusHarness(mode) {
     OVERVIEW_FILTER_URGENT,
     OVERVIEW_FILTER_FOLLOWING,
     OVERVIEW_FILTER_COMPLETED,
-    overviewFilterControl: (value) => controls[value],
-    overviewFilterAllEl: controls[OVERVIEW_FILTER_ALL],
-    overviewFilterUrgentEl: controls[OVERVIEW_FILTER_URGENT],
-    overviewFilterFollowingEl: controls[OVERVIEW_FILTER_FOLLOWING],
-    overviewFilterCompletedEl: controls[OVERVIEW_FILTER_COMPLETED],
+    overviewFilterControl: () => select,
     pendingTaskCreationFocus: null,
     uxSubject: () => null,
     uxFindFocus: () => null,
@@ -682,7 +648,7 @@ function createFocusHarness(mode) {
   return { context, controls };
 }
 
-test("TS-055 focus falls back to the selected filtered radio when its project leaves", () => {
+test("TS-055 focus falls back to the selected filter control when its project leaves", () => {
   for (const mode of [OVERVIEW_FILTER_URGENT, OVERVIEW_FILTER_FOLLOWING,
     OVERVIEW_FILTER_COMPLETED]) {
     const { controls } = createFocusHarness(mode);
@@ -704,7 +670,7 @@ test("TS-055 switching modes preserves card, draft and completion view state", (
   const completionHandler = between(
     app,
     'hideCompletedEl.addEventListener("change"',
-    "if (overviewFilterAllEl)"
+    "if (overviewFilterSelectEl)"
   );
   assert.match(completionHandler, /hideCompleted = hideCompletedEl\.checked/);
   assert.doesNotMatch(completionHandler, /overviewProjectFilter|setOverviewProjectFilter/);
