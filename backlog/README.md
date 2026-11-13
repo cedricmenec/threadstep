@@ -1,3 +1,7 @@
+## Filtre compact des projets dans Overview : TS-070 (13 novembre 2026)
+
+[TS-070](tasks/TS-070.md) remplace le groupe de quatre options du filtre « Filtrer les projets » par un contrôle de sélection compact, en conservant les catégories, la logique, l'état sélectionné et l'accessibilité clavier/tactile. La tâche est `ready / manual / low`, indépendante des autres évolutions UI. Elle limite le changement au filtre Overview, à sa présentation et aux tests associés, et sera implémentée par Codex selon OpenSpec, sans ASF.
+
 ## Retouche visuelle ciblée : TS-069 (13 novembre 2026)
 
 [TS-069](tasks/TS-069.md) propose une amélioration cosmétique du formulaire d’édition d’une tâche : une surface douce et une bordure discrète pour le distinguer de la liste, sans toucher aux cartes, aux comportements ou aux données. La tâche est `ready / manual / low`, indépendante du shell TS-067 et des décisions de périmètre de TS-068. Son implémentation suivra OpenSpec en dehors d’ASF.
