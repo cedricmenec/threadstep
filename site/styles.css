@@ -123,7 +123,7 @@ h2{font-size:1.65rem;letter-spacing:-.045em;margin:7px 0 0}
 .reorder-note{font-size:.82rem;color:#657366;background:#eef2e8;border:1px solid #dde4d6;border-radius:10px;padding:9px 13px;margin:10px 0 0;max-width:520px}
 .reorder-note[hidden]{display:none}
 @media(prefers-reduced-motion:no-preference){.task.dragging,.task.drop-before,.task.drop-after{transition:box-shadow .12s ease,opacity .12s ease}}
-.task-edit-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:100%;min-width:0}
+.task-edit-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:100%;min-width:0;box-sizing:border-box;background:var(--color-surface-muted);border:1px solid var(--color-border-subtle);border-radius:var(--radius-panel);padding:var(--space-5)}
 .task-edit-title{flex:1;min-width:0;border:1px solid var(--color-border);background:var(--color-surface);border-radius:var(--radius-input);padding:9px 12px;color:var(--color-text)}
 .task-edit-priority{border-radius:var(--radius-input);border:1px solid var(--color-border);background:var(--color-surface);padding:0 7px;font-size:var(--font-size-compact);color:var(--color-text-control)}
 .task-edit-note-label{flex-basis:100%;display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:600;color:#415748}
