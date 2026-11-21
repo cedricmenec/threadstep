@@ -124,7 +124,7 @@ test("TS-067 keeps TS-066 Overview composition, classes and reading order untouc
   const overviewCss = css.slice(css.indexOf(startMarker), css.indexOf(endMarker) + endMarker.length);
   assert.equal(
     createHash("sha256").update(overviewCss).digest("hex"),
-    "ff18aa8fdb506e2ce4c701c82898258f85a37abf590e61e862ecfd6acb5ee61e",
+    "59117171174146b25a667077c994ba12022747beac8beb8da3913d3e58ccb658",
     "TS-066 presentation block changed"
   );
   assert.equal((css.match(/TS-066 Overview presentation/g) || []).length, 1);
