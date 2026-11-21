@@ -26,7 +26,7 @@ test("TS-067 delivery dependency is the archived TS-066 change, not a manual gat
   ]) {
     assert.ok(existsSync(resolve(root, module)), module);
   }
-  const tasks = read("openspec/changes/ts-067/tasks.md");
+  const tasks = read("openspec/changes/archive/2026-10-27-ts-067/tasks.md");
   const checklist = tasks.slice(0, tasks.indexOf("## Manual acceptance"));
   assert.doesNotMatch(checklist, /GO manuel|attestation TS-066|bloqué par la recette/i);
 });
