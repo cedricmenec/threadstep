@@ -278,42 +278,41 @@ d'identité SHALL réinitialiser les états transitoires selon
   selon les spécifications canoniques
 - **AND** aucun état du contexte précédent n'est réutilisé
 
-### Requirement: Accessible and responsive presentation parity
+### Requirement: Project card actions and task creation placement
 
-La surface SHALL conserver les éléments HTML, classes, IDs, libellés, noms
-accessibles, ordres de lecture et contrôles du rendu livré. Les cibles
-interactives MUST rester d'au moins 44 × 44 px et la mise en page MUST éviter
-tout débordement horizontal aux largeurs usuelles. Tous les textes
-utilisateur MUST rester des nœuds texte.
+Chaque carte Overview SHALL placer l’ouverture et l’ajout d’une tâche dans sa zone de pied, et SHALL garder les commandes projet actives accessibles une fois chacune avec un nom accessible identifiant le projet.
 
-#### Scenario: Parité des contrôles et noms accessibles
+#### Scenario: Project actions remain delegated and unique
 
-- **WHEN** les cartes sont rendues
-- **THEN** les contrôles d'ouverture, déplacement, suppression, ajout,
-  complétion, priorité, sous-tâches, menu et « Voir plus » conservent leurs
-  classes, libellés et noms accessibles existants
-- **AND** leur ordre de lecture et leur ordre dans le menu restent inchangés
+- **GIVEN** une carte Overview affichée
+- **WHEN** l’utilisateur ouvre le projet, ajoute une tâche, déplace ou supprime le projet
+- **THEN** une seule commande existante correspondante est déléguée au contrôleur
+- **AND** aucune présentation de carte ne produit une écriture supplémentaire
 
-#### Scenario: Balisage utilisateur rendu littéralement
+### Requirement: Project empty and filtered task states
 
-- **GIVEN** un titre de projet, de tâche ou une note contient
-  `<img src=x onerror=alert(1)>`
-- **WHEN** une carte ou une ligne est rendue
-- **THEN** le contenu est affiché comme du texte littéral
-- **AND** aucun élément exécutable n'est créé
+La carte SHALL différencier un projet sans tâche d’un projet dont les tâches sont absentes de l’aperçu après application du filtre, sans modifier la limite des cinq tâches parentes ni les compteurs canoniques.
 
-#### Scenario: Largeurs usuelles sans débordement
+#### Scenario: Genuine empty and filter-hidden projects
 
-- **WHEN** les règles des cartes et des contrôles sont vérifiées pour 320,
-  390, 430, 768 et 1280 px
-- **THEN** les libellés peuvent revenir à la ligne sans débordement horizontal
-- **AND** les cibles interactives restent d'au moins 44 × 44 px
-- **AND** aucune nouvelle disposition, sidebar ou largeur fixe supérieure au
-  mobile n'est introduite
+- **GIVEN** un projet vide ou un projet ayant des tâches toutes masquées
+- **WHEN** sa carte est rendue après le filtre existant
+- **THEN** seul le projet sans tâche reçoit l’état vide et l’action de création
+- **AND** le projet filtré indique que ses tâches sont masquées
+- **AND** les compteurs reflètent toujours les données complètes réelles
 
-#### Scenario: Aucun changement de route, stockage ou dépendance
+### Requirement: Responsive and accessible Overview card controls
 
-- **WHEN** la surface et ses modules sont inspectés
-- **THEN** aucune route, clé de stockage, préférence persistée, dépendance ou
-  ressource réseau n'est ajoutée
-- **AND** les routes hash, l'export/import et la CSP restent inchangés
+Les cartes SHALL rester lisibles sans défilement horizontal de 320 à 1280 px. Les contrôles SHALL avoir un nom accessible distinct, un focus visible et une cible tactile d’au moins 44 × 44 px ; les contenus utilisateur MUST rester du texte.
+
+#### Scenario: Long card content and task controls remain reachable
+
+- **GIVEN** un titre ou une note longue et les contrôles d’une carte
+- **WHEN** la carte est rendue sur téléphone, tablette ou bureau
+- **THEN** le texte revient à la ligne sans débordement horizontal
+- **AND** chaque action projet, tâche, priorité et sous-tâche reste atteignable par clavier et toucher avec un nom accessible
+
+#### Scenario: User content remains literal text
+- **GIVEN** un titre de projet, une tâche ou une note contenant du HTML malveillant
+- **WHEN** la carte est rendue
+- **THEN** le contenu est présenté comme texte littéral et ne crée aucun élément exécutable

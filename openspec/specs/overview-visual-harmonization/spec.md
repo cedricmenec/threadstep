@@ -8,53 +8,6 @@ approuvées, sans modifier ses comportements, ses données ni sa frontière Reac
 
 ## Requirements
 
-### Requirement: Overview composition preserved
-
-La route `#/` SHALL conserver les zones, commandes actives et ordre de lecture
-livrés. Les éléments visuels Stitch approuvés pour TS-068 MAY apparaître
-uniquement comme contenu statique ou commandes nativement désactivées dans les
-cartes projet. Ils MUST NOT ajouter de destination, commande active, métrique
-ou donnée métier fictive.
-
-#### Scenario: All existing surfaces remain present
-
-- **GIVEN** une lecture métier autorisée achevée avec au moins un projet
-- **WHEN** la route `#/` est affichée
-- **THEN** la reprise, la synthèse, la suggestion, les urgences, le formulaire,
-  les filtres, le chargement et les cartes restent présents dans leur ordre
-  relatif livré
-- **AND** les commandes actives existantes conservent leur comportement
-- **AND** les seules additions de TS-068 restent statiques/désactivées dans les
-  cartes projet
-
-#### Scenario: Navigation remains contractual
-
-- **WHEN** l'en-tête et la navigation sont affichés sur Overview
-- **THEN** les quatre destinations et leurs routes restent celles de
-  `app-navigation`
-- **AND** aucune sidebar, barre inférieure ou destination « Tâches / Focus /
-  Chercher » n'est introduite
-- **AND** aucun élément visuel désactivé ne crée une navigation
-
-#### Scenario: Loading and empty states stay unchanged
-
-- **GIVEN** une lecture en attente, un document vide ou un filtre sans résultat
-- **WHEN** la route `#/` est affichée
-- **THEN** le chargement, l'état vide ou l'état filtré prévu reste seul affiché
-- **AND** aucune carte, métrique, valeur projet ou commande factice n'est créée
-  par la mise en page
-
-#### Scenario: Stitch affordances do not execute actions
-
-- **GIVEN** une carte projet Overview affichant des éléments visuels issus de
-  Stitch
-- **WHEN** l'utilisateur tente d'utiliser une recherche, un filtre, un tri, une
-  échéance, un partage, un archivage ou une métadonnée statique
-- **THEN** ces éléments restent désactivés ou non interactifs
-- **AND** la liste, l'ordre, les données, les routes et la persistance restent
-  inchangés
-- **AND** aucune valeur de démonstration n'est présentée comme donnée réelle
-
 ### Requirement: Responsive hierarchy across representative widths
 
 La présentation SHALL rester lisible et sans débordement horizontal à 320, 390,
@@ -159,41 +112,6 @@ propriétaire DOM nouveau.
   persistée
 - **AND** aucune clé de stockage, route ou migration n'est ajoutée
 
-### Requirement: DOM parity and accessible presentation
-
-Les éléments HTML, classes, identifiants, libellés, noms accessibles et ordres
-de lecture de Overview SHALL rester identiques au rendu livré. Les cibles
-interactives MUST conserver au moins 44 × 44 px et le focus visible MUST rester
-perceptible sur les commandes concernées.
-
-#### Scenario: Controls keep their markup and names
-
-- **WHEN** les cartes, tâches, formulaires, filtres et zones Overview sont
-  rendus
-- **THEN** les contrôles conservent leurs classes, identifiants, libellés
-  français, noms accessibles et ordre de lecture
-- **AND** aucune commande n'est déplacée, remplacée ou dupliquée par la mise en
-  page
-- **AND** les textes utilisateur restent des nœuds texte
-
-#### Scenario: Focus and touch targets remain usable
-
-- **GIVEN** une navigation clavier ou un contexte tactile
-- **WHEN** les commandes Overview sont atteintes ou activées
-- **THEN** le focus visible reste perceptible
-- **AND** les cibles interactives pertinentes conservent au moins 44 × 44 px
-- **AND** aucun piège de focus ni changement arbitraire de l'ordre de tabulation
-  n'est introduit
-
-#### Scenario: State information is not colour-only
-
-- **GIVEN** une carte avec progression, urgences, priorité ou tâche terminée
-- **WHEN** la présentation est affichée en niveaux de gris ou sans perception
-  des couleurs
-- **THEN** les libellés, nombres et indices non chromatiques suffisent à
-  distinguer les états
-- **AND** aucune information n'est portée par la couleur seule
-
 ### Requirement: Behaviour, data and interaction continuity preserved
 
 La modification SHALL rester présentationnelle : routes, données, persistance
@@ -255,3 +173,44 @@ présentées comme prouvées par la CI.
 - **AND** ces scénarios restent explicitement à effectuer dans la recette
   manuelle
 - **AND** aucun résultat humain non exécuté n'est déclaré `PASS`
+
+### Requirement: Approved Overview card composition
+
+La carte Overview SHALL présenter le titre et les compteurs réels dans l’en-tête, la liste hiérarchique au centre et les commandes de création et d’ouverture dans le pied. Elle MUST NOT afficher de métadonnée sans source ou de commande inactive de partage/archivage.
+
+#### Scenario: Project card uses its actual data
+
+- **WHEN** une carte Overview est rendue pour un projet
+- **THEN** son titre, ses compteurs, sa progression et ses urgences proviennent des propriétés réelles existantes
+- **AND** aucun exemple, horodatage ou champ « non renseigné » n’est présenté comme une donnée du projet
+
+#### Scenario: Project commands remain available once
+
+- **WHEN** une carte Overview est rendue
+- **THEN** l’ouverture du projet et la création de tâche restent disponibles dans le pied
+- **AND** les commandes existantes de déplacement et de suppression restent accessibles depuis une action nommée
+- **AND** aucun bouton Partager ou Archiver désactivé n’est présenté
+
+### Requirement: Responsive task hierarchy and empty state
+
+Les cartes SHALL adapter les lignes, notes et sous-tâches à la largeur disponible sans défilement horizontal, avec hiérarchie textuelle indépendante de la couleur. Une carte réellement vide MUST être distinguée d’un aperçu masqué par filtre.
+
+#### Scenario: Long text and nested task remain readable
+
+- **GIVEN** des titres ou notes longs et une sous-tâche visible
+- **WHEN** la carte est présentée de 320 à 1280 px
+- **THEN** le texte revient à la ligne, les sous-tâches restent indentées et reliées visuellement
+- **AND** les badges de priorité et l’état terminé restent identifiables par leur texte ou leur forme
+
+#### Scenario: Empty project differs from filtered preview
+
+- **GIVEN** un projet sans tâche ou un projet dont toutes les tâches visibles sont filtrées
+- **WHEN** la carte est rendue
+- **THEN** l’état « aucune tâche » est réservé au projet réellement vide
+- **AND** l’état filtré indique que les tâches sont masquées sans créer de tâche factice
+
+#### Scenario: Touch targets and focus are available
+
+- **WHEN** les commandes de carte ou de tâche sont affichées sur téléphone
+- **THEN** leurs cibles mesurent au moins 44 × 44 px
+- **AND** elles ont des noms accessibles distincts et un focus visible
