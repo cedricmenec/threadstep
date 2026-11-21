@@ -2,10 +2,11 @@
 
 ## Purpose
 
-Valider le socle React existant sur une tranche représentative — le détail
-d'un projet `#/sujet/:id` — sans changer l'interface, les données, la
-persistance, la synchronisation ni la sécurité livrées, afin de produire une
-décision GO / NO-GO documentée.
+Valider et encadrer l'évolution du socle React existant sur une tranche
+représentative — le détail d'un projet `#/sujet/:id` — en préservant les
+données, la persistance, la synchronisation et la sécurité livrées. Les
+exigences de présentation approuvées peuvent faire évoluer l'interface sans
+changer ces contrats.
 
 ## Requirements
 
@@ -70,9 +71,10 @@ sous-arbre tant que la racine est active.
 ### Requirement: Parité de données et de présentation
 
 La surface React SHALL afficher les mêmes données, identifiants, compteurs,
-hiérarchies, ordres et classes CSS que le rendu vanilla de référence, sans
-nouvelle fonctionnalité ni changement de style. Les titres et notes utilisateur
-MUST être rendus comme nœuds texte, jamais comme HTML.
+hiérarchies et ordres que le rendu de référence. Les classes et noms accessibles
+des éléments existants restent stables ; leur présentation visuelle MAY évoluer
+selon les exigences approuvées. Les titres et notes utilisateur MUST rester des
+nœuds texte.
 
 #### Scenario: En-tête et compteurs identiques
 
@@ -116,6 +118,58 @@ MUST être rendus comme nœuds texte, jamais comme HTML.
 - **WHEN** un titre ou une note contient `<img src=x onerror=alert(1)>`
 - **THEN** la chaîne est affichée littéralement
 - **AND** aucun élément exécutable n'est créé à partir de ce texte
+
+### Requirement: Stitch affordances are static and truthful
+
+Les éléments Stitch approuvés par le propriétaire pour recherche, filtres, tri,
+échéances/calendrier, métadonnées, partage/archivage et panneau projet SHALL
+rester statiques ou nativement désactivés. Ils MUST NOT déclencher une action,
+modifier l'état, créer une route ou persister une préférence ou donnée. Aucune
+valeur métier absente MUST être simulée.
+
+#### Scenario: Recherche, filtres et tri désactivés
+
+- **GIVEN** la vue détaillée affiche les éléments visuels de recherche, filtre
+  ou tri issus de Stitch
+- **WHEN** l'utilisateur tente de les modifier ou les activer
+- **THEN** les éléments restent inactifs
+- **AND** les tâches visibles et leur ordre restent ceux des règles actuelles
+
+#### Scenario: Échéance et calendrier sans effet
+
+- **GIVEN** une tâche est affichée à côté d'un élément Stitch d'échéance ou de
+  calendrier
+- **WHEN** cet élément est activé ou reçoit une date
+- **THEN** aucune date n'est enregistrée et aucun calendrier ou sélecteur actif
+  n'est ouvert
+- **AND** la tâche et ses exports restent inchangés
+
+#### Scenario: Métadonnées absentes sans donnée fictive
+
+- **GIVEN** le détail présente les emplacements Stitch de description,
+  catégorie, code ou couverture
+- **WHEN** ces propriétés n'existent pas dans le modèle projet actuel
+- **THEN** aucune valeur, image ou donnée d'exemple n'est inventée
+- **AND** les libellés statiques ou l'indication accessible d'indisponibilité ne
+  sont pas présentés comme des données du projet
+
+#### Scenario: Partage et archivage désactivés
+
+- **GIVEN** le détail affiche les actions Stitch de partage ou d'archivage
+- **WHEN** l'utilisateur tente de les activer
+- **THEN** elles sont nativement désactivées ou non interactives
+- **AND** aucun partage, archivage, changement de route ou écriture n'a lieu
+
+#### Scenario: Panneau de projet sans activité simulée
+
+- **GIVEN** le détail affiche la composition Stitch du panneau de prochaine
+  action, progression ou activité
+- **WHEN** une donnée correspondante n'est pas fournie par les règles et données
+  existantes
+- **THEN** aucun événement, compte, score ou texte d'activité de démonstration
+  n'est affiché
+- **AND** le panneau et ses commandes restent statiques/désactivés et
+  accessibles
 
 ### Requirement: Interactions et validations existantes
 

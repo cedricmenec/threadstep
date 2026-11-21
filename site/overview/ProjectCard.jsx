@@ -65,8 +65,32 @@ export function ProjectCard({ project, commands, transient, dragSession }) {
           >
             Supprimer
           </Button>
+          <Button
+            variant="subtle"
+            className="project-stitch-disabled"
+            type="button"
+            aria-label="Partage, indisponible"
+            disabled
+          >
+            Partager
+          </Button>
+          <Button
+            variant="subtle"
+            className="project-stitch-disabled"
+            type="button"
+            aria-label="Archivage, indisponible"
+            disabled
+          >
+            Archiver
+          </Button>
         </div>
       </div>
+      <dl className="project-stitch-metadata" aria-label="Informations du projet">
+        <div><dt>Description</dt><dd>Non renseignée</dd></div>
+        <div><dt>Catégorie</dt><dd>Non renseignée</dd></div>
+        <div><dt>Code</dt><dd>Non renseigné</dd></div>
+        <div><dt>Couverture</dt><dd>Non disponible</dd></div>
+      </dl>
       <div className="task-area">
         <CreateTaskForm subject={project} commands={commands} />
         {project.items.length === 0 ? (
