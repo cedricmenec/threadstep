@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "TS-071",
+    "path": "backlog/tasks/TS-071.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [],
+    "created_at": "2026-11-21",
+    "content_sha256": "5fb2f4a706209294d280612201ed4bdde9802968ba9db7587a030a5cb41e860f"
+  }
+]
