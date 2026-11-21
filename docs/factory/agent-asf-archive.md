@@ -27,6 +27,10 @@ par [ASF-V2-010](tasks/ASF-V2-010.md) pour les références normatives
 - **Hors périmètre :** aucune fusion sans autorisation applicable, aucun appel
   OpenRouter, aucune modification de `site/`, des workflows, des secrets ou des
   règles GitHub. La recette E2E réelle relève d'[ASF-V2-011](tasks/ASF-V2-011.md).
+- Une clôture administrative demandée explicitement par le propriétaire suit
+  un chemin documentaire distinct : `status: done`, `closure: administrative`
+  et `delivery: null` tant qu'aucune livraison n'a été vérifiée. Elle ne passe
+  pas par `selectArchivable()` et ne constitue pas une preuve de livraison.
 
 ## 2. Séparation des rôles
 

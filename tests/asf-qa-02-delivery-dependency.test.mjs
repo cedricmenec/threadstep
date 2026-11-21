@@ -12,7 +12,7 @@ const backlogContract = read("docs/factory/backlog-v2-task-contract.md");
 const checklistContract = read("docs/factory/openspec-checklist-contract.md");
 const config = read("openspec/config.yaml");
 const taskTemplate = read("backlog/tasks/TEMPLATE.md");
-const ts066 = read("backlog/tasks/TS-066.md");
+const ts066 = read("backlog/archive/TS-066.md");
 
 test("ASF-QA-02: plans and implementation do not invent a preceding manual GO gate", () => {
   const plan = workflow.split("- name: Explore and propose, no product code changes")[1]
@@ -40,7 +40,7 @@ test("ASF-QA-02: product dependencies use real delivery and preserve manual revi
 });
 
 test("ASF-QA-02: the approved Stitch decision for TS-066 is recorded without a per-screen gate", () => {
-  assert.match(ts066, /^status: ready$/m);
+  assert.match(ts066, /^status: done$/m);
   assert.match(ts066, /^depends_on:\r?\n  - TS-065$/m);
   assert.match(ts066, /L'ensemble des maquettes Stitch est approuvé pour la présentation visuelle et UX, sur mobile et desktop/);
   assert.match(ts066, /ne déclenchent aucun workflow OpenRouter payant/);

@@ -91,7 +91,6 @@ test("TS-058 documentation checks the protected files were not modified", () => 
     ".github/workflows",
     "AGENTS.md",
     "opencode.json",
-    "backlog/tasks/TS-058.md",
     "openspec/specs"
   ];
   const output = execFileSync("git", ["status", "--porcelain", "--", ...protectedPaths], {

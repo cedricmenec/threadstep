@@ -6,7 +6,7 @@
 
 ## Livraison technique concernée
 
-- **Tâche :** [TS-064](../../backlog/tasks/TS-064.md).
+- **Tâche :** [TS-064](../../backlog/archive/TS-064.md).
 - **PR produit :** [#214](https://github.com/cedricmenec/threadstep/pull/214), fusionnée le 26 octobre 2026.
 - **Commit fusionné :** `e1e39f8b273ad85f97951163ae64394360031f4a`.
 - **CI main :** [#40417372644](https://github.com/cedricmenec/threadstep/actions/runs/40417372644), terminée avec succès.

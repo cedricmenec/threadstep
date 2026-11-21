@@ -569,12 +569,12 @@ Références techniques :
 [Spécification MVP](mvp.md) ·
 [Recette manuelle](acceptance-checklist.md) ·
 [Guide développeur](developer-guide.md) ·
-[Backlog TS-013](../../backlog/tasks/TS-013.md) ·
-[Backlog TS-010](../../backlog/tasks/TS-010.md) ·
-[Backlog TS-011](../../backlog/tasks/TS-011.md) ·
-[Backlog TS-012](../../backlog/tasks/TS-012.md) ·
-[Backlog TS-014](../../backlog/tasks/TS-014.md) ·
-[Backlog TS-016](../../backlog/tasks/TS-016.md) ·
+[Backlog TS-013](../../backlog/archive/TS-013.md) ·
+[Backlog TS-010](../../backlog/archive/TS-010.md) ·
+[Backlog TS-011](../../backlog/archive/TS-011.md) ·
+[Backlog TS-012](../../backlog/archive/TS-012.md) ·
+[Backlog TS-014](../../backlog/archive/TS-014.md) ·
+[Backlog TS-016](../../backlog/archive/TS-016.md) ·
 [Spécification action-removal](../../openspec/specs/action-removal/spec.md) ·
 [Spécification action-ordering](../../openspec/specs/action-ordering/spec.md) ·
 [Spécification substep-ordering](../../openspec/specs/substep-ordering/spec.md).

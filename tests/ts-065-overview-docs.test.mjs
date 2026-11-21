@@ -45,7 +45,8 @@ test("TS-065 dependency gate verifies TS-064 archive, delivered ancestor, shared
     ".github/workflows",
     "backlog",
     "openspec/specs"
-  ].filter((path) => !(existsSync(resolve(root, "tests/ts-067-navigation-state.test.mjs")) && path === "site/core.js"));
+  ].filter((path) => !(existsSync(resolve(root, "tests/ts-067-navigation-state.test.mjs")) && path === "site/core.js") &&
+    !(existsSync(resolve(root, "docs/factory/tasks/ASF-V2-012.md")) && path === "backlog"));
   const status = git(["status", "--porcelain", "--", ...protectedPaths]).trim();
   assert.equal(status, "", status);
 });

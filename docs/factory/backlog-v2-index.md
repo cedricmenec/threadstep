@@ -41,11 +41,11 @@ compacte reprend les champs du frontmatter sans le corps Markdown :
 | Champ | Origine |
 | --- | --- |
 | `id`, `type`, `status`, `priority`, `automation`, `risk`, `depends_on`, `created_at` | frontmatter validé |
-| `path` | chemin dépôt en POSIX, ex. `backlog/tasks/TS-012.md` |
+| `path` | chemin dépôt en POSIX, ex. `backlog/archive/TS-012.md` |
 | `content_sha256` | SHA-256 des **octets exacts** du fichier de tâche |
 
 `backlog/archive-index.json` a la même forme, plus un champ `delivery`
-explicitement **nullable** :
+explicitement **nullable** et un champ `closure` optionnel :
 
 - `delivery: null` quand aucune preuve n'est déclarée : la présence en archive
   ne prouve donc jamais `delivered` ;
@@ -53,6 +53,10 @@ explicitement **nullable** :
   uniquement lorsque le frontmatter archivé déclare ces champs. Cette forme est
   l'interface initiale destinée à [ASF-V2-010](tasks/ASF-V2-010.md) ; elle ne
   constitue pas une vérification GitHub.
+- `closure: administrative` marque une clôture demandée par le propriétaire,
+  sans affirmer que les critères d'acceptation ont été réalisés. Il est réservé
+  aux fiches archivées avec `status: done` ; `delivery` reste `null` sans preuve
+  vérifiée.
 
 La sérialisation est `JSON.stringify(entries, null, 2)` suivie d'un saut de
 ligne final. À contenu de fichiers égal, les octets produits sont identiques :

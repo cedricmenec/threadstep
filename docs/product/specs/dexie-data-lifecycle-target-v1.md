@@ -57,7 +57,7 @@ La transition est livrée dans le code courant :
 
 ## Décision complémentaire (18 octobre 2026) — fin de compatibilité V1 après transition
 
-La tâche [TS-040](../../../backlog/tasks/TS-040.md), à exécuter **après TS-036 à TS-039**, prévoit d'éliminer du runtime le stockage métier historique `localStorage` et le **support des sauvegardes/documents V1**. Cette décision ultérieure complète la cible initiale, qui demandait encore de conserver la récupération du V1 : les exigences canoniques concernées devront être adaptées **par deltas OpenSpec lors de l'implémentation**, avec traçabilité de la décision et conservation des archives.
+La tâche [TS-040](../../../backlog/archive/TS-040.md), à exécuter **après TS-036 à TS-039**, prévoit d'éliminer du runtime le stockage métier historique `localStorage` et le **support des sauvegardes/documents V1**. Cette décision ultérieure complète la cible initiale, qui demandait encore de conserver la récupération du V1 : les exigences canoniques concernées devront être adaptées **par deltas OpenSpec lors de l'implémentation**, avec traçabilité de la décision et conservation des archives.
 
 **Ordre de sécurité impératif :** les sauvegardes produites **aujourd'hui à partir d'IndexedDB** utilisent encore la forme JSON `version: 1` de `recordsToDocument`. Avant de retirer le lecteur V1, livrer un nouveau format de sauvegarde **IndexedDB versionné, exportable et restaurable**, avec recette sur profil de test et avertissement de changement de format. Il n'est ensuite **pas nécessaire** de conserver la compatibilité des anciens exports V1. Ne jamais supprimer automatiquement les clés historiques : nettoyage local ciblé uniquement après intégrité de la base et sauvegarde moderne vérifiées, avec consentement.
 
@@ -65,15 +65,15 @@ La tâche [TS-040](../../../backlog/tasks/TS-040.md), à exécuter **après TS-0
 
 | Étape | Tâche | Issue principale |
 |---|---|---|
-| 1 | [TS-032](../../../backlog/tasks/TS-032.md) | IndexedDB autonome, sans Cloud |
-| 2 | [TS-033](../../../backlog/tasks/TS-033.md) | Migration V1 vers local Dexie |
-| 3 | [TS-034](../../../backlog/tasks/TS-034.md) | Diagnostic états natifs et premier pull |
-| 4 | [TS-035](../../../backlog/tasks/TS-035.md) | Imports/restaurations idempotents |
-| 5 | [TS-036](../../../backlog/tasks/TS-036.md) | Réconciliation liée au plan affiché |
-| 6 | [TS-037](../../../backlog/tasks/TS-037.md) | Activation opt-in et premier push consenti |
-| 7 | [TS-038](../../../backlog/tasks/TS-038.md) | Isolation URL/utilisateur, logout/purge |
-| 8 | [TS-039](../../../backlog/tasks/TS-039.md) | Tests E2E, sécurité et recette Chrome mobile |
-| 9 | [TS-040](../../../backlog/tasks/TS-040.md) | Retrait des données métier localStorage et formats de sauvegarde V1 après migration vers des exports IndexedDB versionnés |
+| 1 | [TS-032](../../../backlog/archive/TS-032.md) | IndexedDB autonome, sans Cloud |
+| 2 | [TS-033](../../../backlog/archive/TS-033.md) | Migration V1 vers local Dexie |
+| 3 | [TS-034](../../../backlog/archive/TS-034.md) | Diagnostic états natifs et premier pull |
+| 4 | [TS-035](../../../backlog/archive/TS-035.md) | Imports/restaurations idempotents |
+| 5 | [TS-036](../../../backlog/archive/TS-036.md) | Réconciliation liée au plan affiché |
+| 6 | [TS-037](../../../backlog/archive/TS-037.md) | Activation opt-in et premier push consenti |
+| 7 | [TS-038](../../../backlog/archive/TS-038.md) | Isolation URL/utilisateur, logout/purge |
+| 8 | [TS-039](../../../backlog/archive/TS-039.md) | Tests E2E, sécurité et recette Chrome mobile |
+| 9 | [TS-040](../../../backlog/archive/TS-040.md) | Retrait des données métier localStorage et formats de sauvegarde V1 après migration vers des exports IndexedDB versionnés |
 
 Les tâches sont `ready` pour **préparer un plan** mais `automation: manual` / `risk: high`. Ne pas lancer de modèle OpenSpec payant sans autorisation de l'utilisateur. La validation CI peut attester le format du dépôt et les tests statiques, **pas** la fiabilité de la synchronisation sur un vrai service distant.
 

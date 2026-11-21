@@ -19,7 +19,7 @@ d'archive et aucune exécution automatique ne sont livrées.
 
 ## 2. Deux sources de vérité distinctes
 
-- **État déclaratif** : le frontmatter YAML du fichier `backlog/tasks/TS-NNN.md`.
+- **État déclaratif** : le frontmatter YAML du fichier `backlog/tasks/TS-NNN.md` ou de sa fiche historique dans `backlog/archive/`.
   Il décrit la préparation, la priorité, l'éligibilité et les dépendances.
 - **État opérationnel** : PR, commits, checks et runs GitHub. Un champ Markdown,
   une case cochée ou un fichier présent ne prouvent **jamais** une livraison.
@@ -42,7 +42,7 @@ d'archive et aucune exécution automatique ne sont livrées.
 | `schema_version` | Oui | `2` |
 | `id` | Oui | Unique et immuable ; `TS-NNN` pour ThreadStep |
 | `type` | Oui | `product`, `factory` ; la V1 n'orchestre que `product` |
-| `status` | Oui | `proposed`, `ready`, `on_hold`, `canceled` (état déclaratif) |
+| `status` | Oui | `proposed`, `ready`, `on_hold`, `canceled`, `done` (état déclaratif) |
 | `priority` | Oui | `critical`, `high`, `normal`, `low` |
 | `automation` | Oui | `allowed`, `manual` ; `allowed` par défaut à la génération |
 | `risk` | Oui | `low`, `medium`, `high`, `unknown` ; jamais déduire `low` d'un manque d'information |
@@ -63,6 +63,11 @@ d'archive et aucune exécution automatique ne sont livrées.
   **sans seconde promotion**.
 - **`risk: unknown`** dès que le risque n'est pas caractérisé. `unknown` ne vaut
   **jamais** `low` et n'est **jamais** automatiquement exécutable.
+- **`done`** ferme une fiche et n'est valide que dans `backlog/archive/`. Il peut
+  signaler une clôture administrative demandée par le propriétaire sans prouver
+  que le travail produit a été livré ; dans ce cas, déclarer
+  `closure: administrative`, conserver les critères historiques sans les cocher
+  et laisser `delivery: null`.
 - **Les contre-indications explicites priment sur le défaut** : `type: factory`,
   `risk: medium`, `risk: high`, `risk: unknown`, ou une tâche historique dépourvue
   de champ `automation` ne sont pas éligibles à une exécution automatique, même
@@ -86,7 +91,7 @@ Les invariants ci-dessus sont contrôlés statiquement par
 - présence de tous les champs V2 dans `backlog/tasks/TEMPLATE.md` ;
 - valeurs par défaut de génération du modèle (`status: proposed`,
   `automation: allowed`, `risk: unknown`, `depends_on: []`) ;
-- enums documentés (`product`/`factory`, `proposed`/`ready`/`on_hold`/`canceled`,
+- enums documentés (`product`/`factory`, `proposed`/`ready`/`on_hold`/`canceled`/`done`,
   `critical`/`high`/`normal`/`low`, `allowed`/`manual`, `low`/`medium`/`high`/`unknown`) ;
 - directives présentes dans `AGENTS.md` et `ChatGPT.md` ;
 - tâches factory `ASF-V2-NNN` déclarées `Automation: manual` ;

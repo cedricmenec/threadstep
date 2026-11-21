@@ -634,6 +634,18 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "openspec/changes/ts-067/"
     );
   }
+  const administrativeBacklogClosure = existsSync(
+    resolve(root, "docs/factory/tasks/ASF-V2-012.md")
+  );
+  if (administrativeBacklogClosure) {
+    allowed.push(
+      "backlog/",
+      "docs/factory/",
+      "docs/product/",
+      "scripts/asf/backlog-index.mjs",
+      "tests/"
+    );
+  }
   for (const path of changed) {
     assert.ok(
       allowed.some((prefix) => path === prefix || path.startsWith(prefix)),
@@ -650,6 +662,7 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "AGENTS.md",
     ".github/workflows/",
     "backlog/",
-  ].filter((path) => !(ts067InProgress && path === "site/core.js"));
+  ].filter((path) => !(ts067InProgress && path === "site/core.js") &&
+    !(administrativeBacklogClosure && path === "backlog/"));
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });
