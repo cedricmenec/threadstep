@@ -7,7 +7,7 @@ This directory vendors the Google Stitch Agent Skills for project-local discover
 - Installed skills: 16, across Stitch Design, Stitch Build, and Stitch Utilities.
 - License and upstream notices: see each upstream skill file and repository.
 
-The two skills whose upstream names use the plugin namespace `stitch::` have their frontmatter names normalized to their kebab-case directory names, as required for project-local Agent Skills discovery. Skill guidance and supporting assets otherwise follow the pinned upstream revision.
+The eight skills whose upstream names use the plugin namespace `stitch::` have their frontmatter names normalized to their kebab-case directory names, as required for project-local Agent Skills discovery. Skill guidance and supporting assets otherwise follow the pinned upstream revision.
 
 ## Prerequisite
 
