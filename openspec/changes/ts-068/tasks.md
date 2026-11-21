@@ -4,13 +4,13 @@
 
 ### 1. Project and task card presentation
 
-- [ ] 1.1 Harmoniser la carte projet Overview et l'aperçu des tâches avec les styles locaux et tokens existants ; ajouter des tests déterministes prouvant que les cinq groupes Stitch sont statiques/désactivés, les compteurs canoniques et l'ordre restent corrects, et les commandes existantes sont préservées.
-- [ ] 1.2 Harmoniser le détail React et les lignes de tâche ; ajouter des tests déterministes prouvant que les actions existantes restent inchangées, les nouveaux éléments n'agissent pas, et les champs projet ou activité absents n'affichent aucune valeur d'exemple.
-- [ ] 1.3 Ajouter et exécuter des tests Node/jsdom qui vérifient les règles CSS aux largeurs 320, 390, 430, 768 et 1280 px, les classes/relations DOM parent-sous-tâche et les invariants de focus, scroll et brouillon après re-rendu.
+- [x] 1.1 Harmoniser la carte projet Overview et l'aperçu des tâches avec les styles locaux et tokens existants ; ajouter des tests déterministes prouvant que les cinq groupes Stitch sont statiques/désactivés, les compteurs canoniques et l'ordre restent corrects, et les commandes existantes sont préservées.
+- [x] 1.2 Harmoniser le détail React et les lignes de tâche ; ajouter des tests déterministes prouvant que les actions existantes restent inchangées, les nouveaux éléments n'agissent pas, et les champs projet ou activité absents n'affichent aucune valeur d'exemple.
+- [x] 1.3 Ajouter et exécuter des tests Node/jsdom qui vérifient les règles CSS aux largeurs 320, 390, 430, 768 et 1280 px, les classes/relations DOM parent-sous-tâche et les invariants de focus, scroll et brouillon après re-rendu.
 
 ### 2. Pre-sync verification
 
-- [ ] 2.1 Exécuter les tests ciblés de présentation et d'interaction ; corriger les échecs puis relancer les tests concernés.
+- [x] 2.1 Exécuter les tests ciblés de présentation et d'interaction ; corriger les échecs puis relancer les tests concernés.
 - [ ] 2.2 Exécuter `npm run check`, `npm run build` et `npm run verify:build` ; consigner leurs résultats réels.
 - [ ] 2.3 Exécuter `openspec validate ts-068 --strict --no-interactive` et `node scripts/check-openspec-task-phases.mjs openspec/changes/ts-068/tasks.md` ; corriger tout échec.
 - [ ] 2.4 Exécuter `node scripts/agent-openspec-checkpoint.mjs apply ts-068` et vérifier que le diff exact pré-sync est accepté.

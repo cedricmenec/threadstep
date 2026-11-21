@@ -116,6 +116,15 @@ export function TaskItem({
           <div className="task-actions">
             {handle}
             {toggle}
+            <Button
+              variant="subtle"
+              className="task-deadline-disabled"
+              type="button"
+              aria-label={"Échéance et calendrier indisponibles pour « " + item.title + " »"}
+              disabled
+            >
+              Échéance
+            </Button>
             <TaskActionMenu
               subjectId={subjectId}
               subject={subject}

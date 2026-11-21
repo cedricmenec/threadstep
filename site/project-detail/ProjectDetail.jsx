@@ -109,28 +109,81 @@ export function ProjectDetail({ snapshot, commands }) {
             >
               Renommer le projet
             </Button>
+            <Button
+              variant="subtle"
+              className="project-stitch-disabled"
+              type="button"
+              aria-label="Partage, indisponible"
+              disabled
+            >
+              Partager
+            </Button>
+            <Button
+              variant="subtle"
+              className="project-stitch-disabled"
+              type="button"
+              aria-label="Archivage, indisponible"
+              disabled
+            >
+              Archiver
+            </Button>
           </div>
         </div>
       )}
-      <div className="task-area">
-        <CreateTaskForm
-          subject={{ ...snapshot.project, items: snapshot.items }}
-          commands={commands}
-        />
-        {snapshot.items.length === 0 ? (
-          <p className="empty">Aucune étape. Ajoutez la prochaine action à faire.</p>
-        ) : null}
-        <TaskList
-          subject={{ ...snapshot.project, items: snapshot.items }}
-          commands={commands}
-          transient={transient}
-          hideCompleted={hideCompleted}
-          expandedParents={expandedParents}
-          editingItemId={transient.editingItemId}
-          openMenuId={transient.openMenuId}
-          revealItemId={transient.revealItemId}
-          trackedItemId={trackedItemId}
-        />
+      <dl className="project-stitch-metadata" aria-label="Informations du projet">
+        <div><dt>Description</dt><dd>Non renseignée</dd></div>
+        <div><dt>Catégorie</dt><dd>Non renseignée</dd></div>
+        <div><dt>Code</dt><dd>Non renseigné</dd></div>
+        <div><dt>Couverture</dt><dd>Non disponible</dd></div>
+      </dl>
+      <fieldset className="detail-search-controls" disabled>
+        <legend>Recherche, filtres et tri</legend>
+        <label>
+          Recherche
+          <input type="search" aria-label="Recherche indisponible" />
+        </label>
+        <label>
+          Filtrer par état
+          <select aria-label="Filtre par état indisponible" defaultValue="">
+            <option value="">Filtre indisponible</option>
+          </select>
+        </label>
+        <label>
+          Trier par priorité
+          <select aria-label="Tri par priorité indisponible" defaultValue="">
+            <option value="">Tri indisponible</option>
+          </select>
+        </label>
+      </fieldset>
+      <div className="detail-stitch-layout">
+        <div className="task-area detail-main">
+          <CreateTaskForm
+            subject={{ ...snapshot.project, items: snapshot.items }}
+            commands={commands}
+          />
+          {snapshot.items.length === 0 ? (
+            <p className="empty">Aucune étape. Ajoutez la prochaine action à faire.</p>
+          ) : null}
+          <TaskList
+            subject={{ ...snapshot.project, items: snapshot.items }}
+            commands={commands}
+            transient={transient}
+            hideCompleted={hideCompleted}
+            expandedParents={expandedParents}
+            editingItemId={transient.editingItemId}
+            openMenuId={transient.openMenuId}
+            revealItemId={transient.revealItemId}
+            trackedItemId={trackedItemId}
+          />
+        </div>
+        <aside className="project-stitch-panel" aria-label="Aperçu statique du projet">
+          <h3>Prochaine action</h3>
+          <p>Non disponible</p>
+          <h3>Progression</h3>
+          <p>{subject.progressLabel || "Non disponible"}</p>
+          <h3>Activité</h3>
+          <p>Non disponible</p>
+        </aside>
       </div>
     </section>
   );
