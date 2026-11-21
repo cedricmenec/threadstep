@@ -13,24 +13,24 @@
 </head>
 <body>
   <main class="shell">
-    <header class="hero">
-      <div class="eyebrow"><span class="dot"></span> MON ESPACE DE TRAVAIL</div>
-      <div id="app-shell-root">
-        <div class="header-nav">
-          <button type="button" id="nav-menu-button" class="nav-menu-button" aria-expanded="false" aria-controls="nav-menu-panel">
-            <span class="nav-menu-icon" aria-hidden="true">☰</span>
-            <span class="nav-menu-label">Menu</span>
-          </button>
-          <div id="nav-menu-panel" class="nav-menu-panel" hidden>
-            <nav class="nav-menu" aria-label="Navigation principale">
-              <a href="#/">Mes projets</a>
-              <a href="#/parametres">Paramètres</a>
-              <a href="#/parametres/donnees">Imports / Exports</a>
-              <a href="#/parametres/synchronisation">Synchronisation Dexie Cloud</a>
-            </nav>
-          </div>
+    <div id="app-shell-root">
+      <div class="header-nav">
+        <button type="button" id="nav-menu-button" class="nav-menu-button" aria-expanded="false" aria-controls="nav-menu-panel">
+          <span class="nav-menu-icon" aria-hidden="true">☰</span>
+          <span class="nav-menu-label">Menu</span>
+        </button>
+        <div id="nav-menu-panel" class="nav-menu-panel" data-open="false">
+          <nav class="nav-menu" aria-label="Navigation principale">
+            <a href="#/" aria-current="page">Mes projets</a>
+            <a href="#/parametres">Paramètres</a>
+            <a href="#/parametres/donnees">Imports / Exports</a>
+            <a href="#/parametres/synchronisation">Synchronisation Dexie Cloud</a>
+          </nav>
         </div>
       </div>
+    </div>
+    <header class="hero">
+      <div class="eyebrow"><span class="dot"></span> MON ESPACE DE TRAVAIL</div>
       <h1>Thread<span>Step</span></h1>
       <p>Plusieurs sujets, une idée claire de la prochaine étape.</p>
       <p class="privacy">Sans configuration Cloud, vos données restent dans ce navigateur, dans IndexedDB. Une instance Dexie Cloud ne peut être utilisée que si vous la configurez explicitement.</p>

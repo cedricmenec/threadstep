@@ -947,6 +947,64 @@ preuves automatisées et recette humaine sont détaillés dans
 `docs/product/react-app-shell.md`. Les tests jsdom ne remplacent pas une recette
 desktop, tablette, Chrome Android, tactile, clavier réel ou lecteur d'écran.
 
+## Shell de navigation responsive Stitch (TS-067)
+
+TS-067 harmonise la coque de navigation avec les références approuvées
+`DESKTOP-1`, `M02` et `M32`, sans changer les quatre destinations, les routes,
+les données, la persistance ni les propriétaires DOM. La coque React reste
+limitée à l'en-tête et à la navigation ; Overview reste la propriété de
+TS-066 et les surfaces métier gardent leur contrôleur vanilla.
+
+### Points d'entrée
+
+- `site/index.html` : `#app-shell-root` est un enfant direct de
+  `<main class="shell">`, avant `.hero`, avec le markup de repli `data-open`.
+- `site/app-shell/AppShell.jsx`, `site/app-shell/AppHeader.jsx` et
+  `site/app-shell/AppNavigation.jsx` : une seule navigation,
+  `data-open="true|false"` et `aria-current="page"` sur le lien de destination
+  courante.
+- `site/core.js` : `navigationFragmentForRoute(route)`, fonction pure qui
+  rattache Overview, le détail projet et le repli à « Mes projets », puis
+  chaque section de paramètres à son fragment.
+- `site/styles.css` : section `/* TS-067 ... */ ... /* End TS-067 */`, grille du
+  shell, rail sticky dès `1024px`, tiroir compact et style actif.
+- `docs/product/react-app-shell.md` : carte de propriété, placement de l'hôte,
+  paliers, continuité, retour arrière et limites.
+
+### Tests et vérifications
+
+```sh
+node --test tests/ts-067-navigation-state.test.mjs   tests/ts-067-app-shell-layout.test.mjs   tests/ts-067-app-shell-responsive.test.mjs   tests/ts-067-docs.test.mjs
+node --test tests/ts-041-navigation.test.mjs tests/ts-063-app-shell-*.test.mjs
+node --test tests/ts-066-overview-visual.test.mjs   tests/ts-064-overview-render.test.mjs tests/ts-065-overview-continuity.test.mjs
+npm run check
+npm run build
+npm run verify:build
+```
+
+Les tests TS-067 vérifient la parité des quatre destinations, le mapping pur de
+route, les états `data-open`, `aria-current`, l'unicité du panneau et des
+liens, le focus du bouton, l'absence d'écriture ou d'appel métier, le point de
+rupture local, les cibles de 44 px, les tokens inchangés, la CSP, la stabilité
+de la présentation TS-066 et la documentation. Ils ne remplacent pas une
+recette navigateur, tactile, Chrome Android ou lecteur d'écran.
+
+### Retour arrière
+
+Restaurer `#app-shell-root` dans `.hero`, retirer `navigationFragmentForRoute`
+et les tests TS-067, rétablir l'attribut `hidden` et les règles du tiroir
+compact, puis supprimer la section `/* TS-067 ... */ ... /* End TS-067 */`.
+Aucune donnée, préférence, route, clé de stockage, base IndexedDB, dépendance
+ou configuration Cloud n'est affectée.
+
+### Limites de la vérification
+
+Une CI verte ou un test jsdom ne prouve ni la fidélité visuelle à `DESKTOP-1`,
+`M02` et `M32`, ni le débordement réel, ni le toucher, ni le clavier physique,
+ni le lecteur d'écran. Ces vérifications restent une recette humaine
+`Manual acceptance`, non cochée par `apply` et consignée `NOT_RUN` tant
+qu'elles n'ont pas été réellement effectuées.
+
 ## Cartes projets Overview React (TS-064)
 
 **Recette humaine et tâche dépendante :** TS-064 a reçu un GO fonctionnel global

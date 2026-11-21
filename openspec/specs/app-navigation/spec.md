@@ -11,27 +11,38 @@ effet de bord sur les données ou la synchronisation.
 
 ### Requirement: Header navigation menu
 
-L'application SHALL afficher dans l'en-tête un bouton natif de type `button`
-nommé « Menu », avec une cible d'au moins 44 × 44 px, visible et utilisable sur
-mobile comme sur ordinateur. Le bouton SHALL contrôler un panneau de navigation
-contenant exactement « Mes projets », « Paramètres », « Imports / Exports » et
-« Synchronisation Dexie Cloud », dans cet ordre.
+L'application SHALL afficher un bouton natif `button` nommé « Menu » d'au moins
+44 × 44 px. Sous le point de rupture local, il SHALL contrôler un panneau listant
+exactement « Mes projets », « Paramètres », « Imports / Exports » et
+« Synchronisation Dexie Cloud », dans cet ordre. Au-dessus, il SHALL être masqué
+au profit d'une navigation latérale persistante sans doublon.
 
 #### Scenario: Menu button is present on every route
 
-- **WHEN** l'application affiche la vue d'ensemble, un projet ou une page de paramètres
+- **WHEN** l'application affiche la vue d'ensemble, un projet ou une page de
+  paramètres sur une largeur inférieure au point de rupture local
 - **THEN** le bouton « Menu » reste présent dans l'en-tête
-- **AND** il est utilisable sur un écran étroit comme sur un écran large
+- **AND** il est utilisable sur un écran étroit
+
+#### Scenario: Desktop rail presents the same destinations
+
+- **GIVEN** une largeur supérieure ou égale au point de rupture local
+- **WHEN** l'application affiche la vue d'ensemble, un projet ou une page de
+  paramètres
+- **THEN** les quatre destinations sont visibles dans une navigation latérale
+  persistante
+- **AND** le bouton « Menu » n'est pas présenté comme contrôle visible
+- **AND** aucun lien de navigation principal n'est dupliqué dans le document
 
 #### Scenario: Menu entries are the expected ones
 
-- **WHEN** le panneau de navigation est ouvert
+- **WHEN** le panneau de navigation ou le rail latéral est affiché
 - **THEN** il montre « Mes projets », « Paramètres », « Imports / Exports » et « Synchronisation Dexie Cloud »
 - **AND** aucun autre lien de navigation principal n'y est ajouté
 
 #### Scenario: Menu entries target stable relative fragments
 
-- **WHEN** un élément du panneau est activé
+- **WHEN** un élément du panneau ou du rail est activé
 - **THEN** il cible respectivement `#/`, `#/parametres`, `#/parametres/donnees` et `#/parametres/synchronisation`
 - **AND** aucun identifiant sensible, secret ou propre à un compte n'apparaît dans l'URL
 
@@ -147,16 +158,25 @@ connexion et de gestion des espaces dans des sections nommées.
 ### Requirement: Menu interaction and accessible state
 
 Le bouton Menu SHALL exposer un `aria-expanded` exact et un `aria-controls`
-pointant vers le panneau. Le panneau SHALL être masqué hors ouverture. Le menu
-SHALL se fermer après navigation, par Échap et par une action extérieure
-pertinente ; une fermeture sans navigation SHALL retourner le focus au bouton.
+pointant vers le panneau. Sous le point de rupture local, le panneau SHALL être
+masqué hors ouverture ; au-dessus, il SHALL rester visible comme navigation
+latérale. Le menu SHALL se fermer après navigation, par Échap et par une action
+extérieure ; une fermeture sans navigation SHALL rendre le focus au bouton.
 
 #### Scenario: Closed and open states
 
+- **GIVEN** une largeur inférieure au point de rupture local
 - **WHEN** le menu est fermé
 - **THEN** le bouton expose `aria-expanded="false"` et le panneau est masqué
 - **WHEN** le menu est ouvert
 - **THEN** le bouton expose `aria-expanded="true"` et le panneau est visible
+
+#### Scenario: Desktop rail stays visible without open state
+
+- **GIVEN** une largeur supérieure ou égale au point de rupture local
+- **WHEN** la route est affichée puis parcourue
+- **THEN** le panneau de navigation reste visible et accessible comme rail
+- **AND** aucune ouverture préalable du bouton n'est requise pour l'atteindre
 
 #### Scenario: Activating the button toggles the menu
 
@@ -166,28 +186,28 @@ pertinente ; une fermeture sans navigation SHALL retourner le focus au bouton.
 
 #### Scenario: Escape closes and restores focus
 
-- **GIVEN** le menu est ouvert et le focus est dans le panneau
+- **GIVEN** le tiroir est ouvert et le focus est dans le panneau
 - **WHEN** Échap est actionné
 - **THEN** le menu se ferme
 - **AND** le focus revient au bouton Menu
 
 #### Scenario: Navigation closes the menu
 
-- **GIVEN** le menu est ouvert
+- **GIVEN** le tiroir est ouvert
 - **WHEN** un de ses liens est activé
 - **THEN** le menu se ferme et la route demandée devient active
 - **AND** le focus est placé sur le titre de la page de destination
 
 #### Scenario: Outside action closes the menu
 
-- **GIVEN** le menu est ouvert
+- **GIVEN** le tiroir est ouvert
 - **WHEN** l'utilisateur active un contrôle extérieur au menu
 - **THEN** le menu se ferme
 - **AND** l'action extérieure conserve son comportement
 
 #### Scenario: View change closes the menu
 
-- **GIVEN** le menu est ouvert
+- **GIVEN** le tiroir est ouvert
 - **WHEN** la route change, y compris par Précédent ou Suivant
 - **THEN** le menu se ferme et n'est pas restauré ouvert après le rendu
 
@@ -401,31 +421,40 @@ le repli des fragments inconnus MUST rester identiques au rendu livré.
 ### Requirement: Menu interaction parity through the React shell
 
 Le bouton Menu de la coque SHALL rester un `button` natif nommé « Menu », avec
-`aria-expanded` exact, `aria-controls` pointant vers le panneau et un panneau
-masqué hors ouverture. Le menu MUST se fermer après navigation, par Échap et par
-une action extérieure pertinente ; une fermeture sans navigation restaure le
-focus au déclencheur.
+`aria-expanded` exact et `aria-controls` pointant vers le panneau, masqué hors
+ouverture sous le point de rupture local. Au-dessus, le panneau SHALL rester
+visible comme rail. Le menu MUST se fermer après navigation, par Échap ou action
+extérieure ; une fermeture sans navigation restaure le focus au déclencheur.
 
 #### Scenario: Closed and open states are exact
 
+- **GIVEN** une largeur inférieure au point de rupture local
 - **WHEN** le menu est fermé
 - **THEN** le bouton expose `aria-expanded="false"` et le panneau est masqué
 - **WHEN** le menu est ouvert
 - **THEN** le bouton expose `aria-expanded="true"` et le panneau est visible
 - **AND** `aria-controls` référence le panneau présent une seule fois
 
+#### Scenario: Desktop rail is the same single panel
+
+- **GIVEN** une largeur supérieure ou égale au point de rupture local
+- **WHEN** la coque est rendue
+- **THEN** le panneau de navigation est visible comme rail persistant
+- **AND** il reste l'unique instance du panneau et des quatre liens
+- **AND** le bouton masqué ne crée pas de second contrôle de navigation
+
 #### Scenario: Activation and Escape keep usable focus
 
 - **WHEN** le bouton Menu est activé par clic, toucher, Entrée ou Espace
 - **THEN** le menu s'ouvre s'il était fermé et se ferme s'il était ouvert
-- **GIVEN** le menu est ouvert et le focus est dans le panneau
+- **GIVEN** le tiroir est ouvert et le focus est dans le panneau
 - **WHEN** Échap est actionné
 - **THEN** le menu se ferme et le focus revient au bouton Menu
 - **AND** le focus reste visible sur un contrôle utilisable
 
 #### Scenario: Outside action and view change close without stale focus
 
-- **GIVEN** le menu est ouvert
+- **GIVEN** le tiroir est ouvert
 - **WHEN** un contrôle extérieur au menu est activé, ou que la route change par
   lien, Précédent ou Suivant
 - **THEN** le menu se ferme et n'est pas restauré ouvert après le rendu
@@ -444,17 +473,33 @@ focus au déclencheur.
 
 La coque et le menu SHALL rester utilisables sans débordement horizontal aux
 largeurs 320, 390, 430, 768 et 1280 px, avec des libellés qui reviennent à la
-ligne et des cibles interactives d'au moins 44 × 44 px. Aucune nouvelle
-disposition, sidebar ou point de rupture non approuvé n'est introduit.
+ligne et des cibles d'au moins 44 × 44 px. Le point de rupture local approuvé
+est 1024 px ; aucune autre disposition ou point de rupture non approuvé n'est
+introduit.
 
 #### Scenario: Representative widths do not introduce overflow
 
-- **WHEN** les règles structurelles de l'en-tête et du menu sont vérifiées pour
-  320, 390, 430, 768 et 1280 px
-- **THEN** le panneau est borné à la largeur disponible et les libellés peuvent
+- **WHEN** les règles structurelles de l'en-tête, du rail et du tiroir sont
+  vérifiées pour 320, 390, 430, 768 et 1280 px
+- **THEN** le tiroir est borné à la largeur disponible et les libellés peuvent
   revenir à la ligne
 - **AND** aucune largeur fixe supérieure à la largeur mobile n'est imposée
-- **AND** aucune sidebar permanente ou disposition nouvelle n'est ajoutée
+- **AND** le rail desktop ne provoque pas de débordement horizontal
+
+#### Scenario: Compact widths keep the drawer
+
+- **GIVEN** une largeur de 768, 430, 390 ou 320 px
+- **WHEN** la coque est affichée
+- **THEN** le bouton Menu reste visible et ouvre un tiroir lisible
+- **AND** les quatre destinations restent entièrement visibles et atteignables
+  sans débordement horizontal
+
+#### Scenario: Desktop width shows the persistent rail
+
+- **GIVEN** une largeur de 1280 px
+- **WHEN** la coque est affichée
+- **THEN** les quatre destinations sont visibles dans la navigation latérale
+- **AND** la zone de contenu conserve une largeur lisible sans doublon de liens
 
 #### Scenario: Targets and text remain usable at a narrow width
 
@@ -468,7 +513,43 @@ disposition, sidebar ou point de rupture non approuvé n'est introduit.
 #### Scenario: Automated width checks are not device evidence
 
 - **WHEN** les contrôles structurels de largeur et de cible réussissent
-- **THEN** ils prouvent uniquement les règles de largeur, de retour à la ligne
-  et de média query versionnées
+- **THEN** ils prouvent uniquement les règles de largeur, de retour à la ligne,
+  de média query et de disposition versionnées
 - **AND** ils ne sont pas présentés comme une mesure de débordement sur un
   navigateur ou un appareil réel
+
+### Requirement: Current destination indication
+
+La coque SHALL exposer la destination courante avec `aria-current="page"` sur
+le seul lien correspondant et une distinction visuelle qui ne dépend pas de la
+seule couleur. Le mapping SHALL provenir d'une fonction pure de la route :
+Overview et détail projet vers « Mes projets », puis chaque section de
+paramètres vers sa destination.
+
+#### Scenario: Overview and project detail mark Mes projets
+
+- **WHEN** la route courante est `#/`, un repli vers la vue d'ensemble ou un
+  `#/sujet/<id>` valide
+- **THEN** le lien « Mes projets » expose `aria-current="page"`
+- **AND** aucun autre lien de navigation principal ne porte `aria-current`
+
+#### Scenario: Settings routes mark their destination
+
+- **WHEN** la route courante est `#/parametres`, `#/parametres/donnees` ou
+  `#/parametres/synchronisation`
+- **THEN** seul le lien correspondant expose `aria-current="page"`
+- **AND** les autres liens restent sans `aria-current`
+
+#### Scenario: Unknown routes do not invent an active destination
+
+- **WHEN** le fragment est inconnu ou que la route est invalide
+- **THEN** la destination de repli affichée expose seule `aria-current="page"`
+- **AND** aucune destination supplémentaire, route ou libellé n'est créé
+
+#### Scenario: Active state is visible without relying on colour alone
+
+- **GIVEN** une destination courante
+- **WHEN** le rail ou le tiroir est affiché
+- **THEN** le lien courant présente une distinction de forme, de fond ou de
+  bordure en plus de la couleur
+- **AND** le focus visible reste assuré par le contour partagé

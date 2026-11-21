@@ -30,6 +30,19 @@ const SETTINGS_ROUTES = Object.freeze({
   "/parametres/donnees": "data",
   "/parametres/synchronisation": "sync"
 });
+const SETTINGS_ROUTE_FRAGMENTS = Object.freeze({
+  root: NAV_MENU_ENTRIES[1].fragment,
+  data: NAV_MENU_ENTRIES[2].fragment,
+  sync: NAV_MENU_ENTRIES[3].fragment
+});
+export function navigationFragmentForRoute(route) {
+  if (!route || typeof route !== "object") return null;
+  if (route.view === "overview" || route.view === "subject" || route.view === "invalid") {
+    return NAV_MENU_ENTRIES[0].fragment;
+  }
+  if (route.view !== "settings") return null;
+  return SETTINGS_ROUTE_FRAGMENTS[route.section] || null;
+}
 export function routeHeadingId(route) {
   if (!route || typeof route !== "object") return null;
   if (route.view === "overview") return "dashboard-title";
