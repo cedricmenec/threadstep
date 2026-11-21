@@ -70,7 +70,7 @@ test("TS-064 the Overview modules add no sidebar or fixed desktop layout", () =>
   const source = overviewSourceFiles().map((entry) => entry.source).join("\n");
   assert.doesNotMatch(source, /sidebar|drawer|grid-template-columns|style=\{\{|width:\s*\d+px|minWidth/);
   assert.match(source, /className="subjects"|className="subject"|className="subject-head"/);
-  assert.match(source, /className="subject-controls"/);
+  assert.match(source, /className="subject-actions"/);
   assert.match(source, /className="task-area"/);
   assert.match(source, /className="overview-see-more"/);
   assert.doesNotMatch(source, /<style|dangerouslySetInnerHTML|innerHTML/);

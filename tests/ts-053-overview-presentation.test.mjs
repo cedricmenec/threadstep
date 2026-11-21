@@ -289,8 +289,8 @@ test("TS-053 the synthesis text is produced from authorized document state only"
 });
 
 test("TS-053 the React Overview card keeps both urgency and progress indicators", () => {
-  assert.match(projectCard, /className="small subject-urgency">\{project\.urgencyLabel\}/);
-  assert.match(projectCard, /className="small subject-progress">\{project\.progressLabel\}/);
-  assert.match(projectCard, /className="small">[\s\S]*pending[\s\S]*en attente/);
+  assert.match(projectCard, /<li>\{project\.urgencyLabel\}<\/li>/);
+  assert.match(projectCard, /<li>\{project\.progressLabel\}<\/li>/);
+  assert.match(projectCard, /pending\} étape\{pending > 1 \? "s" : ""\} en attente/);
   assert.doesNotMatch(projectCard, /innerHTML|dangerouslySetInnerHTML/);
 });

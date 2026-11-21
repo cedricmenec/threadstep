@@ -50,6 +50,7 @@ export function OverviewTaskList({
             revealItemId={revealItemId}
             trackedItemId={trackedItemId}
             dragSession={dragSession}
+            isOverview
           />
         ))}
       </ul>

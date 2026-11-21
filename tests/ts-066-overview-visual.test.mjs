@@ -252,12 +252,12 @@ test("TS-066 card and task-preview hierarchy keeps markup and preview markers", 
     const fixture = await createOverviewFixture(adapter);
     const card = fixture.container.querySelector(".subject");
     assert.equal(text(card.querySelector("h3")), "projet long");
-    assert.equal(card.querySelectorAll(".subject-head > div:first-child > p").length, 4);
+    assert.equal(card.querySelectorAll(".project-metrics li").length, 4);
     assert.deepEqual(
-      [...card.querySelectorAll(".subject-controls button:not(.project-stitch-disabled)")].map((node) => node.className),
-      ["secondary subject-open", "subtle subject-move", "subtle subject-move", "danger"]
+      [...card.querySelectorAll(".subject-actions-panel button")].map((node) => node.className),
+      ["subtle subject-move", "subtle subject-move", "danger"]
     );
-    assert.equal(card.querySelector(".task-area").querySelector(".task-form").dataset.subject, "projet long");
+    assert.equal(card.querySelector(".overview-project-footer .task-form").dataset.subject, "projet long");
     assert.equal(card.querySelectorAll(".task-area > .tasks > .task").length, 5);
     assert.equal(card.querySelectorAll(".task-substep").length, 1);
     assert.equal(text(card.querySelector(".task-note")), "Note\nmultiligne");
@@ -273,7 +273,7 @@ test("TS-066 card and task-preview hierarchy keeps markup and preview markers", 
   }
 });
 
-test("TS-068 Overview Stitch affordances are disabled and preserve live card commands", async () => {
+test("TS-071 Overview cards remove fake Stitch data and preserve active project commands", async () => {
   const dom = installDeterministicDom();
   try {
     const doc = documentFixture([
@@ -282,22 +282,16 @@ test("TS-068 Overview Stitch affordances are disabled and preserve live card com
     const { adapter, calls } = makeAdapter({ document: doc, transient: { expandedParents: ["parent"] } });
     const fixture = await createOverviewFixture(adapter);
     const card = fixture.container.querySelector(".subject");
-    assert.equal(card.querySelector(".project-stitch-metadata").textContent.includes("Non renseignée"), true);
-    for (const [selector, label] of [
-      ['button[aria-label="Partage, indisponible"]', "Partager"],
-      ['button[aria-label="Archivage, indisponible"]', "Archiver"]
-    ]) {
-      const control = card.querySelector(selector);
-      assert.ok(control, selector);
-      assert.equal(control.textContent.trim(), label);
-      assert.equal(control.disabled, true);
-      control.click();
-    }
-    const deadline = card.querySelector(".task-deadline-disabled");
-    assert.ok(deadline);
-    assert.equal(deadline.disabled, true);
-    deadline.click();
-    assert.equal(calls.length, 0);
+    assert.equal(card.querySelector(".project-stitch-metadata"), null);
+    assert.equal(card.querySelector('[aria-label="Partage, indisponible"]'), null);
+    assert.equal(card.querySelector('[aria-label="Archivage, indisponible"]'), null);
+    assert.equal(card.querySelector(".subject-open").getAttribute("aria-label"), "Ouvrir le projet Projet réel");
+    card.querySelector(".subject-actions > summary").click();
+    const removeProject = card.querySelector('[aria-label="Supprimer le projet Projet réel"]');
+    assert.ok(removeProject);
+    removeProject.click();
+    assert.equal(card.querySelector(".task-deadline-disabled"), null);
+    assert.deepEqual(calls, [["removeProject", ["Projet réel"]]]);
     assert.equal(card.querySelectorAll(".task-parent").length, 1);
     assert.equal(card.querySelectorAll(".task-substep").length, 1);
     fixture.unmount();
@@ -384,21 +378,18 @@ test("TS-066 compiled Overview parity keeps controls, names, order and Voir plus
     const card = fixture.container.querySelector(".subject");
     assert.equal(card.tagName, "SECTION");
     assert.equal(card.dataset.reactSurface, "overview-card");
-    assert.equal(card.getAttribute("aria-label"), "Projet A");
+    assert.equal(card.getAttribute("aria-labelledby"), "overview-project-Projet%20A");
     assert.equal(card.getAttribute("tabindex"), "-1");
+    assert.equal(card.querySelector(".overview-project-title-line h3").id, "overview-project-Projet%20A");
     assert.deepEqual(
-      [...card.querySelector(".subject-head > div:first-child").children].map((node) => node.tagName + "." + node.className),
-      ["H3.", "P.small", "P.small subject-total", "P.small subject-urgency", "P.small subject-progress"]
+      [...card.querySelectorAll(".project-metrics li")].map((node) => node.textContent),
+      ["7 étapes en attente", "6 tâches au total", "1 urgence restante", "0 / 7 étapes terminées (0 %)"]
     );
     assert.deepEqual(
-      [...card.querySelectorAll(".subject-controls button:not(.project-stitch-disabled)")].map((node) => node.getAttribute("aria-label")),
-      [
-        "Ouvrir le projet Projet A",
-        "Monter le sujet Projet A",
-        "Descendre le sujet Projet A",
-        "Supprimer le sujet Projet A"
-      ]
+      [...card.querySelectorAll(".subject-actions-panel button")].map((node) => node.getAttribute("aria-label")),
+      ["Monter le projet Projet A", "Descendre le projet Projet A", "Supprimer le projet Projet A"]
     );
+    assert.equal(card.querySelectorAll('[aria-label="Ouvrir le projet Projet A"]').length, 1);
     assert.deepEqual(
       [...card.querySelectorAll(".task-area > .tasks > .task")].map((node) => node.dataset.item),
       ["parent", "other", "fourth", "fifth", "sixth"]
@@ -596,10 +587,10 @@ test("TS-066 documentation records visual map, tiers, tokens, continuity, rollba
   for (const heading of [
     "Carte visuelle",
     "Paliers responsive",
-    "Composants et tokens réutilisés",
+    "Composants et interactions",
     "Focus, scroll et continuité",
     "Retour arrière",
-    "Preuves structurelles et recette humaine",
+    "Vérifications et recette",
     "Limites"
   ]) {
     assert.match(doc, new RegExp("## " + heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), heading);
@@ -622,20 +613,19 @@ test("TS-066 documentation records visual map, tiers, tokens, continuity, rollba
     /npm run check/,
     /npm run build/,
     /npm run verify:build/,
-    /non cochée par `apply`/,
     /Chrome Android/,
     /lecteur d'écran/,
-    /NOT_RUN/
+    /recette humaine/
   ]) {
     assert.match(doc, phrase);
   }
   const guide = read("docs/product/developer-guide.md");
-  assert.match(guide, /Présentation visuelle Overview \(TS-066\)/);
+  assert.match(guide, /Présentation visuelle des cartes Overview \(TS-071\)/);
   for (const heading of ["Points d'entrée", "Tests et vérifications", "Retour arrière", "Limites de la vérification"]) {
     assert.match(guide, new RegExp("### " + heading), heading);
   }
   assert.match(guide, /docs\/product\/react-overview-presentation\.md/);
-  assert.match(guide, /tests\/ts-066-overview-\*\.test\.mjs/);
+  assert.match(guide, /tests\/ts-071-overview-\*\.test\.mjs/);
   assert.match(guide, /site\/styles\.css/);
   assert.match(guide, /recette humaine/);
 });
@@ -692,6 +682,28 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "openspec/changes/ts-068/"
     );
   }
+  const ts071InProgress = existsSync(resolve(root, "openspec/changes/ts-071"));
+  if (ts071InProgress) {
+    allowed.push(
+      "site/overview/ProjectCard.jsx",
+      "site/overview/OverviewTaskList.jsx",
+      "site/project-detail/TaskItem.jsx",
+      "site/styles.css",
+      "docs/product/react-overview-presentation.md",
+      "docs/product/react-overview-interactions.md",
+      "docs/product/developer-guide.md",
+      "tests/ts-066-overview-visual.test.mjs",
+      "tests/ts-064-overview-render.test.mjs",
+      "tests/ts-064-overview-responsive.test.mjs",
+      "tests/task-total.test.mjs",
+      "tests/ts-071-",
+      "openspec/changes/ts-071/",
+      "openspec/changes/archive/2026-11-21-ts-071/",
+      "openspec/specs/overview-visual-harmonization/spec.md",
+      "openspec/specs/react-overview-cards/spec.md",
+      "openspec/specs/react-overview-interactions/spec.md"
+    );
+  }
   for (const path of changed) {
     assert.ok(
       allowed.some((prefix) => path === prefix || path.startsWith(prefix)),
@@ -710,6 +722,6 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "backlog/",
   ].filter((path) => !(ts067InProgress && path === "site/core.js") &&
     !(administrativeBacklogClosure && path === "backlog/") &&
-    !(ts068InProgress && path === "site/overview/"));
+    !((ts068InProgress || ts071InProgress) && path === "site/overview/"));
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });
