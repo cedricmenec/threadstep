@@ -6,6 +6,10 @@
 
 | Besoin | Guide |
 | --- | --- |
+| Utiliser les Agent Skills Google Stitch dans le dépôt | [ASF-STITCH-001](tasks/ASF-STITCH-001.md) et [skills installés](../../.agents/skills/README.md) |
+
+| Besoin | Guide |
+| --- | --- |
 | Comprendre les composants, le code et les contrôles | [Guide développeur ASF](developer-guide.md) |
 | Séparer instructions d'agent et exigences produit | [Périmètre du contrat AGENTS.md](agent-contract-scope.md) |
 | Vérifier l'état, les SHAs, PR et runs de référence | [État courant](current-state.md) |
