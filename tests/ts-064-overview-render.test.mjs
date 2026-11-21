@@ -216,7 +216,7 @@ test("TS-064 cards keep markup, order, counters and accessible names", async () 
       "1 urgence restante",
       "0 / 4 étapes terminées (0 %)"
     ]);
-    const controls = [...cards[0].querySelectorAll(".subject-controls button")];
+    const controls = [...cards[0].querySelectorAll(".subject-controls button:not(.project-stitch-disabled)")];
     assert.deepEqual(controls.map((node) => node.className), [
       "secondary subject-open",
       "subtle subject-move",
@@ -229,6 +229,7 @@ test("TS-064 cards keep markup, order, counters and accessible names", async () 
       "Descendre le sujet p1",
       "Supprimer le sujet p1"
     ]);
+    assert.equal(cards[0].querySelectorAll(".project-stitch-disabled:disabled").length, 2);
     const topLevel = [...cards[0].querySelectorAll(".task-area > .tasks > .task")]
       .map((node) => node.dataset.item);
     assert.deepEqual(topLevel, ["urgent", "normal", "later"]);
