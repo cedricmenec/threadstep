@@ -17,7 +17,7 @@ test("TS-071 product guides describe the actual card and mobile reorder behavior
 });
 
 test("TS-071 OpenSpec separates executable checks from human acceptance", () => {
-  const tasks = read("openspec/changes/ts-071/tasks.md");
+  const tasks = read("openspec/changes/archive/2026-11-21-ts-071/tasks.md");
   const manual = tasks.slice(tasks.indexOf("## Manual acceptance"), tasks.indexOf("## Post-sync review"));
   const postSync = tasks.slice(tasks.indexOf("## Post-sync review"));
   assert.match(tasks, /Implementation checklist/);
