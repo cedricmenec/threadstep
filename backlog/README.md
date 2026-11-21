@@ -7,22 +7,22 @@ générés depuis les fichiers Markdown : ne pas les modifier à la main.
 
 ## Fiches actives
 
-| ID | Sujet | Statut |
-| --- | --- | --- |
-| [TS-069](tasks/TS-069.md) | Mise en valeur du formulaire d’édition d’une tâche | `ready` |
-| [TS-070](tasks/TS-070.md) | Filtre compact des projets dans Overview | `ready` |
+Aucune. `index.json` est vide.
 
 ## Fiches archivées
 
 Les 64 fiches présentes de TS-001 à TS-068 ont été fermées à la demande du
 propriétaire. TS-053 à TS-056 n'existent pas. Elles portent `status: done` et
-`closure: administrative` ; cela clôt leur suivi dans le backlog sans attester
-la livraison de leur périmètre. `delivery: null` signifie qu'aucune preuve de
-livraison n'est enregistrée. Les critères et cases d'acceptation d'origine sont
-conservés dans chaque fiche.
+`closure: administrative`, avec `delivery: null` : cela clôt leur suivi sans
+attester la livraison de leur périmètre. Les critères d'origine restent
+inchangés.
 
-TS-068 a également une PR d'implémentation séparée (#231) ; l'archivage
-administratif du brief ne remplace pas la vérification de cette PR.
+TS-069 et TS-070 sont livrées par les PR [#228](https://github.com/cedricmenec/threadstep/pull/228)
+et [#230](https://github.com/cedricmenec/threadstep/pull/230). Leurs SHA et
+preuves CI/Pages vérifiées figurent dans `archive-index.json`. La recette visuelle
+sur appareils réels n'est pas attestée par ces contrôles automatisés.
+
+TS-068 a été livrée par la PR [#231](https://github.com/cedricmenec/threadstep/pull/231).
 
 ## Vérifier ou régénérer les index
 

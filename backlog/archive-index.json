@@ -1006,5 +1006,45 @@
     "content_sha256": "8e2b65b6122dd672d265b2c06c6d5e39bc833dcfbbbb53ad6c7d70a119143d6d",
     "delivery": null,
     "closure": "administrative"
+  },
+  {
+    "id": "TS-069",
+    "path": "backlog/archive/TS-069.md",
+    "type": "product",
+    "status": "done",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-11-13",
+    "content_sha256": "3c35ebf4e5db677f705b30239c9621231ed1cff222ffa6afd3ac6e088df17b34",
+    "delivery": {
+      "head_sha": "3be22f965e59559804c8007f2797f4e319532152",
+      "merge_sha": "3cd423dc8cd4cf405745c9c2b9bb4d9fb516c5ea",
+      "pull_request": "228",
+      "pull_request_url": "https://github.com/cedricmenec/threadstep/pull/228",
+      "verified": "true"
+    },
+    "closure": "administrative"
+  },
+  {
+    "id": "TS-070",
+    "path": "backlog/archive/TS-070.md",
+    "type": "product",
+    "status": "done",
+    "priority": "low",
+    "automation": "manual",
+    "risk": "low",
+    "depends_on": [],
+    "created_at": "2026-11-13",
+    "content_sha256": "46c41933ad1fe08f87a29636ee77b058fc809a36706c4f9866526669c1e46de2",
+    "delivery": {
+      "head_sha": "91dab281b5d3513d44c89eed6602dd3eea7e2110",
+      "merge_sha": "a176a635558f922ddcf2d863186a028ab4e8bdd7",
+      "pull_request": "230",
+      "pull_request_url": "https://github.com/cedricmenec/threadstep/pull/230",
+      "verified": "true"
+    },
+    "closure": "administrative"
   }
 ]
