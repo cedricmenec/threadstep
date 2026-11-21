@@ -7,7 +7,7 @@ import { buildBacklogIndex, contentSha256 } from "../scripts/asf/backlog-index.m
 import { extractFrontmatter } from "../scripts/asf/yaml.mjs";
 
 const root = new URL("../", import.meta.url);
-const tasksDir = new URL("backlog/tasks/", root);
+const tasksDir = new URL("backlog/archive/", root);
 const read = url => readFileSync(url, "utf8");
 
 const HISTORICAL = readdirSync(tasksDir)
@@ -62,10 +62,11 @@ test("every historical task is migrated to the complete V2 frontmatter", () => {
     const { fields, body } = frontmatterOf(id);
     assert.equal(fields.schema_version, "2", id);
     assert.equal(fields.id, id, id);
-    assert.deepEqual(Object.keys(fields).sort(), ["automation", "created_at",
+    assert.deepEqual(Object.keys(fields).sort(), ["automation", "closure", "created_at",
       "depends_on", "id", "priority", "risk", "schema_version", "status", "type"], id);
     assert.ok(["product", "factory"].includes(fields.type), id);
-    assert.ok(["proposed", "ready", "on_hold", "canceled"].includes(fields.status), id);
+    assert.equal(fields.status, "done", id);
+    assert.equal(fields.closure, "administrative", id);
     assert.ok(["critical", "high", "normal", "low"].includes(fields.priority), id);
     assert.ok(["low", "medium", "high", "unknown"].includes(fields.risk), id);
     assert.equal(fields.automation, "manual", id);
@@ -87,7 +88,7 @@ test("no migrated task is automatically selectable by default", () => {
     const { fields } = frontmatterOf(id);
     assert.notEqual(fields.automation, "allowed", id);
     assert.equal(fields.risk, "unknown", id);
-    assert.equal(fields.status, "on_hold", id);
+    assert.equal(fields.status, "done", id);
     const autoEligible = fields.type === "product" && fields.status === "ready" &&
       fields.automation === "allowed" && fields.risk === "low";
     assert.equal(autoEligible, false, id + " must never be auto-eligible");
@@ -111,8 +112,8 @@ test("historical criteria and unchecked checkboxes are preserved verbatim", () =
   }
 });
 
-test("the generated index matches the migrated tasks byte for byte", () => {
-  const entries = JSON.parse(read(new URL("backlog/index.json", root)));
+test("the generated archive index matches the migrated tasks byte for byte", () => {
+  const entries = JSON.parse(read(new URL("backlog/archive-index.json", root)));
   assert.deepEqual(entries.filter(entry => EXPECTED_IDS.includes(entry.id))
     .map(entry => entry.id), EXPECTED_IDS);
   for (const entry of entries) {
@@ -124,18 +125,20 @@ test("the generated index matches the migrated tasks byte for byte", () => {
     assert.equal(entry.automation, fields.automation, entry.id);
     assert.equal(entry.risk, fields.risk, entry.id);
     assert.equal(entry.status, fields.status, entry.id);
+    assert.equal(entry.closure, fields.closure, entry.id);
     assert.deepEqual(entry.depends_on, fields.depends_on, entry.id);
     assert.equal(entry.created_at, fields.created_at, entry.id);
   }
-  assert.deepEqual(JSON.parse(read(new URL("backlog/archive-index.json", root))), []);
 });
 
-test("the builder indexes all migrated tasks without diagnostics or archive inference", () => {
+test("the builder indexes archived tasks without inferring delivery", () => {
   const report = buildBacklogIndex({ root: fileURLToPath(root) });
   assert.deepEqual(report.diagnostics, []);
   assert.deepEqual(report.legacy, []);
-  assert.ok(report.active.length >= 11, "migrated tasks must remain indexed");
-  assert.deepEqual(report.active.filter(entry => EXPECTED_IDS.includes(entry.id))
+  assert.deepEqual(report.archive.filter(entry => EXPECTED_IDS.includes(entry.id))
     .map(entry => entry.id), EXPECTED_IDS);
-  assert.equal(report.archive.length, 0);
+  for (const entry of report.archive.filter(entry => EXPECTED_IDS.includes(entry.id))) {
+    assert.equal(entry.delivery, null, entry.id);
+    assert.equal(entry.closure, "administrative", entry.id);
+  }
 });

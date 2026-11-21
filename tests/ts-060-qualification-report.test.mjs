@@ -127,7 +127,6 @@ test("TS-060 protected paths and existing business specs remain unchanged", () =
     "AGENTS.md",
     "opencode.json",
     ".github/workflows/",
-    "backlog/tasks/TS-060.md",
     "openspec/specs/",
     "openspec/changes/archive/",
     "package.json",

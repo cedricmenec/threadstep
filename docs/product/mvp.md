@@ -176,4 +176,4 @@ La synchronisation opérationnelle vérifiée, l'indicateur de synchronisation e
 la purge restent à livrer (TS-028 à TS-030) ; le document V1 et son export sont
 inchangés.
 
-Source de périmètre : [TS-022](../../backlog/tasks/TS-022.md) et [TS-023](../../backlog/tasks/TS-023.md), désormais livrées.
+Source de périmètre : [TS-022](../../backlog/archive/TS-022.md) et [TS-023](../../backlog/archive/TS-023.md), désormais livrées.

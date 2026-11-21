@@ -40,7 +40,7 @@ Faire évoluer l'Autonomous Software Factory vers une orchestration de vagues **
 - [`ChatGPT.md`](https://github.com/cedricmenec/threadstep/blob/main/ChatGPT.md)
 - [`docs/factory/current-state.md`](https://github.com/cedricmenec/threadstep/blob/main/docs/factory/current-state.md)
 - [`docs/factory/roadmap.md`](https://github.com/cedricmenec/threadstep/blob/main/docs/factory/roadmap.md)
-- [`backlog/tasks/TS-003.md`](https://github.com/cedricmenec/threadstep/blob/main/backlog/tasks/TS-003.md)
+- [`backlog/archive/TS-003.md`](https://github.com/cedricmenec/threadstep/blob/main/backlog/archive/TS-003.md)
 - [`agent-openspec.yml`](https://github.com/cedricmenec/threadstep/blob/main/.github/workflows/agent-openspec.yml)
 
 Ces propositions ne constituent **ni une autorisation de modifier le dépôt, ni une autorisation de lancer OpenRouter, ni une autorisation de fusionner des PR**.

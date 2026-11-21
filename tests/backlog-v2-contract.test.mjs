@@ -39,7 +39,7 @@ test("V2 template encodes the fail-safe generation defaults", () => {
 test("contract documents every enum value", () => {
   const doc = read("docs/factory/backlog-v2-task-contract.md");
   for (const value of ["product", "factory", "proposed", "ready", "on_hold",
-    "canceled", "critical", "high", "normal", "low", "allowed", "manual",
+    "canceled", "done", "critical", "high", "normal", "low", "allowed", "manual",
     "medium", "unknown"]) {
     assert.ok(doc.includes("`" + value + "`"), "enum value missing: " + value);
   }
@@ -83,13 +83,15 @@ test("factory V2 task descriptions are explicitly manual", () => {
   }
 });
 
-test("historical backlog tasks never claim automatic eligibility", () => {
-  const dir = new URL("backlog/tasks/", root);
+test("administratively closed historical tasks remain ineligible for automation", () => {
+  const dir = new URL("backlog/archive/", root);
   const files = readdirSync(dir).filter(name => /^TS-\d{3}\.md$/.test(name) &&
     Number(name.slice(3, 6)) >= 1 && Number(name.slice(3, 6)) <= 11);
   assert.equal(files.length, 11, "expected the original eleven migrated tasks");
   for (const file of files) {
     const text = readFileSync(new URL(file, dir), "utf8");
     assert.doesNotMatch(text, /^automation:\s*allowed\s*$/im, file);
+    assert.match(text, /^status:\s*done\s*$/im, file);
+    assert.match(text, /^closure:\s*administrative\s*$/im, file);
   }
 });

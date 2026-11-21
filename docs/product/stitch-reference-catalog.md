@@ -31,7 +31,7 @@ aucune référence absente n'est réputée approuvée.
 
 ### 2.1 Sources utilisées
 
-- **Tâche de référence :** `backlog/tasks/TS-062.md` (contexte, périmètre et
+- **Tâche de référence :** `backlog/archive/TS-062.md` (contexte, périmètre et
   critères d'acceptation).
 - **Projet Stitch :**
   [projet 10325329939517341056](https://stitch.withgoogle.com/projects/10325329939517341056).

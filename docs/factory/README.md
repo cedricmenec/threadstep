@@ -38,6 +38,7 @@
 | ASF-V2-008 à 009 | Sécurité OpenSpec orchestrée et workflow de vagues | PR #49 et #50, réalisations sensibles réconciliées via #51 |
 | ASF-V2-010 | Archiveur déterministe / PR documentaire | PR #52 |
 | ASF-V2-011 | Simulations E2E, tests et documentation du protocole de recette | PR #53 |
+| ASF-V2-012 | Clôture administrative des fiches ThreadStep sans preuve de livraison | Cette PR |
 | Validation réelle V1 | TS-012 : une tâche ; TS-013/014 : deux tâches séquentielles | [run #38886939283](https://github.com/cedricmenec/threadstep/actions/runs/38886939283) + [run #38910657187](https://github.com/cedricmenec/threadstep/actions/runs/38910657187), PR #55/#58/#59, CI et Pages |
 
 Voir les pages de module existantes (`backlog-v2-*.md`, `scheduler-*.md`, `wave-manifest-journal.md`, `delivery-verification.md`, `agent-asf-archive.md`, `e2e-validation.md`) pour les détails du code produit *à l'époque de leur première PR*. Leurs en-têtes historiques peuvent parler de « PR en revue » ou de « preuve locale » ; **la présente page et l'état actuel GitHub prévalent pour le statut opérationnel**.
@@ -47,7 +48,7 @@ Voir les pages de module existantes (`backlog-v2-*.md`, `scheduler-*.md`, `wave-
 - `max_tasks=1|2` seulement, avec **un développement payant à la fois**. Le formulaire n'accepte pas dix tâches ; modifier le seul formulaire casserait le contrat sécurisé.
 - `execute` est un acte de dépense explicitement autorisé par le propriétaire. **Aucun plafond USD garanti** n'existe dans la V1 ; chaque tâche peut générer plusieurs appels OpenRouter.
 - L'auto-merge est **natif GitHub**, et ne doit pas contourner le `check` indépendant ; le contrôle post-fusion exige CI et Pages avant le prochain slot.
-- L'archiveur ASF-V2-010 est une capacité de planification/PR indépendante ; les trois nouvelles tâches produits demeurent dans l'index actif tant qu'aucun archivage réellement réalisé n'est observé.
+- Une clôture administrative (`status: done`, `closure: administrative`) ne prouve pas une livraison ; seul `delivery` rempli par des preuves vérifiées porte ce sens.
 - Le journal sur la branche `asf/waves/wave-<run_id>` ne doit jamais être modifié manuellement comme si un échec pouvait être réinitialisé sans danger.
 - Les six scénarios de panne **simulés** sont en place ; la CI rouge réelle a bloqué la PR #61. La recette manuelle et les permissions GitHub App ont été attestées par le propriétaire le 16 octobre 2026, sans journal technique matériel ni capture sensible. Voir [clôture](closeout-2026-10-16.md).
 

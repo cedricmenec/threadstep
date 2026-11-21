@@ -100,7 +100,6 @@ test("TS-059 no new route, storage key, migration or protected factory file is a
     ".github/workflows",
     "AGENTS.md",
     "opencode.json",
-    "backlog/tasks/TS-059.md",
     "openspec/specs",
     "openspec/changes/archive",
     "package.json",

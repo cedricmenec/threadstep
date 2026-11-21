@@ -22,7 +22,7 @@ backlog/
 │   ├── TEMPLATE.md
 │   └── TS-NNN.md              # Tâches en préparation / non archivées
 └── archive/
-    └── TS-NNN.md              # Tâches livrées avec preuves
+    └── TS-NNN.md              # Livrées avec preuves ou clôturées administrativement
 ```
 
 - **Source de vérité déclarative :** frontmatter YAML de chaque tâche Markdown.
@@ -70,7 +70,7 @@ created_at: 2026-10-16
 | `schema_version` | Oui | `2` |
 | `id` | Oui | Unique et immuable ; `TS-NNN` pour ThreadStep |
 | `type` | Oui | `product`, `factory` ; V1 orchestre seulement `product` |
-| `status` | Oui | `proposed`, `ready`, `on_hold`, `canceled` ; état **déclaratif** |
+| `status` | Oui | `proposed`, `ready`, `on_hold`, `canceled`, `done` ; état **déclaratif** |
 | `priority` | Oui | `critical`, `high`, `normal`, `low` |
 | `automation` | Oui | `allowed`, `manual` ; `allowed` par défaut à la génération |
 | `risk` | Oui | `low`, `medium`, `high`, `unknown` ; jamais déduire `low` d'un manque d'information |
@@ -89,14 +89,15 @@ created_at: 2026-10-16
 - `ready` : critères de préparation vérifiés ; l'éligibilité d'exécution dépend encore des faits GitHub et des règles de vague.
 - `on_hold` : suspension volontaire jusqu'à levée documentée.
 - `canceled` : tâche annulée, jamais sélectionnée ; archivage éventuel séparé des livraisons.
+- `done` : fiche fermée et archivée. Cela peut désigner une clôture administrative du backlog ; sans preuve déclarée, cela ne prétend pas que le travail produit ou ses critères d'acceptation sont livrés. Cette valeur exige `closure: administrative` dans l'archive.
 
-Ne pas stocker `running`, `ci_pending`, `failed`, `merged` comme `status` déclaratif : ce sont des **observations opérationnelles**. L'archivage est une **localisation et une preuve documentaire**, pas une nouvelle valeur de préparation.
+Ne pas stocker `running`, `ci_pending`, `failed`, `merged` comme `status` déclaratif : ce sont des **observations opérationnelles**. L'archive est une localisation ; ses métadonnées distinguent explicitement les preuves de livraison d'une clôture administrative.
 
 ### 4.2 Critères pour `ready`
 
 Valeur utilisateur/objectif, périmètre, comportements observables, critères d'acceptation vérifiables, hypothèses bloquantes résolues, risques et dépendances décrits, tests à prévoir, contraintes sécurité/accessibilité/mobile si pertinentes. Les dépendances peuvent être non livrées : elles bloquent l'exécution, **pas** la préparation.
 
-### 4.3 Archivage après livraison
+### 4.3 Archivage après livraison ou clôture administrative
 
 - L'archiveur reçoit une liste de tâches **dont la livraison a été indépendamment vérifiée** (PR finale fusionnée au SHA attendu, contrôles requis et autres preuves selon la politique).
 - Il déplace uniquement ces fichiers vers `backlog/archive/`, conserve leur contenu historique, ajoute ou génère les métadonnées de livraison **sans cocher rétroactivement** les anciennes cases d'acceptation, puis régénère les index.
@@ -104,6 +105,7 @@ Valeur utilisateur/objectif, périmètre, comportements observables, critères d
 - Cette PR doit être contrôlée par la CI indépendante de `main`. La fusion native n'est demandée que si une autorisation explicite la couvre et si la protection `Protect Main` et le check `check` sont vérifiés. Sinon, la PR demeure ouverte.
 - Si l'archivage échoue, inscrire `archive_pending` dans le journal opérationnel ; le scheduler reconnaît la livraison par ses preuves GitHub et refuse toute réexécution.
 - Les documents OpenSpec archivés sous `openspec/changes/archive/` conservent leur propre cycle de vie : il s'agit d'artefacts différents.
+- Une demande explicite du propriétaire peut clôturer en lot des fiches sans preuve de livraison. Les fichiers sont déplacés dans `backlog/archive/` avec `status: done` et `closure: administrative` ; leurs cases historiques restent inchangées et `delivery` reste `null`. C'est une clôture documentaire du backlog, pas une validation fonctionnelle ni une preuve GitHub.
 
 ### 4.4 Hors vague
 
@@ -111,7 +113,7 @@ Des livraisons manuelles peuvent aussi nécessiter archivage. La V1 prévoit un 
 
 ## 5. Indexation et validation
 
-`backlog/index.json` est un tableau stable de fiches compactes : `id`, `path`, `type`, `status`, `priority`, `automation`, `risk`, `depends_on`, `created_at`, `content_sha256`. Il n'intègre pas le texte des critères d'acceptation. `backlog/archive-index.json` liste les références archivées, leurs chemins et leurs preuves de livraison (numéro/URL de PR, SHA de fusion et de tête si disponibles, état de vérification), sans secrets.
+`backlog/index.json` est un tableau stable de fiches compactes : `id`, `path`, `type`, `status`, `priority`, `automation`, `risk`, `depends_on`, `created_at`, `content_sha256`. Il n'intègre pas le texte des critères d'acceptation. `backlog/archive-index.json` liste les références archivées, leurs chemins, leurs preuves de livraison éventuelles et, pour une clôture administrative, `closure: administrative`, sans secrets. `delivery: null` n'est jamais transformé en livraison par le statut `done` ou la localisation archive.
 
 Le générateur doit :
 
@@ -140,7 +142,8 @@ Le générateur ne doit pas conclure `delivered` à partir de la seule présence
 - [ ] Un index de 100 tâches est produit sans appel LLM et ne contient aucun corps Markdown.
 - [ ] Dépendance inconnue, cyclique, identifiant dupliqué et index obsolète font échouer la validation.
 - [ ] L'état `ready` ne suffit jamais à autoriser un appel OpenRouter.
-- [ ] Une livraison vérifiée peut être archivée par PR documentaire ; une tâche non livrée ne le peut pas.
+- [ ] Une livraison vérifiée est archivée par la voie documentée ; une clôture administrative explicite peut archiver une fiche sans preuve en exigeant `status: done`, `closure: administrative` et `delivery: null`.
+- [ ] `done` ne peut pas rester dans `backlog/tasks/` et ne constitue jamais une preuve de livraison.
 - [ ] Un archivage en attente n'expose pas la tâche à une nouvelle exécution.
 - [ ] Les liens, critères historiques, spécifications canoniques et règles de protection de `main` sont préservés.
 

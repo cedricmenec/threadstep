@@ -18,7 +18,7 @@ export const REQUIRED_FIELDS = Object.freeze(["schema_version", "id", "type", "s
   "priority", "automation", "risk", "depends_on", "created_at"]);
 export const ENUMS = Object.freeze({
   type: ["product", "factory"],
-  status: ["proposed", "ready", "on_hold", "canceled"],
+  status: ["proposed", "ready", "on_hold", "canceled", "done"],
   priority: ["critical", "high", "normal", "low"],
   automation: ["allowed", "manual"],
   risk: ["low", "medium", "high", "unknown"]
@@ -30,7 +30,7 @@ export const GIT_SHA_PATTERN = /^[a-f0-9]{40}$/i;
 const DELIVERY_FIELDS = Object.freeze(["pull_request", "pull_request_url", "merge_sha",
   "head_sha", "verified"]);
 const ACTIVE_FIELDS = new Set(REQUIRED_FIELDS);
-const ARCHIVE_FIELDS = new Set([...REQUIRED_FIELDS, "delivery"]);
+const ARCHIVE_FIELDS = new Set([...REQUIRED_FIELDS, "delivery", "closure"]);
 
 export function serializeIndex(entries) {
   return JSON.stringify(entries, null, 2) + "\n";
@@ -190,6 +190,22 @@ function normalizeTask(fields, { location, repoPath, sha256 }) {
   }
 
   let delivery;
+  let closure;
+  if (location === "archive" && fields.closure !== undefined) {
+    closure = scalar("closure");
+    if (closure !== undefined && closure !== "administrative") {
+      errors.push('invalid closure "' + closure + '"');
+    }
+  }
+  if (fields.status === "done" && location !== "archive") {
+    errors.push('status "done" is valid only for archived tasks');
+  }
+  if (fields.status === "done" && location === "archive" && closure !== "administrative") {
+    errors.push('archived status "done" requires closure: administrative');
+  }
+  if (closure !== undefined && fields.status !== "done") {
+    errors.push('closure metadata requires status "done"');
+  }
   if (location === "archive" && fields.delivery !== undefined && fields.delivery !== null) {
     if (typeof fields.delivery !== "object" || Array.isArray(fields.delivery)) {
       errors.push('field "delivery" must be a mapping');
@@ -227,7 +243,10 @@ function normalizeTask(fields, { location, repoPath, sha256 }) {
     created_at: createdAt,
     content_sha256: sha256
   };
-  if (location === "archive") card.delivery = delivery ?? null;
+  if (location === "archive") {
+    card.delivery = delivery ?? null;
+    if (closure !== undefined) card.closure = closure;
+  }
   return { card, errors };
 }
 

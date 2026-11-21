@@ -5,6 +5,9 @@
 
 **Statut :** découpage de conception approuvé, tâches prêtes pour revue documentaire, aucune implémentation ni exécution autorisée.
 
+La ligne ASF-V2-012 a été ajoutée ensuite pour documenter le contrat de clôture
+administrative. Le statut ci-dessus décrit le lot historique ASF-V2-001..011.
+
 Références : [Backlog V2](../specs/backlog-v2.md), [Scheduler V1](../specs/scheduler-v1.md), [Orchestrator V1](../specs/orchestrator-v1.md).
 
 Chaque tâche ci-dessous est **une PR distincte** de factory, avec contrôles indépendants, mise à jour documentaire dans la même PR et validation explicite de fusion. Les tâches sont liées par leurs dépendances ; la priorité n'annule jamais une dépendance.
@@ -39,6 +42,7 @@ Chaque tâche ci-dessous est **une PR distincte** de factory, avec contrôles in
 | --- | --- | --- |
 | [ASF-V2-010](ASF-V2-010.md) | Archiveur déterministe avec PR documentaire | ASF-V2-002, ASF-V2-003, ASF-V2-007, ASF-V2-009 |
 | [ASF-V2-011](ASF-V2-011.md) | Validation E2E progressive et mise en service contrôlée | ASF-V2-008, ASF-V2-009, ASF-V2-010 |
+| [ASF-V2-012](ASF-V2-012.md) | Clôture administrative en lot sans preuve de livraison | ASF-V2-002, ASF-V2-010 |
 
 ## Contraintes de démarrage
 

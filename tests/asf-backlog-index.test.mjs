@@ -15,7 +15,7 @@ const cli = fileURLToPath(new URL("../scripts/asf/backlog-cli.mjs", import.meta.
 
 function taskMarkdown({ id, type = "product", status = "ready", priority = "normal",
   automation = "allowed", risk = "low", dependsOn = [], createdAt = "2026-10-16",
-  delivery = null, body = "Unique body for " + id } = {}) {
+  delivery = null, closure = null, body = "Unique body for " + id } = {}) {
   const lines = ["---", "schema_version: 2", "id: " + id, "type: " + type,
     "status: " + status, "priority: " + priority, "automation: " + automation,
     "risk: " + risk];
@@ -26,6 +26,7 @@ function taskMarkdown({ id, type = "product", status = "ready", priority = "norm
     lines.push("depends_on: []");
   }
   lines.push("created_at: " + createdAt);
+  if (closure) lines.push("closure: " + closure);
   if (delivery) {
     lines.push("delivery:");
     for (const [key, value] of Object.entries(delivery)) lines.push("  " + key + ": " + value);
@@ -166,6 +167,27 @@ test("explicit archive delivery evidence is kept separate from location", (t) =>
   });
 });
 
+test("administrative done status is archive-only and never implies delivery", (t) => {
+  const root = repo(t, {
+    archive: { "TS-005.md": taskMarkdown({
+      id: "TS-005", status: "done", closure: "administrative"
+    }) }
+  });
+  const { archive, diagnostics } = buildBacklogIndex({ root });
+  assert.deepEqual(diagnostics, []);
+  assert.equal(archive[0].status, "done");
+  assert.equal(archive[0].closure, "administrative");
+  assert.equal(archive[0].delivery, null);
+
+  const invalidRoot = repo(t, {
+    tasks: { "TS-005.md": taskMarkdown({
+      id: "TS-005", status: "done", closure: "administrative"
+    }) }
+  });
+  const invalid = buildBacklogIndex({ root: invalidRoot });
+  assert.match(messages(invalid.diagnostics), /status "done" is valid only for archived tasks/);
+});
+
 test("unknown dependencies, self references and unsafe values fail closed", (t) => {
   const root = repo(t, { tasks: {
     "TS-001.md": taskMarkdown({ id: "TS-001", dependsOn: ["TS-999"] }),
@@ -210,7 +232,7 @@ test("schema, id pattern and enum definitions match the published contract", () 
   assert.ok(!ID_PATTERN.test("ts-001"));
   assert.ok(!ID_PATTERN.test("../TS-001"));
   assert.deepEqual(ENUMS.type, ["product", "factory"]);
-  assert.deepEqual(ENUMS.status, ["proposed", "ready", "on_hold", "canceled"]);
+  assert.deepEqual(ENUMS.status, ["proposed", "ready", "on_hold", "canceled", "done"]);
   assert.ok(ENUMS.risk.includes("unknown"));
 });
 
