@@ -11,9 +11,9 @@
 ### 2. Pre-sync verification
 
 - [x] 2.1 Exécuter les tests ciblés de présentation et d'interaction ; corriger les échecs puis relancer les tests concernés.
-- [ ] 2.2 Exécuter `npm run check`, `npm run build` et `npm run verify:build` ; consigner leurs résultats réels.
-- [ ] 2.3 Exécuter `openspec validate ts-068 --strict --no-interactive` et `node scripts/check-openspec-task-phases.mjs openspec/changes/ts-068/tasks.md` ; corriger tout échec.
-- [ ] 2.4 Exécuter `node scripts/agent-openspec-checkpoint.mjs apply ts-068` et vérifier que le diff exact pré-sync est accepté.
+- [x] 2.2 Exécuter `npm run check`, `npm run build` et `npm run verify:build` ; consigner leurs résultats réels.
+- [x] 2.3 Exécuter `openspec validate ts-068 --strict --no-interactive` et `node scripts/check-openspec-task-phases.mjs openspec/changes/ts-068/tasks.md` ; corriger tout échec.
+- [x] 2.4 Exécuter `node scripts/agent-openspec-checkpoint.mjs apply ts-068` et vérifier que le diff exact pré-sync est accepté.
 
 ## Manual acceptance
 
