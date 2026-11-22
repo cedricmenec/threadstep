@@ -34,7 +34,7 @@ test("the .subject-total style wraps in narrow headers without colour-only signa
 });
 
 test("the React Overview card and adapter keep the same total line without duplicating pending steps", () => {
-  assert.match(projectCard, /className="small subject-total">\{project\.totalTaskCountLabel\}/);
+  assert.match(projectCard, /<li>\{project\.totalTaskCountLabel\}<\/li>/);
   assert.match(overviewAdapter, /totalTaskCountLabel\(topLevelCount\)/);
   assert.doesNotMatch(projectCard, /innerHTML|dangerouslySetInnerHTML/);
 });

@@ -22,7 +22,8 @@ export function TaskItem({
   openMenuId,
   revealItemId,
   trackedItemId,
-  dragSession
+  dragSession,
+  isOverview = false
 }) {
   const level = item.parentId === null || item.parentId === undefined
     ? "task-parent"
@@ -95,13 +96,15 @@ export function TaskItem({
       ) : (
         <>
           <div className="task-row">
-            <input
-              className="task-check"
-              type="checkbox"
-              checked={item.done}
-              aria-label={"Terminer " + item.title}
-              onChange={(event) => commands.toggleItem(subjectId, item.id, event.target.checked)}
-            />
+            <label className="task-check-target">
+              <input
+                className="task-check"
+                type="checkbox"
+                checked={item.done}
+                aria-label={"Terminer " + item.title}
+                onChange={(event) => commands.toggleItem(subjectId, item.id, event.target.checked)}
+              />
+            </label>
             <span className="task-title">{item.title}</span>
             <PriorityControl
               variant="badge"
@@ -116,15 +119,17 @@ export function TaskItem({
           <div className="task-actions">
             {handle}
             {toggle}
-            <Button
-              variant="subtle"
-              className="task-deadline-disabled"
-              type="button"
-              aria-label={"Échéance et calendrier indisponibles pour « " + item.title + " »"}
-              disabled
-            >
-              Échéance
-            </Button>
+            {!isOverview ? (
+              <Button
+                variant="subtle"
+                className="task-deadline-disabled"
+                type="button"
+                aria-label={"Échéance et calendrier indisponibles pour « " + item.title + " »"}
+                disabled
+              >
+                Échéance
+              </Button>
+            ) : null}
             <TaskActionMenu
               subjectId={subjectId}
               subject={subject}
@@ -156,6 +161,7 @@ export function TaskItem({
               revealItemId={revealItemId}
               trackedItemId={trackedItemId}
               dragSession={dragSession}
+              isOverview={isOverview}
             />
           )}
         />

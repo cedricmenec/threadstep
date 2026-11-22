@@ -206,40 +206,34 @@ test("TS-064 cards keep markup, order, counters and accessible names", async () 
     assert.equal(cards.length, 2);
     assert.equal(fixture.container.querySelectorAll('[data-react-surface="overview-card"]').length, 2);
     assert.equal(cards[0].dataset.subject, "p1");
-    assert.equal(cards[0].getAttribute("aria-label"), "p1");
+    assert.equal(cards[0].getAttribute("aria-labelledby"), "overview-project-p1");
     assert.equal(cards[0].getAttribute("tabindex"), "-1");
     assert.equal(text(cards[0].querySelector("h3")), "p1");
-    const labels = [...cards[0].querySelectorAll(".subject-head > div:first-child > p")].map(text);
+    const labels = [...cards[0].querySelectorAll(".project-metrics li")].map(text);
     assert.deepEqual(labels, [
       "4 étapes en attente",
       "3 tâches au total",
       "1 urgence restante",
       "0 / 4 étapes terminées (0 %)"
     ]);
-    const controls = [...cards[0].querySelectorAll(".subject-controls button:not(.project-stitch-disabled)")];
-    assert.deepEqual(controls.map((node) => node.className), [
-      "secondary subject-open",
-      "subtle subject-move",
-      "subtle subject-move",
-      "danger"
-    ]);
+    const controls = [...cards[0].querySelectorAll(".subject-actions-panel button")];
     assert.deepEqual(controls.map((node) => node.getAttribute("aria-label")), [
-      "Ouvrir le projet p1",
-      "Monter le sujet p1",
-      "Descendre le sujet p1",
-      "Supprimer le sujet p1"
+      "Monter le projet p1",
+      "Descendre le projet p1",
+      "Supprimer le projet p1"
     ]);
-    assert.equal(cards[0].querySelectorAll(".project-stitch-disabled:disabled").length, 2);
+    assert.equal(cards[0].querySelectorAll(".subject-open").length, 1);
+    assert.equal(cards[0].querySelectorAll(".project-stitch-disabled:disabled").length, 0);
     const topLevel = [...cards[0].querySelectorAll(".task-area > .tasks > .task")]
       .map((node) => node.dataset.item);
     assert.deepEqual(topLevel, ["urgent", "normal", "later"]);
-    assert.equal(cards[0].querySelector(".task-form").dataset.subject, "p1");
+    assert.equal(cards[0].querySelector(".overview-project-footer .task-form").dataset.subject, "p1");
     assert.equal(cards[0].querySelector(".task-check").getAttribute("aria-label"), "Terminer urgent");
     assert.equal(
       cards[0].querySelector(".priority-control").getAttribute("aria-label"),
       "Priorité de « urgent » : Urgent"
     );
-    assert.match(text(cards[1].querySelector(".empty")), /Aucune étape/);
+    assert.match(text(cards[1].querySelector(".overview-project-empty")), /Aucune tâche/);
     fixture.unmount();
   } finally {
     await new Promise((resolve) => setTimeout(resolve, 0));

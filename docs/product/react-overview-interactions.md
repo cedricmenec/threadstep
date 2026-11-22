@@ -62,7 +62,11 @@ déclenche aucune écriture parallèle. `CreateTaskForm`, `TaskEditor` et
 
 Un dépôt vers un autre sujet, une autre priorité, une sous-étape ou un espace
 vide est refusé. Lorsque « Masquer les étapes terminées » est actif, les
-poignées ne sont pas rendues, comme dans le rendu livré.
+poignées ne sont pas rendues, comme dans le rendu livré. TS-071 masque aussi
+les poignées dans la présentation mobile et pour les pointeurs grossiers afin
+d'éviter un glissement accidentel ; les commandes Monter/Descendre de
+`TaskActionMenu` restent l'alternative tactile et clavier, sous réserve des
+mêmes règles `canMoveWithinPriority` et de visibilité existantes.
 
 ## Diagnostic
 

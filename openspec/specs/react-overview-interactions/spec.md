@@ -211,42 +211,6 @@ précédent MUST être réutilisé, exposé ou écrit dans le nouveau contexte.
 - **AND** les états de chargement ou d'action requise prévus par
   `overview-project-read-state` restent seuls affichés
 
-### Requirement: Interaction parity and safe rendering
-
-Les commandes et éditeurs Overview SHALL conserver les éléments HTML, classes,
-`data-*`, libellés français, noms accessibles, ordres de lecture et cibles
-tactiles du rendu livré. Les contenus utilisateur MUST rester des nœuds texte
-et aucune route, dépendance ou clé de stockage ne doit être ajoutée.
-
-#### Scenario: Controls keep their classes, names and order
-
-- **WHEN** une carte, une tâche, un éditeur et un menu Overview sont rendus
-- **THEN** les contrôles, libellés, classes, `data-*`, noms accessibles et ordres
-  de lecture restent ceux du rendu livré
-- **AND** les cibles interactives conservent la taille tactile existante
-
-#### Scenario: User markup is rendered literally
-
-- **GIVEN** un titre, une note ou un nom accessible contient du markup
-- **WHEN** une carte, une tâche ou un message de validation est rendu
-- **THEN** le contenu reste un nœud texte
-- **AND** aucun élément exécutable n'est créé
-
-#### Scenario: Completed filter suspends reordering without changing data
-
-- **GIVEN** « Masquer les étapes terminées » est actif
-- **WHEN** les tâches Overview sont rendues
-- **THEN** les commandes de réordonnancement sont indisponibles comme dans le
-  rendu livré
-- **AND** l'ordre stocké et les données restent inchangés
-
-#### Scenario: No route or storage change
-
-- **WHEN** les modules d'interaction et le build sont inspectés
-- **THEN** aucune route, clé de stockage, préférence persistée, dépendance ou
-  ressource réseau n'est ajoutée
-- **AND** l'export/import et la CSP restent inchangés
-
 ### Requirement: Preserved platform and business boundaries
 
 Le changement SHALL préserver les routes hash, Dexie/IndexedDB, l'identité
@@ -301,3 +265,36 @@ pas être présentées comme prouvées par la CI.
   clavier, Chrome Android ou lecteur d'écran réelle
 - **AND** ces scénarios restent explicitement à effectuer dans la recette
   manuelle
+
+### Requirement: Accessible task reordering on touch devices
+
+La surface Overview SHALL conserver une commande clavier et tactile pour déplacer une tâche sur les appareils où la poignée de glissement est masquée, en appliquant les mêmes règles de priorité, de parenté, d’ordre et de validation que le contrôleur existant.
+
+#### Scenario: Touch device uses task action menu
+
+- **GIVEN** un appareil à pointeur grossier ou une vue mobile sans poignée de glissement
+- **WHEN** l’utilisateur ouvre les actions d’une tâche réordonnable
+- **THEN** les commandes de déplacement avant/arrière applicables restent accessibles avec un nom indiquant le contexte de priorité ou de parenté
+- **AND** une commande invalide ou sans effet n’écrit aucune donnée
+
+#### Scenario: Reordering rules remain unchanged
+
+- **WHEN** une tâche Overview est déplacée au clavier ou au toucher
+- **THEN** le contrôleur applique les règles existantes de priorité et de parenté
+- **AND** une activation valide produit au plus une mutation déléguée
+
+### Requirement: Task controls retain accessible names and safe text
+
+Les contrôles de tâche conservés dans Overview SHALL garder des noms accessibles qui identifient leur tâche et leur action. Les titres et notes MUST être rendus comme texte ; les actions projet regroupées ne MUST NOT dupliquer une commande.
+
+#### Scenario: Task control names identify the task
+
+- **GIVEN** une tâche avec priorité, sous-tâches et menu d’actions
+- **WHEN** ses contrôles sont rendus dans Overview
+- **THEN** la complétion, la priorité, l’ouverture des sous-tâches et les actions de menu ont des noms accessibles qui identifient la tâche
+- **AND** les commandes de projet restent distinctes de celles de tâche
+
+#### Scenario: User text cannot create markup
+- **GIVEN** un titre ou une note contenant du balisage
+- **WHEN** le texte est affiché dans une carte ou une tâche
+- **THEN** il reste littéral et ne crée aucun élément exécutable

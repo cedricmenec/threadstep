@@ -499,3 +499,44 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .dashboard .subject-controls button{width:100%}
 }
 /* End TS-066 */
+
+/* TS-071 Overview project cards */
+.dashboard .overview-project-card{background:var(--color-surface);border-color:var(--color-border-subtle);border-radius:var(--radius-panel);padding:var(--space-5);box-shadow:0 1px 2px #24382f0a}
+.dashboard .overview-project-card .subject-head{position:relative;align-items:flex-start;gap:var(--space-3)}
+.dashboard .overview-project-heading{flex:1 1 0;min-width:0}
+.dashboard .overview-project-title-line{display:flex;align-items:flex-start;gap:var(--space-3);min-width:0}
+.dashboard .overview-project-marker{width:9px;height:9px;flex:0 0 9px;margin-top:7px;border-radius:50%;background:var(--color-action)}
+.dashboard .overview-project-card h3{flex:1;min-width:0;margin:0;font-size:clamp(1.05rem,1.8vw,1.3rem);line-height:1.35;overflow-wrap:anywhere}
+.dashboard .project-metrics{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-3);list-style:none;margin:var(--space-3) 0 0;padding:0;min-width:0}
+.dashboard .project-metrics li{min-width:0;max-width:100%;padding:3px 8px;border-radius:var(--radius-pill);background:var(--color-surface-muted);color:var(--color-text-control);font-size:var(--font-size-small);line-height:var(--line-height-control);overflow-wrap:anywhere}
+.dashboard .subject-actions{position:relative;flex:0 0 auto;z-index:2}
+.dashboard .subject-actions>summary{display:flex;align-items:center;justify-content:center;width:var(--control-target-min);height:var(--control-target-min);border:1px solid transparent;border-radius:var(--radius-control);color:var(--color-text-subtle);font-size:1.35rem;font-weight:var(--font-weight-heavy);line-height:1;cursor:pointer;list-style:none}
+.dashboard .subject-actions>summary::-webkit-details-marker{display:none}
+.dashboard .subject-actions>summary:hover,.dashboard .subject-actions[open]>summary{background:var(--color-surface-muted);color:var(--color-text)}
+.dashboard .subject-actions>summary:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
+.dashboard .subject-actions-panel{position:absolute;top:calc(100% + var(--space-2));right:0;display:flex;flex-direction:column;gap:var(--space-2);width:min(240px,calc(100vw - 48px));padding:var(--space-2);border:1px solid var(--color-border-subtle);border-radius:var(--radius-control);background:var(--color-surface);box-shadow:0 8px 20px #24382f1a}
+.dashboard .subject-actions-panel button{min-width:var(--control-target-min);min-height:var(--control-target-min);white-space:normal;text-align:left;overflow-wrap:anywhere}
+.dashboard .subject-actions-panel button:focus-visible,.dashboard .subject-open:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
+.dashboard .task-area{margin-top:var(--space-5)}
+.dashboard .overview-project-empty,.dashboard .overview-project-filtered-empty{margin:0;padding:var(--space-5);border-radius:var(--radius-control);background:var(--color-surface-muted);color:var(--color-text-secondary);line-height:1.5;text-align:center}
+.dashboard .overview-project-footer{display:flex;align-items:flex-end;gap:var(--space-3);margin-top:var(--space-5);min-width:0}
+.dashboard .overview-project-footer .task-form{flex:1 1 360px;min-width:0;margin:0}
+.dashboard .overview-project-footer .task-form input{min-width:0}
+.dashboard .overview-project-footer .task-form input,.dashboard .overview-project-footer .task-form select,.dashboard .overview-project-footer .task-form button{min-height:var(--control-target-min)}
+.dashboard .overview-project-footer .subject-open{flex:0 0 auto;min-height:var(--control-target-min);border-radius:var(--radius-control);font-weight:var(--font-weight-bold);white-space:normal;overflow-wrap:anywhere}
+.dashboard .overview-project-card .task{padding-top:var(--space-3);margin-top:var(--space-3)}
+.dashboard .overview-project-card .task-row{align-items:center;gap:var(--space-3)}
+.dashboard .overview-project-card .task-check-target{display:flex;align-items:center;justify-content:center;flex:0 0 var(--control-target-min);width:var(--control-target-min);height:var(--control-target-min);cursor:pointer}
+.dashboard .overview-project-card .task-check{margin:0}
+.dashboard .overview-project-card .task-title{line-height:1.5}
+.dashboard .overview-project-card .task-parent>.task-row .task-title{font-size:1rem;font-weight:var(--font-weight-bold)}
+.dashboard .overview-project-card .task-substep{padding-left:0}
+.dashboard .overview-project-card .children{padding-left:20px;border-left:2px solid var(--color-border-subtle)}
+.dashboard .overview-project-card .task-note{max-width:100%;color:var(--color-text-secondary);line-height:1.5;overflow-wrap:anywhere}
+.dashboard .overview-project-card .task-handle:focus-visible,.dashboard .overview-project-card .task-check:focus-visible,.dashboard .overview-project-card .task-menu-button:focus-visible,.dashboard .overview-project-card .task-toggle:focus-visible,.dashboard .overview-project-card .priority-control:focus-visible,.dashboard .overview-project-card .overview-see-more:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
+.dashboard .overview-project-card .overview-see-more{margin-top:var(--space-4)}
+@media(min-width:768px){.dashboard .overview-project-card{padding:20px 24px}.dashboard .overview-project-card .task-area{margin-top:var(--space-6)}.dashboard .overview-project-card .task-parent>.task-row .task-title{font-size:1.02rem}}
+@media(max-width:620px){.dashboard .overview-project-card{padding:var(--space-5)}.dashboard .overview-project-card .subject-head{gap:var(--space-2)}.dashboard .project-metrics{gap:var(--space-2)}.dashboard .overview-project-footer{align-items:stretch;flex-direction:column}.dashboard .overview-project-footer .task-form{flex:1 1 auto;width:100%}.dashboard .overview-project-footer .subject-open{width:100%;min-height:var(--control-target-min)}.dashboard .overview-project-card .task-row{gap:var(--space-2)}.dashboard .overview-project-card .children{padding-left:20px}.dashboard .overview-project-card .task-actions{margin-left:20px}.dashboard .overview-project-card .task-parent>.task-row .task-title{font-size:.96rem}.dashboard .overview-project-card .task-substep>.task-row .task-title{font-size:.88rem}}
+@media(max-width:620px),(pointer:coarse){.dashboard .overview-project-card .task-handle{display:none}}
+@media(max-width:320px){.dashboard .overview-project-card{padding:var(--space-3)}.dashboard .overview-project-title-line{gap:var(--space-2)}.dashboard .project-metrics li{font-size:.72rem}.dashboard .overview-project-footer .task-form{flex-direction:row}.dashboard .overview-project-footer .task-form input{flex-basis:100%}}
+/* End TS-071 */
