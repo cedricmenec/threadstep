@@ -2,15 +2,15 @@
 
 ## 1. Project card rendering
 
-- [ ] 1.1 Simplify the visible project card to retain only project name, canonical total and urgent counts, and the existing project-open action; add deterministic style/render checks for visible content, exact counts, unique navigation, and hidden task rows.
-- [ ] 1.2 Hide global Overview summaries, filters, urgency lists and task previews while preserving project creation and read/loading states; add assertions for the project-list view and empty state.
-- [ ] 1.3 Update responsive styles and tests so project cards wrap and retain a visible keyboard focus target without horizontal overflow indicators at narrow widths.
+- [x] 1.1 Simplify the visible project card to retain only project name, canonical total and urgent counts, and the existing project-open action; add deterministic style/render checks for visible content, exact counts, unique navigation, and hidden task rows.
+- [x] 1.2 Hide global Overview summaries, filters, urgency lists and task previews while preserving project creation and read/loading states; add assertions for the project-list view and empty state.
+- [x] 1.3 Update responsive styles and tests so project cards wrap and retain a visible keyboard focus target without horizontal overflow indicators at narrow widths.
 
 ## 2. Regression and checks
 
-- [ ] 2.1 Add or adapt deterministic tests for same-context card refresh, focus continuity, project navigation, and no persistence side effects; run the targeted Overview test files.
-- [ ] 2.2 Synchronize the Overview and metrics component guides and verify their documented structure matches the implementation.
-- [ ] 2.3 Run `npm run check`, `npm run build`, `npm run verify:build`, strict OpenSpec validation and `node scripts/check-openspec-task-phases.mjs openspec/changes/ts-073/tasks.md`.
+- [x] 2.1 Automated tests: `node --test tests/ts-066-overview-visual.test.mjs tests/ts-071-overview-render.test.mjs tests/ts-072-project-detail.test.mjs tests/ts-073-overview-responsive.test.mjs` assert same-context refresh, focus continuity, project navigation, presentation and persistence behavior.
+- [x] 2.2 Synchronize the Overview and metrics component guides and verify their documented structure matches the implementation.
+- [x] 2.3 Run `npm run check`, `npm run build`, `npm run verify:build`, strict OpenSpec validation and `node scripts/check-openspec-task-phases.mjs openspec/changes/ts-073/tasks.md`.
 
 ## Manual acceptance
 

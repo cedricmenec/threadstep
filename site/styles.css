@@ -565,3 +565,27 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 .dashboard .overview-project-card .priority-normal{background-image:linear-gradient(var(--color-priority-normal-surface),var(--color-priority-normal-surface))}
 .dashboard .overview-project-card .priority-later{background-image:linear-gradient(var(--color-priority-later-surface),var(--color-priority-later-surface))}
 #dashboard.dashboard-project-detail{padding-top:var(--space-6)}
+
+/* TS-073: keep Overview focused on the project list. */
+.dashboard #resume-card,.dashboard #counter,.dashboard .focus-bar,
+.dashboard #overview-urgencies,.dashboard .filter-toggle,
+.dashboard #reorder-note,.dashboard #overview-urgency-filter{display:none!important}
+.dashboard .overview-project-card{position:relative;display:flex;width:100%;min-height:88px;flex-direction:column;align-items:stretch;justify-content:center;gap:var(--space-3);padding:var(--space-5);border:1px solid var(--color-border-subtle);border-radius:var(--radius-panel);background:var(--color-surface);color:var(--color-text);text-align:left;box-shadow:0 1px 2px #24382f0a;white-space:normal;cursor:pointer}
+.dashboard .overview-project-card:hover{background:var(--color-surface-muted)}
+.dashboard .overview-project-card:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
+.dashboard .overview-project-card .task-area,.dashboard .overview-project-card .subject-actions,
+.dashboard .overview-project-card .overview-create{display:none!important}
+.dashboard .overview-project-card .project-metrics li:first-child,
+.dashboard .overview-project-card .project-metrics li:last-child{display:none!important}
+.dashboard .overview-project-card .overview-project-footer{margin-top:var(--space-3)}
+.dashboard .overview-project-card .subject-open{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:0;border-radius:inherit;background:transparent;color:transparent;opacity:0}
+.dashboard .overview-project-card .subject-open:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset);border-radius:inherit}
+.dashboard .overview-project-title-line{display:flex;align-items:flex-start;gap:var(--space-3);min-width:0}
+.dashboard .overview-project-marker{width:9px;height:9px;flex:0 0 9px;margin-top:7px;border-radius:50%;background:var(--color-action)}
+.dashboard .overview-project-title{min-width:0;font-size:clamp(1.05rem,1.8vw,1.3rem);font-weight:var(--font-weight-heavy);line-height:1.35;overflow-wrap:anywhere}
+.dashboard .project-metrics{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-3);min-width:0}
+.dashboard .project-metric{min-width:0;max-width:100%;padding:3px 8px;border-radius:var(--radius-pill);background:var(--color-surface-muted);color:var(--color-text-control);font-size:var(--font-size-small);line-height:var(--line-height-control);overflow-wrap:anywhere}
+.dashboard .subjects{margin-top:var(--space-4);gap:var(--space-3)}
+.dashboard .add-subject{margin:0}
+@media(min-width:768px){.dashboard .overview-project-card{min-height:96px;padding:var(--space-6)}.dashboard .subjects{gap:var(--space-4)}}
+@media(max-width:620px){.dashboard .overview-project-card{min-height:88px;padding:var(--space-4)}}

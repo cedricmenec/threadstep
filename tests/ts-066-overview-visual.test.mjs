@@ -585,11 +585,9 @@ test("TS-066 route and identity boundaries still release the transient Overview 
 test("TS-066 documentation records visual map, tiers, tokens, continuity, rollback and limits", () => {
   const doc = read("docs/product/react-overview-presentation.md");
   for (const heading of [
-    "Carte visuelle",
-    "Paliers responsive",
-    "Composants et interactions",
-    "Focus, scroll et continuité",
-    "Retour arrière",
+    "Carte projet",
+    "Responsive et accessibilité",
+    "Composants et continuité",
     "Vérifications et recette",
     "Limites"
   ]) {
@@ -601,26 +599,22 @@ test("TS-066 documentation records visual map, tiers, tokens, continuity, rollba
     /430/,
     /768/,
     /1280/,
-    /620px/,
-    /min-width:768px/,
     /site\/overview\/ProjectCard\.jsx/,
-    /site\/overview\/OverviewTaskList\.jsx/,
     /site\/overview\/OverviewCards\.jsx/,
     /site\/styles\/tokens\.css/,
     /site\/styles\.css/,
     /focus/,
-    /scroll/,
+    /défilement/,
     /npm run check/,
     /npm run build/,
     /npm run verify:build/,
-    /Chrome Android/,
-    /lecteur d'écran/,
+    /lecteur d.écran/,
     /recette humaine/
   ]) {
     assert.match(doc, phrase);
   }
   const guide = read("docs/product/developer-guide.md");
-  assert.match(guide, /Présentation visuelle des cartes Overview \(TS-071\)/);
+  assert.match(guide, /Présentation simplifiée de l’Overview \(TS-073\)/);
   for (const heading of ["Points d'entrée", "Tests et vérifications", "Retour arrière", "Limites de la vérification"]) {
     assert.match(guide, new RegExp("### " + heading), heading);
   }
@@ -630,7 +624,7 @@ test("TS-066 documentation records visual map, tiers, tokens, continuity, rollba
   assert.match(guide, /recette humaine/);
 });
 
-test("TS-066 scope stays limited to presentation, documentation, TS-066 tests and the change", () => {
+test("TS-066 historical scope check recognizes the active TS-073 presentation change", () => {
   const git = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
   const changed = git(["status", "--porcelain"]).split("\n").filter(Boolean).map((line) => line.slice(3));
   const allowed = [
@@ -722,6 +716,23 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "openspec/specs/subject-detail-view/spec.md"
     );
   }
+  const ts073InProgress = existsSync(resolve(root, "openspec/changes/ts-073"));
+  if (ts073InProgress) {
+    allowed.push(
+      "site/index.html",
+      "site/styles.css",
+      "docs/product/developer-guide.md",
+      "docs/product/react-overview-cards.md",
+      "docs/product/react-overview-interactions.md",
+      "docs/product/react-overview-presentation.md",
+      "tests/ts-064-overview-docs.test.mjs",
+      "tests/ts-065-overview-docs.test.mjs",
+      "tests/ts-066-overview-visual.test.mjs",
+      "tests/ts-071-overview-docs.test.mjs",
+      "tests/ts-073-overview-responsive.test.mjs",
+      "openspec/changes/ts-073/"
+    );
+  }
   for (const path of changed) {
     assert.ok(
       allowed.some((prefix) => path === prefix || path.startsWith(prefix)),
@@ -742,6 +753,7 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     !(administrativeBacklogClosure && path === "backlog/") &&
     !(ts072InProgress && path === "site/app.js") &&
     !(ts072InProgress && path === "site/react-adapter.js") &&
-    !((ts068InProgress || ts071InProgress) && path === "site/overview/"));
+    !((ts068InProgress || ts071InProgress) && path === "site/overview/") &&
+    !(ts073InProgress && path === "site/index.html"));
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });

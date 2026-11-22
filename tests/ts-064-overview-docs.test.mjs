@@ -14,19 +14,13 @@ const html = read("site/index.html");
 const app = read("site/app.js");
 const packageJson = JSON.parse(read("package.json"));
 
-test("TS-064 documentation maps ownership, boundaries, continuity, diagnostics, rollback and evidence", () => {
+test("TS-073 component guide describes the simplified list, ownership and continuity", () => {
   const headings = [
-    "Carte de propriété DOM",
-    "Points de montage",
-    "Frontières route, identité, blocage et lecture",
-    "Cycle de mise à jour",
-    "Diagnostic",
-    "Commandes de test",
-    "Retour arrière",
-    "Preuves automatisées et recette humaine",
-    "Limites"
+    "Propriété et montage",
+    "Métriques et continuité",
+    "Diagnostic et tests"
   ];
-  assert.match(doc, /^# Cartes projets Overview/m);
+  assert.match(doc, /^# Cartes de projet Overview/m);
   const positions = headings.map((heading) => {
     const index = doc.indexOf("## " + heading);
     assert.notEqual(index, -1, heading);
@@ -35,28 +29,24 @@ test("TS-064 documentation maps ownership, boundaries, continuity, diagnostics, 
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
   for (const phrase of [
     /#subjects/,
-    /#app-shell-root/,
-    /createReactBoundary/,
     /overview-adapter\.js/,
     /surface-decision\.js/,
     /OverviewSurface\.jsx/,
     /ProjectCard\.jsx/,
-    /overviewPreview/,
-    /Voir plus/,
-    /#\/sujet\/<id>/,
+    /openProject/,
+    /nombre total de tâches principales/,
+    /urgences restantes/,
     /npm run check/,
     /npm run build/,
     /npm run verify:build/,
-    /non cochée par `apply`/,
-    /Chrome Android/,
-    /lecteur d'écran/
+    /lecteur d.écran/
   ]) {
     assert.match(doc, phrase);
   }
   assert.ok(existsSync(resolve(root, "site/overview/overview-adapter.js")));
   assert.ok(existsSync(resolve(root, "site/overview/surface-decision.js")));
   assert.ok(existsSync(resolve(root, "site/overview/OverviewSurface.jsx")));
-  assert.match(guide, /Cartes projets Overview React \(TS-064\)/);
+  assert.match(guide, /Présentation simplifiée de l’Overview \(TS-073\)/);
   assert.match(guide, /site\/overview\/overview-adapter\.js/);
   assert.match(guide, /reactBoundary/);
   assert.match(guide, /tests\/ts-064-overview-\*\.test\.mjs/);

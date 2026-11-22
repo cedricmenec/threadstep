@@ -1170,3 +1170,28 @@ visuelle, tactile, clavier, Chrome Android ou lecteur d'écran. Ces vérificatio
 restent une recette humaine dans `Manual acceptance` du changement jusqu'à ce
 qu'elles soient réellement effectuées. Le détail est dans
 `docs/product/react-overview-presentation.md`.
+
+## Présentation simplifiée de l’Overview (TS-073)
+
+L’overview affiche maintenant une liste visuelle de cartes projet avec leur
+nom, le nombre de tâches principales et le nombre d’urgences restantes. Le
+bouton « Ouvrir le projet » entre dans le détail existant. Les lignes de tâches,
+les menus projet, l’ajout de tâche et les compteurs de progression ne sont pas
+présentés sur cette page ; les tâches restent gérées dans le détail.
+
+Les panneaux de suggestion, reprise, urgences et filtres restent dans le
+document de l’application pour préserver leurs contrôleurs et préférences
+existants, mais les règles TS-073 les masquent dans l’Overview. Le formulaire
+d’ajout de projet, les états de chargement et les états de lecture bloquée
+restent disponibles.
+
+Le total utilise les tâches principales, terminées comprises et sous-tâches
+exclues. Les urgences comptent chaque élément `urgent` non terminé, sous-tâches
+comprises. Aucun champ métier, stockage, export, import ou route n’est ajouté.
+Voir [la fiche de présentation TS-073](react-overview-presentation.md) et
+[le guide des cartes](react-overview-cards.md).
+
+Les tests Node/jsdom vérifient les compteurs, la commande d’ouverture, les
+états de lecture, les sélecteurs responsive et l’absence de mutation au rendu.
+Ils ne prouvent ni la perception du focus, ni le toucher, ni le rendu réel aux
+largeurs documentées ; la recette navigateur reste manuelle.
