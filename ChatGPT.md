@@ -37,7 +37,7 @@
 
 | Pourquoi | Source à consulter |
 | --- | --- |
-| Règles applicables aux agents et aux changements | [`AGENTS.md`](AGENTS.md) |
+| Carte des règles applicables aux agents | [`AGENTS.md`](AGENTS.md) |\n| Sécurité commune et autorisations | [`docs/security/README.md`](docs/security/README.md) |\n| Contrat opérationnel ASF | [`agents-asf.md`](agents-asf.md) |
 | Statut **vérifié** de la factory, preuves et limites | [`docs/factory/current-state.md`](docs/factory/current-state.md) |
 | Carte de la factory et documentation de référence | [`docs/factory/README.md`](docs/factory/README.md) |
 | Développer et maintenir la factory ASF V2 | [`docs/factory/developer-guide.md`](docs/factory/developer-guide.md), [`docs/factory/validation-and-recovery.md`](docs/factory/validation-and-recovery.md) |
@@ -125,7 +125,7 @@ ne donne aucune garantie de fraîcheur.
   `docs/factory/tasks/` dans **la même PR** que le changement,
   avec critères, risques, preuves et limites. Mettre à jour
   l'état courant, la méthode, l'architecture et/ou les ADR
-  affectés ; suivre le contrat dans `AGENTS.md`.
+  affectés ; suivre le contrat dans `agents-asf.md`.
 - Faire valider la syntaxe Actions et des scripts, le périmètre et
   la CI. Un workflow modifié mais non vérifié peut ne plus apparaître
   normalement dans GitHub Actions. Ne jamais assouplir les protections
