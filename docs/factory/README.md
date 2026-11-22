@@ -11,7 +11,7 @@
 | Besoin | Guide |
 | --- | --- |
 | Comprendre les composants, le code et les contrôles | [Guide développeur ASF](developer-guide.md) |
-| Séparer instructions d'agent et exigences produit | [Périmètre du contrat AGENTS.md](agent-contract-scope.md) |
+| Séparer instructions d’agent et exigences produit | [Carte AGENTS.md](../../AGENTS.md), [contrat ASF](../../agents-asf.md), [périmètre historique](agent-contract-scope.md) |
 | Vérifier l'état, les SHAs, PR et runs de référence | [État courant](current-state.md) |
 | Comprendre l'installation stable OpenCode | [ASF-OPENCODE-001](tasks/ASF-OPENCODE-001.md) et [Guide développeur](developer-guide.md) |
 | Exécuter un dry-run ou une vague V1 | [Mode opératoire de l'orchestrateur](backlog-orchestrator-manual.md) |
@@ -31,7 +31,7 @@
 | Application pilote ThreadStep | [Guide utilisateur](../product/guide-utilisation.md), [guide développeur](../product/developer-guide.md) et [recette](../product/acceptance-checklist.md) |
 | Publication Pages du build Vite | [ASF-WF-004](tasks/ASF-WF-004.md) et [protocole de déploiement/rollback](pages-vite-deployment.md) : build `dist/`, CI indépendante et vérifications post-fusion |
 
-À chaque session, commencer par [ChatGPT.md](../../ChatGPT.md) et [AGENTS.md](../../AGENTS.md) ; ces fichiers portent le contrat de sécurité, pas les preuves opérationnelles. Les faits de livraison doivent être recoupés avec GitHub.
+À chaque session, commencer par [ChatGPT.md](../../ChatGPT.md) et [AGENTS.md](../../AGENTS.md) ; pour ASF, lire [agents-asf.md](../../agents-asf.md), et pour toutes les méthodes [les règles de sécurité](../security/README.md). Ces fichiers ne sont pas des preuves opérationnelles. Les faits de livraison doivent être recoupés avec GitHub.
 
 ## Programme ASF V2 et preuves
 

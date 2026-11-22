@@ -21,14 +21,14 @@ un service tiers ou d'étendre le périmètre fonctionnel.
 
 | Source | Responsabilité |
 | --- | --- |
-| [AGENTS.md](../../AGENTS.md) | Instructions/mode opératoire du coding agent, garde-fous et preuves. |
+| [AGENTS.md](../../AGENTS.md) | Carte documentaire et principes communs. |\n| [agents-asf.md](../../agents-asf.md) | Instructions et modes opératoires ASF. |\n| [Sécurité](../security/README.md) | Règles transversales de confidentialité, autorisation et protection. |
 | [ChatGPT.md](../../ChatGPT.md) | Accueil, préparation du backlog, niveau d'autorisation. |
 | [Vision](../product/vision.md), [MVP](../product/mvp.md), [guide produit](../product/developer-guide.md) | Cible du produit et baseline historique ; distinguer ce qui est livré et projeté. |
 | [Spécification Dexie Cloud](../product/specs/dexie-cloud-local-first.md), [plan de migration](../product/dexie-cloud-rollout.md) | Exigences normatives du chantier cloud, migration, confidentialité et recette. |
 | [Backlog](../../backlog/README.md), [contrat V2](backlog-v2-task-contract.md) | Tâches, périmètres, qualification, dépendances et éligibilité. |
 | [Contrat checklist](openspec-checklist-contract.md), [reprise](validation-and-recovery.md) | Contraintes de workflow, checkpoints et diagnostics vérifiables. |
 
-## Sécurité et exclusions inchangées
+## Sécurité et exclusions inchangées (historique de la décision du 17 octobre)
 
 - Ne pas publier secrets, jetons d'administration, clés OpenRouter ni
   données personnelles dans le code, le site public, les logs et les PR.

@@ -7,7 +7,7 @@ function read(path) {
 }
 
 const workflow = read(".github/workflows/agent-openspec.yml");
-const contract = read("AGENTS.md");
+const contract = read("agents-asf.md");
 const backlogContract = read("docs/factory/backlog-v2-task-contract.md");
 const checklistContract = read("docs/factory/openspec-checklist-contract.md");
 const config = read("openspec/config.yaml");

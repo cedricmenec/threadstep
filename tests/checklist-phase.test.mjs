@@ -30,7 +30,7 @@ test("OpenSpec workflow checks phase contract on plan and existing apply", () =>
 });
 
 
-const agentContract = readFileSync(new URL("../AGENTS.md", import.meta.url), "utf8");
+const agentContract = readFileSync(new URL("../agents-asf.md", import.meta.url), "utf8");
 const config = readFileSync(new URL("../openspec/config.yaml", import.meta.url), "utf8");
 const manual = readFileSync(new URL("../docs/factory/openspec-checklist-contract.md", import.meta.url), "utf8");
 const example = readFileSync(new URL("../docs/factory/examples/openspec-tasks-example.md", import.meta.url), "utf8");
@@ -52,7 +52,7 @@ test("ASF-OPSX-01 plan and apply prompts preserve the 3-space checklist contract
   assert.match(workflow, /openspec archive "\$CHANGE_ID" --yes --skip-specs/);
 });
 
-test("ASF-OPSX-01 OpenSpec rules and AGENTS preserve human acceptance without pretending it passed", () => {
+test("ASF-OPSX-01 OpenSpec rules and ASF contract preserve human acceptance without pretending it passed", () => {
   assert.match(config, /rules:[\s\S]*tasks:[\s\S]*runner during apply BEFORE OPSX sync/);
   assert.match(config, /Manual acceptance section WITHOUT checkboxes/);
   assert.match(config, /Post-sync review section WITHOUT checkboxes/);
