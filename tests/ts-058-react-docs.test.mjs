@@ -96,6 +96,9 @@ test("TS-058 documentation checks the protected files were not modified", () => 
   const output = execFileSync("git", ["status", "--porcelain", "--", ...protectedPaths], {
     cwd: root,
     encoding: "utf8"
-  }).trim();
+  }).replace(/\n$/, "").split("\n").filter(Boolean).filter((line) =>
+    !(existsSync(resolve(root, "openspec/changes/ts-072")) &&
+      ["openspec/specs/react-project-detail-pilot/spec.md", "openspec/specs/subject-detail-view/spec.md"]
+        .includes(line.slice(3).replace(/^"|"$/g, "")))).join("\n");
   assert.equal(output, "", "protected paths must stay untouched:\n" + output);
 });

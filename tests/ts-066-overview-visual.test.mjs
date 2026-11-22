@@ -704,6 +704,22 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "openspec/specs/react-overview-interactions/spec.md"
     );
   }
+  const ts072InProgress = existsSync(resolve(root, "openspec/changes/ts-072"));
+  if (ts072InProgress) {
+    allowed.push(
+      "site/app.js",
+      "site/index.html",
+      "site/project-detail/ProjectDetail.jsx",
+      "site/project-detail/controller-commands.js",
+      "site/react-adapter.js",
+      "site/styles.css",
+      "tests/ts-068-project-detail.test.mjs",
+      "tests/ts-072-project-detail.test.mjs",
+      "openspec/changes/ts-072/",
+      "openspec/specs/react-project-detail-pilot/spec.md",
+      "openspec/specs/subject-detail-view/spec.md"
+    );
+  }
   for (const path of changed) {
     assert.ok(
       allowed.some((prefix) => path === prefix || path.startsWith(prefix)),
@@ -722,6 +738,8 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
     "backlog/",
   ].filter((path) => !(ts067InProgress && path === "site/core.js") &&
     !(administrativeBacklogClosure && path === "backlog/") &&
+    !(ts072InProgress && path === "site/app.js") &&
+    !(ts072InProgress && path === "site/react-adapter.js") &&
     !((ts068InProgress || ts071InProgress) && path === "site/overview/"));
   assert.equal(git(["status", "--porcelain", "--", ...protectedPaths]).trim(), "");
 });

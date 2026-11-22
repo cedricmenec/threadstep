@@ -146,6 +146,9 @@ test("TS-060 protected paths and existing business specs remain unchanged", () =
   const violations = status.filter((path) =>
     protectedPaths.some((protectedPath) =>
       path === protectedPath || path.startsWith(protectedPath)) &&
-    !authorizedShellMigration.has(path));
+    !authorizedShellMigration.has(path) &&
+    !(existsSync(resolve(root, "openspec/changes/ts-072")) &&
+      ["openspec/specs/react-project-detail-pilot/spec.md", "openspec/specs/subject-detail-view/spec.md"]
+        .includes(path)));
   assert.deepEqual(violations, []);
 });

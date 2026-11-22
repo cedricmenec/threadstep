@@ -28,6 +28,8 @@ export const REACT_ADAPTER_COMMAND_NAMES = Object.freeze([
   "closeItemMenu",
   "trackItem",
   "returnToOverview",
+  "openProject",
+  "setHideCompleted",
   "createSubstep",
   "setPriority",
   "undoRemoval",
@@ -71,7 +73,7 @@ function normalizeRoute(route) {
 }
 
 function snapshotFor(evaluation) {
-  const { project, route, transient } = evaluation;
+  const { document, project, route, transient } = evaluation;
   const metrics = subjectMetrics(project);
   const topLevelCount = totalTaskCount(project.items);
   const items = (Array.isArray(project.items) ? project.items : []).map((item) => ({
@@ -96,6 +98,7 @@ function snapshotFor(evaluation) {
       urgencyLabel: subjectUrgencyLabel(metrics.urgentPending),
       progressLabel: subjectProgressLabel(project.items)
     },
+    projects: document.subjects.map((entry) => ({ id: entry.id, title: entry.title })),
     items,
     transient
   });
@@ -180,6 +183,7 @@ export function createReactAdapter(dependencies = {}) {
       : {};
     return {
       ok: true,
+      document,
       route,
       project,
       transient: transient && typeof transient === "object" ? transient : {},

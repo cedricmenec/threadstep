@@ -69,7 +69,7 @@ function harness(overrides = {}) {
   };
   const counts = {
     persist: 0, render: 0, remove: 0, undo: 0, navigate: 0,
-    saveResume: 0, drag: 0, cancelDrag: 0, prompt: 0
+    saveResume: 0, drag: 0, cancelDrag: 0, prompt: 0, openProject: 0
   };
   const notices = [];
   const commands = createProjectDetailCommands({
@@ -85,6 +85,7 @@ function harness(overrides = {}) {
     startDragAction: () => { counts.drag += 1; return true; },
     cancelDragAction: () => { counts.cancelDrag += 1; return true; },
     navigate: (hash) => { counts.navigate += 1; state.hash = hash; },
+    openProject: () => { counts.openProject += 1; return true; },
     promptText: () => { counts.prompt += 1; return "Sous-étape prompt"; },
     randomId: () => "generated-" + (counts.generated = (counts.generated || 0) + 1),
     getResumeRef: () => state.resumeRef,
@@ -117,6 +118,8 @@ const matrix = [
   { name: "cancelRename", run: (c) => c.cancelRename() },
   { name: "runMenuCommand", run: (c) => c.runMenuCommand("p1", "a", "edit") },
   { name: "returnToOverview", run: (c) => c.returnToOverview("p1"), navigate: 1 },
+  { name: "openProject", run: (c) => c.openProject("p2"), openProject: 1 },
+  { name: "setHideCompleted", run: (c) => c.setHideCompleted(true) },
   { name: "startDrag", run: (c) => c.startDrag("p1", "a", {}, {}), drag: 1 },
   { name: "cancelDrag", run: (c) => c.cancelDrag(null), cancelDrag: 1 }
 ];
@@ -130,11 +133,11 @@ test("TS-060 every detail command is activated once with a single intention and 
     const expectedWrite = entry.persist || 0;
     assert.equal(counts.persist, expectedWrite, entry.name + " persist");
     assert.ok(counts.persist <= 1, entry.name + " emitted more than one write");
-    for (const key of ["remove", "undo", "navigate", "saveResume", "drag", "cancelDrag", "prompt"]) {
+    for (const key of ["remove", "undo", "navigate", "saveResume", "drag", "cancelDrag", "prompt", "openProject"]) {
       assert.equal(counts[key], entry[key] || 0, entry.name + " " + key);
     }
     const delegated = counts.remove + counts.undo + counts.navigate + counts.saveResume +
-      counts.drag + counts.cancelDrag;
+      counts.drag + counts.cancelDrag + counts.openProject;
     assert.ok(delegated <= 1, entry.name + " double callback: " + JSON.stringify(counts));
     if (!expectedWrite) assert.equal(counts.persist, 0, entry.name + " presentation must not persist");
   }

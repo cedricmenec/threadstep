@@ -15,7 +15,8 @@ const css = readFileSync(resolve(root, "site/styles.css"), "utf8");
 const commandNames = [
   "returnToOverview", "startRename", "cancelRename", "renameSubject",
   "createItem", "setPriority", "toggleItem", "toggleSubsteps",
-  "startDrag", "openItemMenu", "closeItemMenu", "runMenuCommand", "cancelEdit"
+  "startDrag", "openItemMenu", "closeItemMenu", "runMenuCommand", "cancelEdit",
+  "openProject", "setHideCompleted"
 ];
 
 function snapshot() {
@@ -34,6 +35,7 @@ function snapshot() {
       totalTaskCountLabel: "1 tâche au total",
       progressLabel: "1 / 2 étapes terminées (50 %)"
     },
+    projects: [{ id: "p1", title: "Projet réel" }, { id: "p2", title: "Autre projet" }],
     items,
     transient: {
       expandedParents: ["parent"],
@@ -47,26 +49,25 @@ function snapshot() {
   };
 }
 
-test("TS-068 project detail Stitch fields are static, disabled, and contain no sample data", async () => {
+test("TS-072 project detail omits unsupported fields and keeps truthful controls", async () => {
   const dom = installDeterministicDom();
   try {
     const adapter = createStaticAdapter({ snapshot: snapshot(), commandNames });
     const fixture = await createSurfaceFixture(adapter);
     const section = fixture.container.querySelector('[data-react-surface="project-detail"]');
-    assert.equal(section.querySelector(".project-stitch-metadata").textContent.includes("Non renseignée"), true);
-    assert.equal(section.querySelector(".project-stitch-metadata").textContent.includes("Non disponible"), true);
-    assert.equal(section.querySelectorAll(".detail-search-controls :disabled").length, 3);
-    assert.equal(section.querySelectorAll(".project-stitch-disabled:disabled").length, 2);
-    assert.deepEqual(
-      [...section.querySelectorAll(".project-stitch-panel p")].map((node) => node.textContent),
-      ["Non disponible", "1 / 2 étapes terminées (50 %)", "Non disponible"]
-    );
-    assert.equal(section.querySelector(".project-stitch-panel").textContent.includes("Activité de démonstration"), false);
+    assert.equal(section.querySelector(".project-stitch-metadata"), null);
+    assert.equal(section.querySelector(".detail-search-controls"), null);
+    assert.equal(section.querySelector(".project-stitch-disabled"), null);
+    assert.equal(section.querySelector(".detail-summary").textContent.includes("Non disponible"), false);
+    assert.equal(section.querySelector(".detail-summary").textContent.includes("1 / 2 étapes terminées (50 %)"), true);
+    assert.equal(section.querySelector(".detail-summary").textContent.includes("Activité"), false);
+    assert.equal(section.querySelector(".detail-project-switcher select").value, "p1");
+    assert.equal(section.querySelectorAll(".detail-completed-filter input").length, 1);
     assert.equal(section.querySelectorAll(".task-deadline-disabled:disabled").length, 2);
     assert.equal(section.querySelectorAll(".task-parent").length, 1);
     assert.equal(section.querySelectorAll(".task-substep").length, 1);
 
-    for (const control of section.querySelectorAll(".detail-search-controls input, .detail-search-controls select, .project-stitch-disabled, .task-deadline-disabled")) {
+    for (const control of section.querySelectorAll(".task-deadline-disabled")) {
       control.dispatchEvent(new globalThis.Event("input", { bubbles: true }));
       control.click();
     }
@@ -84,14 +85,13 @@ test("TS-068 project detail Stitch fields are static, disabled, and contain no s
   }
 });
 
-test("TS-068 card and detail styles use local tokens and collapse without fixed overflow", () => {
-  const start = css.indexOf("/* TS-068 | Static Stitch affordances");
+test("TS-072 detail styles use local tokens and collapse without fixed overflow", () => {
+  const start = css.indexOf("/* TS-072 | Dedicated, truthful project detail */");
   assert.notEqual(start, -1);
   const styles = css.slice(start);
-  assert.match(styles, /\.project-stitch-metadata\{[^}]*display:grid/);
-  assert.match(styles, /\.detail-search-controls\{[^}]*min-width:0/);
   assert.match(styles, /\.detail-stitch-layout\{[^}]*minmax\(0,1fr\) minmax\(220px,280px\)/);
-  assert.ok(styles.includes("@media(max-width:767px){.project-stitch-metadata{"));
+  assert.match(styles, /\.detail-completed-filter\{[^}]*min-height:var\(--control-target-min\)/);
+  assert.ok(styles.includes("@media(max-width:767px){.detail-stitch-layout{"));
   assert.ok(styles.includes(".detail-stitch-layout{grid-template-columns:minmax(0,1fr)}"));
   assert.doesNotMatch(styles, /(?:^|[;{])\s*(?:width|min-width)\s*:\s*(?:3[3-9]\d|[4-9]\d\d|\d{4,})px/);
   const responsiveTiers = new Map([[320, true], [390, true], [430, true], [768, false], [1280, false]]);

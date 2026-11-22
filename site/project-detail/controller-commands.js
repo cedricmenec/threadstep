@@ -59,6 +59,7 @@ export function createProjectDetailCommands(dependencies = {}) {
     startDragAction,
     cancelDragAction,
     navigate,
+    openProject: openProjectAction = () => false,
     promptText = (message) => (typeof globalThis.prompt === "function"
       ? globalThis.prompt(message)
       : null),
@@ -321,6 +322,21 @@ export function createProjectDetailCommands(dependencies = {}) {
     return true;
   }
 
+  function openProject(subjectId) {
+    const project = findSubject(currentDocument(), subjectId);
+    if (!project || typeof openProjectAction !== "function") return false;
+    setTransient({ renamingSubject: false });
+    return openProjectAction(project) === true;
+  }
+
+  function setHideCompleted(hidden) {
+    const next = hidden === true;
+    if (getTransient().hideCompleted === next) return false;
+    setTransient({ hideCompleted: next });
+    render();
+    return true;
+  }
+
   function startDrag(subjectId, itemId, nativeEvent, handle) {
     if (typeof startDragAction !== "function") return false;
     const found = itemsOf(currentDocument(), subjectId);
@@ -358,6 +374,8 @@ export function createProjectDetailCommands(dependencies = {}) {
     cancelRename,
     runMenuCommand,
     returnToOverview,
+    openProject,
+    setHideCompleted,
     startDrag,
     cancelDrag
   };
