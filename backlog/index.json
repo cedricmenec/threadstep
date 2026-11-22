@@ -10,5 +10,17 @@
     "depends_on": [],
     "created_at": "2026-11-21",
     "content_sha256": "5fb2f4a706209294d280612201ed4bdde9802968ba9db7587a030a5cb41e860f"
+  },
+  {
+    "id": "TS-072",
+    "path": "backlog/tasks/TS-072.md",
+    "type": "product",
+    "status": "ready",
+    "priority": "normal",
+    "automation": "manual",
+    "risk": "medium",
+    "depends_on": [],
+    "created_at": "2026-11-22",
+    "content_sha256": "578b91d99447fd506eef0fcc18a89afaaf316439885adf17fde97feefc1e2975"
   }
 ]
