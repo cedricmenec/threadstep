@@ -3,80 +3,33 @@
 ## Purpose
 
 Définir la présentation visuelle et responsive de la route Overview afin que la
-page « Mes projets » reste lisible, cohérente et fidèle aux références Stitch
-approuvées, sans modifier ses comportements, ses données ni sa frontière React.
+page « Mes projets » privilégie une liste de cartes projet claire et concise,
+sans modifier ses comportements, ses données ni sa frontière React.
 
 ## Requirements
 
-### Requirement: Responsive hierarchy across representative widths
+### Requirement: Project list hierarchy and responsive cards
 
-La présentation SHALL rester lisible et sans débordement horizontal à 320, 390,
-430, 768 et 1280 px. Les titres, métriques, libellés et notes longs MUST revenir
-à la ligne dans leur conteneur et les commandes MUST se replier sans être
-rognées. Aucune largeur fixe supérieure à la largeur mobile MUST être imposée.
+La page Overview SHALL privilégier une liste de cartes projet. Chaque carte
+présente le nom du projet, le nombre de tâches principales et le nombre
+d'urgences non terminées, sans aperçu de tâches, filtre ou panneau de synthèse
+globale. La liste SHALL rester lisible et sans débordement horizontal à 320,
+390, 430, 768 et 1280 px.
 
-#### Scenario: Compact phone widths
+#### Scenario: Compact list across viewports
 
-- **GIVEN** une largeur de viewport de 320, 390 ou 430 px
-- **WHEN** Overview affiche la synthèse, les filtres, le formulaire et les cartes
-- **THEN** les zones restent dans la largeur disponible sans débordement
-  horizontal
-- **AND** les en-têtes de carte et les commandes se replient sans perte
-  d'information
-- **AND** les libellés longs et les notes restent lisibles
+- **GIVEN** une liste de projets et des noms longs
+- **WHEN** Overview est affichée à 320, 390, 430, 768 ou 1280 px
+- **THEN** les cartes et compteurs restent lisibles et contenus dans la largeur
+- **AND** les noms longs reviennent à la ligne
+- **AND** aucun filtre, résumé global ou aperçu de tâche n'est présenté
 
-#### Scenario: Tablet and desktop widths
+#### Scenario: Accessible project card
 
-- **GIVEN** une largeur de viewport de 768 ou 1280 px
-- **WHEN** Overview est affiché
-- **THEN** la hiérarchie de titre, synthèse et cartes est plus aérée que sur
-  mobile sans changer l'ordre des zones
-- **AND** le contenu reste borné par la largeur maximale partagée
-- **AND** aucune nouvelle colonne, sidebar ou disposition de navigation n'est
-  introduite
-
-#### Scenario: Long content wraps
-
-- **GIVEN** un titre de projet, un libellé de commande ou une note dépasse la
-  largeur disponible
-- **WHEN** la carte ou la zone globale est rendue
-- **THEN** le texte revient à la ligne dans sa zone autorisée
-- **AND** aucune barre de défilement horizontale n'est ajoutée à la page
-
-### Requirement: Card and task-preview visual hierarchy
-
-Chaque carte projet SHALL présenter une hiérarchie distincte entre le titre du
-projet, ses métriques, ses commandes et ses aperçus de tâches. Les métriques
-d'étapes, d'urgences et de progression MUST rester visibles sans couleur seule,
-et les aperçus de tâches MUST conserver la limite de cinq parents, les
-sous-tâches hors quota et la commande « Voir plus » du comportement livré.
-
-#### Scenario: Card hierarchy is perceivable
-
-- **GIVEN** une carte projet avec des métriques et des tâches
-- **WHEN** la carte est affichée
-- **THEN** le titre du projet est visuellement plus proéminent que ses métriques
-- **AND** les commandes de carte restent distinctes du contenu de lecture
-- **AND** les informations d'étapes, d'urgences et de progression restent
-  compréhensibles par leur texte
-
-#### Scenario: Task preview stays within its contract
-
-- **GIVEN** une carte avec zéro, un, cinq ou six tâches parentes visibles
-- **WHEN** l'aperçu est rendu après application du filtre de complétion
-- **THEN** l'aperçu affiche respectivement zéro, un, cinq ou cinq parents
-- **AND** les sous-tâches ne consomment aucun emplacement
-- **AND** « Voir plus » reste présent uniquement au-delà de cinq parents
-
-#### Scenario: Task states remain distinguishable
-
-- **GIVEN** des tâches terminées, des priorités différentes et des sous-étapes
-  repliées ou développées
-- **WHEN** les lignes sont affichées
-- **THEN** les distinctions de priorité, de complétion et de hiérarchie restent
-  perceptibles sans couleur seule
-- **AND** les notes restent du texte brut multiligne
-- **AND** aucune donnée ni relation n'est modifiée par la présentation
+- **WHEN** une carte projet est affichée
+- **THEN** elle offre une commande d'ouverture avec focus visible et nom
+  accessible qui identifie le projet
+- **AND** ses métriques restent compréhensibles comme texte sans dépendre de la couleur seule
 
 ### Requirement: Existing components and tokens reused
 
@@ -158,10 +111,10 @@ présentées comme prouvées par la CI.
 
 #### Scenario: Structural checks cover the visual contract
 
-- **WHEN** les tests TS-066 s'exécutent
-- **THEN** ils vérifient la parité DOM, les largeurs et media queries
-  versionnées, la réutilisation des tokens, les cibles tactiles et l'absence de
-  dépendance, route ou stockage nouveaux
+- **WHEN** les tests déterministes de la liste projet s'exécutent
+- **THEN** ils vérifient la présence des cartes et compteurs, l'absence visuelle
+  des panneaux et tâches, les règles responsive, les tokens et le contrôle
+  d'ouverture accessible
 - **AND** ils n'ouvrent aucune base réelle et n'appellent aucun service Cloud,
   OTP ou réseau
 
@@ -173,44 +126,3 @@ présentées comme prouvées par la CI.
 - **AND** ces scénarios restent explicitement à effectuer dans la recette
   manuelle
 - **AND** aucun résultat humain non exécuté n'est déclaré `PASS`
-
-### Requirement: Approved Overview card composition
-
-La carte Overview SHALL présenter le titre et les compteurs réels dans l’en-tête, la liste hiérarchique au centre et les commandes de création et d’ouverture dans le pied. Elle MUST NOT afficher de métadonnée sans source ou de commande inactive de partage/archivage.
-
-#### Scenario: Project card uses its actual data
-
-- **WHEN** une carte Overview est rendue pour un projet
-- **THEN** son titre, ses compteurs, sa progression et ses urgences proviennent des propriétés réelles existantes
-- **AND** aucun exemple, horodatage ou champ « non renseigné » n’est présenté comme une donnée du projet
-
-#### Scenario: Project commands remain available once
-
-- **WHEN** une carte Overview est rendue
-- **THEN** l’ouverture du projet et la création de tâche restent disponibles dans le pied
-- **AND** les commandes existantes de déplacement et de suppression restent accessibles depuis une action nommée
-- **AND** aucun bouton Partager ou Archiver désactivé n’est présenté
-
-### Requirement: Responsive task hierarchy and empty state
-
-Les cartes SHALL adapter les lignes, notes et sous-tâches à la largeur disponible sans défilement horizontal, avec hiérarchie textuelle indépendante de la couleur. Une carte réellement vide MUST être distinguée d’un aperçu masqué par filtre.
-
-#### Scenario: Long text and nested task remain readable
-
-- **GIVEN** des titres ou notes longs et une sous-tâche visible
-- **WHEN** la carte est présentée de 320 à 1280 px
-- **THEN** le texte revient à la ligne, les sous-tâches restent indentées et reliées visuellement
-- **AND** les badges de priorité et l’état terminé restent identifiables par leur texte ou leur forme
-
-#### Scenario: Empty project differs from filtered preview
-
-- **GIVEN** un projet sans tâche ou un projet dont toutes les tâches visibles sont filtrées
-- **WHEN** la carte est rendue
-- **THEN** l’état « aucune tâche » est réservé au projet réellement vide
-- **AND** l’état filtré indique que les tâches sont masquées sans créer de tâche factice
-
-#### Scenario: Touch targets and focus are available
-
-- **WHEN** les commandes de carte ou de tâche sont affichées sur téléphone
-- **THEN** leurs cibles mesurent au moins 44 × 44 px
-- **AND** elles ont des noms accessibles distincts et un focus visible
