@@ -112,11 +112,17 @@ export function TaskItem({
               value={item.priority}
               onChange={(priority) => commands.setPriority(subjectId, item.id, priority)}
             />
+            {isOverview ? <div className="task-actions">
+              {handle}
+              {toggle}
+              <TaskActionMenu subjectId={subjectId} subject={subject} item={item} commands={commands}
+                open={openMenuId === item.id} hideCompleted={hideCompleted} tracked={trackedItemId === item.id} />
+            </div> : null}
           </div>
           {typeof item.note === "string" && item.note.trim().length > 0 ? (
             <p className="task-note">{item.note}</p>
           ) : null}
-          <div className="task-actions">
+          {!isOverview ? <div className="task-actions">
             {handle}
             {toggle}
             {!isOverview ? (
@@ -139,7 +145,7 @@ export function TaskItem({
               hideCompleted={hideCompleted}
               tracked={trackedItemId === item.id}
             />
-          </div>
+          </div> : null}
         </>
       )}
       {view.renderChildren ? (
