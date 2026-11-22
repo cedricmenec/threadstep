@@ -5,15 +5,14 @@ import { resolve } from "node:path";
 
 const read = (path) => readFileSync(resolve(process.cwd(), path), "utf8");
 
-test("TS-071 product guides describe the actual card and mobile reorder behavior", () => {
+test("TS-073 product guides describe the simplified project list and detail navigation", () => {
   const presentation = read("docs/product/react-overview-presentation.md");
   const interactions = read("docs/product/react-overview-interactions.md");
-  assert.match(presentation, /DS-CARD-OVERVIEW-72/);
-  assert.match(presentation, /état filtré distinct/);
-  assert.match(presentation, /44 × 44 px/);
-  assert.match(presentation, /poignée de glisser-déposer est masquée/);
-  assert.match(interactions, /commandes Monter\/Descendre/);
-  assert.match(interactions, /canMoveWithinPriority/);
+  assert.match(presentation, /aucun aperçu de tâche/i);
+  assert.match(presentation, /tâches principales/);
+  assert.match(presentation, /« tâche en cours »/);
+  assert.match(interactions, /commande `openProject`/);
+  assert.match(interactions, /restent\s+disponibles dans la vue de détail/);
 });
 
 test("TS-071 OpenSpec separates executable checks from human acceptance", () => {

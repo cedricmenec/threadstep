@@ -1,133 +1,65 @@
-# Cartes projets Overview — surface React bornée (TS-064)
+# Cartes de projet Overview — surface React bornée
 
-**Périmètre :** route `#/` uniquement, pour la liste des cartes projet dans
-`#subjects`. Les filtres, le compteur global, la suggestion, la reprise, la
-zone « Urgences à traiter », le chargement, la synthèse, le formulaire de
-projet, les paramètres et les formulaires sensibles restent vanilla.
-`automation: manual` : ce document ne planifie ni n'autorise une exécution
-payante, une fusion ou une nouvelle migration.
+La route `#/` rend dans `#subjects` une liste de cartes projet, chacune
+exposant le titre, le nombre total de tâches principales et le nombre
+d’urgences restantes. L’activation de la carte ouvre le détail du projet.
+`#subjects` garde un seul propriétaire React actif à la fois : la surface
+Overview ou celle du détail.
 
-## Carte de propriété DOM
+## Propriété et montage
 
-| Zone | Propriétaire | Conteneur |
-| --- | --- | --- |
-| En-tête et menu de navigation | surface React de coque | `#app-shell-root` |
-| Cartes projet Overview | surface React bornée Overview | `#subjects` |
-| Détail projet | surface React bornée du détail | `#subjects` |
-| Filtres, compteur global, suggestion, reprise, urgences, chargement, formulaire de projet, paramètres | contrôleur vanilla | éléments dédiés hors `#subjects` |
+`site/overview/overview-adapter.js` produit un instantané détaché et gelé des
+projets dans l’ordre du document. Il calcule le total via `totalTaskCount` et
+les urgences via `subjectMetrics` sans ouvrir ou modifier Dexie, IndexedDB,
+`localStorage`, le réseau ou l’OTP. Les données restent transmises aux
+composants existants ; les styles retirent les lignes de tâche de l’affichage.
 
-`#subjects` n'a qu'un propriétaire actif à la fois. Overview et détail ne sont
-jamais montés simultanément. La coque garde son hôte séparé et ne réécrit
-jamais le conteneur de contenu. Toute surface est démontée avant une écriture
-vanilla ou un changement de contexte.
+`OverviewSurface.jsx`, `OverviewCards.jsx` et `ProjectCard.jsx` possèdent
+uniquement le rendu des cartes dans `#subjects`. Le contenu visible de chaque
+carte est son nom, ses deux compteurs et la commande d’ouverture accessible,
+qui délègue `openProject(project.id)`. Les lignes de tâches, formulaires et
+actions secondaires restent dans le DOM React existant mais sont masqués pour
+la présentation Overview. La commande existante `openSubject` conserve la
+route, l’historique et le transfert du focus vers le détail.
+`site/overview/surface-decision.js` garde la décision de montage séparée pour
+les états de route, d’accès métier, de lecture et de présentation.
 
-## Points de montage
+Le formulaire de création de projet, les états de chargement et les zones de
+sécurité/lecture restent dans leur conteneur vanilla. Aucun panneau global de
+résumé, de suggestion, de reprise, d’urgences ou de filtrage n’est affiché.
 
-- `site/overview/overview-adapter.js` produit un instantané détaché et gelé des
-  projets filtrés, des compteurs dérivés de `site/core.js` et de l'état
-  transitoire. Il ne lit ni n'écrit Dexie, IndexedDB, `localStorage`, le réseau
-  ou l'OTP.
-- `site/overview/surface-decision.js` décide du montage à partir de la route,
-  de l'autorisation métier, de la lecture terminée et de la présentation
-  TS-052.
-- `site/overview/OverviewSurface.jsx`, `OverviewCards.jsx`, `ProjectCard.jsx`
-  et `OverviewTaskList.jsx` rendent les cartes avec les primitives
-  `site/ui/` et les composants de tâches déjà qualifiés du détail.
-- `site/app.js` branche l'instance `createReactBoundary` existante (`reactBoundary`), les commandes de carte
-  (`openProject`, `seeMore`, `moveProject`, `removeProject`, `resetFilter`) et
-  les commandes d'items existantes. Il conserve `parseRoute`, `hashchange`,
-  `navigate`, `openSubject`, `applyFocus` et `finishUxRender`.
-- `OverviewTaskList` applique `overviewPreview` après le filtre « Masquer les
-  étapes terminées » et avant la limite de cinq parents. Les sous-tâches ne
-  consomment aucun emplacement. Au-delà du quota, une seule commande
-  « Voir plus » ouvre `#/sujet/<id>` via `openSubject`.
+## Métriques et continuité
 
-## Frontières route, identité, blocage et lecture
+Le total compte les tâches principales, y compris terminées, et exclut les
+sous-tâches. Les urgences comptent tous les éléments urgents non terminés,
+sous-tâches comprises. Les valeurs se recalculent depuis le document autorisé
+à chaque mise à jour et n’ajoutent aucune préférence, propriété ou écriture.
 
-- Quitter `#/` vers un projet, les paramètres ou une route invalide libère la
-  surface Overview avant tout rendu vanilla ou montage du détail.
-- Revenir vers `#/` libère d'abord la surface du détail ; les cartes sont
-  dérivées du document courant.
-- Un changement d'identité autorisée, d'espace ou de liaison invalide la
-  surface avant toute réécriture. Un événement tardif de l'espace précédent ne
-  peut pas réintroduire ses cartes.
-- Un état `AWAITING_READ` ou `actionRequired` sans projets disponibles libère la
-  surface et conserve le chargement, le résumé d'attention et le lien de
-  synchronisation TS-052. Une lecture autorisée vide monte l'état vide existant.
-- Un changement de filtre, une complétion ou un rafraîchissement de fond de la
-  même vue met à jour la surface en place : pas de remontage, pas de seconde
-  commande, pas d'écriture déclenchée par la présentation.
+Un rafraîchissement de même identité actualise la surface montée et garde les
+cartes dans le même ordre. Une navigation ou un changement d’identité libère la
+surface avant d’afficher le détail ou le contexte suivant. Une lecture en
+attente ou bloquée ne devient jamais une liste vide fictive.
 
-## Cycle de mise à jour
+## Diagnostic et tests
 
-`render()` capture l'état UX avant le rendu, libère la surface dont la route ou
-le contexte a changé, met à jour ou monte la surface Overview dans `#subjects`,
-puis appelle `applyFocus()` et `finishUxRender()`. Les clés stables
-(`subject.id`, `item.id`) et l'absence de remontage conservent les brouillons
-d'éditeur, les parents développés, le menu ouvert, le filtre et l'ancrage de
-scroll. Une navigation explicite, un rechargement, un import/restauration
-réussi ou un changement d'identité réinitialise les états transitoires selon
-`ux-interaction-continuity`.
-
-## Diagnostic
-
-1. Vérifier que `#subjects` n'a qu'un propriétaire : `reactBoundary.owner()`.
-2. Vérifier la décision de montage avec `decideOverviewSurface` et l'état de
-   présentation dans `overviewPresentationSnapshot`.
-3. Vérifier `overviewSurfaceContextKey()` (vue, identité, état bloquant) et
-   `reactOverviewRecord`.
-4. Vérifier que `overview-adapter.js` n'importe ni Dexie, ni l'OTP, ni
-   `site/app.js`, ni `persist()`.
-5. Pour un compteur ou un aperçu, comparer avec `overviewPreview`,
-   `subjectMetrics`, `subjectUrgencyLabel`, `subjectProgressLabel` et
-   `totalTaskCountLabel` de `site/core.js`.
-
-## Commandes de test
+Vérifier `reactBoundary.owner()`, `reactOverviewRecord` et
+`overviewSurfaceContextKey()` pour confirmer le propriétaire de `#subjects`.
+Les tests `tests/ts-064-overview-render.test.mjs`,
+`tests/ts-064-overview-boundary.test.mjs` et
+`tests/ts-073-overview-responsive.test.mjs` vérifient respectivement les
+cartes/métriques, la frontière de surface et la structure responsive.
 
 ```sh
-node --test tests/ts-064-overview-render.test.mjs \
-  tests/ts-064-overview-commands.test.mjs \
-  tests/ts-064-overview-boundary.test.mjs \
-  tests/ts-064-overview-continuity.test.mjs \
-  tests/ts-064-overview-read-state.test.mjs \
-  tests/ts-064-overview-side-effects.test.mjs \
-  tests/ts-064-overview-responsive.test.mjs \
-  tests/ts-064-overview-docs.test.mjs
 npm run check
 npm run build
 npm run verify:build
 ```
 
-## Retour arrière
+Les tests DOM ne remplacent pas l’inspection humaine au clavier, au toucher,
+avec un lecteur d’écran ou sur un navigateur réel.
 
-Le changement ne crée ni donnée, ni migration, ni route, ni clé de stockage.
-Le retour arrière est un revert de code : retirer l'import et le montage de la
-surface Overview, restaurer le rendu de cartes du contrôleur, puis supprimer
-`site/overview/` s'il n'est plus consommé. La coque, le détail React, Dexie,
-l'OTP, les exports et la configuration Cloud ne sont pas affectés.
+## Historique de recette
 
-## Preuves automatisées et recette humaine
-
-Les tests jsdom et Node prouvent le markup, les compteurs, l'aperçu de cinq
-parents, les commandes uniques, les frontières de propriété, la continuité
-simulée, l'absence d'écriture et les garde-fous statiques. Ils ne prouvent pas
-le rendu visuel, le toucher réel, le clavier physique, le focus perçu, le
-lecteur d'écran ni une synchronisation Dexie Cloud de test.
-
-La recette desktop et Chrome Android reste dans `Manual acceptance` du
-changement, **non cochée par `apply`** et non remplacée par une CI verte.
-
-**Attestation post-livraison du 26 octobre 2026 :** le propriétaire déclare
-avoir réalisé une recette manuelle globale sur desktop et Android et juge le
-résultat valide. Voir le [rapport de GO humain TS-064](react-overview-ts-064-acceptance.md),
-qui distingue cette déclaration des scénarios individuels non attestés ;
-ce rapport constitue la trace du prérequis de TS-065.
-
-## Limites
-
-- Aucun changement de règle métier, de route, de stockage, de dépendance, de
-  CSP ou de configuration Cloud.
-- Les références visuelles Overview non approuvées restent hors périmètre ; la
-  composition Stitch appartient à TS-066.
-- Les interactions et éditeurs restent ceux déjà livrés ; leur qualification
-  appartient à TS-065.
+Le rapport [TS-064](react-overview-ts-064-acceptance.md) consigne une
+déclaration de recette fonctionnelle antérieure sur desktop et Android. Elle
+ne constitue pas une validation manuelle de la présentation simplifiée TS-073.

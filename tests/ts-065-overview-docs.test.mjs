@@ -77,53 +77,25 @@ test("TS-065 baseline control classes, accessible names and command names remain
   assert.match(app, /function startDrag\(event, subject, item, handle\)/);
 });
 
-test("TS-065 interaction documentation maps ownership, delegated commands, drag, diagnostics and limits", () => {
-  const headings = [
-    "Carte de propriété des interactions",
-    "Commandes déléguées",
-    "Cycle du glisser-déposer",
-    "Diagnostic",
-    "Continuité des éditeurs et du focus",
-    "Isolation des contextes",
-    "Frontières de plateforme",
-    "Retour arrière",
-    "Preuves automatisées et recette humaine",
-    "Limites"
-  ];
-  assert.match(doc, /^# Interactions et éditeurs Overview React/m);
+test("TS-073 interaction guide puts project navigation in Overview and task controls in detail", () => {
+  const headings = ["Vue Overview", "Détail du projet", "Vérification"];
+  assert.match(doc, /^# Interactions de l’Overview et du détail/m);
   const positions = headings.map((heading) => {
     const index = doc.indexOf("## " + heading);
     assert.notEqual(index, -1, heading);
     return index;
   });
   assert.deepEqual([...positions].sort((a, b) => a - b), positions);
-  for (const command of [
-    "createItem",
-    "updateItem",
-    "setPriority",
-    "toggleItem",
-    "runMenuCommand",
-    "toggleSubsteps",
-    "removeItem",
-    "undoRemoval",
-    "trackItem",
-    "reorderItem"
-  ]) {
-    assert.match(doc, new RegExp(command), command);
-  }
+  assert.match(doc, /openProject/);
+  assert.match(doc, /actions\s+de mutation/);
+  assert.match(doc, /suppression/);
+  assert.match(doc, /vue de détail/);
   for (const phrase of [
-    /use-overview-drag\.js/,
-    /dragSession/,
-    /pointercancel/,
-    /Échap/,
-    /TaskEditor/,
-    /CreateTaskForm/,
     /npm run check/,
     /npm run build/,
     /npm run verify:build/,
-    /Chrome Android/,
-    /lecteur d'écran/,
-    /hors checklist `apply`/
+    /lecteur d.écran/,
+    /même vue et identité/
   ]) {
     assert.match(doc, phrase);
   }
@@ -157,5 +129,5 @@ test("TS-065 no route or storage key is introduced by interactions, documentatio
   assert.doesNotMatch(source, /threadstep\.[a-z]+\.v\d/);
   assert.doesNotMatch(source, /location\.hash\s*=|pushState|replaceState/);
   assert.doesNotMatch(doc, /threadstep\.[a-z]+\.v\d/);
-  assert.match(doc, /n'ajoutent aucune route, aucune clé de\s+stockage/);
+  assert.match(doc, /n’ajoute aucune route, clé de stockage/);
 });
