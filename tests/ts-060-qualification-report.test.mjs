@@ -147,8 +147,11 @@ test("TS-060 protected paths and existing business specs remain unchanged", () =
     protectedPaths.some((protectedPath) =>
       path === protectedPath || path.startsWith(protectedPath)) &&
     !authorizedShellMigration.has(path) &&
-    !(existsSync(resolve(root, "openspec/changes/ts-072")) &&
+    !((existsSync(resolve(root, "openspec/changes/ts-072")) ||
+      existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072"))) &&
       ["openspec/specs/react-project-detail-pilot/spec.md", "openspec/specs/subject-detail-view/spec.md"]
-        .includes(path)));
+        .includes(path)) &&
+    !(existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072")) &&
+      path === "openspec/changes/archive/2026-11-22-ts-072/"));
   assert.deepEqual(violations, []);
 });

@@ -704,7 +704,8 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "openspec/specs/react-overview-interactions/spec.md"
     );
   }
-  const ts072InProgress = existsSync(resolve(root, "openspec/changes/ts-072"));
+  const ts072InProgress = existsSync(resolve(root, "openspec/changes/ts-072")) ||
+    existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072"));
   if (ts072InProgress) {
     allowed.push(
       "site/app.js",
@@ -716,6 +717,7 @@ test("TS-066 scope stays limited to presentation, documentation, TS-066 tests an
       "tests/ts-068-project-detail.test.mjs",
       "tests/ts-072-project-detail.test.mjs",
       "openspec/changes/ts-072/",
+      "openspec/changes/archive/2026-11-22-ts-072/",
       "openspec/specs/react-project-detail-pilot/spec.md",
       "openspec/specs/subject-detail-view/spec.md"
     );

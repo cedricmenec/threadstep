@@ -97,7 +97,8 @@ test("TS-058 documentation checks the protected files were not modified", () => 
     cwd: root,
     encoding: "utf8"
   }).replace(/\n$/, "").split("\n").filter(Boolean).filter((line) =>
-    !(existsSync(resolve(root, "openspec/changes/ts-072")) &&
+    !((existsSync(resolve(root, "openspec/changes/ts-072")) ||
+      existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072"))) &&
       ["openspec/specs/react-project-detail-pilot/spec.md", "openspec/specs/subject-detail-view/spec.md"]
         .includes(line.slice(3).replace(/^"|"$/g, "")))).join("\n");
   assert.equal(output, "", "protected paths must stay untouched:\n" + output);

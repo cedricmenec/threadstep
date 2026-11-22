@@ -107,5 +107,9 @@ test("no archived change under openspec/changes/archive is modified", () => {
   } catch {
     return;
   }
-  assert.equal(status.trim(), "");
+  const lines = status.trim().split("\n").filter(Boolean);
+  const allowedArchive = "openspec/changes/archive/2026-11-22-ts-072/";
+  const unexpected = lines.filter((line) =>
+    !(existsSync(resolve(root, allowedArchive)) && line.slice(3) === allowedArchive));
+  assert.deepEqual(unexpected, []);
 });
