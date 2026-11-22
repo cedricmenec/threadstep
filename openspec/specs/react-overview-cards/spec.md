@@ -316,3 +316,21 @@ Les cartes SHALL rester lisibles sans défilement horizontal de 320 à 1280 px. 
 - **GIVEN** un titre de projet, une tâche ou une note contenant du HTML malveillant
 - **WHEN** la carte est rendue
 - **THEN** le contenu est présenté comme texte littéral et ne crée aucun élément exécutable
+
+### Requirement: Stitch-aligned task hierarchy
+
+La carte Overview SHALL présenter une hiérarchie compacte inspirée des références Stitch : tâches et commandes sur une même ligne, sous-tâches reliées à leur parent et notes visuellement rattachées. Les priorités SHALL apparaître comme des badges interactifs, avec une cible accessible de 44 px.
+
+#### Scenario: Priority remains editable
+
+- **GIVEN** une tâche avec une priorité réelle
+- **WHEN** sa priorité est affichée dans Overview
+- **THEN** son libellé apparaît comme un badge
+- **AND** le contrôle reste modifiable au clavier et au toucher avec son nom accessible
+
+#### Scenario: Task creation is disclosed
+
+- **GIVEN** une carte Overview
+- **WHEN** l’utilisateur active « Ajouter une tâche »
+- **THEN** le formulaire existant et ses validations deviennent accessibles
+- **AND** son brouillon reste présent lors d’un rafraîchissement de la même carte

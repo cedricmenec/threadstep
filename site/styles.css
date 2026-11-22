@@ -540,3 +540,31 @@ footer{font-size:.77rem;color:#8b968e;margin-top:32px}
 @media(max-width:620px),(pointer:coarse){.dashboard .overview-project-card .task-handle{display:none}}
 @media(max-width:320px){.dashboard .overview-project-card{padding:var(--space-3)}.dashboard .overview-project-title-line{gap:var(--space-2)}.dashboard .project-metrics li{font-size:.72rem}.dashboard .overview-project-footer .task-form{flex-direction:row}.dashboard .overview-project-footer .task-form input{flex-basis:100%}}
 /* End TS-071 */
+
+/* Stitch Overview: compact hierarchy, with full-size interactive targets. */
+.dashboard .overview-project-footer{justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.dashboard .overview-create{position:relative}
+.dashboard .overview-create summary{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:var(--radius-control);background:var(--color-surface-muted);color:var(--color-text);cursor:pointer;list-style:none}
+.dashboard .overview-create summary::-webkit-details-marker{display:none}
+.dashboard .overview-create summary:focus-visible{outline:var(--focus-outline);outline-offset:var(--focus-outline-offset)}
+.dashboard .overview-create[open]{flex:1 1 360px}
+.dashboard .overview-create .task-form{margin-top:8px;flex-wrap:wrap}
+.dashboard .overview-project-card .task{border:0;padding:0;margin:0;position:relative}
+.dashboard .overview-project-card .task-row{min-height:44px;gap:4px;flex-wrap:nowrap}
+.dashboard .overview-project-card .task-parent>.task-row .task-title{font-size:.875rem;font-weight:500;line-height:1.45}
+.dashboard .overview-project-card .task-substep>.task-row .task-title{font-size:.8125rem;font-weight:400}
+.dashboard .overview-project-card .priority-control{font-size:.7rem;font-weight:600;letter-spacing:0;border-radius:999px;background-image:none;padding:0 10px;min-height:44px}
+.dashboard .overview-project-card .task-actions{margin:0;gap:0;flex-wrap:nowrap;align-items:center}
+.dashboard .overview-project-card .task-toggle{font-size:0;padding:0;min-width:44px}
+.dashboard .overview-project-card .task-toggle::after{content:'⌄';font-size:1rem}
+.dashboard .overview-project-card .task-toggle[aria-expanded="true"]::after{content:'⌃'}
+.dashboard .overview-project-card .task-menu{position:absolute;right:0;top:100%;z-index:5}
+.dashboard .overview-project-card .task-note{margin:0 48px 8px;padding:6px 9px;width:fit-content;background:var(--color-surface-muted);border-radius:var(--radius-control);font-size:.8125rem;white-space:pre-wrap}
+.dashboard .overview-project-card .children{margin:0 0 4px 21px;padding-left:20px;border-left:2px solid var(--color-border-subtle)}
+.dashboard .overview-project-card .children>.task::before{content:'';position:absolute;left:-20px;top:22px;width:18px;border-top:2px solid var(--color-border-subtle)}
+.dashboard .overview-project-card .task.done>.task-row{background:var(--color-surface-muted);border-radius:var(--radius-control)}
+@media(max-width:620px){.dashboard .overview-project-footer{flex-direction:row;align-items:center}.dashboard .overview-create{flex:1 1 auto}.dashboard .overview-create summary{width:100%}.dashboard .overview-project-footer .subject-open{width:auto}.dashboard .overview-project-card .task-actions{margin:0}.dashboard .overview-project-card .task-handle{display:none}.dashboard .overview-project-card .task-note{margin-left:44px;margin-right:0}.dashboard .overview-project-card .priority-control{padding:0 7px}}
+.dashboard .overview-project-card .priority-control{background-color:transparent;background-repeat:no-repeat;background-position:center;background-size:100% 22px}
+.dashboard .overview-project-card .priority-urgent{background-image:linear-gradient(var(--color-priority-urgent-surface),var(--color-priority-urgent-surface))}
+.dashboard .overview-project-card .priority-normal{background-image:linear-gradient(var(--color-priority-normal-surface),var(--color-priority-normal-surface))}
+.dashboard .overview-project-card .priority-later{background-image:linear-gradient(var(--color-priority-later-surface),var(--color-priority-later-surface))}

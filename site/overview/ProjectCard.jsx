@@ -90,7 +90,10 @@ export function ProjectCard({ project, commands, transient, dragSession }) {
         />
       </div>
       <div className="overview-project-footer">
-        <CreateTaskForm subject={project} commands={commands} />
+        <details className="overview-create">
+          <summary>+ Ajouter une tâche</summary>
+          <CreateTaskForm subject={project} commands={commands} />
+        </details>
         <Button
           variant="primary"
           className="subject-open"

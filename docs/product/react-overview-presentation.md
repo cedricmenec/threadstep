@@ -95,3 +95,7 @@ relation, de persistance, de préférence ou de format d'export/import. Les
 variantes de carte repliable et de filtre par carte, le partage, l'archivage,
 les échéances, les métriques nouvelles et l'horodatage de synchronisation
 restent hors périmètre. Une CI verte ne vaut pas recette physique.
+
+### Fidélité Stitch des cartes Overview
+
+Les tâches sont présentées en lignes compactes avec leurs commandes, les sous-tâches reliées par des connecteurs et les notes rattachées à leur tâche. La priorité reste un sélecteur natif accessible, présenté comme un badge. Le bouton « Ajouter une tâche » révèle le formulaire existant sans démonter son brouillon. Les compteurs et actions reposent sur les données et commandes réelles. La comparaison visuelle sur appareils et la recette clavier et tactile restent nécessaires.
