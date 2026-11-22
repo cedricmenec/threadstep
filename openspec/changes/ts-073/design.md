@@ -2,18 +2,18 @@
 
 ## Overview
 
-Garder la surface React bornée qui possède `#subjects`, mais remplacer ses cartes de tâches par des liens/boutons de projet avec titre, total de tâches principales et nombre d’urgences restantes. La carte est une commande d’ouverture unique, avec un nom accessible incluant le projet. L’état réellement vide de la liste garde son texte et l’accès existant à la création de projet.
+Garder la surface React bornée qui possède `#subjects` et les commandes existantes du contrôleur. Simplifier la présentation des cartes avec des styles qui masquent les aperçus, les commandes de tâches et les actions projet secondaires ; garder le titre, le total de tâches principales, le nombre d’urgences restantes et la commande d’ouverture accessible. L’état réellement vide de la liste garde son texte et l’accès existant à la création de projet.
 
 ## Data and behavior
 
 - Réutiliser `totalTaskCount` et `subjectMetrics(...).urgentPending` à partir du snapshot déjà autorisé ; aucun champ ou stockage n’est ajouté.
-- Ne pas utiliser `overviewPreview`, les filtres, les aperçus ou les états de tâche dans la surface Overview.
-- Déléguer l’ouverture à `openProject(project.id)` et préserver la route et la gestion de focus existantes.
+- Conserver le calcul canonique de compteurs du `overview-adapter`; les filtres et données de tâche peuvent rester dans l’état interne mais ne sont pas présentés dans l’overview.
+- Déléguer l’ouverture à `openProject(project.id)` depuis l’action nommée de la carte et préserver la route et la gestion de focus existantes.
 - Conserver le contrôle de création de projet hors du propriétaire React, ainsi que les surfaces de lecture bloquée et de chargement.
 
 ## Interaction and continuity
 
-Le contenu de la carte est un seul contrôle de navigation, sans contrôles interactifs imbriqués. Tab/Entrée et le toucher doivent ouvrir le même projet ; son focus visible et son nom accessible sont testables dans le DOM. Un rafraîchissement de même route et identité met à jour les compteurs dans la surface montée et n’annonce pas de changement si les valeurs sont identiques. Une navigation explicite réinitialise le contexte selon `ux-interaction-continuity`.
+La carte garde la commande d’ouverture nommée, atteignable par Tab/Entrée et toucher ; son focus visible et son nom accessible sont testables dans le DOM. Un rafraîchissement de même route et identité met à jour les compteurs dans la surface montée et n’annonce pas de changement si les valeurs sont identiques. Une navigation explicite réinitialise le contexte selon `ux-interaction-continuity`.
 
 ## Responsive presentation
 

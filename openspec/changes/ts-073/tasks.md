@@ -2,8 +2,8 @@
 
 ## 1. Project card rendering
 
-- [ ] 1.1 Simplify the Overview adapter and card surface to expose project name, canonical total and urgent counts, and one project-open action; add deterministic render tests for exact counts, unique navigation, and absent task rows.
-- [ ] 1.2 Remove global Overview-only summaries, filters, urgency lists and task previews while preserving project creation and read/loading states; add DOM assertions for the rendered page sections and empty state.
+- [ ] 1.1 Simplify the visible project card to retain only project name, canonical total and urgent counts, and the existing project-open action; add deterministic style/render checks for visible content, exact counts, unique navigation, and hidden task rows.
+- [ ] 1.2 Hide global Overview summaries, filters, urgency lists and task previews while preserving project creation and read/loading states; add assertions for the project-list view and empty state.
 - [ ] 1.3 Update responsive styles and tests so project cards wrap and retain a visible keyboard focus target without horizontal overflow indicators at narrow widths.
 
 ## 2. Regression and checks

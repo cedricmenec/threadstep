@@ -6,9 +6,9 @@ L’overview affiche actuellement plusieurs synthèses globales, filtres, tâche
 
 ## What Changes
 
-- Réduire le contenu métier principal à la liste des projets ; retirer la suggestion, la reprise, la liste globale d’urgences, les filtres et les aperçus de tâches de cette page.
+- Réduire le contenu métier visible à la liste des projets ; masquer la suggestion, la reprise, la liste globale d’urgences, les filtres et les aperçus de tâches sur cette page.
 - Afficher par projet le nombre total de tâches principales et le nombre de tâches urgentes non terminées, sous-tâches comprises, selon les calculs existants.
-- Ouvrir le détail du projet lorsque sa carte est activée ; conserver la route, l’historique et le traitement du focus existants.
+- Conserver une commande d’ouverture accessible dans chaque carte et ouvrir le détail du projet ; conserver la route, l’historique et le traitement du focus existants.
 - Garder l’ajout de projet comme action de gestion de la liste et préserver les états de chargement et d’accès requis.
 - Ne pas afficher de « tâche en cours » : aucune définition fiable de cette notion n’existe dans les données et la demande la présente comme facultative.
 - Préserver données, ordre, règles métier, persistance, import/export et page de détail.

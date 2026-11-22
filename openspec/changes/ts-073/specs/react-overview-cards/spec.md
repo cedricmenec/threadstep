@@ -23,7 +23,7 @@ La surface Overview SHALL afficher une carte par projet autorisé, dans l’ordr
 #### Scenario: Open a project from its card
 
 - **GIVEN** une carte nommant le projet A
-- **WHEN** l’utilisateur active la carte par clavier, pointeur ou toucher
+- **WHEN** l’utilisateur active sa commande d’ouverture au clavier, au pointeur ou au toucher
 - **THEN** l’intention existante ouvre la route de détail du projet A
 - **AND** aucun autre projet n’est ouvert
 - **AND** le focus de navigation suit le contrat existant de la route de détail
@@ -42,13 +42,13 @@ La surface Overview SHALL afficher une carte par projet autorisé, dans l’ordr
 - **THEN** l’état de chargement ou d’attention applicable est affiché
 - **AND** aucune carte vide ni aucune métrique n’est présentée
 
-### Requirement: Card interaction and read continuity
+### Requirement: Project opening and read continuity
 
-La carte SHALL être un contrôle de navigation accessible unique, sans contrôle interactif imbriqué. Les mises à jour de même route et identité SHALL préserver le focus pertinent, le contexte de lecture et la surface montée. L’ouverture SHALL utiliser la commande et la route existantes sans écriture supplémentaire.
+Chaque carte SHALL offrir une commande d’ouverture accessible, sans commande dupliquée. Les mises à jour de même route et identité SHALL préserver le focus pertinent, le contexte de lecture et la surface montée. L’ouverture SHALL utiliser la commande et la route existantes sans écriture supplémentaire.
 
 #### Scenario: Single navigation command
 
-- **WHEN** une carte projet est activée une fois
+- **WHEN** la commande d’ouverture d’une carte projet est activée une fois
 - **THEN** une seule commande `openProject` est déléguée avec son identifiant
 - **AND** aucun état métier ni stockage n’est modifié par le rendu
 
