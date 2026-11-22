@@ -121,55 +121,37 @@ nœuds texte.
 
 ### Requirement: Stitch affordances are static and truthful
 
-Les éléments Stitch approuvés par le propriétaire pour recherche, filtres, tri,
-échéances/calendrier, métadonnées, partage/archivage et panneau projet SHALL
-rester statiques ou nativement désactivés. Ils MUST NOT déclencher une action,
-modifier l'état, créer une route ou persister une préférence ou donnée. Aucune
-valeur métier absente MUST être simulée.
+Les contrôles ou valeurs Stitch sans donnée ou comportement métier SHALL être omis de la page détail. Les informations conservées MUST être issues des données et règles existantes. Les commandes de date ou calendrier non prises en charge dans les lignes de tâche SHALL rester nativement désactivées et sans effet.
 
 #### Scenario: Recherche, filtres et tri désactivés
-
-- **GIVEN** la vue détaillée affiche les éléments visuels de recherche, filtre
-  ou tri issus de Stitch
-- **WHEN** l'utilisateur tente de les modifier ou les activer
-- **THEN** les éléments restent inactifs
-- **AND** les tâches visibles et leur ordre restent ceux des règles actuelles
+- **GIVEN** la page détail ne fournit aucune recherche ou tri de projet opérationnel
+- **WHEN** la page détail est rendue
+- **THEN** aucun champ de recherche, filtre d'état ou tri factice n'est présenté
+- **AND** le sélecteur de projet et le filtre actif des tâches terminées restent utilisables
 
 #### Scenario: Échéance et calendrier sans effet
-
-- **GIVEN** une tâche est affichée à côté d'un élément Stitch d'échéance ou de
-  calendrier
+- **GIVEN** une tâche est affichée à côté d'un élément Stitch d'échéance ou de calendrier
 - **WHEN** cet élément est activé ou reçoit une date
-- **THEN** aucune date n'est enregistrée et aucun calendrier ou sélecteur actif
-  n'est ouvert
+- **THEN** aucune date n'est enregistrée et aucun calendrier ou sélecteur actif n'est ouvert
 - **AND** la tâche et ses exports restent inchangés
 
 #### Scenario: Métadonnées absentes sans donnée fictive
-
-- **GIVEN** le détail présente les emplacements Stitch de description,
-  catégorie, code ou couverture
-- **WHEN** ces propriétés n'existent pas dans le modèle projet actuel
-- **THEN** aucune valeur, image ou donnée d'exemple n'est inventée
-- **AND** les libellés statiques ou l'indication accessible d'indisponibilité ne
-  sont pas présentés comme des données du projet
+- **GIVEN** le détail du projet ne contient pas de description, catégorie, code ou couverture
+- **WHEN** le projet est affiché
+- **THEN** aucun bloc de métadonnées ou valeur d'exemple n'est présenté comme une information du projet
 
 #### Scenario: Partage et archivage désactivés
-
-- **GIVEN** le détail affiche les actions Stitch de partage ou d'archivage
-- **WHEN** l'utilisateur tente de les activer
-- **THEN** elles sont nativement désactivées ou non interactives
-- **AND** aucun partage, archivage, changement de route ou écriture n'a lieu
+- **GIVEN** ThreadStep ne fournit pas de commandes de partage ou d'archivage
+- **WHEN** le détail est affiché
+- **THEN** aucune action de partage ou d'archivage factice n'est présentée
+- **AND** aucun partage, archivage, changement de route ou écriture ne peut en résulter
 
 #### Scenario: Panneau de projet sans activité simulée
-
-- **GIVEN** le détail affiche la composition Stitch du panneau de prochaine
-  action, progression ou activité
-- **WHEN** une donnée correspondante n'est pas fournie par les règles et données
-  existantes
-- **THEN** aucun événement, compte, score ou texte d'activité de démonstration
-  n'est affiché
-- **AND** le panneau et ses commandes restent statiques/désactivés et
-  accessibles
+- **GIVEN** le projet fournit une progression calculable et des tâches existantes
+- **WHEN** le détail affiche son résumé
+- **THEN** la progression et la prochaine tâche proviennent des données actuelles du projet
+- **AND** aucune activité ni métrique de démonstration n'est présentée
+- **AND** toute information sans source métier est omise
 
 ### Requirement: Interactions et validations existantes
 

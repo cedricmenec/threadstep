@@ -159,6 +159,7 @@ import { Dexie, dexieCloud } from "./vendor/dexie-cloud.mjs";
 import { selectReadingAnchor, resolveReadingAnchor, readingScrollDelta, shouldRestoreInteraction, authorizedWorkspaceIdentityKey, shouldResetExpandedParents } from "./interaction-continuity.js";
 
 const subjectsEl = document.querySelector("#subjects");
+const overviewControlsEl = document.querySelector("#overview-controls");
 const reactBoundary = createReactBoundary();
 const appShellHostEl = document.querySelector("#app-shell-root");
 const appShellBoundary = createReactBoundary();
@@ -458,6 +459,7 @@ const projectDetailCommands = createProjectDetailCommands({
     return hadDrag;
   },
   navigate,
+  openProject: (subject) => openSubject(subject),
   getResumeRef: () => resumeRef,
   setResumeRef: (ref) => { resumeRef = ref; },
   saveResumePreference
@@ -2510,7 +2512,7 @@ function applyBusinessVisibility() {
   if (businessToolsEl) businessToolsEl.hidden = configured && (!authenticated || bindingBlocked);
   // Do not display an empty dashboard while IndexedDB is still loading or
   // while another account's cache is unverified/mismatched.
-  if (dashboardEl) {
+  if (typeof dashboardEl !== "undefined" && dashboardEl) {
     dashboardEl.hidden = Boolean(settingsSection) ||
       (configured && (!authenticated || bindingBlocked || !documentLoaded));
     // A read that is genuinely authorized and still pending exposes the stable
@@ -3755,6 +3757,19 @@ function render() {
     return;
   }
   const detail = route.view !== "overview";
+  if (typeof overviewControlsEl !== "undefined" && overviewControlsEl) {
+    overviewControlsEl.hidden = detail;
+  }
+  if (typeof dashboardEl !== "undefined" && dashboardEl) {
+    dashboardEl.classList.toggle("dashboard-project-detail", detail);
+    if (detail) {
+      dashboardEl.removeAttribute("aria-labelledby");
+      dashboardEl.setAttribute("aria-label", "Détail du projet");
+    } else {
+      dashboardEl.setAttribute("aria-labelledby", "dashboard-title");
+      dashboardEl.removeAttribute("aria-label");
+    }
+  }
   subjectForm.hidden = detail;
   focusSuggestEl.hidden = detail;
   const nextSubjects = document.createDocumentFragment();

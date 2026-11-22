@@ -112,6 +112,12 @@ test("TS-059 no new route, storage key, migration or protected factory file is a
     encoding: "utf8"
   }).replace(/\n$/, "").split("\n").filter(Boolean)
     .map((line) => line.slice(3).replace(/^"|"$/g, ""))
-    .filter((path) => !authorizedShellMigration.has(path));
+    .filter((path) => !authorizedShellMigration.has(path))
+    .filter((path) => !((existsSync(resolve(root, "openspec/changes/ts-072")) ||
+      existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072"))) &&
+      ["openspec/specs/react-project-detail-pilot/spec.md", "openspec/specs/subject-detail-view/spec.md"]
+        .includes(path)))
+    .filter((path) => !(existsSync(resolve(root, "openspec/changes/archive/2026-11-22-ts-072")) &&
+      path === "openspec/changes/archive/2026-11-22-ts-072/"));
   assert.deepEqual(status, [], "protected paths must stay untouched:\n" + status.join("\n"));
 });

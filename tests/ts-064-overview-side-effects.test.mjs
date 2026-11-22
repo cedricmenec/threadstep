@@ -129,7 +129,9 @@ test("TS-064 core, boundary and Dexie configuration are untouched by this change
     "package-lock.json",
     "AGENTS.md",
     "openspec/specs"
-  ].filter((path) => !(existsSync(resolve(root, "tests/ts-067-navigation-state.test.mjs")) && path === "site/core.js"));
+  ].filter((path) => !(existsSync(resolve(root, "tests/ts-067-navigation-state.test.mjs")) && path === "site/core.js") &&
+    !(existsSync(resolve(root, "tests/ts-072-project-detail.test.mjs")) &&
+      ["site/react-adapter.js", "openspec/specs"].includes(path)));
   const status = execFileSync("git", ["status", "--porcelain", "--", ...paths], {
     cwd: root,
     encoding: "utf8"

@@ -66,6 +66,10 @@ export function ProjectDetail({ snapshot, commands }) {
 
   const pending = subject.pendingCount;
   const topLevel = totalTaskCount(snapshot.items);
+  const projects = Array.isArray(snapshot.projects) && snapshot.projects.length > 0
+    ? snapshot.projects
+    : [{ id: subject.id, title: subject.title }];
+  const nextAction = snapshot.items.find((item) => item.parentId === null && item.done !== true);
 
   return (
     <section
@@ -85,6 +89,20 @@ export function ProjectDetail({ snapshot, commands }) {
         >
           Retour à la vue d'ensemble
         </Button>
+        <label className="detail-project-switcher">
+          <span>Changer de projet</span>
+          <select
+            value={subject.id}
+            aria-label="Changer de projet"
+            onChange={(event) => {
+              if (event.target.value !== subject.id) commands.openProject(event.target.value);
+            }}
+          >
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.title}</option>
+            ))}
+          </select>
+        </label>
       </div>
       {transient.renamingSubject === true ? (
         <RenameForm subject={subject} commands={commands} />
@@ -109,54 +127,19 @@ export function ProjectDetail({ snapshot, commands }) {
             >
               Renommer le projet
             </Button>
-            <Button
-              variant="subtle"
-              className="project-stitch-disabled"
-              type="button"
-              aria-label="Partage, indisponible"
-              disabled
-            >
-              Partager
-            </Button>
-            <Button
-              variant="subtle"
-              className="project-stitch-disabled"
-              type="button"
-              aria-label="Archivage, indisponible"
-              disabled
-            >
-              Archiver
-            </Button>
           </div>
         </div>
       )}
-      <dl className="project-stitch-metadata" aria-label="Informations du projet">
-        <div><dt>Description</dt><dd>Non renseignée</dd></div>
-        <div><dt>Catégorie</dt><dd>Non renseignée</dd></div>
-        <div><dt>Code</dt><dd>Non renseigné</dd></div>
-        <div><dt>Couverture</dt><dd>Non disponible</dd></div>
-      </dl>
-      <fieldset className="detail-search-controls" disabled>
-        <legend>Recherche, filtres et tri</legend>
-        <label>
-          Recherche
-          <input type="search" aria-label="Recherche indisponible" />
-        </label>
-        <label>
-          Filtrer par état
-          <select aria-label="Filtre par état indisponible" defaultValue="">
-            <option value="">Filtre indisponible</option>
-          </select>
-        </label>
-        <label>
-          Trier par priorité
-          <select aria-label="Tri par priorité indisponible" defaultValue="">
-            <option value="">Tri indisponible</option>
-          </select>
-        </label>
-      </fieldset>
       <div className="detail-stitch-layout">
         <div className="task-area detail-main">
+          <label className="detail-completed-filter">
+            <input
+              type="checkbox"
+              checked={hideCompleted}
+              onChange={(event) => commands.setHideCompleted(event.target.checked)}
+            />
+            <span>Masquer les étapes terminées</span>
+          </label>
           <CreateTaskForm
             subject={{ ...snapshot.project, items: snapshot.items }}
             commands={commands}
@@ -176,13 +159,15 @@ export function ProjectDetail({ snapshot, commands }) {
             trackedItemId={trackedItemId}
           />
         </div>
-        <aside className="project-stitch-panel" aria-label="Aperçu statique du projet">
-          <h3>Prochaine action</h3>
-          <p>Non disponible</p>
-          <h3>Progression</h3>
-          <p>{subject.progressLabel || "Non disponible"}</p>
-          <h3>Activité</h3>
-          <p>Non disponible</p>
+        <aside className="detail-summary" aria-label="Résumé du projet">
+          <section>
+            <h3>Prochaine action</h3>
+            <p>{nextAction ? nextAction.title : "Aucune étape en attente"}</p>
+          </section>
+          <section>
+            <h3>Progression</h3>
+            <p>{subject.progressLabel}</p>
+          </section>
         </aside>
       </div>
     </section>
