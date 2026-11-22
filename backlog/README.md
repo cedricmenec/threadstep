@@ -8,6 +8,7 @@ générés depuis les fichiers Markdown : ne pas les modifier à la main.
 ## Fiches actives
 
 - [TS-071 : Recomposer les cartes projet Overview selon Stitch desktop et mobile](tasks/TS-071.md) : prête, risque moyen, exécution manuelle.
+- [TS-072 : Dédier la page de détail projet et faciliter le changement de projet](tasks/TS-072.md) : prête, risque moyen, exécution manuelle.
 
 ## Fiches archivées
 
