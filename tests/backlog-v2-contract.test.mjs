@@ -61,15 +61,15 @@ test("ChatGPT.md owns backlog generation directives; AGENTS.md delegates to it",
   }
   const agent = read("AGENTS.md");
   assert.match(agent, /ChatGPT\.md/);
-  assert.match(agent, /backlog-v2-task-contract\.md/);
+  assert.match(agent, /backlog-v2-task-contract\.md/);\n  assert.match(agent, /agents-asf\.md/);
 });
 
-test("coding agent instructions must not prohibit approved product architectures", () => {
+test("coding agent map delegates safety and product architecture", () => {
   const agent = read("AGENTS.md");
   assert.match(agent, /docs\/product\//);
   assert.match(agent, /sécurité/);
   assert.match(agent, /main/);
-  assert.doesNotMatch(agent, /No backend|No.*authentication|no third-party JS bundles/i);
+  assert.match(agent, /docs\/security\/README\.md/);\n  assert.ok(agent.trimEnd().split("\\n").length < 100);\n  assert.doesNotMatch(agent, /No backend|No.*authentication|no third-party JS bundles/i);
 });
 
 test("factory V2 task descriptions are explicitly manual", () => {
